@@ -4,6 +4,12 @@ export default function AskVIC() {
   const [message, setMessage] = useState('')
   const [reply, setReply] = useState('')
   const [loading, setLoading] = useState(false)
+  const [scratchPad, setScratchPad] = useState('')
+  const [notes, setNotes] = useState('')
+  const [showCalculator, setShowCalculator] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
+  const [calcInput, setCalcInput] = useState('')
+  const [calcResult, setCalcResult] = useState('')
 
   async function sendMessage() {
     if (!message.trim() || loading) return
@@ -34,14 +40,24 @@ export default function AskVIC() {
     }
   }
 
-  function usePrompt(prompt) {
-    setMessage(prompt)
+  function chooseSubject(subject) {
+    setMessage(`I need help with ${subject}. Please teach me step by step.`)
+  }
+
+  function runCalculator() {
+    try {
+      const safe = calcInput.replace(/[^0-9+\-*/(). ]/g, '')
+      const result = Function(`"use strict"; return (${safe})`)()
+      setCalcResult(String(result))
+    } catch {
+      setCalcResult('Invalid calculation')
+    }
   }
 
   return (
     <div style={styles.page}>
-      <div style={styles.backgroundGlowOne} />
-      <div style={styles.backgroundGlowTwo} />
+      <div style={styles.glowOne} />
+      <div style={styles.glowTwo} />
 
       <div style={styles.shell}>
         <div style={styles.leftPanel}>
@@ -56,126 +72,139 @@ export default function AskVIC() {
           <h1 style={styles.heading}>More than answers. Real teaching.</h1>
 
           <p style={styles.subheading}>
-            VIC is built to teach, adapt, and support students in real time —
-            whether they need intervention, extra practice, enrichment, or help
-            in the evening when no teacher is there.
+            VIC helps students with support, practice, enrichment, and evening help
+            in a calm, guided workspace.
           </p>
 
-          <div style={styles.audienceGrid}>
-            <div style={styles.audienceCard}>
-              <div style={styles.audienceTitle}>For students</div>
-              <div style={styles.audienceText}>
-                Step-by-step help that meets you where you are without making
-                you feel behind.
-              </div>
-            </div>
-
-            <div style={styles.audienceCard}>
-              <div style={styles.audienceTitle}>For parents</div>
-              <div style={styles.audienceText}>
-                Extra support at home that teaches, guides, and builds
-                confidence.
-              </div>
-            </div>
-
-            <div style={styles.audienceCard}>
-              <div style={styles.audienceTitle}>For teachers</div>
-              <div style={styles.audienceText}>
-                An extra set of hands for follow-up help, differentiation, and
-                practice beyond the school day.
-              </div>
-            </div>
-          </div>
-
-          <div style={styles.featureList}>
-            <div style={styles.featureItem}>Teaches instead of just replying</div>
-            <div style={styles.featureItem}>Supports struggling students patiently</div>
-            <div style={styles.featureItem}>Provides enrichment for advanced learners</div>
-            <div style={styles.featureItem}>Available when students need help at night</div>
+          <div style={styles.card}>
+            <div style={styles.cardTitle}>Scratch Pad</div>
+            <textarea
+              value={scratchPad}
+              onChange={(e) => setScratchPad(e.target.value)}
+              placeholder="Work things out here..."
+              style={styles.sideTextarea}
+            />
           </div>
         </div>
 
-        <div style={styles.chatPanel}>
-          <div style={styles.chatHeader}>
-            <div>
-              <div style={styles.chatLabel}>GUIDED SESSION</div>
-              <div style={styles.chatTitle}>Start with VIC</div>
-            </div>
-            <div style={styles.statusWrap}>
-              <span style={styles.statusDot} />
-              <span style={styles.statusText}>Ready to teach</span>
-            </div>
-          </div>
-
-          <div style={styles.chatBody}>
-            <div style={styles.assistantBubble}>
-              <div style={styles.bubbleLabel}>VIC</div>
-              <p style={styles.bubbleText}>
-                I’m here to teach, not just give answers. Tell me your grade,
-                subject, and what you’re working on, and I’ll help you step by
-                step from the right starting point.
-              </p>
-            </div>
-
-            {message.trim() ? (
-              <div style={styles.userBubble}>
-                <div style={styles.bubbleLabelUser}>YOU</div>
-                <p style={styles.bubbleText}>{message}</p>
+        <div style={styles.rightPanel}>
+          <div style={styles.chatCard}>
+            <div style={styles.chatHeader}>
+              <div>
+                <div style={styles.chatLabel}>GUIDED SESSION</div>
+                <div style={styles.chatTitle}>Start with VIC</div>
               </div>
-            ) : null}
+              <div style={styles.statusPill}>
+                <span style={styles.statusDot} />
+                Ready to teach
+              </div>
+            </div>
 
-            {reply ? (
+            <div style={styles.messageArea}>
               <div style={styles.assistantBubble}>
                 <div style={styles.bubbleLabel}>VIC</div>
-                <p style={styles.bubbleText}>{reply}</p>
+                <p style={styles.bubbleText}>
+                  I’m here to teach, not just answer. Choose a subject or tell me what
+                  you’re working on.
+                </p>
               </div>
-            ) : null}
-          </div>
 
-          <div style={styles.promptSection}>
-            <div style={styles.promptHeading}>Try a guided starting point</div>
-            <div style={styles.promptGrid}>
-              <button style={styles.promptButton} onClick={() => usePrompt('I am struggling with fractions and need to start from the beginning.')}>
-                I’m struggling and need to start from the beginning
+              {message.trim() ? (
+                <div style={styles.userBubble}>
+                  <div style={styles.bubbleLabelUser}>YOU</div>
+                  <p style={styles.bubbleText}>{message}</p>
+                </div>
+              ) : null}
+
+              {reply ? (
+                <div style={styles.assistantBubble}>
+                  <div style={styles.bubbleLabel}>VIC</div>
+                  <p style={styles.bubbleText}>{reply}</p>
+                </div>
+              ) : null}
+            </div>
+
+            <div style={styles.subjectSection}>
+              <div style={styles.sectionTitle}>Choose a subject</div>
+              <div style={styles.subjectGrid}>
+                <button style={styles.subjectButton} onClick={() => chooseSubject('math')}>
+                  Math
+                </button>
+                <button style={styles.subjectButton} onClick={() => chooseSubject('reading')}>
+                  Reading
+                </button>
+                <button style={styles.subjectButton} onClick={() => chooseSubject('writing')}>
+                  Writing
+                </button>
+                <button style={styles.subjectButton} onClick={() => chooseSubject('science')}>
+                  Science
+                </button>
+              </div>
+            </div>
+
+            <div style={styles.toolsBar}>
+              <button style={styles.toolButton} onClick={() => setShowCalculator(!showCalculator)}>
+                Calculator
               </button>
-              <button style={styles.promptButton} onClick={() => usePrompt('Give me extra practice on vocabulary and check my understanding.')}>
-                Give me extra practice and check my understanding
-              </button>
-              <button style={styles.promptButton} onClick={() => usePrompt('Challenge me with something harder once I understand this.')}>
-                Challenge me once I understand this
-              </button>
-              <button style={styles.promptButton} onClick={() => usePrompt('It is evening and I need help finishing this for tomorrow.')}>
-                I need help tonight getting ready for tomorrow
+              <button style={styles.toolButton} onClick={() => setShowNotes(!showNotes)}>
+                Notes
               </button>
             </div>
-          </div>
 
-          <div style={styles.inputWrap}>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              rows={5}
-              style={styles.textarea}
-              placeholder="Example: I’m in 5th grade math and I’m stuck on fractions. Please teach me step by step and check if I understand before moving on."
-            />
-
-            <div style={styles.inputFooter}>
-              <div style={styles.inputHint}>
-                Press Enter to send · Shift+Enter for a new line
+            {showCalculator ? (
+              <div style={styles.toolPanel}>
+                <div style={styles.cardTitle}>Calculator</div>
+                <input
+                  value={calcInput}
+                  onChange={(e) => setCalcInput(e.target.value)}
+                  placeholder="Example: 12 * (4 + 3)"
+                  style={styles.calcInput}
+                />
+                <div style={styles.calcRow}>
+                  <button style={styles.smallButton} onClick={runCalculator}>
+                    Calculate
+                  </button>
+                  <div style={styles.calcResult}>{calcResult}</div>
+                </div>
               </div>
+            ) : null}
 
-              <button
-                onClick={sendMessage}
-                disabled={loading || !message.trim()}
-                style={{
-                  ...styles.sendButton,
-                  opacity: loading || !message.trim() ? 0.6 : 1,
-                  cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {loading ? 'Teaching...' : 'Start'}
-              </button>
+            {showNotes ? (
+              <div style={styles.toolPanel}>
+                <div style={styles.cardTitle}>Notes</div>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Keep notes here..."
+                  style={styles.notesTextarea}
+                />
+              </div>
+            ) : null}
+
+            <div style={styles.inputSection}>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyDown={handleKeyDown}
+                rows={4}
+                placeholder="Type what you need help with..."
+                style={styles.mainTextarea}
+              />
+
+              <div style={styles.inputFooter}>
+                <div style={styles.inputHint}>Press Enter to send</div>
+                <button
+                  onClick={sendMessage}
+                  disabled={loading || !message.trim()}
+                  style={{
+                    ...styles.sendButton,
+                    opacity: loading || !message.trim() ? 0.6 : 1,
+                    cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
+                  }}
+                >
+                  {loading ? 'Teaching...' : 'Start'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -190,13 +219,12 @@ const styles = {
     background:
       'radial-gradient(circle at top left, rgba(72,118,255,0.16), transparent 32%), radial-gradient(circle at bottom right, rgba(87,224,184,0.10), transparent 30%), linear-gradient(135deg, #0a1020 0%, #0f172a 45%, #121826 100%)',
     color: '#e8eefc',
-    fontFamily:
-      '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
     overflow: 'hidden',
   },
 
-  backgroundGlowOne: {
+  glowOne: {
     position: 'absolute',
     top: '-120px',
     left: '-80px',
@@ -205,10 +233,9 @@ const styles = {
     background: 'rgba(84, 119, 255, 0.16)',
     filter: 'blur(90px)',
     borderRadius: '50%',
-    pointerEvents: 'none',
   },
 
-  backgroundGlowTwo: {
+  glowTwo: {
     position: 'absolute',
     bottom: '-120px',
     right: '-60px',
@@ -217,28 +244,31 @@ const styles = {
     background: 'rgba(70, 220, 190, 0.10)',
     filter: 'blur(90px)',
     borderRadius: '50%',
-    pointerEvents: 'none',
   },
 
   shell: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '44px 24px',
+    padding: '40px 24px',
     display: 'grid',
-    gridTemplateColumns: '1fr 1.08fr',
+    gridTemplateColumns: '0.85fr 1.15fr',
     gap: '28px',
-    alignItems: 'stretch',
   },
 
   leftPanel: {
-    padding: '24px 8px 24px 8px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px',
+  },
+
+  rightPanel: {
+    display: 'flex',
   },
 
   brandRow: {
     display: 'flex',
     alignItems: 'center',
     gap: '14px',
-    marginBottom: '28px',
   },
 
   logo: {
@@ -252,7 +282,6 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: '0 10px 30px rgba(94, 234, 212, 0.20)',
   },
 
   eyebrow: {
@@ -269,68 +298,53 @@ const styles = {
   },
 
   heading: {
-    fontSize: '52px',
+    fontSize: '50px',
     lineHeight: 1.02,
-    margin: '0 0 18px 0',
+    margin: 0,
     fontWeight: 800,
     letterSpacing: '-0.03em',
-    maxWidth: '560px',
+    maxWidth: '500px',
   },
 
   subheading: {
-    fontSize: '19px',
-    lineHeight: 1.65,
+    fontSize: '18px',
+    lineHeight: 1.6,
     color: '#b8c6e6',
-    maxWidth: '580px',
-    margin: '0 0 26px 0',
+    maxWidth: '500px',
+    margin: 0,
   },
 
-  audienceGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: '12px',
-    marginBottom: '20px',
-    maxWidth: '590px',
-  },
-
-  audienceCard: {
+  card: {
     background: 'rgba(255,255,255,0.05)',
     border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '18px',
-    padding: '18px 18px',
-    backdropFilter: 'blur(10px)',
+    borderRadius: '20px',
+    padding: '18px',
   },
 
-  audienceTitle: {
+  cardTitle: {
     fontSize: '14px',
     fontWeight: 700,
-    marginBottom: '8px',
+    marginBottom: '12px',
     color: '#f3f7ff',
   },
 
-  audienceText: {
+  sideTextarea: {
+    width: '100%',
+    minHeight: '300px',
+    borderRadius: '16px',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.04)',
+    color: '#eef4ff',
+    padding: '16px',
     fontSize: '15px',
-    lineHeight: 1.55,
-    color: '#b8c6e6',
+    lineHeight: 1.5,
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
   },
 
-  featureList: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gap: '10px',
-    maxWidth: '590px',
-  },
-
-  featureItem: {
-    fontSize: '15px',
-    color: '#dbe6ff',
-    padding: '10px 14px',
-    borderLeft: '2px solid rgba(94, 234, 212, 0.55)',
-    background: 'rgba(255,255,255,0.03)',
-    borderRadius: '10px',
-  },
-
-  chatPanel: {
+  chatCard: {
+    width: '100%',
     background: 'rgba(12, 19, 35, 0.72)',
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '28px',
@@ -339,16 +353,15 @@ const styles = {
     backdropFilter: 'blur(18px)',
     display: 'flex',
     flexDirection: 'column',
-    minHeight: '720px',
+    gap: '16px',
   },
 
   chatHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: '18px',
+    paddingBottom: '14px',
     borderBottom: '1px solid rgba(255,255,255,0.08)',
-    marginBottom: '16px',
   },
 
   chatLabel: {
@@ -364,14 +377,16 @@ const styles = {
     marginTop: '6px',
   },
 
-  statusWrap: {
+  statusPill: {
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '999px',
     padding: '8px 12px',
+    fontSize: '13px',
+    color: '#d7e3ff',
   },
 
   statusDot: {
@@ -379,50 +394,17 @@ const styles = {
     height: '8px',
     background: '#5eead4',
     borderRadius: '50%',
-    boxShadow: '0 0 12px rgba(94, 234, 212, 0.7)',
   },
 
-  statusText: {
-    fontSize: '13px',
-    color: '#d7e3ff',
-  },
-
-  chatBody: {
+  messageArea: {
+    background: 'rgba(255,255,255,0.03)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '20px',
+    padding: '16px',
+    minHeight: '170px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
-    padding: '6px 2px 16px 2px',
-    minHeight: '220px',
-  },
-
-  promptSection: {
-    paddingTop: '8px',
-    paddingBottom: '16px',
-  },
-
-  promptHeading: {
-    fontSize: '14px',
-    fontWeight: 700,
-    color: '#cdd9f5',
-    marginBottom: '12px',
-  },
-
-  promptGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
     gap: '12px',
-  },
-
-  promptButton: {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    color: '#e8eefc',
-    padding: '14px 16px',
-    borderRadius: '16px',
-    textAlign: 'left',
-    fontSize: '14px',
-    lineHeight: 1.45,
-    backdropFilter: 'blur(10px)',
   },
 
   assistantBubble: {
@@ -430,7 +412,7 @@ const styles = {
     maxWidth: '88%',
     background: 'rgba(255,255,255,0.06)',
     border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: '20px',
+    borderRadius: '18px',
     padding: '16px 18px',
   },
 
@@ -439,7 +421,7 @@ const styles = {
     maxWidth: '88%',
     background: 'linear-gradient(135deg, rgba(122,162,255,0.20), rgba(94,234,212,0.12))',
     border: '1px solid rgba(122,162,255,0.20)',
-    borderRadius: '20px',
+    borderRadius: '18px',
     padding: '16px 18px',
   },
 
@@ -467,20 +449,118 @@ const styles = {
     whiteSpace: 'pre-wrap',
   },
 
-  inputWrap: {
-    borderTop: '1px solid rgba(255,255,255,0.08)',
-    paddingTop: '18px',
-    marginTop: 'auto',
+  subjectSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
   },
 
-  textarea: {
+  sectionTitle: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#cdd9f5',
+  },
+
+  subjectGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+  },
+
+  subjectButton: {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    color: '#e8eefc',
+    padding: '16px',
+    borderRadius: '16px',
+    fontSize: '15px',
+    fontWeight: 600,
+    textAlign: 'left',
+  },
+
+  toolsBar: {
+    display: 'flex',
+    gap: '10px',
+  },
+
+  toolButton: {
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    color: '#dfe8fb',
+    padding: '10px 14px',
+    borderRadius: '12px',
+    fontSize: '14px',
+  },
+
+  toolPanel: {
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '18px',
+    padding: '16px',
+  },
+
+  calcInput: {
     width: '100%',
-    minHeight: '132px',
-    borderRadius: '20px',
+    borderRadius: '12px',
     border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(255,255,255,0.04)',
     color: '#eef4ff',
-    padding: '18px',
+    padding: '12px',
+    fontSize: '15px',
+    boxSizing: 'border-box',
+    marginBottom: '12px',
+  },
+
+  calcRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+
+  smallButton: {
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 16px',
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#07111e',
+    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
+  },
+
+  calcResult: {
+    fontSize: '14px',
+    color: '#dbe6ff',
+  },
+
+  notesTextarea: {
+    width: '100%',
+    minHeight: '120px',
+    borderRadius: '14px',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.04)',
+    color: '#eef4ff',
+    padding: '14px',
+    fontSize: '15px',
+    lineHeight: 1.5,
+    resize: 'vertical',
+    boxSizing: 'border-box',
+  },
+
+  inputSection: {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    borderRadius: '20px',
+    padding: '16px',
+  },
+
+  mainTextarea: {
+    width: '100%',
+    minHeight: '130px',
+    borderRadius: '16px',
+    border: '1px solid rgba(255,255,255,0.12)',
+    background: 'rgba(255,255,255,0.08)',
+    color: '#eef4ff',
+    padding: '16px',
     fontSize: '16px',
     lineHeight: 1.5,
     resize: 'vertical',
@@ -489,7 +569,7 @@ const styles = {
   },
 
   inputFooter: {
-    marginTop: '14px',
+    marginTop: '12px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -509,6 +589,5 @@ const styles = {
     fontWeight: 700,
     color: '#07111e',
     background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
-    boxShadow: '0 10px 30px rgba(94, 234, 212, 0.20)',
   },
 }
