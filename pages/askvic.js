@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export default function AskVIC() {
   const [input, setInput] = useState('')
@@ -12,9 +12,15 @@ export default function AskVIC() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: 'I’m here to teach, not just answer. Type anything to begin or start a subject below.',
+      text: 'I’m here to teach, not just answer. Type anything to begin or start a lesson below.',
     },
   ])
+
+  const messagesEndRef = useRef(null)
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages])
 
   async function sendMessage(customMessage) {
     const outgoing = typeof customMessage === 'string' ? customMessage : input
@@ -120,6 +126,55 @@ export default function AskVIC() {
               style={styles.sideTextarea}
             />
           </div>
+
+          <div style={styles.leftToolsWrap}>
+            <div style={styles.leftToolsTitle}>Tools</div>
+
+            <div style={styles.leftToolsBar}>
+              <button
+                style={styles.toolButton}
+                onClick={() => setShowCalculator(!showCalculator)}
+              >
+                Calculator
+              </button>
+              <button
+                style={styles.toolButton}
+                onClick={() => setShowNotes(!showNotes)}
+              >
+                Notes
+              </button>
+            </div>
+
+            {showCalculator ? (
+              <div style={styles.toolPanel}>
+                <div style={styles.cardTitleDark}>Calculator</div>
+                <input
+                  value={calcInput}
+                  onChange={(e) => setCalcInput(e.target.value)}
+                  placeholder="Example: 12 * (4 + 3)"
+                  style={styles.calcInput}
+                />
+                <div style={styles.calcRow}>
+                  <button style={styles.smallButton} onClick={runCalculator}>
+                    Calculate
+                  </button>
+                  <div style={styles.calcResult}>{calcResult}</div>
+                </div>
+              </div>
+            ) : null}
+
+            {showNotes ? (
+              <div style={styles.toolPanel}>
+                <div style={styles.cardTitleDark}>Notes</div>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Keep notes here..."
+                  style={styles.notesTextarea}
+                />
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <div style={styles.rightPanel}>
@@ -159,11 +214,12 @@ export default function AskVIC() {
                     </p>
                   </div>
                 ))}
+                <div ref={messagesEndRef} />
               </div>
 
               {messages.length === 1 ? (
                 <div style={styles.helperText}>
-                  Type anything to begin (like “help me with fractions”) or start a lesson below.
+                  Type anything to begin, or start a lesson below.
                 </div>
               ) : null}
 
@@ -211,45 +267,6 @@ export default function AskVIC() {
                 </div>
               </div>
             </div>
-
-            <div style={styles.toolsBar}>
-              <button style={styles.toolButton} onClick={() => setShowCalculator(!showCalculator)}>
-                Calculator
-              </button>
-              <button style={styles.toolButton} onClick={() => setShowNotes(!showNotes)}>
-                Notes
-              </button>
-            </div>
-
-            {showCalculator ? (
-              <div style={styles.toolPanel}>
-                <div style={styles.cardTitleDark}>Calculator</div>
-                <input
-                  value={calcInput}
-                  onChange={(e) => setCalcInput(e.target.value)}
-                  placeholder="Example: 12 * (4 + 3)"
-                  style={styles.calcInput}
-                />
-                <div style={styles.calcRow}>
-                  <button style={styles.smallButton} onClick={runCalculator}>
-                    Calculate
-                  </button>
-                  <div style={styles.calcResult}>{calcResult}</div>
-                </div>
-              </div>
-            ) : null}
-
-            {showNotes ? (
-              <div style={styles.toolPanel}>
-                <div style={styles.cardTitleDark}>Notes</div>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Keep notes here..."
-                  style={styles.notesTextarea}
-                />
-              </div>
-            ) : null}
           </div>
         </div>
       </div>
@@ -296,17 +313,17 @@ const styles = {
   shell: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '40px 24px',
+    padding: '28px 24px',
     display: 'grid',
-    gridTemplateColumns: '0.92fr 1.08fr',
-    gap: '28px',
-    alignItems: 'stretch',
+    gridTemplateColumns: '0.9fr 1.1fr',
+    gap: '24px',
+    alignItems: 'start',
   },
 
   leftPanel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    gap: '16px',
   },
 
   rightPanel: {
@@ -320,13 +337,13 @@ const styles = {
   },
 
   logo: {
-    width: '64px',
-    height: '64px',
+    width: '60px',
+    height: '60px',
     borderRadius: '18px',
     background: 'linear-gradient(135deg, #6f8cff 0%, #4fd1c5 100%)',
     color: '#0a1020',
     fontWeight: 800,
-    fontSize: '19px',
+    fontSize: '18px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -335,7 +352,7 @@ const styles = {
   },
 
   brandName: {
-    fontSize: '30px',
+    fontSize: '28px',
     fontWeight: 900,
     letterSpacing: '0.04em',
     lineHeight: 1,
@@ -350,7 +367,7 @@ const styles = {
   },
 
   heading: {
-    fontSize: '50px',
+    fontSize: '46px',
     lineHeight: 1.02,
     margin: 0,
     fontWeight: 800,
@@ -360,7 +377,7 @@ const styles = {
 
   taglinePrimary: {
     fontSize: '18px',
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     color: '#dbe6ff',
     maxWidth: '520px',
     margin: 0,
@@ -369,7 +386,7 @@ const styles = {
 
   subheading: {
     fontSize: '18px',
-    lineHeight: 1.6,
+    lineHeight: 1.55,
     color: '#b8c6e6',
     maxWidth: '520px',
     margin: 0,
@@ -379,7 +396,7 @@ const styles = {
     background: 'rgba(255,255,255,0.05)',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '20px',
-    padding: '18px',
+    padding: '16px',
   },
 
   cardTitle: {
@@ -391,7 +408,7 @@ const styles = {
 
   cardHelper: {
     fontSize: '13px',
-    lineHeight: 1.5,
+    lineHeight: 1.45,
     color: '#9fb0d3',
     marginBottom: '12px',
   },
@@ -405,7 +422,7 @@ const styles = {
 
   sideTextarea: {
     width: '100%',
-    minHeight: '320px',
+    minHeight: '250px',
     borderRadius: '16px',
     border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(255,255,255,0.04)',
@@ -418,24 +435,42 @@ const styles = {
     boxSizing: 'border-box',
   },
 
+  leftToolsWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+
+  leftToolsTitle: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#d7e3ff',
+  },
+
+  leftToolsBar: {
+    display: 'flex',
+    gap: '10px',
+    flexWrap: 'wrap',
+  },
+
   chatCard: {
     width: '100%',
     background: 'rgba(12, 19, 35, 0.72)',
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '28px',
-    padding: '20px',
+    padding: '18px',
     boxShadow: '0 25px 80px rgba(0,0,0,0.35)',
     backdropFilter: 'blur(18px)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '14px',
   },
 
   chatHeader: {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: '14px',
+    paddingBottom: '12px',
     borderBottom: '1px solid rgba(255,255,255,0.08)',
   },
 
@@ -447,7 +482,7 @@ const styles = {
   },
 
   chatTitle: {
-    fontSize: '28px',
+    fontSize: '26px',
     fontWeight: 800,
     marginTop: '6px',
   },
@@ -477,7 +512,7 @@ const styles = {
 
   systemWrap: {
     borderRadius: '24px',
-    padding: '18px',
+    padding: '16px',
     background:
       'linear-gradient(135deg, rgba(98,132,255,0.18), rgba(94,234,212,0.10))',
     border: '1px solid rgba(130, 154, 255, 0.35)',
@@ -485,7 +520,7 @@ const styles = {
       '0 0 0 1px rgba(255,255,255,0.05) inset, 0 0 28px rgba(94,234,212,0.08)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '12px',
   },
 
   messageArea: {
@@ -493,8 +528,8 @@ const styles = {
     border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: '20px',
     padding: '16px',
-    minHeight: '260px',
-    maxHeight: '420px',
+    minHeight: '220px',
+    maxHeight: '360px',
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
@@ -508,7 +543,7 @@ const styles = {
     background: '#f3f7fb',
     border: '1px solid #d8e2ee',
     borderRadius: '18px',
-    padding: '16px 18px',
+    padding: '14px 16px',
   },
 
   userBubble: {
@@ -517,7 +552,7 @@ const styles = {
     background: '#e8f1ff',
     border: '1px solid #c6dafd',
     borderRadius: '18px',
-    padding: '16px 18px',
+    padding: '14px 16px',
   },
 
   bubbleLabel: {
@@ -563,17 +598,17 @@ const styles = {
     background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '18px',
-    padding: '14px',
+    padding: '12px',
   },
 
   mainTextarea: {
     width: '100%',
-    minHeight: '84px',
+    minHeight: '72px',
     borderRadius: '16px',
     border: '1px solid rgba(255,255,255,0.16)',
     background: 'rgba(255,255,255,0.96)',
     color: '#0f172a',
-    padding: '16px',
+    padding: '14px',
     fontSize: '16px',
     lineHeight: 1.5,
     resize: 'vertical',
@@ -582,7 +617,7 @@ const styles = {
   },
 
   inputFooter: {
-    marginTop: '12px',
+    marginTop: '10px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -597,7 +632,7 @@ const styles = {
   sendButton: {
     border: 'none',
     borderRadius: '14px',
-    padding: '14px 22px',
+    padding: '12px 20px',
     fontSize: '15px',
     fontWeight: 700,
     color: '#07111e',
@@ -608,7 +643,7 @@ const styles = {
   subjectSection: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '10px',
   },
 
   sectionTitle: {
@@ -620,24 +655,18 @@ const styles = {
   subjectGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
+    gap: '10px',
   },
 
   subjectButton: {
     background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(255,255,255,0.12)',
     color: '#f7fbff',
-    padding: '16px',
+    padding: '14px',
     borderRadius: '16px',
     fontSize: '15px',
     fontWeight: 600,
     textAlign: 'left',
-  },
-
-  toolsBar: {
-    display: 'flex',
-    gap: '10px',
-    flexWrap: 'wrap',
   },
 
   toolButton: {
