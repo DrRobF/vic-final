@@ -19,7 +19,7 @@ export default function AskVIC() {
   const messagesEndRef = useRef(null)
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }, [messages])
 
   async function sendMessage(customMessage) {
@@ -288,7 +288,7 @@ const styles = {
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
-    overflow: 'hidden',
+    overflowX: 'hidden',
   },
 
   backgroundGlowOne: {
@@ -318,52 +318,55 @@ const styles = {
   shell: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '56px 24px 28px',
+    padding: '96px 24px 32px',
     display: 'grid',
     gridTemplateColumns: '0.9fr 1.1fr',
-    gap: '24px',
+    gap: '28px',
     alignItems: 'start',
   },
 
   leftPanel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    gap: '22px',
+    paddingTop: '12px',
   },
 
   rightPanel: {
     display: 'flex',
+    paddingTop: '12px',
   },
 
   brandRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '16px',
-    marginBottom: '18px',
+    gap: '18px',
+    marginBottom: '8px',
   },
 
   logoWrap: {
     position: 'relative',
+    flexShrink: 0,
   },
 
   logoCore: {
     position: 'relative',
-    width: '72px',
-    height: '72px',
-    borderRadius: '22px',
+    width: '82px',
+    height: '82px',
+    borderRadius: '24px',
     background: 'linear-gradient(145deg, #7ea2ff 0%, #58dfd1 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     boxShadow:
-      '0 16px 36px rgba(79,209,197,0.22), inset 0 1px 0 rgba(255,255,255,0.35)',
+      '0 18px 42px rgba(79,209,197,0.22), inset 0 1px 0 rgba(255,255,255,0.35)',
     overflow: 'hidden',
   },
 
   logoText: {
     position: 'relative',
     zIndex: 2,
-    fontSize: '26px',
+    fontSize: '28px',
     fontWeight: 900,
     letterSpacing: '0.08em',
     color: '#08111f',
@@ -373,8 +376,8 @@ const styles = {
     position: 'absolute',
     top: '-18px',
     right: '-12px',
-    width: '44px',
-    height: '44px',
+    width: '46px',
+    height: '46px',
     borderRadius: '50%',
     background: 'rgba(255,255,255,0.24)',
     filter: 'blur(6px)',
@@ -387,45 +390,45 @@ const styles = {
   },
 
   brandName: {
-    fontSize: '30px',
+    fontSize: '34px',
     fontWeight: 900,
     letterSpacing: '0.04em',
     lineHeight: 1,
-    marginBottom: '6px',
+    marginBottom: '8px',
   },
 
   tagline: {
-    fontSize: '13px',
+    fontSize: '14px',
     color: '#8ea3d1',
     letterSpacing: '0.08em',
     fontWeight: 600,
   },
 
   heading: {
-    fontSize: '46px',
+    fontSize: '54px',
     lineHeight: 1.02,
     margin: 0,
-    marginBottom: '14px',
+    marginBottom: '8px',
     fontWeight: 800,
     letterSpacing: '-0.03em',
-    maxWidth: '520px',
+    maxWidth: '560px',
   },
 
   taglinePrimary: {
-    fontSize: '18px',
+    fontSize: '20px',
     lineHeight: 1.55,
     color: '#dbe6ff',
-    maxWidth: '520px',
+    maxWidth: '540px',
     margin: 0,
-    marginBottom: '10px',
+    marginBottom: '8px',
     fontWeight: 500,
   },
 
   subheading: {
-    fontSize: '18px',
-    lineHeight: 1.55,
+    fontSize: '19px',
+    lineHeight: 1.6,
     color: '#b8c6e6',
-    maxWidth: '520px',
+    maxWidth: '540px',
     margin: 0,
   },
 
