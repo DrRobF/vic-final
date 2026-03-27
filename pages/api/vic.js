@@ -1,4 +1,12 @@
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -19,7 +27,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         prompt: {
-          id: "pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b"  // ← your VIC brain
+          id: "pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b"
         },
         input: message
       })
