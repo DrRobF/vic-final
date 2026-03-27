@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         prompt: {
-          id: "pmpt_69c52eb12f3"  // ← your VIC brain
+          id: "pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b"  // ← your VIC brain
         },
         input: message
       })
