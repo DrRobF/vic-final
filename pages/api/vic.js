@@ -11,10 +11,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { message } = req.body || {}
+  const { messages } = req.body || {}
 
-  if (!message) {
-    return res.status(400).json({ error: 'Missing message' })
+  if (!Array.isArray(messages) || messages.length === 0) {
+    return res.status(400).json({ error: 'Missing messages array' })
   }
 
   try {
@@ -22,26 +22,34 @@ export default async function handler(req, res) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1-mini",
+        model: 'gpt-4.1-mini',
         prompt: {
-          id: "pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b"
+          id: 'pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b',
         },
-        input: message
-      })
+        input: messages,
+      }),
     })
 
     const data = await response.json()
 
+    if (!response.ok) {
+      console.error('OpenAI API error:', data)
+      return res.status(response.status).json({
+        error: data?.error?.message || 'OpenAI request failed',
+      })
+    }
+
     const reply =
+      data.output_text ||
       data.output?.[0]?.content?.[0]?.text ||
-      "Sorry, I had trouble responding."
+      'Sorry, I had trouble responding.'
 
     return res.status(200).json({ reply })
-
   } catch (error) {
+    console.error('Server error:', error)
     return res.status(500).json({ error: 'Server error' })
   }
 }
