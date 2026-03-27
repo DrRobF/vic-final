@@ -1,8 +1,7 @@
 import { useState } from 'react'
 
 export default function AskVIC() {
-  const [message, setMessage] = useState('')
-  const [reply, setReply] = useState('')
+  const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [workArea, setWorkArea] = useState('')
   const [notes, setNotes] = useState('')
@@ -10,15 +9,24 @@ export default function AskVIC() {
   const [showNotes, setShowNotes] = useState(false)
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
+  const [messages, setMessages] = useState([
+    {
+      role: 'assistant',
+      text: 'I’m here to teach, not just answer. Type anything to begin or start a subject below.',
+    },
+  ])
 
   async function sendMessage(customMessage) {
-    const outgoing = typeof customMessage === 'string' ? customMessage : message
+    const outgoing = typeof customMessage === 'string' ? customMessage : input
 
     if (!outgoing.trim() || loading) return
 
+    const userMessage = { role: 'user', text: outgoing }
+    const thinkingMessage = { role: 'assistant', text: 'VIC is thinking...' }
+
+    setMessages((prev) => [...prev, userMessage, thinkingMessage])
     setLoading(true)
-    setMessage(outgoing)
-    setReply('VIC is thinking...')
+    setInput('')
 
     try {
       const res = await fetch('/api/vic', {
@@ -28,9 +36,22 @@ export default function AskVIC() {
       })
 
       const data = await res.json()
-      setReply(data.reply || 'No reply')
+      const finalReply = data.reply || 'No reply'
+
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = { role: 'assistant', text: finalReply }
+        return updated
+      })
     } catch (error) {
-      setReply('Something went wrong. Please try again.')
+      setMessages((prev) => {
+        const updated = [...prev]
+        updated[updated.length - 1] = {
+          role: 'assistant',
+          text: 'Something went wrong. Please try again.',
+        }
+        return updated
+      })
     } finally {
       setLoading(false)
     }
@@ -51,6 +72,10 @@ export default function AskVIC() {
   function runCalculator() {
     try {
       const safe = calcInput.replace(/[^0-9+\-*/(). ]/g, '')
+      if (!safe.trim()) {
+        setCalcResult('')
+        return
+      }
       const result = Function(`"use strict"; return (${safe})`)()
       setCalcResult(String(result))
     } catch {
@@ -111,51 +136,79 @@ export default function AskVIC() {
               </div>
             </div>
 
-            <div style={styles.messageArea}>
-              <div style={styles.assistantBubble}>
-                <div style={styles.bubbleLabel}>VIC</div>
-                <p style={styles.bubbleText}>
-                  I’m here to teach, not just answer. Type anything to begin or
-                  start a subject below.
-                </p>
+            <div style={styles.systemWrap}>
+              <div style={styles.messageArea}>
+                {messages.map((msg, index) => (
+                  <div
+                    key={index}
+                    style={msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble}
+                  >
+                    <div
+                      style={
+                        msg.role === 'assistant' ? styles.bubbleLabel : styles.bubbleLabelUser
+                      }
+                    >
+                      {msg.role === 'assistant' ? 'VIC' : 'YOU'}
+                    </div>
+                    <p
+                      style={
+                        msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText
+                      }
+                    >
+                      {msg.text}
+                    </p>
+                  </div>
+                ))}
               </div>
 
-              {message.trim() ? (
-                <div style={styles.userBubble}>
-                  <div style={styles.bubbleLabelUser}>YOU</div>
-                  <p style={styles.userBubbleText}>{message}</p>
+              {messages.length === 1 ? (
+                <div style={styles.helperText}>
+                  Type anything to begin (like “help me with fractions”) or start a lesson below.
                 </div>
               ) : null}
 
-              {reply ? (
-                <div style={styles.assistantBubble}>
-                  <div style={styles.bubbleLabel}>VIC</div>
-                  <p style={styles.bubbleText}>{reply}</p>
+              <div style={styles.inputSection}>
+                <textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  rows={2}
+                  placeholder="Type what you need help with..."
+                  style={styles.mainTextarea}
+                />
+
+                <div style={styles.inputFooter}>
+                  <div style={styles.inputHint}>Press Enter to send</div>
+                  <button
+                    onClick={() => sendMessage()}
+                    disabled={loading || !input.trim()}
+                    style={{
+                      ...styles.sendButton,
+                      opacity: loading || !input.trim() ? 0.6 : 1,
+                      cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {loading ? 'Thinking...' : 'Send'}
+                  </button>
                 </div>
-              ) : null}
-            </div>
-
-            {!message.trim() && !reply ? (
-              <div style={styles.helperText}>
-                Type anything to begin (like “help me with fractions”) or choose a subject below.
               </div>
-            ) : null}
 
-            <div style={styles.subjectSection}>
-              <div style={styles.sectionTitle}>Start a lesson</div>
-              <div style={styles.subjectGrid}>
-                <button style={styles.subjectButton} onClick={() => startSubject('math')}>
-                  Start Math
-                </button>
-                <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
-                  Start Reading
-                </button>
-                <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
-                  Start Writing
-                </button>
-                <button style={styles.subjectButton} onClick={() => startSubject('science')}>
-                  Start Science
-                </button>
+              <div style={styles.subjectSection}>
+                <div style={styles.sectionTitle}>Start a lesson</div>
+                <div style={styles.subjectGrid}>
+                  <button style={styles.subjectButton} onClick={() => startSubject('math')}>
+                    Start Math
+                  </button>
+                  <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
+                    Start Reading
+                  </button>
+                  <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
+                    Start Writing
+                  </button>
+                  <button style={styles.subjectButton} onClick={() => startSubject('science')}>
+                    Start Science
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -197,32 +250,6 @@ export default function AskVIC() {
                 />
               </div>
             ) : null}
-
-            <div style={styles.inputSection}>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={4}
-                placeholder="Type what you need help with..."
-                style={styles.mainTextarea}
-              />
-
-              <div style={styles.inputFooter}>
-                <div style={styles.inputHint}>Press Enter to send</div>
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={loading || !message.trim()}
-                  style={{
-                    ...styles.sendButton,
-                    opacity: loading || !message.trim() ? 0.6 : 1,
-                    cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loading ? 'Thinking...' : 'Send'}
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
@@ -336,7 +363,7 @@ const styles = {
     lineHeight: 1.6,
     color: '#dbe6ff',
     maxWidth: '520px',
-    margin: '0',
+    margin: 0,
     fontWeight: 500,
   },
 
@@ -448,12 +475,27 @@ const styles = {
     color: '#d7e3ff',
   },
 
+  systemWrap: {
+    borderRadius: '24px',
+    padding: '18px',
+    background:
+      'linear-gradient(135deg, rgba(98,132,255,0.18), rgba(94,234,212,0.10))',
+    border: '1px solid rgba(130, 154, 255, 0.35)',
+    boxShadow:
+      '0 0 0 1px rgba(255,255,255,0.05) inset, 0 0 28px rgba(94,234,212,0.08)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+
   messageArea: {
     background: '#ffffff',
     border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: '20px',
     padding: '16px',
-    minHeight: '220px',
+    minHeight: '260px',
+    maxHeight: '420px',
+    overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
@@ -513,8 +555,54 @@ const styles = {
   helperText: {
     fontSize: '14px',
     lineHeight: 1.5,
-    color: '#cdd9f5',
+    color: '#d7e3ff',
     textAlign: 'center',
+  },
+
+  inputSection: {
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    borderRadius: '18px',
+    padding: '14px',
+  },
+
+  mainTextarea: {
+    width: '100%',
+    minHeight: '84px',
+    borderRadius: '16px',
+    border: '1px solid rgba(255,255,255,0.16)',
+    background: 'rgba(255,255,255,0.96)',
+    color: '#0f172a',
+    padding: '16px',
+    fontSize: '16px',
+    lineHeight: 1.5,
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+
+  inputFooter: {
+    marginTop: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '16px',
+  },
+
+  inputHint: {
+    fontSize: '13px',
+    color: '#d2def8',
+  },
+
+  sendButton: {
+    border: 'none',
+    borderRadius: '14px',
+    padding: '14px 22px',
+    fontSize: '15px',
+    fontWeight: 700,
+    color: '#07111e',
+    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
+    boxShadow: '0 10px 30px rgba(94, 234, 212, 0.20)',
   },
 
   subjectSection: {
@@ -526,7 +614,7 @@ const styles = {
   sectionTitle: {
     fontSize: '14px',
     fontWeight: 700,
-    color: '#cdd9f5',
+    color: '#d7e3ff',
   },
 
   subjectGrid: {
@@ -615,51 +703,5 @@ const styles = {
     lineHeight: 1.5,
     resize: 'vertical',
     boxSizing: 'border-box',
-  },
-
-  inputSection: {
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: '20px',
-    padding: '16px',
-  },
-
-  mainTextarea: {
-    width: '100%',
-    minHeight: '130px',
-    borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.16)',
-    background: 'rgba(255,255,255,0.95)',
-    color: '#0f172a',
-    padding: '16px',
-    fontSize: '16px',
-    lineHeight: 1.5,
-    resize: 'vertical',
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
-
-  inputFooter: {
-    marginTop: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '16px',
-  },
-
-  inputHint: {
-    fontSize: '13px',
-    color: '#b8c6e6',
-  },
-
-  sendButton: {
-    border: 'none',
-    borderRadius: '14px',
-    padding: '14px 22px',
-    fontSize: '15px',
-    fontWeight: 700,
-    color: '#07111e',
-    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
-    boxShadow: '0 10px 30px rgba(94, 234, 212, 0.20)',
   },
 }
