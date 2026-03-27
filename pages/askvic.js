@@ -4,17 +4,13 @@ export default function AskVIC() {
   const [message, setMessage] = useState('')
   const [reply, setReply] = useState('')
   const [loading, setLoading] = useState(false)
-  const [scratchPad, setScratchPad] = useState('')
+  const [showTools, setShowTools] = useState(false)
+  const [work, setWork] = useState('')
   const [notes, setNotes] = useState('')
-  const [showCalculator, setShowCalculator] = useState(false)
-  const [showNotes, setShowNotes] = useState(false)
-  const [calcInput, setCalcInput] = useState('')
-  const [calcResult, setCalcResult] = useState('')
 
   async function sendMessage(customMessage) {
-    const outgoing = typeof customMessage === 'string' ? customMessage : message
-
-    if (!outgoing.trim() || loading) return
+    const outgoing = customMessage || message
+    if (!outgoing.trim()) return
 
     setLoading(true)
     setMessage(outgoing)
@@ -29,8 +25,8 @@ export default function AskVIC() {
 
       const data = await res.json()
       setReply(data.reply || 'No reply')
-    } catch (error) {
-      setReply('Something went wrong. Please try again.')
+    } catch {
+      setReply('Something went wrong.')
     } finally {
       setLoading(false)
     }
@@ -43,178 +39,89 @@ export default function AskVIC() {
     }
   }
 
-  function chooseSubject(subject) {
-    const subjectMessage = `I need help with ${subject}. Please teach me step by step.`
-    setMessage(subjectMessage)
-    sendMessage(subjectMessage)
-  }
-
-  function runCalculator() {
-    try {
-      const safe = calcInput.replace(/[^0-9+\-*/(). ]/g, '')
-      const result = Function(`"use strict"; return (${safe})`)()
-      setCalcResult(String(result))
-    } catch {
-      setCalcResult('Invalid calculation')
-    }
+  function startSubject(subject) {
+    const msg = `I want to start a ${subject} lesson. Please guide me step by step.`
+    sendMessage(msg)
   }
 
   return (
     <div style={styles.page}>
-      <div style={styles.glowOne} />
-      <div style={styles.glowTwo} />
+      
+      {/* TOP BAR */}
+      <div style={styles.topBar}>
+        <div style={styles.logo}>VIC</div>
+        <div style={styles.status}>Ready</div>
+      </div>
 
-      <div style={styles.shell}>
-        <div style={styles.leftPanel}>
-          <div style={styles.brandRow}>
-            <div style={styles.logo}>VIC</div>
+      {/* MAIN CHAT AREA */}
+      <div style={styles.chatArea}>
+        <div style={styles.assistantBubble}>
+          VIC: I’ll guide you step by step. Choose a subject or tell me what you need help with.
+        </div>
 
-            <div>
-              <div style={styles.brandName}>VIC</div>
-              <div style={styles.tagline}>Virtual Co-Teacher</div>
-            </div>
+        {message && <div style={styles.userBubble}>You: {message}</div>}
+        {reply && <div style={styles.assistantBubble}>{reply}</div>}
+      </div>
+
+      {/* HELPER TEXT */}
+      {!message && (
+        <div style={styles.helper}>
+          Type anything to begin (like “help me with fractions”) or choose a subject below.
+        </div>
+      )}
+
+      {/* SUBJECT BUTTONS */}
+      <div style={styles.subjectRow}>
+        <button onClick={() => startSubject('math')}>Start Math</button>
+        <button onClick={() => startSubject('reading')}>Start Reading</button>
+        <button onClick={() => startSubject('writing')}>Start Writing</button>
+        <button onClick={() => startSubject('science')}>Start Science</button>
+      </div>
+
+      {/* INPUT */}
+      <div style={styles.inputBar}>
+        <textarea
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Type what you need help with..."
+          style={styles.input}
+        />
+
+        <button onClick={() => sendMessage()}>
+          {loading ? 'Thinking...' : 'Send'}
+        </button>
+      </div>
+
+      {/* TOOLS BUTTON */}
+      <div style={styles.toolsToggle}>
+        <button onClick={() => setShowTools(!showTools)}>
+          Tools
+        </button>
+      </div>
+
+      {/* TOOLS PANEL */}
+      {showTools && (
+        <div style={styles.toolsPanel}>
+          <div>
+            <strong>Work Area</strong>
+            <textarea
+              value={work}
+              onChange={(e) => setWork(e.target.value)}
+              placeholder="Write your work here..."
+            />
           </div>
 
-          <h1 style={styles.heading}>More than answers. Real teaching.</h1>
-
-          <p style={styles.subheading}>
-            VIC helps students with support, practice, enrichment, and evening help
-            in a calm, guided workspace.
-          </p>
-
-          <div style={styles.card}>
-            <div style={styles.cardTitle}>Scratch Pad</div>
+          <div>
+            <strong>Notes</strong>
             <textarea
-              value={scratchPad}
-              onChange={(e) => setScratchPad(e.target.value)}
-              placeholder="Work things out here..."
-              style={styles.sideTextarea}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Take notes..."
             />
           </div>
         </div>
-
-        <div style={styles.rightPanel}>
-          <div style={styles.chatCard}>
-            <div style={styles.chatHeader}>
-              <div>
-                <div style={styles.chatLabel}>GUIDED SESSION</div>
-                <div style={styles.chatTitle}>Teaching Workspace</div>
-              </div>
-              <div style={styles.statusPill}>
-                <span style={styles.statusDot} />
-                Ready
-              </div>
-            </div>
-
-            <div style={styles.messageArea}>
-              <div style={styles.assistantBubble}>
-                <div style={styles.bubbleLabel}>VIC</div>
-                <p style={styles.bubbleText}>
-                  I’m here to teach, not just answer. Choose a subject or tell me what
-                  you’re working on.
-                </p>
-              </div>
-
-              {message.trim() ? (
-                <div style={styles.userBubble}>
-                  <div style={styles.bubbleLabelUser}>YOU</div>
-                  <p style={styles.userBubbleText}>{message}</p>
-                </div>
-              ) : null}
-
-              {reply ? (
-                <div style={styles.assistantBubble}>
-                  <div style={styles.bubbleLabel}>VIC</div>
-                  <p style={styles.bubbleText}>{reply}</p>
-                </div>
-              ) : null}
-            </div>
-
-            <div style={styles.subjectSection}>
-              <div style={styles.sectionTitle}>Choose a subject</div>
-              <div style={styles.subjectGrid}>
-                <button style={styles.subjectButton} onClick={() => chooseSubject('math')}>
-                  Math
-                </button>
-                <button style={styles.subjectButton} onClick={() => chooseSubject('reading')}>
-                  Reading
-                </button>
-                <button style={styles.subjectButton} onClick={() => chooseSubject('writing')}>
-                  Writing
-                </button>
-                <button style={styles.subjectButton} onClick={() => chooseSubject('science')}>
-                  Science
-                </button>
-              </div>
-            </div>
-
-            <div style={styles.toolsBar}>
-              <button style={styles.toolButton} onClick={() => setShowCalculator(!showCalculator)}>
-                Calculator
-              </button>
-              <button style={styles.toolButton} onClick={() => setShowNotes(!showNotes)}>
-                Notes
-              </button>
-            </div>
-
-            {showCalculator ? (
-              <div style={styles.toolPanel}>
-                <div style={styles.cardTitleDark}>Calculator</div>
-                <input
-                  value={calcInput}
-                  onChange={(e) => setCalcInput(e.target.value)}
-                  placeholder="Example: 12 * (4 + 3)"
-                  style={styles.calcInput}
-                />
-                <div style={styles.calcRow}>
-                  <button style={styles.smallButton} onClick={runCalculator}>
-                    Calculate
-                  </button>
-                  <div style={styles.calcResult}>{calcResult}</div>
-                </div>
-              </div>
-            ) : null}
-
-            {showNotes ? (
-              <div style={styles.toolPanel}>
-                <div style={styles.cardTitleDark}>Notes</div>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Keep notes here..."
-                  style={styles.notesTextarea}
-                />
-              </div>
-            ) : null}
-
-            <div style={styles.inputSection}>
-              <textarea
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                rows={4}
-                placeholder="Type what you need help with..."
-                style={styles.mainTextarea}
-              />
-
-              <div style={styles.inputFooter}>
-                <div style={styles.inputHint}>Press Enter to send</div>
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={loading || !message.trim()}
-                  style={{
-                    ...styles.sendButton,
-                    opacity: loading || !message.trim() ? 0.6 : 1,
-                    cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  {loading ? 'Thinking...' : 'Send'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   )
 }
@@ -222,403 +129,83 @@ export default function AskVIC() {
 const styles = {
   page: {
     minHeight: '100vh',
-    background:
-      'radial-gradient(circle at top left, rgba(72,118,255,0.14), transparent 32%), radial-gradient(circle at bottom right, rgba(87,224,184,0.08), transparent 30%), linear-gradient(135deg, #0a1020 0%, #0f172a 45%, #121826 100%)',
-    color: '#e8eefc',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
-    position: 'relative',
-    overflow: 'hidden',
-  },
-
-  glowOne: {
-    position: 'absolute',
-    top: '-120px',
-    left: '-80px',
-    width: '320px',
-    height: '320px',
-    background: 'rgba(84, 119, 255, 0.16)',
-    filter: 'blur(90px)',
-    borderRadius: '50%',
-    pointerEvents: 'none',
-  },
-
-  glowTwo: {
-    position: 'absolute',
-    bottom: '-120px',
-    right: '-60px',
-    width: '320px',
-    height: '320px',
-    background: 'rgba(70, 220, 190, 0.10)',
-    filter: 'blur(90px)',
-    borderRadius: '50%',
-    pointerEvents: 'none',
-  },
-
-  shell: {
-    maxWidth: '1280px',
-    margin: '0 auto',
-    padding: '40px 24px',
-    display: 'grid',
-    gridTemplateColumns: '0.85fr 1.15fr',
-    gap: '28px',
-  },
-
-  leftPanel: {
+    background: '#0f172a',
+    color: '#fff',
     display: 'flex',
     flexDirection: 'column',
-    gap: '20px',
+    padding: '20px',
+    fontFamily: 'sans-serif',
   },
 
-  rightPanel: {
+  topBar: {
     display: 'flex',
-  },
-
-  brandRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '14px',
+    justifyContent: 'space-between',
+    marginBottom: '20px',
   },
 
   logo: {
-    width: '64px',
-    height: '64px',
-    borderRadius: '18px',
-    background: 'linear-gradient(135deg, #6f8cff 0%, #4fd1c5 100%)',
-    color: '#0a1020',
-    fontWeight: 800,
-    fontSize: '19px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    letterSpacing: '1px',
-    boxShadow: '0 12px 30px rgba(79, 209, 197, 0.25)',
+    fontWeight: 'bold',
+    fontSize: '20px',
   },
 
-  brandName: {
-    fontSize: '30px',
-    fontWeight: 900,
-    letterSpacing: '0.04em',
-    lineHeight: 1,
-    marginBottom: '6px',
-  },
-
-  tagline: {
-    fontSize: '13px',
-    color: '#8ea3d1',
-    letterSpacing: '0.08em',
-    fontWeight: 600,
-  },
-
-  heading: {
-    fontSize: '50px',
-    lineHeight: 1.02,
-    margin: 0,
-    fontWeight: 800,
-    letterSpacing: '-0.03em',
-    maxWidth: '500px',
-  },
-
-  subheading: {
-    fontSize: '18px',
-    lineHeight: 1.6,
-    color: '#b8c6e6',
-    maxWidth: '500px',
-    margin: 0,
-  },
-
-  card: {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '20px',
-    padding: '18px',
-  },
-
-  cardTitle: {
+  status: {
     fontSize: '14px',
-    fontWeight: 700,
-    marginBottom: '12px',
-    color: '#f3f7ff',
+    color: '#a5b4fc',
   },
 
-  cardTitleDark: {
-    fontSize: '14px',
-    fontWeight: 700,
-    marginBottom: '12px',
-    color: '#0f172a',
-  },
-
-  sideTextarea: {
-    width: '100%',
-    minHeight: '300px',
-    borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.10)',
-    background: 'rgba(255,255,255,0.04)',
-    color: '#eef4ff',
-    padding: '16px',
-    fontSize: '15px',
-    lineHeight: 1.5,
-    resize: 'vertical',
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
-
-  chatCard: {
-    width: '100%',
-    background: 'rgba(12, 19, 35, 0.72)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: '28px',
-    padding: '20px',
-    boxShadow: '0 25px 80px rgba(0,0,0,0.35)',
-    backdropFilter: 'blur(18px)',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '16px',
-  },
-
-  chatHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: '14px',
-    borderBottom: '1px solid rgba(255,255,255,0.08)',
-  },
-
-  chatLabel: {
-    fontSize: '11px',
-    letterSpacing: '0.16em',
-    color: '#8ea3d1',
-    fontWeight: 700,
-  },
-
-  chatTitle: {
-    fontSize: '28px',
-    fontWeight: 800,
-    marginTop: '6px',
-  },
-
-  statusPill: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: '999px',
-    padding: '8px 12px',
-    fontSize: '13px',
-    color: '#d7e3ff',
-  },
-
-  statusDot: {
-    width: '8px',
-    height: '8px',
-    background: '#5eead4',
-    borderRadius: '50%',
-  },
-
-  messageArea: {
-    background: '#ffffff',
-    border: '1px solid rgba(15,23,42,0.08)',
-    borderRadius: '20px',
-    padding: '16px',
-    minHeight: '190px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+  chatArea: {
+    flex: 1,
+    background: '#fff',
+    color: '#000',
+    borderRadius: '12px',
+    padding: '15px',
+    overflowY: 'auto',
+    marginBottom: '10px',
   },
 
   assistantBubble: {
-    alignSelf: 'flex-start',
-    maxWidth: '88%',
-    background: '#f3f7fb',
-    border: '1px solid #d8e2ee',
-    borderRadius: '18px',
-    padding: '16px 18px',
+    marginBottom: '10px',
   },
 
   userBubble: {
-    alignSelf: 'flex-end',
-    maxWidth: '88%',
-    background: '#e8f1ff',
-    border: '1px solid #c6dafd',
-    borderRadius: '18px',
-    padding: '16px 18px',
+    textAlign: 'right',
+    marginBottom: '10px',
   },
 
-  bubbleLabel: {
-    fontSize: '11px',
-    letterSpacing: '0.16em',
-    color: '#5f7290',
-    fontWeight: 700,
-    marginBottom: '8px',
-  },
-
-  bubbleLabelUser: {
-    fontSize: '11px',
-    letterSpacing: '0.16em',
-    color: '#355e9b',
-    fontWeight: 700,
-    marginBottom: '8px',
-  },
-
-  bubbleText: {
-    margin: 0,
-    fontSize: '16px',
-    lineHeight: 1.6,
-    color: '#0f172a',
-    whiteSpace: 'pre-wrap',
-  },
-
-  userBubbleText: {
-    margin: 0,
-    fontSize: '16px',
-    lineHeight: 1.6,
-    color: '#0f172a',
-    whiteSpace: 'pre-wrap',
-  },
-
-  subjectSection: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-
-  sectionTitle: {
+  helper: {
+    textAlign: 'center',
     fontSize: '14px',
-    fontWeight: 700,
-    color: '#cdd9f5',
+    marginBottom: '10px',
+    color: '#cbd5f5',
   },
 
-  subjectGrid: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
-  },
-
-  subjectButton: {
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    color: '#f7fbff',
-    padding: '16px',
-    borderRadius: '16px',
-    fontSize: '15px',
-    fontWeight: 600,
-    textAlign: 'left',
-  },
-
-  toolsBar: {
+  subjectRow: {
     display: 'flex',
     gap: '10px',
-    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: '10px',
   },
 
-  toolButton: {
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    color: '#eef4ff',
-    padding: '10px 14px',
-    borderRadius: '12px',
-    fontSize: '14px',
-    fontWeight: 600,
-  },
-
-  toolPanel: {
-    background: '#ffffff',
-    border: '1px solid rgba(15,23,42,0.08)',
-    borderRadius: '18px',
-    padding: '16px',
-  },
-
-  calcInput: {
-    width: '100%',
-    borderRadius: '12px',
-    border: '1px solid #d6e0ec',
-    background: '#f8fbff',
-    color: '#0f172a',
-    padding: '12px',
-    fontSize: '15px',
-    boxSizing: 'border-box',
-    marginBottom: '12px',
-  },
-
-  calcRow: {
+  inputBar: {
     display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    flexWrap: 'wrap',
+    gap: '10px',
   },
 
-  smallButton: {
-    border: 'none',
-    borderRadius: '12px',
-    padding: '10px 16px',
-    fontSize: '14px',
-    fontWeight: 700,
-    color: '#07111e',
-    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
+  input: {
+    flex: 1,
+    padding: '10px',
+    borderRadius: '8px',
   },
 
-  calcResult: {
-    fontSize: '14px',
-    color: '#0f172a',
+  toolsToggle: {
+    marginTop: '10px',
+    textAlign: 'center',
   },
 
-  notesTextarea: {
-    width: '100%',
-    minHeight: '120px',
-    borderRadius: '14px',
-    border: '1px solid #d6e0ec',
-    background: '#f8fbff',
-    color: '#0f172a',
-    padding: '14px',
-    fontSize: '15px',
-    lineHeight: 1.5,
-    resize: 'vertical',
-    boxSizing: 'border-box',
-  },
-
-  inputSection: {
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    borderRadius: '20px',
-    padding: '16px',
-  },
-
-  mainTextarea: {
-    width: '100%',
-    minHeight: '130px',
-    borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.16)',
-    background: 'rgba(255,255,255,0.95)',
-    color: '#0f172a',
-    padding: '16px',
-    fontSize: '16px',
-    lineHeight: 1.5,
-    resize: 'vertical',
-    outline: 'none',
-    boxSizing: 'border-box',
-  },
-
-  inputFooter: {
-    marginTop: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '16px',
-  },
-
-  inputHint: {
-    fontSize: '13px',
-    color: '#b8c6e6',
-  },
-
-  sendButton: {
-    border: 'none',
-    borderRadius: '14px',
-    padding: '14px 22px',
-    fontSize: '15px',
-    fontWeight: 700,
-    color: '#07111e',
-    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
+  toolsPanel: {
+    marginTop: '10px',
+    background: '#1e293b',
+    padding: '10px',
+    borderRadius: '10px',
   },
 }
