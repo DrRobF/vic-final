@@ -97,9 +97,14 @@ export default function AskVIC() {
       <div style={styles.shell}>
         <div style={styles.leftPanel}>
           <div style={styles.brandRow}>
-            <div style={styles.logo}>VIC</div>
+            <div style={styles.logoWrap}>
+              <div style={styles.logoCore}>
+                <span style={styles.logoText}>VC</span>
+                <div style={styles.logoShine} />
+              </div>
+            </div>
 
-            <div>
+            <div style={styles.brandTextWrap}>
               <div style={styles.brandName}>VIC</div>
               <div style={styles.tagline}>Virtual Co-Teacher</div>
             </div>
@@ -313,7 +318,7 @@ const styles = {
   shell: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '28px 24px',
+    padding: '56px 24px 28px',
     display: 'grid',
     gridTemplateColumns: '0.9fr 1.1fr',
     gap: '24px',
@@ -323,7 +328,7 @@ const styles = {
   leftPanel: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '20px',
   },
 
   rightPanel: {
@@ -333,26 +338,56 @@ const styles = {
   brandRow: {
     display: 'flex',
     alignItems: 'center',
-    gap: '14px',
+    gap: '16px',
+    marginBottom: '18px',
   },
 
-  logo: {
-    width: '60px',
-    height: '60px',
-    borderRadius: '18px',
-    background: 'linear-gradient(135deg, #6f8cff 0%, #4fd1c5 100%)',
-    color: '#0a1020',
-    fontWeight: 800,
-    fontSize: '18px',
+  logoWrap: {
+    position: 'relative',
+  },
+
+  logoCore: {
+    position: 'relative',
+    width: '72px',
+    height: '72px',
+    borderRadius: '22px',
+    background: 'linear-gradient(145deg, #7ea2ff 0%, #58dfd1 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    letterSpacing: '1px',
-    boxShadow: '0 12px 30px rgba(79, 209, 197, 0.25)',
+    boxShadow:
+      '0 16px 36px rgba(79,209,197,0.22), inset 0 1px 0 rgba(255,255,255,0.35)',
+    overflow: 'hidden',
+  },
+
+  logoText: {
+    position: 'relative',
+    zIndex: 2,
+    fontSize: '26px',
+    fontWeight: 900,
+    letterSpacing: '0.08em',
+    color: '#08111f',
+  },
+
+  logoShine: {
+    position: 'absolute',
+    top: '-18px',
+    right: '-12px',
+    width: '44px',
+    height: '44px',
+    borderRadius: '50%',
+    background: 'rgba(255,255,255,0.24)',
+    filter: 'blur(6px)',
+  },
+
+  brandTextWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
   },
 
   brandName: {
-    fontSize: '28px',
+    fontSize: '30px',
     fontWeight: 900,
     letterSpacing: '0.04em',
     lineHeight: 1,
@@ -370,6 +405,7 @@ const styles = {
     fontSize: '46px',
     lineHeight: 1.02,
     margin: 0,
+    marginBottom: '14px',
     fontWeight: 800,
     letterSpacing: '-0.03em',
     maxWidth: '520px',
@@ -381,6 +417,7 @@ const styles = {
     color: '#dbe6ff',
     maxWidth: '520px',
     margin: 0,
+    marginBottom: '10px',
     fontWeight: 500,
   },
 
