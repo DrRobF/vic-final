@@ -11,17 +11,20 @@ export default function AskVIC() {
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
 
-  async function sendMessage() {
-    if (!message.trim() || loading) return
+  async function sendMessage(customMessage) {
+    const outgoing = typeof customMessage === 'string' ? customMessage : message
+
+    if (!outgoing.trim() || loading) return
 
     setLoading(true)
+    setMessage(outgoing)
     setReply('VIC is thinking...')
 
     try {
       const res = await fetch('/api/vic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ message: outgoing }),
       })
 
       const data = await res.json()
@@ -41,7 +44,9 @@ export default function AskVIC() {
   }
 
   function chooseSubject(subject) {
-    setMessage(`I need help with ${subject}. Please teach me step by step.`)
+    const subjectMessage = `I need help with ${subject}. Please teach me step by step.`
+    setMessage(subjectMessage)
+    sendMessage(subjectMessage)
   }
 
   function runCalculator() {
@@ -62,10 +67,11 @@ export default function AskVIC() {
       <div style={styles.shell}>
         <div style={styles.leftPanel}>
           <div style={styles.brandRow}>
-            <div style={styles.logo}>V</div>
+            <div style={styles.logo}>VIC</div>
+
             <div>
-              <div style={styles.eyebrow}>AI TEACHER</div>
               <div style={styles.brandName}>VIC</div>
+              <div style={styles.tagline}>Virtual Co-Teacher</div>
             </div>
           </div>
 
@@ -92,11 +98,11 @@ export default function AskVIC() {
             <div style={styles.chatHeader}>
               <div>
                 <div style={styles.chatLabel}>GUIDED SESSION</div>
-                <div style={styles.chatTitle}>Start with VIC</div>
+                <div style={styles.chatTitle}>Teaching Workspace</div>
               </div>
               <div style={styles.statusPill}>
                 <span style={styles.statusDot} />
-                Ready to teach
+                Ready
               </div>
             </div>
 
@@ -112,7 +118,7 @@ export default function AskVIC() {
               {message.trim() ? (
                 <div style={styles.userBubble}>
                   <div style={styles.bubbleLabelUser}>YOU</div>
-                  <p style={styles.bubbleText}>{message}</p>
+                  <p style={styles.userBubbleText}>{message}</p>
                 </div>
               ) : null}
 
@@ -153,7 +159,7 @@ export default function AskVIC() {
 
             {showCalculator ? (
               <div style={styles.toolPanel}>
-                <div style={styles.cardTitle}>Calculator</div>
+                <div style={styles.cardTitleDark}>Calculator</div>
                 <input
                   value={calcInput}
                   onChange={(e) => setCalcInput(e.target.value)}
@@ -171,7 +177,7 @@ export default function AskVIC() {
 
             {showNotes ? (
               <div style={styles.toolPanel}>
-                <div style={styles.cardTitle}>Notes</div>
+                <div style={styles.cardTitleDark}>Notes</div>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
@@ -194,7 +200,7 @@ export default function AskVIC() {
               <div style={styles.inputFooter}>
                 <div style={styles.inputHint}>Press Enter to send</div>
                 <button
-                  onClick={sendMessage}
+                  onClick={() => sendMessage()}
                   disabled={loading || !message.trim()}
                   style={{
                     ...styles.sendButton,
@@ -202,7 +208,7 @@ export default function AskVIC() {
                     cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  {loading ? 'Teaching...' : 'Start'}
+                  {loading ? 'Thinking...' : 'Send'}
                 </button>
               </div>
             </div>
@@ -217,7 +223,7 @@ const styles = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(72,118,255,0.16), transparent 32%), radial-gradient(circle at bottom right, rgba(87,224,184,0.10), transparent 30%), linear-gradient(135deg, #0a1020 0%, #0f172a 45%, #121826 100%)',
+      'radial-gradient(circle at top left, rgba(72,118,255,0.14), transparent 32%), radial-gradient(circle at bottom right, rgba(87,224,184,0.08), transparent 30%), linear-gradient(135deg, #0a1020 0%, #0f172a 45%, #121826 100%)',
     color: '#e8eefc',
     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
@@ -233,6 +239,7 @@ const styles = {
     background: 'rgba(84, 119, 255, 0.16)',
     filter: 'blur(90px)',
     borderRadius: '50%',
+    pointerEvents: 'none',
   },
 
   glowTwo: {
@@ -244,6 +251,7 @@ const styles = {
     background: 'rgba(70, 220, 190, 0.10)',
     filter: 'blur(90px)',
     borderRadius: '50%',
+    pointerEvents: 'none',
   },
 
   shell: {
@@ -272,29 +280,33 @@ const styles = {
   },
 
   logo: {
-    width: '48px',
-    height: '48px',
-    borderRadius: '14px',
-    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
-    color: '#08111f',
-    fontWeight: 700,
-    fontSize: '22px',
+    width: '64px',
+    height: '64px',
+    borderRadius: '18px',
+    background: 'linear-gradient(135deg, #6f8cff 0%, #4fd1c5 100%)',
+    color: '#0a1020',
+    fontWeight: 800,
+    fontSize: '19px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-
-  eyebrow: {
-    fontSize: '11px',
-    letterSpacing: '0.18em',
-    color: '#8ea3d1',
-    fontWeight: 700,
+    letterSpacing: '1px',
+    boxShadow: '0 12px 30px rgba(79, 209, 197, 0.25)',
   },
 
   brandName: {
-    fontSize: '20px',
-    fontWeight: 700,
-    marginTop: '3px',
+    fontSize: '30px',
+    fontWeight: 900,
+    letterSpacing: '0.04em',
+    lineHeight: 1,
+    marginBottom: '6px',
+  },
+
+  tagline: {
+    fontSize: '13px',
+    color: '#8ea3d1',
+    letterSpacing: '0.08em',
+    fontWeight: 600,
   },
 
   heading: {
@@ -326,6 +338,13 @@ const styles = {
     fontWeight: 700,
     marginBottom: '12px',
     color: '#f3f7ff',
+  },
+
+  cardTitleDark: {
+    fontSize: '14px',
+    fontWeight: 700,
+    marginBottom: '12px',
+    color: '#0f172a',
   },
 
   sideTextarea: {
@@ -397,21 +416,22 @@ const styles = {
   },
 
   messageArea: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: '#ffffff',
+    border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: '20px',
     padding: '16px',
-    minHeight: '170px',
+    minHeight: '190px',
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
   },
 
   assistantBubble: {
     alignSelf: 'flex-start',
     maxWidth: '88%',
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
+    background: '#f3f7fb',
+    border: '1px solid #d8e2ee',
     borderRadius: '18px',
     padding: '16px 18px',
   },
@@ -419,8 +439,8 @@ const styles = {
   userBubble: {
     alignSelf: 'flex-end',
     maxWidth: '88%',
-    background: 'linear-gradient(135deg, rgba(122,162,255,0.20), rgba(94,234,212,0.12))',
-    border: '1px solid rgba(122,162,255,0.20)',
+    background: '#e8f1ff',
+    border: '1px solid #c6dafd',
     borderRadius: '18px',
     padding: '16px 18px',
   },
@@ -428,7 +448,7 @@ const styles = {
   bubbleLabel: {
     fontSize: '11px',
     letterSpacing: '0.16em',
-    color: '#8ea3d1',
+    color: '#5f7290',
     fontWeight: 700,
     marginBottom: '8px',
   },
@@ -436,7 +456,7 @@ const styles = {
   bubbleLabelUser: {
     fontSize: '11px',
     letterSpacing: '0.16em',
-    color: '#b8fff1',
+    color: '#355e9b',
     fontWeight: 700,
     marginBottom: '8px',
   },
@@ -445,7 +465,15 @@ const styles = {
     margin: 0,
     fontSize: '16px',
     lineHeight: 1.6,
-    color: '#edf3ff',
+    color: '#0f172a',
+    whiteSpace: 'pre-wrap',
+  },
+
+  userBubbleText: {
+    margin: 0,
+    fontSize: '16px',
+    lineHeight: 1.6,
+    color: '#0f172a',
     whiteSpace: 'pre-wrap',
   },
 
@@ -468,9 +496,9 @@ const styles = {
   },
 
   subjectButton: {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    color: '#e8eefc',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    color: '#f7fbff',
     padding: '16px',
     borderRadius: '16px',
     fontSize: '15px',
@@ -481,20 +509,22 @@ const styles = {
   toolsBar: {
     display: 'flex',
     gap: '10px',
+    flexWrap: 'wrap',
   },
 
   toolButton: {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    color: '#dfe8fb',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    color: '#eef4ff',
     padding: '10px 14px',
     borderRadius: '12px',
     fontSize: '14px',
+    fontWeight: 600,
   },
 
   toolPanel: {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: '#ffffff',
+    border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: '18px',
     padding: '16px',
   },
@@ -502,9 +532,9 @@ const styles = {
   calcInput: {
     width: '100%',
     borderRadius: '12px',
-    border: '1px solid rgba(255,255,255,0.10)',
-    background: 'rgba(255,255,255,0.04)',
-    color: '#eef4ff',
+    border: '1px solid #d6e0ec',
+    background: '#f8fbff',
+    color: '#0f172a',
     padding: '12px',
     fontSize: '15px',
     boxSizing: 'border-box',
@@ -515,6 +545,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     gap: '12px',
+    flexWrap: 'wrap',
   },
 
   smallButton: {
@@ -529,16 +560,16 @@ const styles = {
 
   calcResult: {
     fontSize: '14px',
-    color: '#dbe6ff',
+    color: '#0f172a',
   },
 
   notesTextarea: {
     width: '100%',
     minHeight: '120px',
     borderRadius: '14px',
-    border: '1px solid rgba(255,255,255,0.10)',
-    background: 'rgba(255,255,255,0.04)',
-    color: '#eef4ff',
+    border: '1px solid #d6e0ec',
+    background: '#f8fbff',
+    color: '#0f172a',
     padding: '14px',
     fontSize: '15px',
     lineHeight: 1.5,
@@ -547,7 +578,7 @@ const styles = {
   },
 
   inputSection: {
-    background: 'rgba(255,255,255,0.06)',
+    background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '20px',
     padding: '16px',
@@ -557,9 +588,9 @@ const styles = {
     width: '100%',
     minHeight: '130px',
     borderRadius: '16px',
-    border: '1px solid rgba(255,255,255,0.12)',
-    background: 'rgba(255,255,255,0.08)',
-    color: '#eef4ff',
+    border: '1px solid rgba(255,255,255,0.16)',
+    background: 'rgba(255,255,255,0.95)',
+    color: '#0f172a',
     padding: '16px',
     fontSize: '16px',
     lineHeight: 1.5,
@@ -578,7 +609,7 @@ const styles = {
 
   inputHint: {
     fontSize: '13px',
-    color: '#90a3c8',
+    color: '#b8c6e6',
   },
 
   sendButton: {
