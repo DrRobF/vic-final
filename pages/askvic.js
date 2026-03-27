@@ -28,36 +28,47 @@ export default function AskVIC() {
     if (!outgoing.trim() || loading) return
 
     const userMessage = { role: 'user', text: outgoing }
-    const thinkingMessage = { role: 'assistant', text: 'VIC is thinking...' }
 
-    setMessages((prev) => [...prev, userMessage, thinkingMessage])
+    const nextMessages = [...messages, userMessage]
+
+    setMessages([...nextMessages, { role: 'assistant', text: 'VIC is thinking...' }])
     setLoading(true)
     setInput('')
 
     try {
+      const apiMessages = nextMessages.map((msg) => ({
+        role: msg.role,
+        content: msg.text,
+      }))
+
       const res = await fetch('/api/vic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: outgoing }),
+        body: JSON.stringify({ messages: apiMessages }),
       })
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`)
+      }
 
       const data = await res.json()
       const finalReply = data.reply || 'No reply'
 
-      setMessages((prev) => {
-        const updated = [...prev]
-        updated[updated.length - 1] = { role: 'assistant', text: finalReply }
-        return updated
-      })
+      setMessages([
+        ...nextMessages,
+        {
+          role: 'assistant',
+          text: finalReply,
+        },
+      ])
     } catch (error) {
-      setMessages((prev) => {
-        const updated = [...prev]
-        updated[updated.length - 1] = {
+      setMessages([
+        ...nextMessages,
+        {
           role: 'assistant',
           text: 'Something went wrong. Please try again.',
-        }
-        return updated
-      })
+        },
+      ])
     } finally {
       setLoading(false)
     }
@@ -192,7 +203,7 @@ export default function AskVIC() {
 
               <div style={styles.statusWrap}>
                 <span style={styles.statusDot} />
-                <span style={styles.statusText}>Ready</span>
+                <span style={styles.statusText}>{loading ? 'Thinking' : 'Ready'}</span>
               </div>
             </div>
 
