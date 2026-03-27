@@ -48,55 +48,62 @@ export default function AskVIC() {
           <div style={styles.brandRow}>
             <div style={styles.logo}>V</div>
             <div>
-              <div style={styles.eyebrow}>AI TUTOR</div>
+              <div style={styles.eyebrow}>AI TEACHER</div>
               <div style={styles.brandName}>VIC</div>
             </div>
           </div>
 
-          <h1 style={styles.heading}>Ask better. Learn faster.</h1>
+          <h1 style={styles.heading}>More than answers. Real teaching.</h1>
 
           <p style={styles.subheading}>
-            VIC helps students think clearly, practice confidently, and get
-            unstuck without the pressure of a classroom.
+            VIC is built to teach, adapt, and support students in real time —
+            whether they need intervention, extra practice, enrichment, or help
+            in the evening when no teacher is there.
           </p>
 
-          <div style={styles.promptGrid}>
-            <button style={styles.promptButton} onClick={() => usePrompt('Help me with fractions')}>
-              Help me with fractions
-            </button>
-            <button style={styles.promptButton} onClick={() => usePrompt('Quiz me on vocabulary')}>
-              Quiz me on vocabulary
-            </button>
-            <button style={styles.promptButton} onClick={() => usePrompt('Explain this step by step')}>
-              Explain this step by step
-            </button>
-            <button style={styles.promptButton} onClick={() => usePrompt('I need help getting started')}>
-              I need help getting started
-            </button>
+          <div style={styles.audienceGrid}>
+            <div style={styles.audienceCard}>
+              <div style={styles.audienceTitle}>For students</div>
+              <div style={styles.audienceText}>
+                Step-by-step help that meets you where you are without making
+                you feel behind.
+              </div>
+            </div>
+
+            <div style={styles.audienceCard}>
+              <div style={styles.audienceTitle}>For parents</div>
+              <div style={styles.audienceText}>
+                Extra support at home that teaches, guides, and builds
+                confidence.
+              </div>
+            </div>
+
+            <div style={styles.audienceCard}>
+              <div style={styles.audienceTitle}>For teachers</div>
+              <div style={styles.audienceText}>
+                An extra set of hands for follow-up help, differentiation, and
+                practice beyond the school day.
+              </div>
+            </div>
           </div>
 
-          <div style={styles.infoRow}>
-            <div style={styles.infoCard}>
-              <div style={styles.infoTitle}>Student-friendly</div>
-              <div style={styles.infoText}>Clear explanations without overwhelm.</div>
-            </div>
-
-            <div style={styles.infoCard}>
-              <div style={styles.infoTitle}>Calm support</div>
-              <div style={styles.infoText}>Built to guide, not intimidate.</div>
-            </div>
+          <div style={styles.featureList}>
+            <div style={styles.featureItem}>Teaches instead of just replying</div>
+            <div style={styles.featureItem}>Supports struggling students patiently</div>
+            <div style={styles.featureItem}>Provides enrichment for advanced learners</div>
+            <div style={styles.featureItem}>Available when students need help at night</div>
           </div>
         </div>
 
         <div style={styles.chatPanel}>
           <div style={styles.chatHeader}>
             <div>
-              <div style={styles.chatLabel}>LIVE SESSION</div>
-              <div style={styles.chatTitle}>Ask VIC</div>
+              <div style={styles.chatLabel}>GUIDED SESSION</div>
+              <div style={styles.chatTitle}>Start with VIC</div>
             </div>
             <div style={styles.statusWrap}>
               <span style={styles.statusDot} />
-              <span style={styles.statusText}>Ready</span>
+              <span style={styles.statusText}>Ready to teach</span>
             </div>
           </div>
 
@@ -104,8 +111,9 @@ export default function AskVIC() {
             <div style={styles.assistantBubble}>
               <div style={styles.bubbleLabel}>VIC</div>
               <p style={styles.bubbleText}>
-                Hi — tell me what you’re working on, what grade you’re in, or
-                where you want to jump in.
+                I’m here to teach, not just give answers. Tell me your grade,
+                subject, and what you’re working on, and I’ll help you step by
+                step from the right starting point.
               </p>
             </div>
 
@@ -124,6 +132,24 @@ export default function AskVIC() {
             ) : null}
           </div>
 
+          <div style={styles.promptSection}>
+            <div style={styles.promptHeading}>Try a guided starting point</div>
+            <div style={styles.promptGrid}>
+              <button style={styles.promptButton} onClick={() => usePrompt('I am struggling with fractions and need to start from the beginning.')}>
+                I’m struggling and need to start from the beginning
+              </button>
+              <button style={styles.promptButton} onClick={() => usePrompt('Give me extra practice on vocabulary and check my understanding.')}>
+                Give me extra practice and check my understanding
+              </button>
+              <button style={styles.promptButton} onClick={() => usePrompt('Challenge me with something harder once I understand this.')}>
+                Challenge me once I understand this
+              </button>
+              <button style={styles.promptButton} onClick={() => usePrompt('It is evening and I need help finishing this for tomorrow.')}>
+                I need help tonight getting ready for tomorrow
+              </button>
+            </div>
+          </div>
+
           <div style={styles.inputWrap}>
             <textarea
               value={message}
@@ -131,11 +157,13 @@ export default function AskVIC() {
               onKeyDown={handleKeyDown}
               rows={5}
               style={styles.textarea}
-              placeholder="Ask a question, paste a problem, or tell VIC what you need help with..."
+              placeholder="Example: I’m in 5th grade math and I’m stuck on fractions. Please teach me step by step and check if I understand before moving on."
             />
 
             <div style={styles.inputFooter}>
-              <div style={styles.inputHint}>Press Enter to send · Shift+Enter for a new line</div>
+              <div style={styles.inputHint}>
+                Press Enter to send · Shift+Enter for a new line
+              </div>
 
               <button
                 onClick={sendMessage}
@@ -146,7 +174,7 @@ export default function AskVIC() {
                   cursor: loading || !message.trim() ? 'not-allowed' : 'pointer',
                 }}
               >
-                {loading ? 'Thinking...' : 'Send'}
+                {loading ? 'Teaching...' : 'Start'}
               </button>
             </div>
           </div>
@@ -195,9 +223,9 @@ const styles = {
   shell: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '48px 24px',
+    padding: '44px 24px',
     display: 'grid',
-    gridTemplateColumns: '1fr 1.1fr',
+    gridTemplateColumns: '1fr 1.08fr',
     gap: '28px',
     alignItems: 'stretch',
   },
@@ -241,66 +269,65 @@ const styles = {
   },
 
   heading: {
-    fontSize: '56px',
+    fontSize: '52px',
     lineHeight: 1.02,
     margin: '0 0 18px 0',
     fontWeight: 800,
     letterSpacing: '-0.03em',
-    maxWidth: '540px',
+    maxWidth: '560px',
   },
 
   subheading: {
     fontSize: '19px',
     lineHeight: 1.65,
     color: '#b8c6e6',
-    maxWidth: '560px',
-    margin: '0 0 28px 0',
+    maxWidth: '580px',
+    margin: '0 0 26px 0',
   },
 
-  promptGrid: {
+  audienceGrid: {
     display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
+    gridTemplateColumns: '1fr',
     gap: '12px',
-    marginBottom: '26px',
+    marginBottom: '20px',
+    maxWidth: '590px',
   },
 
-  promptButton: {
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
-    color: '#e8eefc',
-    padding: '14px 16px',
-    borderRadius: '16px',
-    textAlign: 'left',
-    fontSize: '15px',
-    lineHeight: 1.4,
-    backdropFilter: 'blur(10px)',
-  },
-
-  infoRow: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '14px',
-  },
-
-  infoCard: {
+  audienceCard: {
     background: 'rgba(255,255,255,0.05)',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '18px',
-    padding: '18px',
+    padding: '18px 18px',
     backdropFilter: 'blur(10px)',
   },
 
-  infoTitle: {
+  audienceTitle: {
     fontSize: '14px',
     fontWeight: 700,
     marginBottom: '8px',
     color: '#f3f7ff',
   },
 
-  infoText: {
-    fontSize: '14px',
+  audienceText: {
+    fontSize: '15px',
     lineHeight: 1.55,
     color: '#b8c6e6',
+  },
+
+  featureList: {
+    display: 'grid',
+    gridTemplateColumns: '1fr',
+    gap: '10px',
+    maxWidth: '590px',
+  },
+
+  featureItem: {
+    fontSize: '15px',
+    color: '#dbe6ff',
+    padding: '10px 14px',
+    borderLeft: '2px solid rgba(94, 234, 212, 0.55)',
+    background: 'rgba(255,255,255,0.03)',
+    borderRadius: '10px',
   },
 
   chatPanel: {
@@ -312,7 +339,7 @@ const styles = {
     backdropFilter: 'blur(18px)',
     display: 'flex',
     flexDirection: 'column',
-    minHeight: '760px',
+    minHeight: '720px',
   },
 
   chatHeader: {
@@ -321,7 +348,7 @@ const styles = {
     alignItems: 'center',
     paddingBottom: '18px',
     borderBottom: '1px solid rgba(255,255,255,0.08)',
-    marginBottom: '18px',
+    marginBottom: '16px',
   },
 
   chatLabel: {
@@ -361,17 +388,46 @@ const styles = {
   },
 
   chatBody: {
-    flex: 1,
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
-    padding: '10px 2px 18px 2px',
-    overflowY: 'auto',
+    padding: '6px 2px 16px 2px',
+    minHeight: '220px',
+  },
+
+  promptSection: {
+    paddingTop: '8px',
+    paddingBottom: '16px',
+  },
+
+  promptHeading: {
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#cdd9f5',
+    marginBottom: '12px',
+  },
+
+  promptGrid: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '12px',
+  },
+
+  promptButton: {
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    color: '#e8eefc',
+    padding: '14px 16px',
+    borderRadius: '16px',
+    textAlign: 'left',
+    fontSize: '14px',
+    lineHeight: 1.45,
+    backdropFilter: 'blur(10px)',
   },
 
   assistantBubble: {
     alignSelf: 'flex-start',
-    maxWidth: '85%',
+    maxWidth: '88%',
     background: 'rgba(255,255,255,0.06)',
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '20px',
@@ -380,7 +436,7 @@ const styles = {
 
   userBubble: {
     alignSelf: 'flex-end',
-    maxWidth: '85%',
+    maxWidth: '88%',
     background: 'linear-gradient(135deg, rgba(122,162,255,0.20), rgba(94,234,212,0.12))',
     border: '1px solid rgba(122,162,255,0.20)',
     borderRadius: '20px',
@@ -414,11 +470,12 @@ const styles = {
   inputWrap: {
     borderTop: '1px solid rgba(255,255,255,0.08)',
     paddingTop: '18px',
+    marginTop: 'auto',
   },
 
   textarea: {
     width: '100%',
-    minHeight: '140px',
+    minHeight: '132px',
     borderRadius: '20px',
     border: '1px solid rgba(255,255,255,0.10)',
     background: 'rgba(255,255,255,0.04)',
