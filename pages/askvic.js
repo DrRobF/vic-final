@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 const BRAIN_VERSION = 'v3.2.2'
 
@@ -15,33 +15,59 @@ export default function AskVIC() {
     {
       role: 'assistant',
       text: 'I’m here to teach, not just answer. Type anything to begin or start a lesson below.',
+      visual: {
+        type: 'welcome',
+        title: 'How VIC helps',
+        items: [
+          'Teaches step by step',
+          'Uses examples and visuals',
+          'Checks understanding',
+        ],
+      },
     },
   ])
 
-  const assistantMessageRefs = useRef({})
   const messageAreaRef = useRef(null)
+  const assistantMessageRefs = useRef({})
+  const previousMessageCountRef = useRef(messages.length)
+
+  const canGetReport = useMemo(() => messages.length > 1 && !loading, [messages.length, loading])
 
   useEffect(() => {
     const lastIndex = messages.length - 1
     const lastMessage = messages[lastIndex]
 
-    if (lastMessage?.role === 'assistant') {
-      const container = messageAreaRef.current
-      const target = assistantMessageRefs.current[lastIndex]
-
-      if (container && target) {
-        requestAnimationFrame(() => {
-          const containerRect = container.getBoundingClientRect()
-          const targetRect = target.getBoundingClientRect()
-          const relativeTop = targetRect.top - containerRect.top + container.scrollTop
-
-          container.scrollTo({
-            top: Math.max(relativeTop - 8, 0),
-            behavior: 'smooth',
-          })
-        })
-      }
+    if (!lastMessage || lastMessage.role !== 'assistant') {
+      previousMessageCountRef.current = messages.length
+      return
     }
+
+    const container = messageAreaRef.current
+    const target = assistantMessageRefs.current[lastIndex]
+
+    if (!container || !target) {
+      previousMessageCountRef.current = messages.length
+      return
+    }
+
+    const scrollToNewestAssistant = () => {
+      const containerRect = container.getBoundingClientRect()
+      const targetRect = target.getBoundingClientRect()
+      const offsetTop = targetRect.top - containerRect.top + container.scrollTop
+      const idealTop = Math.max(offsetTop - 10, 0)
+
+      container.scrollTo({
+        top: idealTop,
+        behavior: messages.length > previousMessageCountRef.current ? 'smooth' : 'auto',
+      })
+    }
+
+    requestAnimationFrame(() => {
+      scrollToNewestAssistant()
+      setTimeout(scrollToNewestAssistant, 80)
+    })
+
+    previousMessageCountRef.current = messages.length
   }, [messages])
 
   async function sendMessage(customMessage) {
@@ -52,7 +78,14 @@ export default function AskVIC() {
     const userMessage = { role: 'user', text: outgoing }
     const nextMessages = [...messages, userMessage]
 
-    setMessages([...nextMessages, { role: 'assistant', text: 'VIC is thinking...' }])
+    setMessages([
+      ...nextMessages,
+      {
+        role: 'assistant',
+        text: 'VIC is thinking...',
+      },
+    ])
+
     setLoading(true)
     setInput('')
 
@@ -74,12 +107,14 @@ export default function AskVIC() {
 
       const data = await res.json()
       const finalReply = data.reply || 'No reply'
+      const visual = inferVisualFromConversation(outgoing, finalReply)
 
       const updatedMessages = [
         ...nextMessages,
         {
           role: 'assistant',
           text: finalReply,
+          visual,
         },
       ]
 
@@ -92,6 +127,11 @@ export default function AskVIC() {
         {
           role: 'assistant',
           text: errorReply,
+          visual: {
+            type: 'tip',
+            title: 'Quick fix',
+            body: 'Try sending the message again. If it keeps happening, check the API route or OpenAI response.',
+          },
         },
       ])
       return errorReply
@@ -163,6 +203,7 @@ export default function AskVIC() {
                 style={styles.logoImage}
               />
             </div>
+
             <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
           </div>
 
@@ -198,6 +239,7 @@ export default function AskVIC() {
               >
                 Calculator
               </button>
+
               <button
                 style={styles.toolButton}
                 onClick={() => setShowNotes(!showNotes)}
@@ -271,13 +313,16 @@ export default function AskVIC() {
                     >
                       {msg.role === 'assistant' ? 'VIC' : 'YOU'}
                     </div>
+
                     <p
-                      style={
-                        msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText
-                      }
+                      style={msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText}
                     >
                       {msg.text}
                     </p>
+
+                    {msg.role === 'assistant' && msg.visual ? (
+                      <VisualCardRenderer visual={msg.visual} />
+                    ) : null}
                   </div>
                 ))}
               </div>
@@ -300,6 +345,7 @@ export default function AskVIC() {
 
                 <div style={styles.inputFooter}>
                   <div style={styles.inputHint}>Press Enter to send</div>
+
                   <button
                     onClick={() => sendMessage()}
                     disabled={loading || !input.trim()}
@@ -317,14 +363,15 @@ export default function AskVIC() {
               <div style={styles.subjectSection}>
                 <div style={styles.sectionHeaderRow}>
                   <div style={styles.sectionTitle}>Start a lesson</div>
+
                   <button
                     style={{
                       ...styles.reportButton,
-                      opacity: messages.length <= 1 || loading ? 0.6 : 1,
-                      cursor: messages.length <= 1 || loading ? 'not-allowed' : 'pointer',
+                      opacity: canGetReport ? 1 : 0.6,
+                      cursor: canGetReport ? 'pointer' : 'not-allowed',
                     }}
                     onClick={requestReport}
-                    disabled={messages.length <= 1 || loading}
+                    disabled={!canGetReport}
                   >
                     Get Report
                   </button>
@@ -351,6 +398,294 @@ export default function AskVIC() {
       </div>
     </div>
   )
+}
+
+function VisualCardRenderer({ visual }) {
+  if (!visual || !visual.type) return null
+
+  if (visual.type === 'welcome') {
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Lesson support'}</div>
+          <div style={styles.visualBadge}>Live visual</div>
+        </div>
+
+        <div style={styles.visualList}>
+          {(visual.items || []).map((item, index) => (
+            <div key={`${item}-${index}`} style={styles.visualListItem}>
+              <span style={styles.visualListDot} />
+              <span>{item}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (visual.type === 'fraction') {
+    const numerator = Math.max(0, Number(visual.numerator) || 0)
+    const denominator = Math.max(1, Number(visual.denominator) || 1)
+
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Fraction model'}</div>
+          <div style={styles.visualBadge}>
+            {numerator}/{denominator}
+          </div>
+        </div>
+
+        <div style={styles.fractionBarWrap}>
+          {Array.from({ length: denominator }).map((_, index) => (
+            <div
+              key={index}
+              style={{
+                ...styles.fractionPiece,
+                background:
+                  index < numerator
+                    ? 'linear-gradient(135deg, #7c5cff 0%, #43e7d0 100%)'
+                    : '#e2e8f0',
+              }}
+            />
+          ))}
+        </div>
+
+        <div style={styles.visualDescription}>
+          {numerator} out of {denominator} equal parts are shaded.
+        </div>
+      </div>
+    )
+  }
+
+  if (visual.type === 'numberline') {
+    const start = Number.isFinite(visual.start) ? visual.start : 0
+    const end = Number.isFinite(visual.end) ? visual.end : 10
+    const highlight = Number.isFinite(visual.highlight) ? visual.highlight : start
+    const values = []
+
+    for (let i = start; i <= end; i += 1) {
+      values.push(i)
+    }
+
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Number line'}</div>
+          <div style={styles.visualBadge}>Math visual</div>
+        </div>
+
+        <div style={styles.numberLineWrap}>
+          <div style={styles.numberLineBase} />
+          <div style={styles.numberLineRow}>
+            {values.map((value) => {
+              const isHighlight = value === highlight
+
+              return (
+                <div key={value} style={styles.numberTickWrap}>
+                  <div
+                    style={{
+                      ...styles.numberDot,
+                      background: isHighlight ? '#7c5cff' : '#94a3b8',
+                      boxShadow: isHighlight ? '0 0 0 5px rgba(124,92,255,0.14)' : 'none',
+                    }}
+                  />
+                  <div
+                    style={{
+                      ...styles.numberLabel,
+                      color: isHighlight ? '#4338ca' : '#475569',
+                      fontWeight: isHighlight ? 700 : 600,
+                    }}
+                  >
+                    {value}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div style={styles.visualDescription}>
+          The highlighted point shows {highlight}.
+        </div>
+      </div>
+    )
+  }
+
+  if (visual.type === 'steps') {
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Step-by-step'}</div>
+          <div style={styles.visualBadge}>Teacher board</div>
+        </div>
+
+        <div style={styles.stepList}>
+          {(visual.steps || []).map((step, index) => (
+            <div key={`${step}-${index}`} style={styles.stepRow}>
+              <div style={styles.stepNumber}>{index + 1}</div>
+              <div style={styles.stepText}>{step}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  if (visual.type === 'vocab') {
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Vocabulary card'}</div>
+          <div style={styles.visualBadge}>ELA support</div>
+        </div>
+
+        <div style={styles.vocabWord}>{visual.word || 'Vocabulary'}</div>
+        <div style={styles.vocabDefinition}>{visual.definition || ''}</div>
+
+        {visual.example ? (
+          <div style={styles.vocabExampleBox}>
+            <div style={styles.vocabExampleLabel}>Example</div>
+            <div style={styles.vocabExampleText}>{visual.example}</div>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (visual.type === 'tip') {
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Quick tip'}</div>
+          <div style={styles.visualBadge}>Support</div>
+        </div>
+        <div style={styles.visualDescription}>{visual.body || ''}</div>
+      </div>
+    )
+  }
+
+  return null
+}
+
+function inferVisualFromConversation(userText, assistantText) {
+  const combined = `${userText} ${assistantText}`.toLowerCase()
+
+  const fractionMatch =
+    combined.match(/(\d+)\s*\/\s*(\d+)/) ||
+    combined.match(/(\d+)\s+out of\s+(\d+)/)
+
+  if (
+    fractionMatch &&
+    !combined.includes('grade 10') &&
+    !combined.includes('chapter') &&
+    !combined.includes('page')
+  ) {
+    const numerator = Number(fractionMatch[1])
+    const denominator = Number(fractionMatch[2])
+
+    if (denominator > 0 && denominator <= 12 && numerator <= denominator) {
+      return {
+        type: 'fraction',
+        title: 'Fraction model',
+        numerator,
+        denominator,
+      }
+    }
+  }
+
+  const numberMatch =
+    combined.match(/\bnumber line\b/) ||
+    combined.match(/\bcount\b/) ||
+    combined.match(/\binteger\b/) ||
+    combined.match(/\bnegative\b/)
+
+  if (numberMatch) {
+    const highlightMatch = assistantText.match(/-?\d+/)
+    const highlight = highlightMatch ? Number(highlightMatch[0]) : 3
+    const start = Math.min(highlight - 3, 0)
+    const end = Math.max(highlight + 3, 6)
+
+    return {
+      type: 'numberline',
+      title: 'Number line',
+      start,
+      end,
+      highlight,
+    }
+  }
+
+  if (
+    combined.includes('step by step') ||
+    combined.includes('first') ||
+    combined.includes('next') ||
+    combined.includes('then') ||
+    combined.includes('finally')
+  ) {
+    const parsedSteps = extractSteps(assistantText)
+
+    if (parsedSteps.length >= 2) {
+      return {
+        type: 'steps',
+        title: 'Let’s break it down',
+        steps: parsedSteps.slice(0, 4),
+      }
+    }
+  }
+
+  if (
+    combined.includes('vocabulary') ||
+    combined.includes('define') ||
+    combined.includes('definition') ||
+    combined.includes('meaning of')
+  ) {
+    const vocab = extractVocabularyCard(assistantText)
+    if (vocab) return vocab
+  }
+
+  return null
+}
+
+function extractSteps(text) {
+  if (!text) return []
+
+  const lines = text
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+
+  const numberedLines = lines
+    .map((line) => line.replace(/^\d+[\).\s-]+/, '').trim())
+    .filter((line, index) => /^\d+[\).\s-]+/.test(lines[index]))
+
+  if (numberedLines.length >= 2) return numberedLines
+
+  const sentences = text
+    .split(/(?<=[.!?])\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+
+  return sentences.filter((sentence) => sentence.length <= 120).slice(0, 4)
+}
+
+function extractVocabularyCard(text) {
+  if (!text) return null
+
+  const pattern = /([A-Za-z][A-Za-z\s-]{1,30})\s+(means|is)\s+([^.!?]{8,180})/i
+  const match = text.match(pattern)
+
+  if (!match) return null
+
+  const word = match[1].trim()
+  const definition = match[3].trim()
+
+  return {
+    type: 'vocab',
+    title: 'Vocabulary',
+    word,
+    definition,
+    example: 'Try using the word in your own sentence.',
+  }
 }
 
 const styles = {
@@ -433,11 +768,11 @@ const styles = {
 
   logoImageWrap: {
     width: '100%',
-    maxWidth: '360px',
+    maxWidth: '338px',
     background: 'rgba(255,255,255,0.04)',
     border: '1px solid rgba(255,255,255,0.08)',
     borderRadius: '24px',
-    padding: '18px 18px 14px',
+    padding: '16px 16px 12px',
     boxSizing: 'border-box',
     backdropFilter: 'blur(8px)',
   },
@@ -628,13 +963,12 @@ const styles = {
     borderRadius: '20px',
     padding: '16px',
     minHeight: '220px',
-    maxHeight: '360px',
+    maxHeight: '420px',
     overflowY: 'auto',
     display: 'flex',
     flexDirection: 'column',
     gap: '12px',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
-    scrollBehavior: 'smooth',
   },
 
   assistantBubble: {
@@ -849,5 +1183,196 @@ const styles = {
     lineHeight: 1.5,
     resize: 'vertical',
     boxSizing: 'border-box',
+  },
+
+  visualCard: {
+    marginTop: '12px',
+    padding: '12px',
+    background: 'linear-gradient(180deg, #ffffff 0%, #f8fbff 100%)',
+    border: '1px solid #dce7f4',
+    borderRadius: '16px',
+    boxShadow: '0 6px 18px rgba(15,23,42,0.06)',
+  },
+
+  visualHeaderRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '10px',
+    marginBottom: '10px',
+    flexWrap: 'wrap',
+  },
+
+  visualTitle: {
+    fontSize: '13px',
+    fontWeight: 800,
+    color: '#1e293b',
+  },
+
+  visualBadge: {
+    fontSize: '11px',
+    fontWeight: 800,
+    color: '#4338ca',
+    background: 'rgba(124,92,255,0.10)',
+    border: '1px solid rgba(124,92,255,0.18)',
+    borderRadius: '999px',
+    padding: '5px 8px',
+  },
+
+  visualDescription: {
+    fontSize: '13px',
+    lineHeight: 1.55,
+    color: '#475569',
+  },
+
+  visualList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+
+  visualListItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    fontSize: '14px',
+    color: '#334155',
+    lineHeight: 1.45,
+  },
+
+  visualListDot: {
+    width: '8px',
+    height: '8px',
+    borderRadius: '50%',
+    background: '#43e7d0',
+    boxShadow: '0 0 0 4px rgba(67,231,208,0.15)',
+    flexShrink: 0,
+  },
+
+  fractionBarWrap: {
+    display: 'flex',
+    gap: '6px',
+    width: '100%',
+  },
+
+  fractionPiece: {
+    flex: 1,
+    height: '28px',
+    borderRadius: '8px',
+    border: '1px solid rgba(148,163,184,0.20)',
+  },
+
+  numberLineWrap: {
+    position: 'relative',
+    paddingTop: '8px',
+    paddingBottom: '4px',
+  },
+
+  numberLineBase: {
+    position: 'absolute',
+    left: '12px',
+    right: '12px',
+    top: '20px',
+    height: '3px',
+    borderRadius: '999px',
+    background: '#cbd5e1',
+  },
+
+  numberLineRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '8px',
+    position: 'relative',
+  },
+
+  numberTickWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    minWidth: '28px',
+    position: 'relative',
+    zIndex: 1,
+  },
+
+  numberDot: {
+    width: '12px',
+    height: '12px',
+    borderRadius: '50%',
+    border: '2px solid #ffffff',
+    marginBottom: '8px',
+  },
+
+  numberLabel: {
+    fontSize: '12px',
+  },
+
+  stepList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+  },
+
+  stepRow: {
+    display: 'grid',
+    gridTemplateColumns: '30px 1fr',
+    gap: '10px',
+    alignItems: 'start',
+  },
+
+  stepNumber: {
+    width: '30px',
+    height: '30px',
+    borderRadius: '50%',
+    background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
+    color: '#07111e',
+    fontWeight: 800,
+    fontSize: '14px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  stepText: {
+    fontSize: '14px',
+    lineHeight: 1.5,
+    color: '#334155',
+    paddingTop: '4px',
+  },
+
+  vocabWord: {
+    fontSize: '22px',
+    lineHeight: 1.2,
+    fontWeight: 800,
+    color: '#0f172a',
+    marginBottom: '6px',
+  },
+
+  vocabDefinition: {
+    fontSize: '14px',
+    lineHeight: 1.6,
+    color: '#334155',
+  },
+
+  vocabExampleBox: {
+    marginTop: '10px',
+    padding: '10px',
+    borderRadius: '12px',
+    background: '#eef6ff',
+    border: '1px solid #d7e8fb',
+  },
+
+  vocabExampleLabel: {
+    fontSize: '11px',
+    letterSpacing: '0.12em',
+    fontWeight: 800,
+    color: '#355e9b',
+    marginBottom: '6px',
+  },
+
+  vocabExampleText: {
+    fontSize: '13px',
+    lineHeight: 1.55,
+    color: '#334155',
   },
 }
