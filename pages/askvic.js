@@ -19,21 +19,30 @@ export default function AskVIC() {
   ])
 
   const assistantMessageRefs = useRef({})
+  const messageAreaRef = useRef(null)
 
   useEffect(() => {
     const lastIndex = messages.length - 1
     const lastMessage = messages[lastIndex]
 
     if (lastMessage?.role === 'assistant') {
+      const container = messageAreaRef.current
       const target = assistantMessageRefs.current[lastIndex]
-      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+      if (container && target) {
+        const offsetTop = target.offsetTop
+        container.scrollTo({
+          top: offsetTop - 8,
+          behavior: 'smooth',
+        })
+      }
     }
   }, [messages])
 
   async function sendMessage(customMessage) {
     const outgoing = typeof customMessage === 'string' ? customMessage : input
 
-    if (!outgoing.trim() || loading) return
+    if (!outgoing.trim() || loading) return null
 
     const userMessage = { role: 'user', text: outgoing }
     const nextMessages = [...messages, userMessage]
@@ -61,21 +70,26 @@ export default function AskVIC() {
       const data = await res.json()
       const finalReply = data.reply || 'No reply'
 
-      setMessages([
+      const updatedMessages = [
         ...nextMessages,
         {
           role: 'assistant',
           text: finalReply,
         },
-      ])
+      ]
+
+      setMessages(updatedMessages)
+      return finalReply
     } catch (error) {
+      const errorReply = 'Something went wrong. Please try again.'
       setMessages([
         ...nextMessages,
         {
           role: 'assistant',
-          text: 'Something went wrong. Please try again.',
+          text: errorReply,
         },
       ])
+      return errorReply
     } finally {
       setLoading(false)
     }
@@ -93,8 +107,25 @@ export default function AskVIC() {
     sendMessage(subjectMessage)
   }
 
-  function requestReport() {
-    sendMessage('Generate a report for this session.')
+  async function requestReport() {
+    const finalReply = await sendMessage('Generate a clean structured session report for download.')
+    if (finalReply) {
+      downloadReport(finalReply)
+    }
+  }
+
+  function downloadReport(text) {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'VIC-Report.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+
+    URL.revokeObjectURL(url)
   }
 
   function runCalculator() {
@@ -115,6 +146,7 @@ export default function AskVIC() {
     <div style={styles.page}>
       <div style={styles.backgroundGlowOne} />
       <div style={styles.backgroundGlowTwo} />
+      <div style={styles.backgroundGlowThree} />
 
       <div style={styles.shell}>
         <div style={styles.leftPanel}>
@@ -220,7 +252,7 @@ export default function AskVIC() {
             </div>
 
             <div style={styles.systemWrap}>
-              <div style={styles.messageArea}>
+              <div ref={messageAreaRef} style={styles.messageArea}>
                 {messages.map((msg, index) => (
                   <div
                     key={index}
@@ -324,7 +356,7 @@ const styles = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at top left, rgba(72,118,255,0.16), transparent 32%), radial-gradient(circle at bottom right, rgba(87,224,184,0.10), transparent 30%), linear-gradient(135deg, #0a1020 0%, #0f172a 45%, #121826 100%)',
+      'radial-gradient(circle at 20% 10%, rgba(124, 92, 255, 0.25), transparent 35%), radial-gradient(circle at 80% 90%, rgba(0, 255, 200, 0.18), transparent 40%), linear-gradient(135deg, #05070f 0%, #0b1224 50%, #0e1a2f 100%)',
     color: '#e8eefc',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
@@ -338,7 +370,7 @@ const styles = {
     left: '-80px',
     width: '320px',
     height: '320px',
-    background: 'rgba(84, 119, 255, 0.16)',
+    background: 'rgba(110, 92, 255, 0.18)',
     filter: 'blur(90px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -350,8 +382,20 @@ const styles = {
     right: '-60px',
     width: '320px',
     height: '320px',
-    background: 'rgba(70, 220, 190, 0.10)',
+    background: 'rgba(0, 255, 200, 0.12)',
     filter: 'blur(90px)',
+    borderRadius: '50%',
+    pointerEvents: 'none',
+  },
+
+  backgroundGlowThree: {
+    position: 'absolute',
+    top: '35%',
+    right: '18%',
+    width: '240px',
+    height: '240px',
+    background: 'rgba(70, 130, 255, 0.12)',
+    filter: 'blur(80px)',
     borderRadius: '50%',
     pointerEvents: 'none',
   },
@@ -395,7 +439,7 @@ const styles = {
     width: '82px',
     height: '82px',
     borderRadius: '24px',
-    background: 'linear-gradient(145deg, #7ea2ff 0%, #58dfd1 100%)',
+    background: 'linear-gradient(145deg, #8f7cff 0%, #3ff1d0 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -442,7 +486,7 @@ const styles = {
 
   tagline: {
     fontSize: '14px',
-    color: '#8ea3d1',
+    color: '#9fb2ff',
     letterSpacing: '0.08em',
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -453,7 +497,7 @@ const styles = {
     alignSelf: 'flex-start',
     fontSize: '12px',
     fontWeight: 700,
-    color: '#dce7ff',
+    color: '#e4ebff',
     background: 'rgba(255,255,255,0.08)',
     border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: '999px',
@@ -475,7 +519,7 @@ const styles = {
   taglinePrimary: {
     fontSize: '21px',
     lineHeight: 1.55,
-    color: '#dbe6ff',
+    color: '#e3eaff',
     maxWidth: '540px',
     margin: 0,
     marginBottom: '8px',
@@ -485,7 +529,7 @@ const styles = {
   subheading: {
     fontSize: '18px',
     lineHeight: 1.65,
-    color: '#b8c6e6',
+    color: '#c3d1ee',
     maxWidth: '540px',
     margin: 0,
   },
@@ -553,11 +597,11 @@ const styles = {
 
   chatCard: {
     width: '100%',
-    background: 'rgba(12, 19, 35, 0.72)',
+    background: 'rgba(12, 19, 35, 0.78)',
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '28px',
     padding: '18px',
-    boxShadow: '0 25px 80px rgba(0,0,0,0.35)',
+    boxShadow: '0 25px 80px rgba(0,0,0,0.38)',
     backdropFilter: 'blur(18px)',
     display: 'flex',
     flexDirection: 'column',
@@ -575,7 +619,7 @@ const styles = {
   chatLabel: {
     fontSize: '11px',
     letterSpacing: '0.16em',
-    color: '#8ea3d1',
+    color: '#97adff',
     fontWeight: 700,
   },
 
@@ -612,8 +656,8 @@ const styles = {
     borderRadius: '24px',
     padding: '16px',
     background:
-      'linear-gradient(135deg, rgba(98,132,255,0.18), rgba(94,234,212,0.10))',
-    border: '1px solid rgba(130, 154, 255, 0.35)',
+      'linear-gradient(135deg, rgba(123,92,255,0.20), rgba(63,241,208,0.10))',
+    border: '1px solid rgba(146, 151, 255, 0.32)',
     boxShadow:
       '0 0 0 1px rgba(255,255,255,0.05) inset, 0 0 28px rgba(94,234,212,0.08)',
     display: 'flex',
@@ -633,6 +677,7 @@ const styles = {
     flexDirection: 'column',
     gap: '12px',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+    scrollBehavior: 'smooth',
   },
 
   assistantBubble: {
@@ -734,8 +779,8 @@ const styles = {
     fontSize: '15px',
     fontWeight: 700,
     color: '#07111e',
-    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
-    boxShadow: '0 10px 30px rgba(94, 234, 212, 0.20)',
+    background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
+    boxShadow: '0 10px 30px rgba(63, 241, 208, 0.20)',
   },
 
   subjectSection: {
@@ -827,7 +872,7 @@ const styles = {
     fontSize: '14px',
     fontWeight: 700,
     color: '#07111e',
-    background: 'linear-gradient(135deg, #7aa2ff 0%, #5eead4 100%)',
+    background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
   },
 
   calcResult: {
