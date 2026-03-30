@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
+const BRAIN_VERSION = 'v3.2.2'
+
 export default function AskVIC() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -16,10 +18,16 @@ export default function AskVIC() {
     },
   ])
 
-  const messagesEndRef = useRef(null)
+  const assistantMessageRefs = useRef({})
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    const lastIndex = messages.length - 1
+    const lastMessage = messages[lastIndex]
+
+    if (lastMessage?.role === 'assistant') {
+      const target = assistantMessageRefs.current[lastIndex]
+      target?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
   }, [messages])
 
   async function sendMessage(customMessage) {
@@ -28,7 +36,6 @@ export default function AskVIC() {
     if (!outgoing.trim() || loading) return
 
     const userMessage = { role: 'user', text: outgoing }
-
     const nextMessages = [...messages, userMessage]
 
     setMessages([...nextMessages, { role: 'assistant', text: 'VIC is thinking...' }])
@@ -86,6 +93,10 @@ export default function AskVIC() {
     sendMessage(subjectMessage)
   }
 
+  function requestReport() {
+    sendMessage('Generate a report for this session.')
+  }
+
   function runCalculator() {
     try {
       const safe = calcInput.replace(/[^0-9+\-*/(). ]/g, '')
@@ -118,6 +129,7 @@ export default function AskVIC() {
             <div style={styles.brandTextWrap}>
               <div style={styles.brandName}>VIC</div>
               <div style={styles.tagline}>Virtual Co-Teacher</div>
+              <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
             </div>
           </div>
 
@@ -212,6 +224,11 @@ export default function AskVIC() {
                 {messages.map((msg, index) => (
                   <div
                     key={index}
+                    ref={(el) => {
+                      if (msg.role === 'assistant') {
+                        assistantMessageRefs.current[index] = el
+                      }
+                    }}
                     style={msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble}
                   >
                     <div
@@ -230,7 +247,6 @@ export default function AskVIC() {
                     </p>
                   </div>
                 ))}
-                <div ref={messagesEndRef} />
               </div>
 
               {messages.length === 1 ? (
@@ -266,7 +282,21 @@ export default function AskVIC() {
               </div>
 
               <div style={styles.subjectSection}>
-                <div style={styles.sectionTitle}>Start a lesson</div>
+                <div style={styles.sectionHeaderRow}>
+                  <div style={styles.sectionTitle}>Start a lesson</div>
+                  <button
+                    style={{
+                      ...styles.reportButton,
+                      opacity: messages.length <= 1 || loading ? 0.6 : 1,
+                      cursor: messages.length <= 1 || loading ? 'not-allowed' : 'pointer',
+                    }}
+                    onClick={requestReport}
+                    disabled={messages.length <= 1 || loading}
+                  >
+                    Get Report
+                  </button>
+                </div>
+
                 <div style={styles.subjectGrid}>
                   <button style={styles.subjectButton} onClick={() => startSubject('math')}>
                     Start Math
@@ -398,35 +428,52 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'center',
+    gap: '6px',
   },
 
   brandName: {
-    fontSize: '34px',
-    fontWeight: 900,
-    letterSpacing: '0.04em',
+    fontSize: '36px',
+    fontWeight: 800,
+    letterSpacing: '0.03em',
     lineHeight: 1,
-    marginBottom: '8px',
+    fontFamily:
+      '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   },
 
   tagline: {
     fontSize: '14px',
     color: '#8ea3d1',
     letterSpacing: '0.08em',
-    fontWeight: 600,
+    fontWeight: 700,
+    textTransform: 'uppercase',
+  },
+
+  versionPill: {
+    marginTop: '2px',
+    alignSelf: 'flex-start',
+    fontSize: '12px',
+    fontWeight: 700,
+    color: '#dce7ff',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '999px',
+    padding: '6px 10px',
   },
 
   heading: {
-    fontSize: '54px',
+    fontSize: '56px',
     lineHeight: 1.02,
     margin: 0,
     marginBottom: '8px',
-    fontWeight: 800,
-    letterSpacing: '-0.03em',
-    maxWidth: '560px',
+    fontWeight: 700,
+    letterSpacing: '-0.035em',
+    maxWidth: '580px',
+    fontFamily:
+      '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   },
 
   taglinePrimary: {
-    fontSize: '20px',
+    fontSize: '21px',
     lineHeight: 1.55,
     color: '#dbe6ff',
     maxWidth: '540px',
@@ -436,8 +483,8 @@ const styles = {
   },
 
   subheading: {
-    fontSize: '19px',
-    lineHeight: 1.6,
+    fontSize: '18px',
+    lineHeight: 1.65,
     color: '#b8c6e6',
     maxWidth: '540px',
     margin: 0,
@@ -697,10 +744,27 @@ const styles = {
     gap: '10px',
   },
 
+  sectionHeaderRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+  },
+
   sectionTitle: {
     fontSize: '14px',
     fontWeight: 700,
     color: '#d7e3ff',
+  },
+
+  reportButton: {
+    border: '1px solid rgba(255,255,255,0.14)',
+    background: 'rgba(255,255,255,0.10)',
+    color: '#f7fbff',
+    padding: '10px 14px',
+    borderRadius: '14px',
+    fontSize: '14px',
+    fontWeight: 700,
   },
 
   subjectGrid: {
