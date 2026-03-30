@@ -30,10 +30,15 @@ export default function AskVIC() {
       const target = assistantMessageRefs.current[lastIndex]
 
       if (container && target) {
-        const offsetTop = target.offsetTop
-        container.scrollTo({
-          top: offsetTop - 8,
-          behavior: 'smooth',
+        requestAnimationFrame(() => {
+          const containerRect = container.getBoundingClientRect()
+          const targetRect = target.getBoundingClientRect()
+          const relativeTop = targetRect.top - containerRect.top + container.scrollTop
+
+          container.scrollTo({
+            top: Math.max(relativeTop - 8, 0),
+            behavior: 'smooth',
+          })
         })
       }
     }
@@ -150,19 +155,15 @@ export default function AskVIC() {
 
       <div style={styles.shell}>
         <div style={styles.leftPanel}>
-          <div style={styles.brandRow}>
-            <div style={styles.logoWrap}>
-              <div style={styles.logoCore}>
-                <span style={styles.logoText}>VC</span>
-                <div style={styles.logoShine} />
-              </div>
+          <div style={styles.brandBlock}>
+            <div style={styles.logoImageWrap}>
+              <img
+                src="/vic-logo.png"
+                alt="VIC Virtual Co-Teacher logo"
+                style={styles.logoImage}
+              />
             </div>
-
-            <div style={styles.brandTextWrap}>
-              <div style={styles.brandName}>VIC</div>
-              <div style={styles.tagline}>Virtual Co-Teacher</div>
-              <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
-            </div>
+            <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
           </div>
 
           <h1 style={styles.heading}>More than answers. Real teaching.</h1>
@@ -356,7 +357,7 @@ const styles = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at 20% 10%, rgba(124, 92, 255, 0.25), transparent 35%), radial-gradient(circle at 80% 90%, rgba(0, 255, 200, 0.18), transparent 40%), linear-gradient(135deg, #05070f 0%, #0b1224 50%, #0e1a2f 100%)',
+      'radial-gradient(circle at 20% 10%, rgba(124, 92, 255, 0.28), transparent 35%), radial-gradient(circle at 80% 90%, rgba(0, 255, 200, 0.20), transparent 40%), linear-gradient(135deg, #05070f 0%, #0b1224 50%, #0e1a2f 100%)',
     color: '#e8eefc',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
@@ -403,7 +404,7 @@ const styles = {
   shell: {
     maxWidth: '1280px',
     margin: '0 auto',
-    padding: '96px 24px 32px',
+    padding: '88px 24px 32px',
     display: 'grid',
     gridTemplateColumns: '0.9fr 1.1fr',
     gap: '28px',
@@ -422,78 +423,34 @@ const styles = {
     paddingTop: '12px',
   },
 
-  brandRow: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '18px',
-    marginBottom: '8px',
-  },
-
-  logoWrap: {
-    position: 'relative',
-    flexShrink: 0,
-  },
-
-  logoCore: {
-    position: 'relative',
-    width: '82px',
-    height: '82px',
-    borderRadius: '24px',
-    background: 'linear-gradient(145deg, #8f7cff 0%, #3ff1d0 100%)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    boxShadow:
-      '0 18px 42px rgba(79,209,197,0.22), inset 0 1px 0 rgba(255,255,255,0.35)',
-    overflow: 'hidden',
-  },
-
-  logoText: {
-    position: 'relative',
-    zIndex: 2,
-    fontSize: '28px',
-    fontWeight: 900,
-    letterSpacing: '0.08em',
-    color: '#08111f',
-  },
-
-  logoShine: {
-    position: 'absolute',
-    top: '-18px',
-    right: '-12px',
-    width: '46px',
-    height: '46px',
-    borderRadius: '50%',
-    background: 'rgba(255,255,255,0.24)',
-    filter: 'blur(6px)',
-  },
-
-  brandTextWrap: {
+  brandBlock: {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
-    gap: '6px',
+    alignItems: 'flex-start',
+    gap: '12px',
+    marginBottom: '6px',
   },
 
-  brandName: {
-    fontSize: '36px',
-    fontWeight: 800,
-    letterSpacing: '0.03em',
-    lineHeight: 1,
-    fontFamily:
-      '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
+  logoImageWrap: {
+    width: '100%',
+    maxWidth: '520px',
+    background: 'rgba(255,255,255,0.04)',
+    border: '1px solid rgba(255,255,255,0.08)',
+    borderRadius: '24px',
+    padding: '18px 18px 14px',
+    boxSizing: 'border-box',
+    backdropFilter: 'blur(8px)',
   },
 
-  tagline: {
-    fontSize: '14px',
-    color: '#9fb2ff',
-    letterSpacing: '0.08em',
-    fontWeight: 700,
-    textTransform: 'uppercase',
+  logoImage: {
+    width: '100%',
+    height: 'auto',
+    display: 'block',
+    objectFit: 'contain',
+    filter: 'drop-shadow(0 10px 22px rgba(0,0,0,0.18))',
   },
 
   versionPill: {
-    marginTop: '2px',
     alignSelf: 'flex-start',
     fontSize: '12px',
     fontWeight: 700,
