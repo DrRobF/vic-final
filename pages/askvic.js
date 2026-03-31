@@ -15,16 +15,97 @@ export default function AskVIC() {
     {
       role: 'assistant',
       text: 'Hi — pick a subject on the left or type here to begin.',
-      visual: { type: 'placeholder' },
+      visual: { type: 'placeholder', title: 'Visual Support' },
     },
   ])
 
   const messageAreaRef = useRef(null)
+  const previousMessageCountRef = useRef(messages.length)
 
-  const canGetReport = useMemo(
-    () => messages.length > 1 && !loading,
-    [messages.length, loading]
-  )
+  const canGetReport = useMemo(() => messages.length > 1 && !loading, [messages.length, loading])
+
+  useEffect(() => {
+    const container = messageAreaRef.current
+    if (!container) return
+
+    if (messages.length > previousMessageCountRef.current) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth',
+      })
+    }
+
+    previousMessageCountRef.current = messages.length
+  }, [messages])
+
+  async function sendMessage(customMessage) {
+    const outgoing = typeof customMessage === 'string' ? customMessage : input
+
+    if (!outgoing.trim() || loading) return null
+
+    const userMessage = { role: 'user', text: outgoing }
+    const nextMessages = [...messages, userMessage]
+
+    setMessages([
+      ...nextMessages,
+      {
+        role: 'assistant',
+        text: 'VIC is thinking...',
+      },
+    ])
+
+    setLoading(true)
+    setInput('')
+
+    try {
+      const apiMessages = nextMessages.map((msg) => ({
+        role: msg.role,
+        content: msg.text,
+      }))
+
+      const res = await fetch('/api/vic', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: apiMessages }),
+      })
+
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`)
+      }
+
+      const data = await res.json()
+      const finalReply = data.reply || 'No reply'
+      const visual = inferVisualFromConversation(outgoing, finalReply)
+
+      setMessages([
+        ...nextMessages,
+        {
+          role: 'assistant',
+          text: finalReply,
+          visual,
+        },
+      ])
+
+      return finalReply
+    } catch (error) {
+      const errorReply = 'Something went wrong. Please try again.'
+      setMessages([
+        ...nextMessages,
+        {
+          role: 'assistant',
+          text: errorReply,
+          visual: {
+            type: 'tip',
+            title: 'Quick fix',
+            body: 'Try sending the message again. If it keeps happening, check the API route or OpenAI response.',
+          },
+        },
+      ])
+      return errorReply
+    } finally {
+      setLoading(false)
+    }
+  }
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -33,263 +114,1227 @@ export default function AskVIC() {
     }
   }
 
-  async function sendMessage(customMessage) {
-    const outgoing = typeof customMessage === 'string' ? customMessage : input
-    if (!outgoing.trim() || loading) return
+  function startSubject(subject) {
+    const subjectMessage = `I want to start a ${subject} lesson. Please guide me step by step.`
+    sendMessage(subjectMessage)
+  }
 
-    const next = [...messages, { role: 'user', text: outgoing }]
-
-    setMessages([...next, { role: 'assistant', text: 'Thinking...' }])
-    setInput('')
-    setLoading(true)
-
-    try {
-      const res = await fetch('/api/vic', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: next.map(m => ({ role: m.role, content: m.text })),
-        }),
-      })
-
-      const data = await res.json()
-
-      setMessages([
-        ...next,
-        {
-          role: 'assistant',
-          text: data.reply || 'No reply',
-          visual: inferVisual(data.reply),
-        },
-      ])
-    } catch {
-      setMessages([
-        ...next,
-        { role: 'assistant', text: 'Something went wrong.' },
-      ])
-    } finally {
-      setLoading(false)
+  async function requestReport() {
+    const finalReply = await sendMessage('Generate a clean structured session report for download.')
+    if (finalReply) {
+      downloadReport(finalReply)
     }
   }
 
-  function startSubject(subject) {
-    sendMessage(`Start a ${subject} lesson.`)
+  function downloadReport(text) {
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a')
+    a.href = url
+    a.download = 'VIC-Report.txt'
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+
+    URL.revokeObjectURL(url)
   }
 
-  function requestReport() {
-    sendMessage('Generate a session report.')
+  function runCalculator() {
+    try {
+      const safe = calcInput.replace(/[^0-9+\-*/(). ]/g, '')
+      if (!safe.trim()) {
+        setCalcResult('')
+        return
+      }
+      const result = Function(`"use strict"; return (${safe})`)()
+      setCalcResult(String(result))
+    } catch {
+      setCalcResult('Invalid calculation')
+    }
   }
 
   return (
     <div style={styles.page}>
-      <div style={styles.layout}>
+      <div style={styles.backgroundGlowOne} />
+      <div style={styles.backgroundGlowTwo} />
+      <div style={styles.backgroundGlowThree} />
 
-        {/* LEFT PANEL */}
-        <div style={styles.left}>
-
-          {/* LOGO */}
-          <div style={styles.logoBox}>
-            <img src="/vic-logo.png" style={{ width: '100%' }} />
-            <div style={styles.version}>Brain {BRAIN_VERSION}</div>
-          </div>
-
-          {/* START BUTTONS */}
-          <div style={styles.card}>
-            <div style={styles.title}>Start Learning</div>
-            <div style={styles.grid}>
-              <button onClick={() => startSubject('math')}>Math</button>
-              <button onClick={() => startSubject('reading')}>Reading</button>
-              <button onClick={() => startSubject('writing')}>Writing</button>
-              <button onClick={() => startSubject('science')}>Science</button>
-            </div>
-          </div>
-
-          {/* TOOLS */}
-          <div style={styles.card}>
-            <div style={styles.title}>Tools</div>
-
-            <button onClick={() => setShowCalculator(!showCalculator)}>
-              Calculator
-            </button>
-
-            <button onClick={() => setShowNotes(!showNotes)}>
-              Notes
-            </button>
-
-            <button disabled={!canGetReport} onClick={requestReport}>
-              Get Report
-            </button>
-
-            {showCalculator && (
-              <div>
-                <input
-                  value={calcInput}
-                  onChange={e => setCalcInput(e.target.value)}
-                  placeholder="12 * (4+3)"
+      <div style={styles.shell}>
+        <div style={styles.leftColumn}>
+          <section style={styles.heroCard}>
+            <div style={styles.heroTop}>
+              <div style={styles.logoImageWrap}>
+                <img
+                  src="/vic-logo.png"
+                  alt="VIC Virtual Co-Teacher logo"
+                  style={styles.logoImage}
                 />
-                <button onClick={() => setCalcResult(eval(calcInput))}>
-                  =
-                </button>
-                <div>{calcResult}</div>
               </div>
-            )}
 
-            {showNotes && (
-              <textarea
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-              />
-            )}
-          </div>
-
-          {/* PRACTICE */}
-          <div style={styles.card}>
-            <div style={styles.title}>Practice Area</div>
-            <textarea
-              value={workArea}
-              onChange={e => setWorkArea(e.target.value)}
-              placeholder="Let’s practice..."
-            />
-          </div>
-        </div>
-
-        {/* RIGHT PANEL */}
-        <div style={styles.right}>
-
-          <div style={styles.chat}>
-
-            {/* CHAT MESSAGES */}
-            <div ref={messageAreaRef} style={styles.messages}>
-              {messages.map((m, i) => (
-                <div key={i} style={m.role === 'assistant' ? styles.bot : styles.user}>
-                  {m.text}
-                  {m.visual && <Visual visual={m.visual} />}
-                </div>
-              ))}
+              <div style={styles.heroTextWrap}>
+                <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
+                <h1 style={styles.heading}>More than answers. Real teaching.</h1>
+                <p style={styles.tagline}>
+                  Guided help that feels calm, clear, and personal.
+                </p>
+              </div>
             </div>
 
-            {/* INPUT */}
-            <div style={styles.inputBox}>
-              <textarea
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Type here..."
-              />
+            <div style={styles.quickStartWrap}>
+              <div style={styles.sectionEyebrow}>Start Learning</div>
+              <div style={styles.subjectGrid}>
+                <button style={styles.subjectButton} onClick={() => startSubject('math')}>
+                  Math
+                </button>
+                <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
+                  Reading
+                </button>
+                <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
+                  Writing
+                </button>
+                <button style={styles.subjectButton} onClick={() => startSubject('science')}>
+                  Science
+                </button>
+              </div>
+            </div>
+          </section>
 
-              <button onClick={() => sendMessage()}>
-                Send
+          <section style={styles.toolsCard}>
+            <div style={styles.toolsHeaderRow}>
+              <div>
+                <div style={styles.sectionEyebrow}>Workspace Tools</div>
+                <div style={styles.sectionTitle}>Practice, notes, and report</div>
+              </div>
+
+              <button
+                style={canGetReport ? styles.reportButton : styles.reportButtonDisabled}
+                onClick={requestReport}
+                disabled={!canGetReport}
+              >
+                Get Report
               </button>
             </div>
 
-          </div>
+            <div style={styles.toolToggleRow}>
+              <button
+                style={showCalculator ? styles.toolToggleActive : styles.toolToggle}
+                onClick={() => setShowCalculator(!showCalculator)}
+              >
+                Calculator
+              </button>
 
+              <button
+                style={showNotes ? styles.toolToggleActive : styles.toolToggle}
+                onClick={() => setShowNotes(!showNotes)}
+              >
+                Notes
+              </button>
+            </div>
+
+            <div style={styles.practiceWrap}>
+              <div style={styles.miniLabel}>Practice Area</div>
+              <textarea
+                value={workArea}
+                onChange={(e) => setWorkArea(e.target.value)}
+                placeholder="Let’s practice here..."
+                style={styles.sideTextarea}
+              />
+            </div>
+
+            {showCalculator ? (
+              <div style={styles.toolPanel}>
+                <div style={styles.miniLabelDark}>Calculator</div>
+                <input
+                  value={calcInput}
+                  onChange={(e) => setCalcInput(e.target.value)}
+                  placeholder="Example: 12 * (4 + 3)"
+                  style={styles.calcInput}
+                />
+                <div style={styles.calcRow}>
+                  <button style={styles.smallButton} onClick={runCalculator}>
+                    Calculate
+                  </button>
+                  <div style={styles.calcResult}>{calcResult}</div>
+                </div>
+              </div>
+            ) : null}
+
+            {showNotes ? (
+              <div style={styles.toolPanel}>
+                <div style={styles.miniLabelDark}>Notes</div>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Keep notes here..."
+                  style={styles.notesTextarea}
+                />
+              </div>
+            ) : null}
+          </section>
+        </div>
+
+        <div style={styles.rightColumn}>
+          <section style={styles.chatCard}>
+            <div style={styles.chatHeader}>
+              <div>
+                <div style={styles.chatEyebrow}>Guided Session</div>
+                <div style={styles.chatTitle}>Conversation</div>
+              </div>
+
+              <div style={styles.statusWrap}>
+                <span style={styles.statusDot} />
+                <span style={styles.statusText}>{loading ? 'Thinking' : 'Ready'}</span>
+              </div>
+            </div>
+
+            <div ref={messageAreaRef} style={styles.messageArea}>
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  style={msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble}
+                >
+                  <div
+                    style={
+                      msg.role === 'assistant' ? styles.bubbleLabel : styles.bubbleLabelUser
+                    }
+                  >
+                    {msg.role === 'assistant' ? 'VIC' : 'YOU'}
+                  </div>
+
+                  <p
+                    style={msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText}
+                  >
+                    {msg.text}
+                  </p>
+
+                  {msg.role === 'assistant' && msg.visual ? (
+                    <VisualCardRenderer visual={msg.visual} />
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section style={styles.inputCard}>
+            <div style={styles.inputHeaderRow}>
+              <div>
+                <div style={styles.chatEyebrow}>Write to VIC</div>
+                <div style={styles.inputTitle}>Your message</div>
+              </div>
+
+              <div style={styles.inputHint}>Enter = new line • Ctrl/Cmd + Enter = send</div>
+            </div>
+
+            <textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              rows={5}
+              placeholder="Type here..."
+              style={styles.mainTextarea}
+            />
+
+            <div style={styles.inputFooter}>
+              <div style={styles.footerPrompt}>
+                Shorter turns work best. One thought or question at a time.
+              </div>
+
+              <button
+                onClick={() => sendMessage()}
+                disabled={loading || !input.trim()}
+                style={{
+                  ...styles.sendButton,
+                  opacity: loading || !input.trim() ? 0.6 : 1,
+                  cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {loading ? 'Thinking...' : 'Send'}
+              </button>
+            </div>
+          </section>
         </div>
       </div>
     </div>
   )
 }
 
-/* ---------- VISUAL ---------- */
+function VisualCardRenderer({ visual }) {
+  if (!visual || !visual.type) return null
 
-function Visual({ visual }) {
   if (visual.type === 'placeholder') {
-    return <div style={{ marginTop: 10, opacity: 0.4 }}>Visual area</div>
+    return (
+      <div style={styles.visualPlaceholderCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Visual Support'}</div>
+          <div style={styles.visualBadge}>Ready</div>
+        </div>
+
+        <div style={styles.placeholderGraphic}>
+          <div style={styles.placeholderOrbOne} />
+          <div style={styles.placeholderOrbTwo} />
+          <div style={styles.placeholderLineLong} />
+          <div style={styles.placeholderLineShort} />
+          <div style={styles.placeholderLineMid} />
+        </div>
+      </div>
+    )
   }
+
+  if (visual.type === 'fraction') {
+    const numerator = Math.max(0, Number(visual.numerator) || 0)
+    const denominator = Math.max(1, Number(visual.denominator) || 1)
+
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Fraction model'}</div>
+          <div style={styles.visualBadge}>
+            {numerator}/{denominator}
+          </div>
+        </div>
+
+        <div style={styles.fractionBarWrap}>
+          {Array.from({ length: denominator }).map((_, index) => (
+            <div
+              key={index}
+              style={{
+                ...styles.fractionPiece,
+                background:
+                  index < numerator
+                    ? 'linear-gradient(135deg, #7c5cff 0%, #43e7d0 100%)'
+                    : '#e2e8f0',
+              }}
+            />
+          ))}
+        </div>
+
+        <div style={styles.visualDescription}>
+          {numerator} out of {denominator} equal parts are shaded.
+        </div>
+      </div>
+    )
+  }
+
+  if (visual.type === 'numberline') {
+    const start = Number.isFinite(visual.start) ? visual.start : 0
+    const end = Number.isFinite(visual.end) ? visual.end : 10
+    const highlight = Number.isFinite(visual.highlight) ? visual.highlight : start
+    const values = []
+
+    for (let i = start; i <= end; i += 1) {
+      values.push(i)
+    }
+
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Number line'}</div>
+          <div style={styles.visualBadge}>Math visual</div>
+        </div>
+
+        <div style={styles.numberLineWrap}>
+          <div style={styles.numberLineBase} />
+          <div style={styles.numberLineRow}>
+            {values.map((value) => {
+              const isHighlight = value === highlight
+
+              return (
+                <div key={value} style={styles.numberTickWrap}>
+                  <div
+                    style={{
+                      ...styles.numberDot,
+                      background: isHighlight ? '#7c5cff' : '#94a3b8',
+                      boxShadow: isHighlight ? '0 0 0 5px rgba(124,92,255,0.14)' : 'none',
+                    }}
+                  />
+                  <div
+                    style={{
+                      ...styles.numberLabel,
+                      color: isHighlight ? '#4338ca' : '#475569',
+                      fontWeight: isHighlight ? 700 : 600,
+                    }}
+                  >
+                    {value}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div style={styles.visualDescription}>
+          The highlighted point shows {highlight}.
+        </div>
+      </div>
+    )
+  }
+
+  if (visual.type === 'vocab') {
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Vocabulary card'}</div>
+          <div style={styles.visualBadge}>ELA support</div>
+        </div>
+
+        <div style={styles.vocabWord}>{visual.word || 'Vocabulary'}</div>
+        <div style={styles.vocabDefinition}>{visual.definition || ''}</div>
+
+        {visual.example ? (
+          <div style={styles.vocabExampleBox}>
+            <div style={styles.vocabExampleLabel}>Example</div>
+            <div style={styles.vocabExampleText}>{visual.example}</div>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
+  if (visual.type === 'tip') {
+    return (
+      <div style={styles.visualCard}>
+        <div style={styles.visualHeaderRow}>
+          <div style={styles.visualTitle}>{visual.title || 'Quick tip'}</div>
+          <div style={styles.visualBadge}>Support</div>
+        </div>
+        <div style={styles.visualDescription}>{visual.body || ''}</div>
+      </div>
+    )
+  }
+
   return null
 }
 
-function inferVisual(text = '') {
-  return { type: 'placeholder' }
+function inferVisualFromConversation(userText, assistantText) {
+  const combined = `${userText} ${assistantText}`.toLowerCase()
+
+  const fractionMatch =
+    combined.match(/(\d+)\s*\/\s*(\d+)/) ||
+    combined.match(/(\d+)\s+out of\s+(\d+)/)
+
+  if (
+    fractionMatch &&
+    !combined.includes('grade 10') &&
+    !combined.includes('chapter') &&
+    !combined.includes('page')
+  ) {
+    const numerator = Number(fractionMatch[1])
+    const denominator = Number(fractionMatch[2])
+
+    if (denominator > 0 && denominator <= 12 && numerator <= denominator) {
+      return {
+        type: 'fraction',
+        title: 'Fraction model',
+        numerator,
+        denominator,
+      }
+    }
+  }
+
+  const numberMatch =
+    combined.match(/\bnumber line\b/) ||
+    combined.match(/\bcount\b/) ||
+    combined.match(/\binteger\b/) ||
+    combined.match(/\bnegative\b/)
+
+  if (numberMatch) {
+    const highlightMatch = assistantText.match(/-?\d+/)
+    const highlight = highlightMatch ? Number(highlightMatch[0]) : 3
+    const start = Math.min(highlight - 3, 0)
+    const end = Math.max(highlight + 3, 6)
+
+    return {
+      type: 'numberline',
+      title: 'Number line',
+      start,
+      end,
+      highlight,
+    }
+  }
+
+  if (
+    combined.includes('vocabulary') ||
+    combined.includes('define') ||
+    combined.includes('definition') ||
+    combined.includes('meaning of')
+  ) {
+    const vocab = extractVocabularyCard(assistantText)
+    if (vocab) return vocab
+  }
+
+  return {
+    type: 'placeholder',
+    title: 'Visual Support',
+  }
 }
 
-/* ---------- STYLES ---------- */
+function extractVocabularyCard(text) {
+  if (!text) return null
+
+  const pattern = /([A-Za-z][A-Za-z\s-]{1,30})\s+(means|is)\s+([^.!?]{8,180})/i
+  const match = text.match(pattern)
+
+  if (!match) return null
+
+  const word = match[1].trim()
+  const definition = match[3].trim()
+
+  return {
+    type: 'vocab',
+    title: 'Vocabulary',
+    word,
+    definition,
+    example: 'Try using the word in your own sentence.',
+  }
+}
 
 const styles = {
   page: {
+    minHeight: '100vh',
+    background:
+      'radial-gradient(circle at 14% 10%, rgba(124, 92, 255, 0.24), transparent 26%), radial-gradient(circle at 82% 88%, rgba(0, 255, 200, 0.10), transparent 28%), linear-gradient(135deg, #030816 0%, #07122a 48%, #08192f 100%)',
+    color: '#e8eefc',
+    fontFamily:
+      '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+
+  backgroundGlowOne: {
+    position: 'absolute',
+    top: '-100px',
+    left: '-80px',
+    width: '280px',
+    height: '280px',
+    background: 'rgba(110, 92, 255, 0.16)',
+    filter: 'blur(80px)',
+    borderRadius: '50%',
+    pointerEvents: 'none',
+  },
+
+  backgroundGlowTwo: {
+    position: 'absolute',
+    bottom: '-100px',
+    right: '-60px',
+    width: '300px',
+    height: '300px',
+    background: 'rgba(0, 255, 200, 0.10)',
+    filter: 'blur(88px)',
+    borderRadius: '50%',
+    pointerEvents: 'none',
+  },
+
+  backgroundGlowThree: {
+    position: 'absolute',
+    top: '34%',
+    right: '18%',
+    width: '220px',
+    height: '220px',
+    background: 'rgba(70, 130, 255, 0.10)',
+    filter: 'blur(75px)',
+    borderRadius: '50%',
+    pointerEvents: 'none',
+  },
+
+  shell: {
+    maxWidth: '1440px',
     height: '100vh',
-    background: '#0b1224',
-    color: 'white',
-  },
-
-  layout: {
+    margin: '0 auto',
+    padding: '18px',
+    boxSizing: 'border-box',
     display: 'grid',
-    gridTemplateColumns: '320px 1fr',
-    height: '100%',
+    gridTemplateColumns: '360px minmax(0, 1fr)',
+    gap: '18px',
   },
 
-  left: {
-    padding: 16,
+  leftColumn: {
+    minHeight: 0,
+    display: 'grid',
+    gridTemplateRows: '1fr 1fr',
+    gap: '18px',
+  },
+
+  rightColumn: {
+    minHeight: 0,
+    display: 'grid',
+    gridTemplateRows: '1fr 240px',
+    gap: '18px',
+  },
+
+  heroCard: {
+    minHeight: 0,
+    background: 'linear-gradient(180deg, rgba(14, 23, 46, 0.92) 0%, rgba(10, 18, 38, 0.88) 100%)',
+    border: '1px solid rgba(145, 160, 255, 0.14)',
+    borderRadius: '28px',
+    padding: '18px',
+    boxShadow: '0 18px 50px rgba(0,0,0,0.32)',
     display: 'flex',
     flexDirection: 'column',
-    gap: 12,
-    overflowY: 'auto',
+    gap: '18px',
+    overflow: 'hidden',
   },
 
-  right: {
-    padding: 16,
-    height: '100%',
+  heroTop: {
+    display: 'grid',
+    gridTemplateColumns: '108px 1fr',
+    gap: '16px',
+    alignItems: 'center',
   },
 
-  logoBox: {
-    background: '#111827',
-    padding: 12,
-    borderRadius: 12,
+  logoImageWrap: {
+    width: '108px',
+    height: '108px',
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(240,245,255,0.96) 100%)',
+    borderRadius: '22px',
+    padding: '12px',
+    boxSizing: 'border-box',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 14px 34px rgba(0,0,0,0.18)',
   },
 
-  version: {
-    fontSize: 12,
-    opacity: 0.7,
-    marginTop: 6,
+  logoImage: {
+    width: '100%',
+    height: 'auto',
+    display: 'block',
+    objectFit: 'contain',
   },
 
-  card: {
-    background: '#111827',
-    padding: 12,
-    borderRadius: 12,
+  heroTextWrap: {
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    gap: '8px',
+    minWidth: 0,
   },
 
-  title: {
-    fontWeight: 'bold',
-    marginBottom: 6,
+  versionPill: {
+    alignSelf: 'flex-start',
+    fontSize: '11px',
+    fontWeight: 800,
+    color: '#eaf0ff',
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    borderRadius: '999px',
+    padding: '6px 10px',
   },
 
-  grid: {
+  heading: {
+    margin: 0,
+    fontSize: '34px',
+    lineHeight: 1.02,
+    letterSpacing: '-0.03em',
+    fontWeight: 700,
+    fontFamily:
+      '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
+  },
+
+  tagline: {
+    margin: 0,
+    fontSize: '16px',
+    lineHeight: 1.45,
+    color: '#cad7f3',
+    maxWidth: '320px',
+  },
+
+  quickStartWrap: {
+    flex: 1,
+    minHeight: 0,
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '12px',
+    justifyContent: 'center',
+  },
+
+  sectionEyebrow: {
+    fontSize: '11px',
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+    color: '#9db2ff',
+    fontWeight: 800,
+  },
+
+  sectionTitle: {
+    fontSize: '18px',
+    fontWeight: 800,
+    color: '#f2f6ff',
+    marginTop: '4px',
+  },
+
+  subjectGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: 8,
+    gap: '12px',
   },
 
-  chat: {
-    height: '100%',
+  subjectButton: {
+    border: '1px solid rgba(255,255,255,0.12)',
+    background:
+      'linear-gradient(135deg, rgba(143,124,255,0.18) 0%, rgba(63,241,208,0.10) 100%)',
+    color: '#f7fbff',
+    padding: '14px 16px',
+    borderRadius: '18px',
+    fontSize: '15px',
+    fontWeight: 800,
+    textAlign: 'left',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.16)',
+  },
+
+  toolsCard: {
+    minHeight: 0,
+    background: 'linear-gradient(180deg, rgba(14, 23, 46, 0.92) 0%, rgba(10, 18, 38, 0.88) 100%)',
+    border: '1px solid rgba(145, 160, 255, 0.14)',
+    borderRadius: '28px',
+    padding: '18px',
+    boxShadow: '0 18px 50px rgba(0,0,0,0.32)',
     display: 'flex',
     flexDirection: 'column',
-  },
-
-  messages: {
-    flex: 1,
+    gap: '14px',
     overflowY: 'auto',
-    background: 'white',
-    color: 'black',
-    padding: 12,
-    borderRadius: 12,
   },
 
-  bot: {
-    marginBottom: 10,
-  },
-
-  user: {
-    textAlign: 'right',
-    marginBottom: 10,
-  },
-
-  inputBox: {
+  toolsHeaderRow: {
     display: 'flex',
-    gap: 8,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '12px',
+  },
+
+  reportButton: {
+    border: '1px solid rgba(255,255,255,0.14)',
+    background: 'rgba(255,255,255,0.10)',
+    color: '#f7fbff',
+    padding: '10px 14px',
+    borderRadius: '14px',
+    fontSize: '14px',
+    fontWeight: 800,
+    whiteSpace: 'nowrap',
+  },
+
+  reportButtonDisabled: {
+    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'rgba(255,255,255,0.05)',
+    color: '#90a3cd',
+    padding: '10px 14px',
+    borderRadius: '14px',
+    fontSize: '14px',
+    fontWeight: 800,
+    whiteSpace: 'nowrap',
+  },
+
+  toolToggleRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '10px',
+  },
+
+  toolToggle: {
+    background: 'rgba(255,255,255,0.08)',
+    border: '1px solid rgba(255,255,255,0.12)',
+    color: '#eef4ff',
+    padding: '12px 14px',
+    borderRadius: '15px',
+    fontSize: '14px',
+    fontWeight: 800,
+  },
+
+  toolToggleActive: {
+    background:
+      'linear-gradient(135deg, rgba(143,124,255,0.22) 0%, rgba(63,241,208,0.12) 100%)',
+    border: '1px solid rgba(143,124,255,0.32)',
+    color: '#ffffff',
+    padding: '12px 14px',
+    borderRadius: '15px',
+    fontSize: '14px',
+    fontWeight: 800,
+  },
+
+  practiceWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+
+  miniLabel: {
+    fontSize: '13px',
+    fontWeight: 800,
+    color: '#e7efff',
+  },
+
+  miniLabelDark: {
+    fontSize: '13px',
+    fontWeight: 800,
+    color: '#0f172a',
+    marginBottom: '10px',
+  },
+
+  sideTextarea: {
+    width: '100%',
+    minHeight: '132px',
+    borderRadius: '18px',
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.05)',
+    color: '#eef4ff',
+    padding: '14px 16px',
+    fontSize: '15px',
+    lineHeight: 1.5,
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+
+  toolPanel: {
+    background: '#ffffff',
+    border: '1px solid rgba(15,23,42,0.08)',
+    borderRadius: '18px',
+    padding: '14px',
+  },
+
+  calcInput: {
+    width: '100%',
+    borderRadius: '12px',
+    border: '1px solid #d6deec',
+    background: '#f8fbff',
+    color: '#0f172a',
+    padding: '12px 13px',
+    fontSize: '15px',
+    boxSizing: 'border-box',
+    outline: 'none',
+  },
+
+  calcRow: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    marginTop: '12px',
+  },
+
+  smallButton: {
+    border: 'none',
+    borderRadius: '12px',
+    padding: '10px 14px',
+    fontSize: '14px',
+    fontWeight: 800,
+    color: '#07111e',
+    background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
+  },
+
+  calcResult: {
+    minHeight: '22px',
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#334155',
+    wordBreak: 'break-word',
+  },
+
+  notesTextarea: {
+    width: '100%',
+    minHeight: '130px',
+    borderRadius: '14px',
+    border: '1px solid #d6deec',
+    background: '#f8fbff',
+    color: '#0f172a',
+    padding: '12px 13px',
+    fontSize: '15px',
+    lineHeight: 1.5,
+    resize: 'vertical',
+    outline: 'none',
+    boxSizing: 'border-box',
+  },
+
+  chatCard: {
+    minHeight: 0,
+    background: 'linear-gradient(180deg, rgba(10, 18, 37, 0.96) 0%, rgba(8, 15, 31, 0.92) 100%)',
+    border: '1px solid rgba(145, 160, 255, 0.14)',
+    borderRadius: '30px',
+    padding: '18px',
+    boxShadow: '0 22px 60px rgba(0,0,0,0.34)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+
+  chatHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '12px',
+  },
+
+  chatEyebrow: {
+    fontSize: '11px',
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+    color: '#97adff',
+    fontWeight: 800,
+  },
+
+  chatTitle: {
+    fontSize: '28px',
+    fontWeight: 800,
+    color: '#f5f8ff',
+    marginTop: '4px',
+  },
+
+  statusWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    background: 'rgba(255,255,255,0.06)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    borderRadius: '999px',
+    padding: '8px 12px',
+  },
+
+  statusDot: {
+    width: '8px',
+    height: '8px',
+    background: '#5eead4',
+    borderRadius: '50%',
+    boxShadow: '0 0 12px rgba(94, 234, 212, 0.7)',
+  },
+
+  statusText: {
+    fontSize: '13px',
+    color: '#d7e3ff',
+  },
+
+  messageArea: {
+    flex: 1,
+    minHeight: 0,
+    overflowY: 'auto',
+    background:
+      'linear-gradient(180deg, rgba(248,251,255,0.98) 0%, rgba(239,245,255,0.98) 100%)',
+    border: '1px solid rgba(255,255,255,0.16)',
+    borderRadius: '24px',
+    padding: '18px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+
+  assistantBubble: {
+    alignSelf: 'flex-start',
+    maxWidth: '78%',
+    background: '#f4f8ff',
+    border: '1px solid #dbe6f4',
+    borderRadius: '20px',
+    padding: '15px 16px',
+    boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
+  },
+
+  userBubble: {
+    alignSelf: 'flex-end',
+    maxWidth: '74%',
+    background: 'linear-gradient(135deg, #e8f1ff 0%, #dff7f2 100%)',
+    border: '1px solid #c6dafd',
+    borderRadius: '20px',
+    padding: '15px 16px',
+    boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
+  },
+
+  bubbleLabel: {
+    fontSize: '11px',
+    letterSpacing: '0.16em',
+    color: '#5f7290',
+    fontWeight: 800,
+    marginBottom: '8px',
+    textTransform: 'uppercase',
+  },
+
+  bubbleLabelUser: {
+    fontSize: '11px',
+    letterSpacing: '0.16em',
+    color: '#355e9b',
+    fontWeight: 800,
+    marginBottom: '8px',
+    textTransform: 'uppercase',
+  },
+
+  bubbleText: {
+    margin: 0,
+    fontSize: '16px',
+    lineHeight: 1.6,
+    color: '#0f172a',
+    whiteSpace: 'pre-wrap',
+  },
+
+  userBubbleText: {
+    margin: 0,
+    fontSize: '16px',
+    lineHeight: 1.6,
+    color: '#0f172a',
+    whiteSpace: 'pre-wrap',
+  },
+
+  inputCard: {
+    background: 'linear-gradient(180deg, rgba(10, 18, 37, 0.96) 0%, rgba(8, 15, 31, 0.92) 100%)',
+    border: '1px solid rgba(145, 160, 255, 0.14)',
+    borderRadius: '30px',
+    padding: '18px',
+    boxShadow: '0 22px 60px rgba(0,0,0,0.34)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '14px',
+  },
+
+  inputHeaderRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: '16px',
+  },
+
+  inputTitle: {
+    fontSize: '24px',
+    fontWeight: 800,
+    color: '#f5f8ff',
+    marginTop: '4px',
+  },
+
+  inputHint: {
+    fontSize: '13px',
+    color: '#cdd9f4',
+    textAlign: 'right',
+    maxWidth: '250px',
+    lineHeight: 1.4,
+  },
+
+  mainTextarea: {
+    width: '100%',
+    minHeight: '110px',
+    borderRadius: '22px',
+    border: '1px solid rgba(255,255,255,0.14)',
+    background: 'rgba(255,255,255,0.98)',
+    color: '#0f172a',
+    padding: '16px',
+    fontSize: '17px',
+    lineHeight: 1.5,
+    resize: 'none',
+    outline: 'none',
+    boxSizing: 'border-box',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+  },
+
+  inputFooter: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: '16px',
+  },
+
+  footerPrompt: {
+    fontSize: '14px',
+    lineHeight: 1.45,
+    color: '#d5e0fb',
+    maxWidth: '520px',
+  },
+
+  sendButton: {
+    border: 'none',
+    borderRadius: '16px',
+    padding: '13px 24px',
+    fontSize: '15px',
+    fontWeight: 800,
+    color: '#07111e',
+    background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
+    boxShadow: '0 10px 30px rgba(63, 241, 208, 0.20)',
+    whiteSpace: 'nowrap',
+  },
+
+  visualCard: {
+    marginTop: '12px',
+    background: '#ffffff',
+    border: '1px solid #d8e2ee',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+
+  visualPlaceholderCard: {
+    marginTop: '12px',
+    background: 'linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)',
+    border: '1px solid #d8e2ee',
+    borderRadius: '16px',
+    padding: '14px',
+  },
+
+  visualHeaderRow: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    marginBottom: '12px',
+  },
+
+  visualTitle: {
+    fontSize: '14px',
+    fontWeight: 800,
+    color: '#0f172a',
+  },
+
+  visualBadge: {
+    fontSize: '11px',
+    fontWeight: 800,
+    color: '#4f46e5',
+    background: '#eef2ff',
+    border: '1px solid #c7d2fe',
+    borderRadius: '999px',
+    padding: '5px 9px',
+    whiteSpace: 'nowrap',
+  },
+
+  placeholderGraphic: {
+    position: 'relative',
+    borderRadius: '14px',
+    height: '112px',
+    background:
+      'linear-gradient(135deg, rgba(143,124,255,0.14) 0%, rgba(63,241,208,0.10) 100%)',
+    overflow: 'hidden',
+    border: '1px solid rgba(124,92,255,0.12)',
+  },
+
+  placeholderOrbOne: {
+    position: 'absolute',
+    width: '74px',
+    height: '74px',
+    borderRadius: '50%',
+    background: 'rgba(124,92,255,0.18)',
+    top: '16px',
+    left: '18px',
+  },
+
+  placeholderOrbTwo: {
+    position: 'absolute',
+    width: '58px',
+    height: '58px',
+    borderRadius: '50%',
+    background: 'rgba(63,241,208,0.18)',
+    bottom: '16px',
+    right: '20px',
+  },
+
+  placeholderLineLong: {
+    position: 'absolute',
+    left: '116px',
+    right: '24px',
+    top: '24px',
+    height: '12px',
+    borderRadius: '999px',
+    background: 'rgba(255,255,255,0.62)',
+  },
+
+  placeholderLineShort: {
+    position: 'absolute',
+    left: '116px',
+    right: '86px',
+    top: '48px',
+    height: '10px',
+    borderRadius: '999px',
+    background: 'rgba(255,255,255,0.46)',
+  },
+
+  placeholderLineMid: {
+    position: 'absolute',
+    left: '24px',
+    right: '118px',
+    bottom: '22px',
+    height: '10px',
+    borderRadius: '999px',
+    background: 'rgba(255,255,255,0.42)',
+  },
+
+  visualDescription: {
+    fontSize: '14px',
+    lineHeight: 1.55,
+    color: '#334155',
+  },
+
+  fractionBarWrap: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(28px, 1fr))',
+    gap: '8px',
+    marginBottom: '12px',
+  },
+
+  fractionPiece: {
+    height: '34px',
+    borderRadius: '10px',
+  },
+
+  numberLineWrap: {
+    position: 'relative',
+    paddingTop: '14px',
+    paddingBottom: '6px',
+  },
+
+  numberLineBase: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: '30px',
+    height: '3px',
+    borderRadius: '999px',
+    background: '#cbd5e1',
+  },
+
+  numberLineRow: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(38px, 1fr))',
+    gap: '4px',
+    position: 'relative',
+  },
+
+  numberTickWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '8px',
+    minWidth: 0,
+  },
+
+  numberDot: {
+    width: '14px',
+    height: '14px',
+    borderRadius: '50%',
+    zIndex: 1,
+  },
+
+  numberLabel: {
+    fontSize: '13px',
+  },
+
+  vocabWord: {
+    fontSize: '20px',
+    fontWeight: 800,
+    color: '#0f172a',
+    marginBottom: '8px',
+  },
+
+  vocabDefinition: {
+    fontSize: '14px',
+    lineHeight: 1.55,
+    color: '#334155',
+  },
+
+  vocabExampleBox: {
+    marginTop: '12px',
+    background: '#f8fafc',
+    border: '1px solid #e2e8f0',
+    borderRadius: '12px',
+    padding: '12px',
+  },
+
+  vocabExampleLabel: {
+    fontSize: '12px',
+    fontWeight: 800,
+    color: '#64748b',
+    marginBottom: '6px',
+  },
+
+  vocabExampleText: {
+    fontSize: '14px',
+    color: '#334155',
+    lineHeight: 1.5,
   },
 }
