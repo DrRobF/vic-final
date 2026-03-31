@@ -14,15 +14,10 @@ export default function AskVIC() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: 'I’m here to teach, not just answer. Type anything to begin or start a lesson below.',
+      text: 'Hi — type here or start a lesson below.',
       visual: {
-        type: 'welcome',
-        title: 'How VIC helps',
-        items: [
-          'Teaches step by step',
-          'Uses examples and visuals',
-          'Checks understanding',
-        ],
+        type: 'placeholder',
+        title: 'Visual area',
       },
     },
   ])
@@ -141,7 +136,7 @@ export default function AskVIC() {
   }
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault()
       sendMessage()
     }
@@ -219,12 +214,12 @@ export default function AskVIC() {
           </p>
 
           <div style={styles.card}>
-            <div style={styles.cardTitle}>Work Area</div>
-            <div style={styles.cardHelper}>Write your work here while VIC helps you.</div>
+            <div style={styles.cardTitle}>Practice Area</div>
+            <div style={styles.cardHelper}>Try your ideas here while VIC helps you.</div>
             <textarea
               value={workArea}
               onChange={(e) => setWorkArea(e.target.value)}
-              placeholder="Show your work here..."
+              placeholder="Let’s practice here..."
               style={styles.sideTextarea}
             />
           </div>
@@ -329,7 +324,7 @@ export default function AskVIC() {
 
               {messages.length === 1 ? (
                 <div style={styles.helperText}>
-                  Type anything to begin, or start a lesson below.
+                  Type here or start a lesson below.
                 </div>
               ) : null}
 
@@ -338,13 +333,13 @@ export default function AskVIC() {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  rows={2}
-                  placeholder="Type what you need help with..."
+                  rows={3}
+                  placeholder="Type here..."
                   style={styles.mainTextarea}
                 />
 
                 <div style={styles.inputFooter}>
-                  <div style={styles.inputHint}>Press Enter to send</div>
+                  <div style={styles.inputHint}>Enter = new line • Ctrl/Cmd + Enter = send</div>
 
                   <button
                     onClick={() => sendMessage()}
@@ -362,7 +357,7 @@ export default function AskVIC() {
 
               <div style={styles.subjectSection}>
                 <div style={styles.sectionHeaderRow}>
-                  <div style={styles.sectionTitle}>Start a lesson</div>
+                  <div style={styles.sectionTitle}>Start a new lesson</div>
 
                   <button
                     style={{
@@ -403,21 +398,30 @@ export default function AskVIC() {
 function VisualCardRenderer({ visual }) {
   if (!visual || !visual.type) return null
 
-  if (visual.type === 'welcome') {
+  if (visual.type === 'placeholder') {
     return (
-      <div style={styles.visualCard}>
-        <div style={styles.visualHeaderRow}>
-          <div style={styles.visualTitle}>{visual.title || 'Lesson support'}</div>
-          <div style={styles.visualBadge}>Live visual</div>
+      <div style={styles.visualPlaceholderCard}>
+        <div style={styles.visualPlaceholderHeader}>
+          <div style={styles.visualTitle}>{visual.title || 'Visual area'}</div>
+          <div style={styles.visualBadgeMuted}>Waiting</div>
         </div>
 
-        <div style={styles.visualList}>
-          {(visual.items || []).map((item, index) => (
-            <div key={`${item}-${index}`} style={styles.visualListItem}>
-              <span style={styles.visualListDot} />
-              <span>{item}</span>
-            </div>
-          ))}
+        <div style={styles.visualPlaceholderArt}>
+          <div style={styles.visualOrbLarge} />
+          <div style={styles.visualOrbSmall} />
+          <div style={styles.visualLineRow}>
+            <span style={styles.visualLineShort} />
+            <span style={styles.visualLineLong} />
+          </div>
+          <div style={styles.visualGrid}>
+            {Array.from({ length: 6 }).map((_, index) => (
+              <span key={index} style={styles.visualGridCell} />
+            ))}
+          </div>
+        </div>
+
+        <div style={styles.visualPlaceholderText}>
+          Visuals will appear here only when they help explain something.
         </div>
       </div>
     )
@@ -616,24 +620,6 @@ function inferVisualFromConversation(userText, assistantText) {
   }
 
   if (
-    combined.includes('step by step') ||
-    combined.includes('first') ||
-    combined.includes('next') ||
-    combined.includes('then') ||
-    combined.includes('finally')
-  ) {
-    const parsedSteps = extractSteps(assistantText)
-
-    if (parsedSteps.length >= 2) {
-      return {
-        type: 'steps',
-        title: 'Let’s break it down',
-        steps: parsedSteps.slice(0, 4),
-      }
-    }
-  }
-
-  if (
     combined.includes('vocabulary') ||
     combined.includes('define') ||
     combined.includes('definition') ||
@@ -644,28 +630,6 @@ function inferVisualFromConversation(userText, assistantText) {
   }
 
   return null
-}
-
-function extractSteps(text) {
-  if (!text) return []
-
-  const lines = text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-
-  const numberedLines = lines
-    .map((line) => line.replace(/^\d+[\).\s-]+/, '').trim())
-    .filter((line, index) => /^\d+[\).\s-]+/.test(lines[index]))
-
-  if (numberedLines.length >= 2) return numberedLines
-
-  const sentences = text
-    .split(/(?<=[.!?])\s+/)
-    .map((s) => s.trim())
-    .filter(Boolean)
-
-  return sentences.filter((sentence) => sentence.length <= 120).slice(0, 4)
 }
 
 function extractVocabularyCard(text) {
@@ -1183,6 +1147,114 @@ const styles = {
     lineHeight: 1.5,
     resize: 'vertical',
     boxSizing: 'border-box',
+  },
+
+
+  visualPlaceholderCard: {
+    marginTop: '14px',
+    borderRadius: '18px',
+    border: '1px solid rgba(124,92,255,0.14)',
+    background: 'linear-gradient(180deg, #fbfcff 0%, #f5f8ff 100%)',
+    padding: '14px',
+  },
+
+  visualPlaceholderHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '12px',
+    marginBottom: '12px',
+  },
+
+  visualBadgeMuted: {
+    fontSize: '11px',
+    fontWeight: 700,
+    color: '#64748b',
+    background: '#eef2ff',
+    border: '1px solid #dbe4ff',
+    borderRadius: '999px',
+    padding: '5px 9px',
+  },
+
+  visualPlaceholderArt: {
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: '16px',
+    minHeight: '138px',
+    border: '1px solid #e2e8f0',
+    background:
+      'radial-gradient(circle at top left, rgba(124,92,255,0.14), transparent 34%), radial-gradient(circle at bottom right, rgba(67,231,208,0.16), transparent 32%), linear-gradient(180deg, #ffffff 0%, #f8fafc 100%)',
+    padding: '18px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'space-between',
+    gap: '14px',
+  },
+
+  visualOrbLarge: {
+    position: 'absolute',
+    top: '16px',
+    right: '18px',
+    width: '64px',
+    height: '64px',
+    borderRadius: '50%',
+    background: 'rgba(124,92,255,0.10)',
+    filter: 'blur(0px)',
+  },
+
+  visualOrbSmall: {
+    position: 'absolute',
+    top: '40px',
+    right: '62px',
+    width: '28px',
+    height: '28px',
+    borderRadius: '50%',
+    background: 'rgba(67,231,208,0.22)',
+  },
+
+  visualLineRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '10px',
+    width: '58%',
+  },
+
+  visualLineShort: {
+    display: 'block',
+    width: '55%',
+    height: '10px',
+    borderRadius: '999px',
+    background: 'linear-gradient(90deg, rgba(124,92,255,0.34), rgba(124,92,255,0.08))',
+  },
+
+  visualLineLong: {
+    display: 'block',
+    width: '88%',
+    height: '10px',
+    borderRadius: '999px',
+    background: 'linear-gradient(90deg, rgba(67,231,208,0.34), rgba(67,231,208,0.08))',
+  },
+
+  visualGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '10px',
+    maxWidth: '240px',
+  },
+
+  visualGridCell: {
+    display: 'block',
+    height: '28px',
+    borderRadius: '10px',
+    border: '1px solid #dbe4ff',
+    background: 'rgba(255,255,255,0.72)',
+  },
+
+  visualPlaceholderText: {
+    marginTop: '10px',
+    fontSize: '13px',
+    lineHeight: 1.55,
+    color: '#475569',
   },
 
   visualCard: {
