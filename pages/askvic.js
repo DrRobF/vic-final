@@ -14,7 +14,7 @@ export default function AskVIC() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: 'Hi — pick a subject on the left or type here to begin.',
+      text: 'Hi — pick a subject on the left to begin.',
       visual: { type: 'idle', title: 'Visual Support' },
     },
   ])
@@ -207,7 +207,7 @@ export default function AskVIC() {
 
           <section style={styles.toolsCard}>
             <div style={styles.toolsHeaderRow}>
-              <div>
+              <div style={styles.toolsHeaderText}>
                 <div style={styles.sectionEyebrow}>Workspace Tools</div>
                 <div style={styles.sectionTitle}>Practice, notes, and report</div>
               </div>
@@ -661,14 +661,14 @@ const styles = {
     padding: '18px',
     boxSizing: 'border-box',
     display: 'grid',
-    gridTemplateColumns: '360px minmax(0, 1fr)',
+    gridTemplateColumns: '380px minmax(0, 1fr)',
     gap: '18px',
   },
 
   leftColumn: {
     minHeight: 0,
     display: 'grid',
-    gridTemplateRows: '1fr 1fr',
+    gridTemplateRows: '0.98fr 1.02fr',
     gap: '18px',
   },
 
@@ -689,22 +689,22 @@ const styles = {
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '18px',
+    gap: '16px',
     overflow: 'hidden',
   },
 
   heroTop: {
     display: 'grid',
-    gridTemplateColumns: '108px 1fr',
-    gap: '16px',
+    gridTemplateColumns: '126px 1fr',
+    gap: '18px',
     alignItems: 'center',
   },
 
   logoImageWrap: {
-    width: '108px',
-    height: '108px',
+    width: '126px',
+    height: '126px',
     background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(240,245,255,0.96) 100%)',
-    borderRadius: '22px',
+    borderRadius: '24px',
     padding: '12px',
     boxSizing: 'border-box',
     display: 'flex',
@@ -762,7 +762,7 @@ const styles = {
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
+    gap: '10px',
     justifyContent: 'center',
   },
 
@@ -772,14 +772,15 @@ const styles = {
     textTransform: 'uppercase',
     color: '#9db2ff',
     fontWeight: 800,
+    marginBottom: '2px',
   },
 
   sectionTitle: {
     fontSize: '18px',
     fontWeight: 800,
     color: '#f2f6ff',
-    marginTop: '4px',
-    lineHeight: 1.2,
+    marginTop: '2px',
+    lineHeight: 1.15,
   },
 
   subjectGrid: {
@@ -803,6 +804,8 @@ const styles = {
     flexDirection: 'column',
     gap: '5px',
     transition: 'transform 180ms ease, box-shadow 180ms ease',
+    minHeight: '82px',
+    overflow: 'hidden',
   },
 
   subjectButtonLabel: {
@@ -832,10 +835,14 @@ const styles = {
   },
 
   toolsHeaderRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    display: 'grid',
+    gridTemplateColumns: '1fr auto',
+    alignItems: 'start',
     gap: '12px',
+  },
+
+  toolsHeaderText: {
+    minWidth: 0,
   },
 
   reportButton: {
@@ -848,6 +855,7 @@ const styles = {
     fontWeight: 800,
     whiteSpace: 'nowrap',
     boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+    alignSelf: 'start',
   },
 
   reportButtonDisabled: {
@@ -859,6 +867,7 @@ const styles = {
     fontSize: '14px',
     fontWeight: 800,
     whiteSpace: 'nowrap',
+    alignSelf: 'start',
   },
 
   toolToggleRow: {
@@ -911,10 +920,10 @@ const styles = {
 
   sideTextarea: {
     width: '100%',
-    minHeight: '132px',
+    minHeight: '146px',
     borderRadius: '18px',
-    border: '1px solid rgba(255,255,255,0.10)',
-    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(173, 193, 255, 0.22)',
+    background: 'linear-gradient(180deg, rgba(30,45,82,0.88) 0%, rgba(23,35,67,0.88) 100%)',
     color: '#eef4ff',
     padding: '14px 16px',
     fontSize: '15px',
@@ -922,7 +931,7 @@ const styles = {
     resize: 'vertical',
     outline: 'none',
     boxSizing: 'border-box',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.14)',
   },
 
   toolPanel: {
@@ -1224,17 +1233,17 @@ const styles = {
     position: 'relative',
     zIndex: 1,
     display: 'grid',
-    gridTemplateColumns: '84px 1fr',
-    gap: '14px',
+    gridTemplateColumns: '98px 1fr',
+    gap: '16px',
     alignItems: 'center',
     padding: '16px',
   },
 
   visualIdleLogo: {
-    width: '84px',
-    height: '84px',
+    width: '98px',
+    height: '98px',
     objectFit: 'contain',
-    opacity: 0.72,
+    opacity: 0.78,
     filter: 'drop-shadow(0 8px 16px rgba(15,23,42,0.10))',
   },
 
