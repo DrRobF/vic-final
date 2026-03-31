@@ -15,7 +15,7 @@ export default function AskVIC() {
     {
       role: 'assistant',
       text: 'Hi — pick a subject on the left or type here to begin.',
-      visual: { type: 'placeholder', title: 'Visual Support' },
+      visual: { type: 'idle', title: 'Visual Support' },
     },
   ])
 
@@ -159,6 +159,7 @@ export default function AskVIC() {
       <div style={styles.backgroundGlowOne} />
       <div style={styles.backgroundGlowTwo} />
       <div style={styles.backgroundGlowThree} />
+      <div style={styles.backgroundMesh} />
 
       <div style={styles.shell}>
         <div style={styles.leftColumn}>
@@ -185,16 +186,20 @@ export default function AskVIC() {
               <div style={styles.sectionEyebrow}>Start Learning</div>
               <div style={styles.subjectGrid}>
                 <button style={styles.subjectButton} onClick={() => startSubject('math')}>
-                  Math
+                  <span style={styles.subjectButtonLabel}>Math</span>
+                  <span style={styles.subjectButtonSub}>Practice and problem solving</span>
                 </button>
                 <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
-                  Reading
+                  <span style={styles.subjectButtonLabel}>Reading</span>
+                  <span style={styles.subjectButtonSub}>Comprehension and analysis</span>
                 </button>
                 <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
-                  Writing
+                  <span style={styles.subjectButtonLabel}>Writing</span>
+                  <span style={styles.subjectButtonSub}>Ideas, drafting, and revision</span>
                 </button>
                 <button style={styles.subjectButton} onClick={() => startSubject('science')}>
-                  Science
+                  <span style={styles.subjectButtonLabel}>Science</span>
+                  <span style={styles.subjectButtonSub}>Concepts, vocabulary, and inquiry</span>
                 </button>
               </div>
             </div>
@@ -362,20 +367,22 @@ export default function AskVIC() {
 function VisualCardRenderer({ visual }) {
   if (!visual || !visual.type) return null
 
-  if (visual.type === 'placeholder') {
+  if (visual.type === 'idle') {
     return (
-      <div style={styles.visualPlaceholderCard}>
-        <div style={styles.visualHeaderRow}>
-          <div style={styles.visualTitle}>{visual.title || 'Visual Support'}</div>
-          <div style={styles.visualBadge}>Ready</div>
-        </div>
-
-        <div style={styles.placeholderGraphic}>
-          <div style={styles.placeholderOrbOne} />
-          <div style={styles.placeholderOrbTwo} />
-          <div style={styles.placeholderLineLong} />
-          <div style={styles.placeholderLineShort} />
-          <div style={styles.placeholderLineMid} />
+      <div style={styles.visualIdleCard}>
+        <div style={styles.visualIdleGlow} />
+        <div style={styles.visualIdleInner}>
+          <img
+            src="/vic-logo.png"
+            alt="VIC logo"
+            style={styles.visualIdleLogo}
+          />
+          <div style={styles.visualIdleTextWrap}>
+            <div style={styles.visualIdleTitle}>Visual support will appear here</div>
+            <div style={styles.visualIdleText}>
+              Diagrams, models, and step visuals show up only when they help.
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -564,7 +571,7 @@ function inferVisualFromConversation(userText, assistantText) {
   }
 
   return {
-    type: 'placeholder',
+    type: 'idle',
     title: 'Visual Support',
   }
 }
@@ -593,7 +600,7 @@ const styles = {
   page: {
     minHeight: '100vh',
     background:
-      'radial-gradient(circle at 14% 10%, rgba(124, 92, 255, 0.24), transparent 26%), radial-gradient(circle at 82% 88%, rgba(0, 255, 200, 0.10), transparent 28%), linear-gradient(135deg, #030816 0%, #07122a 48%, #08192f 100%)',
+      'radial-gradient(circle at 14% 10%, rgba(124, 92, 255, 0.28), transparent 26%), radial-gradient(circle at 82% 88%, rgba(0, 255, 200, 0.12), transparent 28%), linear-gradient(135deg, #030816 0%, #08142d 48%, #09213a 100%)',
     color: '#e8eefc',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
@@ -619,7 +626,7 @@ const styles = {
     right: '-60px',
     width: '300px',
     height: '300px',
-    background: 'rgba(0, 255, 200, 0.10)',
+    background: 'rgba(0, 255, 200, 0.12)',
     filter: 'blur(88px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -634,6 +641,16 @@ const styles = {
     background: 'rgba(70, 130, 255, 0.10)',
     filter: 'blur(75px)',
     borderRadius: '50%',
+    pointerEvents: 'none',
+  },
+
+  backgroundMesh: {
+    position: 'absolute',
+    inset: 0,
+    background:
+      'linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)',
+    backgroundSize: '32px 32px',
+    maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.75), rgba(0,0,0,0.2))',
     pointerEvents: 'none',
   },
 
@@ -664,11 +681,12 @@ const styles = {
 
   heroCard: {
     minHeight: 0,
-    background: 'linear-gradient(180deg, rgba(14, 23, 46, 0.92) 0%, rgba(10, 18, 38, 0.88) 100%)',
+    background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.90) 0%, rgba(9, 18, 38, 0.82) 100%)',
     border: '1px solid rgba(145, 160, 255, 0.14)',
     borderRadius: '28px',
     padding: '18px',
-    boxShadow: '0 18px 50px rgba(0,0,0,0.32)',
+    boxShadow: '0 20px 52px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
     gap: '18px',
@@ -692,7 +710,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 14px 34px rgba(0,0,0,0.18)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.72), 0 14px 34px rgba(0,0,0,0.18)',
   },
 
   logoImage: {
@@ -718,6 +736,7 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.12)',
     borderRadius: '999px',
     padding: '6px 10px',
+    boxShadow: '0 6px 14px rgba(0,0,0,0.12)',
   },
 
   heading: {
@@ -760,6 +779,7 @@ const styles = {
     fontWeight: 800,
     color: '#f2f6ff',
     marginTop: '4px',
+    lineHeight: 1.2,
   },
 
   subjectGrid: {
@@ -771,23 +791,40 @@ const styles = {
   subjectButton: {
     border: '1px solid rgba(255,255,255,0.12)',
     background:
-      'linear-gradient(135deg, rgba(143,124,255,0.18) 0%, rgba(63,241,208,0.10) 100%)',
+      'linear-gradient(135deg, rgba(143,124,255,0.16) 0%, rgba(63,241,208,0.08) 100%)',
     color: '#f7fbff',
     padding: '14px 16px',
     borderRadius: '18px',
     fontSize: '15px',
     fontWeight: 800,
     textAlign: 'left',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.16)',
+    boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '5px',
+    transition: 'transform 180ms ease, box-shadow 180ms ease',
+  },
+
+  subjectButtonLabel: {
+    fontSize: '16px',
+    fontWeight: 800,
+  },
+
+  subjectButtonSub: {
+    fontSize: '11px',
+    lineHeight: 1.35,
+    color: '#c7d6f5',
+    fontWeight: 600,
   },
 
   toolsCard: {
     minHeight: 0,
-    background: 'linear-gradient(180deg, rgba(14, 23, 46, 0.92) 0%, rgba(10, 18, 38, 0.88) 100%)',
+    background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.90) 0%, rgba(9, 18, 38, 0.82) 100%)',
     border: '1px solid rgba(145, 160, 255, 0.14)',
     borderRadius: '28px',
     padding: '18px',
-    boxShadow: '0 18px 50px rgba(0,0,0,0.32)',
+    boxShadow: '0 20px 52px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
@@ -803,13 +840,14 @@ const styles = {
 
   reportButton: {
     border: '1px solid rgba(255,255,255,0.14)',
-    background: 'rgba(255,255,255,0.10)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05))',
     color: '#f7fbff',
     padding: '10px 14px',
     borderRadius: '14px',
     fontSize: '14px',
     fontWeight: 800,
     whiteSpace: 'nowrap',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
   },
 
   reportButtonDisabled: {
@@ -837,6 +875,7 @@ const styles = {
     borderRadius: '15px',
     fontSize: '14px',
     fontWeight: 800,
+    boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
   },
 
   toolToggleActive: {
@@ -848,6 +887,7 @@ const styles = {
     borderRadius: '15px',
     fontSize: '14px',
     fontWeight: 800,
+    boxShadow: '0 8px 18px rgba(0,0,0,0.14)',
   },
 
   practiceWrap: {
@@ -882,6 +922,7 @@ const styles = {
     resize: 'vertical',
     outline: 'none',
     boxSizing: 'border-box',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
   },
 
   toolPanel: {
@@ -889,6 +930,7 @@ const styles = {
     border: '1px solid rgba(15,23,42,0.08)',
     borderRadius: '18px',
     padding: '14px',
+    boxShadow: '0 12px 24px rgba(15,23,42,0.08)',
   },
 
   calcInput: {
@@ -918,6 +960,7 @@ const styles = {
     fontWeight: 800,
     color: '#07111e',
     background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
+    boxShadow: '0 8px 20px rgba(63,241,208,0.18)',
   },
 
   calcResult: {
@@ -945,11 +988,12 @@ const styles = {
 
   chatCard: {
     minHeight: 0,
-    background: 'linear-gradient(180deg, rgba(10, 18, 37, 0.96) 0%, rgba(8, 15, 31, 0.92) 100%)',
+    background: 'linear-gradient(180deg, rgba(8, 16, 34, 0.92) 0%, rgba(8, 15, 31, 0.84) 100%)',
     border: '1px solid rgba(145, 160, 255, 0.14)',
     borderRadius: '30px',
     padding: '18px',
-    boxShadow: '0 22px 60px rgba(0,0,0,0.34)',
+    boxShadow: '0 22px 60px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
@@ -985,6 +1029,7 @@ const styles = {
     border: '1px solid rgba(255,255,255,0.10)',
     borderRadius: '999px',
     padding: '8px 12px',
+    boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
   },
 
   statusDot: {
@@ -1006,32 +1051,33 @@ const styles = {
     overflowY: 'auto',
     background:
       'linear-gradient(180deg, rgba(248,251,255,0.98) 0%, rgba(239,245,255,0.98) 100%)',
-    border: '1px solid rgba(255,255,255,0.16)',
+    border: '1px solid rgba(255,255,255,0.18)',
     borderRadius: '24px',
     padding: '18px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '16px',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 16px 34px rgba(6,10,18,0.10)',
   },
 
   assistantBubble: {
     alignSelf: 'flex-start',
-    maxWidth: '78%',
-    background: '#f4f8ff',
+    maxWidth: '76%',
+    background: '#f7faff',
     border: '1px solid #dbe6f4',
-    borderRadius: '20px',
-    padding: '15px 16px',
-    boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
+    borderRadius: '22px',
+    padding: '16px 17px',
+    boxShadow: '0 12px 26px rgba(15,23,42,0.06)',
   },
 
   userBubble: {
     alignSelf: 'flex-end',
-    maxWidth: '74%',
-    background: 'linear-gradient(135deg, #e8f1ff 0%, #dff7f2 100%)',
-    border: '1px solid #c6dafd',
-    borderRadius: '20px',
-    padding: '15px 16px',
-    boxShadow: '0 10px 24px rgba(15,23,42,0.06)',
+    maxWidth: '72%',
+    background: 'linear-gradient(135deg, #eef4ff 0%, #e3fbf6 100%)',
+    border: '1px solid #cfe0ff',
+    borderRadius: '22px',
+    padding: '16px 17px',
+    boxShadow: '0 12px 26px rgba(15,23,42,0.06)',
   },
 
   bubbleLabel: {
@@ -1054,26 +1100,27 @@ const styles = {
 
   bubbleText: {
     margin: 0,
-    fontSize: '16px',
-    lineHeight: 1.6,
+    fontSize: '17px',
+    lineHeight: 1.68,
     color: '#0f172a',
     whiteSpace: 'pre-wrap',
   },
 
   userBubbleText: {
     margin: 0,
-    fontSize: '16px',
-    lineHeight: 1.6,
+    fontSize: '17px',
+    lineHeight: 1.68,
     color: '#0f172a',
     whiteSpace: 'pre-wrap',
   },
 
   inputCard: {
-    background: 'linear-gradient(180deg, rgba(10, 18, 37, 0.96) 0%, rgba(8, 15, 31, 0.92) 100%)',
+    background: 'linear-gradient(180deg, rgba(8, 16, 34, 0.92) 0%, rgba(8, 15, 31, 0.84) 100%)',
     border: '1px solid rgba(145, 160, 255, 0.14)',
     borderRadius: '30px',
     padding: '18px',
-    boxShadow: '0 22px 60px rgba(0,0,0,0.34)',
+    boxShadow: '0 22px 60px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
@@ -1103,18 +1150,18 @@ const styles = {
 
   mainTextarea: {
     width: '100%',
-    minHeight: '110px',
+    minHeight: '112px',
     borderRadius: '22px',
-    border: '1px solid rgba(255,255,255,0.14)',
-    background: 'rgba(255,255,255,0.98)',
+    border: '1px solid rgba(255,255,255,0.20)',
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,251,255,0.99) 100%)',
     color: '#0f172a',
-    padding: '16px',
-    fontSize: '17px',
-    lineHeight: 1.5,
+    padding: '18px',
+    fontSize: '18px',
+    lineHeight: 1.55,
     resize: 'none',
     outline: 'none',
     boxSizing: 'border-box',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.78), 0 18px 34px rgba(6,10,18,0.12)',
   },
 
   inputFooter: {
@@ -1139,7 +1186,7 @@ const styles = {
     fontWeight: 800,
     color: '#07111e',
     background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
-    boxShadow: '0 10px 30px rgba(63, 241, 208, 0.20)',
+    boxShadow: '0 14px 30px rgba(63, 241, 208, 0.24)',
     whiteSpace: 'nowrap',
   },
 
@@ -1149,14 +1196,65 @@ const styles = {
     border: '1px solid #d8e2ee',
     borderRadius: '16px',
     padding: '14px',
+    boxShadow: '0 10px 20px rgba(15,23,42,0.05)',
   },
 
-  visualPlaceholderCard: {
-    marginTop: '12px',
-    background: 'linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%)',
-    border: '1px solid #d8e2ee',
-    borderRadius: '16px',
-    padding: '14px',
+  visualIdleCard: {
+    marginTop: '14px',
+    position: 'relative',
+    overflow: 'hidden',
+    borderRadius: '18px',
+    background:
+      'linear-gradient(135deg, rgba(238,242,255,0.92) 0%, rgba(232,250,246,0.82) 100%)',
+    border: '1px solid rgba(203,213,225,0.9)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
+  },
+
+  visualIdleGlow: {
+    position: 'absolute',
+    inset: 'auto auto -30px -20px',
+    width: '130px',
+    height: '130px',
+    borderRadius: '50%',
+    background: 'rgba(124,92,255,0.12)',
+    filter: 'blur(10px)',
+  },
+
+  visualIdleInner: {
+    position: 'relative',
+    zIndex: 1,
+    display: 'grid',
+    gridTemplateColumns: '84px 1fr',
+    gap: '14px',
+    alignItems: 'center',
+    padding: '16px',
+  },
+
+  visualIdleLogo: {
+    width: '84px',
+    height: '84px',
+    objectFit: 'contain',
+    opacity: 0.72,
+    filter: 'drop-shadow(0 8px 16px rgba(15,23,42,0.10))',
+  },
+
+  visualIdleTextWrap: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+
+  visualIdleTitle: {
+    fontSize: '15px',
+    fontWeight: 800,
+    color: '#25334f',
+  },
+
+  visualIdleText: {
+    fontSize: '13px',
+    lineHeight: 1.5,
+    color: '#51617d',
+    maxWidth: '340px',
   },
 
   visualHeaderRow: {
@@ -1182,66 +1280,6 @@ const styles = {
     borderRadius: '999px',
     padding: '5px 9px',
     whiteSpace: 'nowrap',
-  },
-
-  placeholderGraphic: {
-    position: 'relative',
-    borderRadius: '14px',
-    height: '112px',
-    background:
-      'linear-gradient(135deg, rgba(143,124,255,0.14) 0%, rgba(63,241,208,0.10) 100%)',
-    overflow: 'hidden',
-    border: '1px solid rgba(124,92,255,0.12)',
-  },
-
-  placeholderOrbOne: {
-    position: 'absolute',
-    width: '74px',
-    height: '74px',
-    borderRadius: '50%',
-    background: 'rgba(124,92,255,0.18)',
-    top: '16px',
-    left: '18px',
-  },
-
-  placeholderOrbTwo: {
-    position: 'absolute',
-    width: '58px',
-    height: '58px',
-    borderRadius: '50%',
-    background: 'rgba(63,241,208,0.18)',
-    bottom: '16px',
-    right: '20px',
-  },
-
-  placeholderLineLong: {
-    position: 'absolute',
-    left: '116px',
-    right: '24px',
-    top: '24px',
-    height: '12px',
-    borderRadius: '999px',
-    background: 'rgba(255,255,255,0.62)',
-  },
-
-  placeholderLineShort: {
-    position: 'absolute',
-    left: '116px',
-    right: '86px',
-    top: '48px',
-    height: '10px',
-    borderRadius: '999px',
-    background: 'rgba(255,255,255,0.46)',
-  },
-
-  placeholderLineMid: {
-    position: 'absolute',
-    left: '24px',
-    right: '118px',
-    bottom: '22px',
-    height: '10px',
-    borderRadius: '999px',
-    background: 'rgba(255,255,255,0.42)',
   },
 
   visualDescription: {
