@@ -160,10 +160,12 @@ export default function AskVIC() {
       <div style={styles.backgroundGlowTwo} />
       <div style={styles.backgroundGlowThree} />
       <div style={styles.backgroundMesh} />
+      <div style={styles.backgroundSweep} />
 
       <div style={styles.shell}>
         <div style={styles.leftColumn}>
           <section style={styles.heroCard}>
+            <div style={styles.heroSparkle} />
             <div style={styles.heroTop}>
               <div style={styles.logoImageWrap}>
                 <img
@@ -238,7 +240,10 @@ export default function AskVIC() {
             </div>
 
             <div style={styles.practiceWrap}>
-              <div style={styles.miniLabel}>Practice Area</div>
+              <div style={styles.practiceHeaderRow}>
+                <div style={styles.miniLabel}>Practice Area</div>
+                <div style={styles.practiceHint}>Work it out here while VIC teaches.</div>
+              </div>
               <textarea
                 value={workArea}
                 onChange={(e) => setWorkArea(e.target.value)}
@@ -654,6 +659,14 @@ const styles = {
     pointerEvents: 'none',
   },
 
+  backgroundSweep: {
+    position: 'absolute',
+    inset: 0,
+    background:
+      'linear-gradient(115deg, transparent 0%, transparent 36%, rgba(91, 208, 255, 0.035) 50%, transparent 64%, transparent 100%)',
+    pointerEvents: 'none',
+  },
+
   shell: {
     maxWidth: '1440px',
     height: '100vh',
@@ -661,14 +674,14 @@ const styles = {
     padding: '18px',
     boxSizing: 'border-box',
     display: 'grid',
-    gridTemplateColumns: '380px minmax(0, 1fr)',
+    gridTemplateColumns: '392px minmax(0, 1fr)',
     gap: '18px',
   },
 
   leftColumn: {
     minHeight: 0,
     display: 'grid',
-    gridTemplateRows: '0.98fr 1.02fr',
+    gridTemplateRows: '1fr 1fr',
     gap: '18px',
   },
 
@@ -691,6 +704,17 @@ const styles = {
     flexDirection: 'column',
     gap: '16px',
     overflow: 'hidden',
+    position: 'relative',
+  },
+
+  heroSparkle: {
+    position: 'absolute',
+    top: '-18px',
+    right: '-10px',
+    width: '120px',
+    height: '120px',
+    background: 'radial-gradient(circle, rgba(63,241,208,0.16) 0%, rgba(63,241,208,0.0) 70%)',
+    pointerEvents: 'none',
   },
 
   heroTop: {
@@ -762,8 +786,9 @@ const styles = {
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column',
-    gap: '10px',
+    gap: '12px',
     justifyContent: 'center',
+    paddingTop: '4px',
   },
 
   sectionEyebrow: {
@@ -787,6 +812,7 @@ const styles = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
     gap: '12px',
+    paddingBottom: '8px',
   },
 
   subjectButton: {
@@ -804,8 +830,9 @@ const styles = {
     flexDirection: 'column',
     gap: '5px',
     transition: 'transform 180ms ease, box-shadow 180ms ease',
-    minHeight: '82px',
+    minHeight: '96px',
     overflow: 'hidden',
+    justifyContent: 'space-between',
   },
 
   subjectButtonLabel: {
@@ -905,6 +932,18 @@ const styles = {
     gap: '8px',
   },
 
+  practiceHeaderRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '2px',
+  },
+
+  practiceHint: {
+    fontSize: '12px',
+    color: '#aebee6',
+    lineHeight: 1.4,
+  },
+
   miniLabel: {
     fontSize: '13px',
     fontWeight: 800,
@@ -920,12 +959,12 @@ const styles = {
 
   sideTextarea: {
     width: '100%',
-    minHeight: '146px',
+    minHeight: '158px',
     borderRadius: '18px',
     border: '1px solid rgba(173, 193, 255, 0.22)',
-    background: 'linear-gradient(180deg, rgba(30,45,82,0.88) 0%, rgba(23,35,67,0.88) 100%)',
+    background: 'linear-gradient(180deg, rgba(38,58,104,0.92) 0%, rgba(28,43,82,0.92) 100%)',
     color: '#eef4ff',
-    padding: '14px 16px',
+    padding: '16px',
     fontSize: '15px',
     lineHeight: 1.5,
     resize: 'vertical',
