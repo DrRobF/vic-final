@@ -617,12 +617,12 @@ const styles = {
   page: {
     height: '100vh',
     background:
-      'radial-gradient(circle at 14% 8%, rgba(159, 87, 255, 0.34), transparent 24%), radial-gradient(circle at 82% 84%, rgba(84, 248, 255, 0.16), transparent 26%), radial-gradient(circle at 50% 20%, rgba(247, 95, 255, 0.10), transparent 28%), linear-gradient(135deg, #060412 0%, #130925 42%, #0a1630 100%)',
+      'radial-gradient(circle at 14% 8%, rgba(171, 91, 255, 0.38), transparent 24%), radial-gradient(circle at 82% 84%, rgba(171, 91, 255, 0.18), transparent 26%), radial-gradient(circle at 50% 20%, rgba(247, 95, 255, 0.14), transparent 28%), radial-gradient(circle at 78% 72%, rgba(140, 88, 255, 0.14), transparent 26%), linear-gradient(135deg, #070312 0%, #17092b 44%, #10061d 100%)',
     color: '#f2edff',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
-    overflow: 'auto',
+    overflow: 'hidden',
   },
 
   backgroundGlowOne: {
@@ -643,7 +643,7 @@ const styles = {
     right: '-70px',
     width: '340px',
     height: '340px',
-    background: 'rgba(84, 248, 255, 0.14)',
+    background: 'rgba(171, 91, 255, 0.16)',
     filter: 'blur(92px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -655,7 +655,7 @@ const styles = {
     right: '16%',
     width: '240px',
     height: '240px',
-    background: 'rgba(247, 95, 255, 0.12)',
+    background: 'rgba(214, 104, 255, 0.14)',
     filter: 'blur(82px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -667,7 +667,7 @@ const styles = {
     left: '8%',
     width: '220px',
     height: '220px',
-    background: 'rgba(130, 84, 255, 0.16)',
+    background: 'rgba(171, 91, 255, 0.18)',
     filter: 'blur(75px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -687,7 +687,7 @@ const styles = {
     position: 'absolute',
     inset: 0,
     background:
-      'linear-gradient(115deg, transparent 0%, transparent 36%, rgba(186, 94, 255, 0.05) 50%, transparent 64%, transparent 100%)',
+      'linear-gradient(115deg, transparent 0%, transparent 36%, rgba(171, 91, 255, 0.08) 50%, transparent 64%, transparent 100%)',
     pointerEvents: 'none',
   },
 
@@ -780,7 +780,7 @@ const styles = {
     width: '100%',
     height: '100%',
     display: 'block',
-    objectFit: 'contain', transform: 'scale(1.28)' ,
+    objectFit: 'contain', transform: 'scale(1.4)' ,
     borderRadius: '16px',
     background: 'rgba(255,255,255,0.96)',
     position: 'relative',
@@ -1166,7 +1166,7 @@ const styles = {
   chatCanvas: {
     flex: 1,
     minHeight: 0,
-    background: '#f3edff',
+    background: '#f6f1ff',
     borderRadius: '28px',
     padding: '18px',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
@@ -1279,7 +1279,7 @@ const styles = {
     minHeight: '106px',
     borderRadius: '20px',
     border: '1px solid rgba(191, 205, 255, 0.18)',
-    background: '#f3edff',
+    background: '#f6f1ff',
     color: '#0f172a',
     padding: '16px',
     fontSize: '16px',
@@ -1343,7 +1343,7 @@ const styles = {
   visualIdleLogo: {
     width: '96px',
     height: '64px',
-    objectFit: 'contain', transform: 'scale(1.28)' ,
+    objectFit: 'contain', transform: 'scale(1.4)' ,
     borderRadius: '14px',
     background: 'rgba(255,255,255,0.82)',
     padding: '10px',
