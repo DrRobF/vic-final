@@ -14,7 +14,8 @@ export default function AskVIC() {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      text: 'Hi — pick a subject on the left to begin.',
+      text:
+        'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nOr pick a subject on the left.',
       visual: { type: 'idle', title: 'Visual Support' },
     },
   ])
@@ -162,6 +163,24 @@ export default function AskVIC() {
       <div style={styles.backgroundMesh} />
       <div style={styles.backgroundSweep} />
 
+      <div style={styles.topNav}>
+        <div style={styles.topNavInner}>
+          <div style={styles.topNavBrandWrap}>
+            <img src="/vic-logo.png" alt="VIC logo" style={styles.topNavLogo} />
+            <div>
+              <div style={styles.topNavBrand}>VIC</div>
+              <div style={styles.topNavSub}>Virtual Co-Teacher</div>
+            </div>
+          </div>
+
+          <div style={styles.topNavRight}>
+            <button style={styles.navLink} type="button">How it Works</button>
+            <button style={styles.navLink} type="button">Who It’s For</button>
+            <button style={styles.navLink} type="button">About</button>
+          </div>
+        </div>
+      </div>
+
       <div style={styles.shell}>
         <div style={styles.leftColumn}>
           <section style={styles.heroCard}>
@@ -189,19 +208,22 @@ export default function AskVIC() {
               <div style={styles.subjectGrid}>
                 <button style={styles.subjectButton} onClick={() => startSubject('math')}>
                   <span style={styles.subjectButtonLabel}>Math</span>
-                  <span style={styles.subjectButtonSub}>Practice and problem solving</span>
+                  <span style={styles.subjectButtonSub}>Start a math lesson</span>
                 </button>
+
                 <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
                   <span style={styles.subjectButtonLabel}>Reading</span>
-                  <span style={styles.subjectButtonSub}>Comprehension and analysis</span>
+                  <span style={styles.subjectButtonSub}>Practice comprehension</span>
                 </button>
+
                 <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
                   <span style={styles.subjectButtonLabel}>Writing</span>
-                  <span style={styles.subjectButtonSub}>Ideas, drafting, and revision</span>
+                  <span style={styles.subjectButtonSub}>Draft and revise ideas</span>
                 </button>
+
                 <button style={styles.subjectButton} onClick={() => startSubject('science')}>
                   <span style={styles.subjectButtonLabel}>Science</span>
-                  <span style={styles.subjectButtonSub}>Concepts, vocabulary, and inquiry</span>
+                  <span style={styles.subjectButtonSub}>Explore concepts step by step</span>
                 </button>
               </div>
             </div>
@@ -244,6 +266,7 @@ export default function AskVIC() {
                 <div style={styles.miniLabel}>Practice Area</div>
                 <div style={styles.practiceHint}>Work it out here while VIC teaches.</div>
               </div>
+
               <textarea
                 value={workArea}
                 onChange={(e) => setWorkArea(e.target.value)}
@@ -312,9 +335,7 @@ export default function AskVIC() {
                     {msg.role === 'assistant' ? 'VIC' : 'YOU'}
                   </div>
 
-                  <p
-                    style={msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText}
-                  >
+                  <p style={msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText}>
                     {msg.text}
                   </p>
 
@@ -347,7 +368,7 @@ export default function AskVIC() {
 
             <div style={styles.inputFooter}>
               <div style={styles.footerPrompt}>
-                Shorter turns work best. One thought or question at a time.
+                Pick a subject or ask a question. One thought at a time works best.
               </div>
 
               <button
@@ -365,6 +386,37 @@ export default function AskVIC() {
           </section>
         </div>
       </div>
+
+      <section style={styles.bottomInfoSection}>
+        <div style={styles.bottomInfoInner}>
+          <div style={styles.infoBlock}>
+            <div style={styles.infoEyebrow}>How VIC Works</div>
+            <div style={styles.infoTitle}>Teaching first. Answers second.</div>
+            <p style={styles.infoText}>
+              VIC explains the idea, models an example, guides practice, and checks understanding
+              step by step.
+            </p>
+          </div>
+
+          <div style={styles.infoBlock}>
+            <div style={styles.infoEyebrow}>Who It’s For</div>
+            <div style={styles.infoTitle}>Students, families, and teachers</div>
+            <p style={styles.infoText}>
+              Built to feel like an extra teacher in the room, not just a chatbot that spits out
+              answers.
+            </p>
+          </div>
+
+          <div style={styles.infoBlock}>
+            <div style={styles.infoEyebrow}>Why It Feels Different</div>
+            <div style={styles.infoTitle}>A real workspace, not a landing page</div>
+            <p style={styles.infoText}>
+              The tool stays first. Everything below is optional context so the learning experience
+              stays clean and fast.
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
@@ -377,11 +429,7 @@ function VisualCardRenderer({ visual }) {
       <div style={styles.visualIdleCard}>
         <div style={styles.visualIdleGlow} />
         <div style={styles.visualIdleInner}>
-          <img
-            src="/vic-logo.png"
-            alt="VIC logo"
-            style={styles.visualIdleLogo}
-          />
+          <img src="/vic-logo.png" alt="VIC logo" style={styles.visualIdleLogo} />
           <div style={styles.visualIdleTextWrap}>
             <div style={styles.visualIdleTitle}>Visual support will appear here</div>
             <div style={styles.visualIdleText}>
@@ -610,7 +658,7 @@ const styles = {
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
-    overflow: 'hidden',
+    overflowX: 'hidden',
   },
 
   backgroundGlowOne: {
@@ -667,15 +715,94 @@ const styles = {
     pointerEvents: 'none',
   },
 
+  topNav: {
+    width: '100%',
+    padding: '14px 18px 0',
+    boxSizing: 'border-box',
+    position: 'relative',
+    zIndex: 2,
+  },
+
+  topNavInner: {
+    maxWidth: '1440px',
+    margin: '0 auto',
+    minHeight: '64px',
+    padding: '12px 18px',
+    borderRadius: '20px',
+    border: '1px solid rgba(145, 160, 255, 0.12)',
+    background: 'linear-gradient(180deg, rgba(8, 16, 34, 0.74) 0%, rgba(9, 18, 38, 0.58) 100%)',
+    boxShadow: '0 14px 36px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)',
+    backdropFilter: 'blur(14px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: '18px',
+  },
+
+  topNavBrandWrap: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    minWidth: 0,
+  },
+
+  topNavLogo: {
+    width: '34px',
+    height: '34px',
+    borderRadius: '10px',
+    objectFit: 'contain',
+    background: '#ffffff',
+    padding: '4px',
+    boxSizing: 'border-box',
+  },
+
+  topNavBrand: {
+    fontSize: '15px',
+    fontWeight: 800,
+    letterSpacing: '0.02em',
+    color: '#f7fbff',
+    lineHeight: 1.1,
+  },
+
+  topNavSub: {
+    fontSize: '11px',
+    color: '#9fb0d6',
+    fontWeight: 600,
+    lineHeight: 1.2,
+    marginTop: '2px',
+  },
+
+  topNavRight: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+  },
+
+  navLink: {
+    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'rgba(255,255,255,0.05)',
+    color: '#dbe7ff',
+    padding: '10px 14px',
+    borderRadius: '999px',
+    fontSize: '13px',
+    fontWeight: 700,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  },
+
   shell: {
     maxWidth: '1440px',
-    height: '100vh',
+    minHeight: 'calc(100vh - 112px)',
     margin: '0 auto',
     padding: '18px',
     boxSizing: 'border-box',
     display: 'grid',
     gridTemplateColumns: '392px minmax(0, 1fr)',
     gap: '18px',
+    position: 'relative',
+    zIndex: 2,
   },
 
   leftColumn: {
@@ -769,8 +896,7 @@ const styles = {
     lineHeight: 1.02,
     letterSpacing: '-0.03em',
     fontWeight: 700,
-    fontFamily:
-      '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   },
 
   tagline: {
@@ -833,6 +959,7 @@ const styles = {
     minHeight: '96px',
     overflow: 'hidden',
     justifyContent: 'space-between',
+    cursor: 'pointer',
   },
 
   subjectButtonLabel: {
@@ -883,6 +1010,7 @@ const styles = {
     whiteSpace: 'nowrap',
     boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
     alignSelf: 'start',
+    cursor: 'pointer',
   },
 
   reportButtonDisabled: {
@@ -912,6 +1040,7 @@ const styles = {
     fontSize: '14px',
     fontWeight: 800,
     boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
+    cursor: 'pointer',
   },
 
   toolToggleActive: {
@@ -924,6 +1053,7 @@ const styles = {
     fontSize: '14px',
     fontWeight: 800,
     boxShadow: '0 8px 18px rgba(0,0,0,0.14)',
+    cursor: 'pointer',
   },
 
   practiceWrap: {
@@ -1009,6 +1139,7 @@ const styles = {
     color: '#07111e',
     background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
     boxShadow: '0 8px 20px rgba(63,241,208,0.18)',
+    cursor: 'pointer',
   },
 
   calcResult: {
@@ -1044,122 +1175,120 @@ const styles = {
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '16px',
   },
 
   chatHeader: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: '12px',
+    justifyContent: 'space-between',
+    gap: '16px',
   },
 
   chatEyebrow: {
     fontSize: '11px',
     letterSpacing: '0.16em',
     textTransform: 'uppercase',
-    color: '#97adff',
+    color: '#9db2ff',
     fontWeight: 800,
+    marginBottom: '4px',
   },
 
   chatTitle: {
-    fontSize: '28px',
+    fontSize: '22px',
     fontWeight: 800,
-    color: '#f5f8ff',
-    marginTop: '4px',
+    color: '#f8fbff',
+    lineHeight: 1.1,
   },
 
   statusWrap: {
-    display: 'flex',
+    display: 'inline-flex',
     alignItems: 'center',
     gap: '8px',
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.10)',
+    padding: '10px 14px',
     borderRadius: '999px',
-    padding: '8px 12px',
-    boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+    background: 'rgba(255,255,255,0.05)',
+    border: '1px solid rgba(255,255,255,0.10)',
+    whiteSpace: 'nowrap',
   },
 
   statusDot: {
-    width: '8px',
-    height: '8px',
-    background: '#5eead4',
+    width: '9px',
+    height: '9px',
     borderRadius: '50%',
-    boxShadow: '0 0 12px rgba(94, 234, 212, 0.7)',
+    background: '#54f0c8',
+    boxShadow: '0 0 0 6px rgba(84,240,200,0.10)',
   },
 
   statusText: {
-    fontSize: '13px',
-    color: '#d7e3ff',
+    fontSize: '14px',
+    fontWeight: 700,
+    color: '#eef4ff',
   },
 
   messageArea: {
     flex: 1,
     minHeight: 0,
     overflowY: 'auto',
-    background:
-      'linear-gradient(180deg, rgba(248,251,255,0.98) 0%, rgba(239,245,255,0.98) 100%)',
-    border: '1px solid rgba(255,255,255,0.18)',
-    borderRadius: '24px',
-    padding: '18px',
+    paddingRight: '4px',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7), 0 16px 34px rgba(6,10,18,0.10)',
+    gap: '14px',
   },
 
   assistantBubble: {
     alignSelf: 'flex-start',
-    maxWidth: '76%',
-    background: '#f7faff',
-    border: '1px solid #dbe6f4',
-    borderRadius: '22px',
-    padding: '16px 17px',
-    boxShadow: '0 12px 26px rgba(15,23,42,0.06)',
+    width: 'min(640px, 100%)',
+    background: 'rgba(239, 244, 255, 0.90)',
+    color: '#0f172a',
+    borderRadius: '26px',
+    padding: '16px',
+    boxShadow: '0 12px 28px rgba(0,0,0,0.10)',
   },
 
   userBubble: {
     alignSelf: 'flex-end',
-    maxWidth: '72%',
-    background: 'linear-gradient(135deg, #eef4ff 0%, #e3fbf6 100%)',
-    border: '1px solid #cfe0ff',
-    borderRadius: '22px',
-    padding: '16px 17px',
-    boxShadow: '0 12px 26px rgba(15,23,42,0.06)',
+    width: 'min(540px, 100%)',
+    background: 'linear-gradient(135deg, rgba(124,92,255,0.22) 0%, rgba(63,241,208,0.12) 100%)',
+    color: '#ecf3ff',
+    border: '1px solid rgba(255,255,255,0.10)',
+    borderRadius: '26px',
+    padding: '16px',
+    boxShadow: '0 12px 28px rgba(0,0,0,0.16)',
   },
 
   bubbleLabel: {
-    fontSize: '11px',
-    letterSpacing: '0.16em',
-    color: '#5f7290',
-    fontWeight: 800,
-    marginBottom: '8px',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
     textTransform: 'uppercase',
+    color: '#516182',
+    marginBottom: '8px',
   },
 
   bubbleLabelUser: {
-    fontSize: '11px',
-    letterSpacing: '0.16em',
-    color: '#355e9b',
-    fontWeight: 800,
-    marginBottom: '8px',
+    fontSize: '12px',
+    fontWeight: 900,
+    letterSpacing: '0.12em',
     textTransform: 'uppercase',
+    color: '#cddcff',
+    marginBottom: '8px',
   },
 
   bubbleText: {
     margin: 0,
-    fontSize: '17px',
-    lineHeight: 1.68,
-    color: '#0f172a',
     whiteSpace: 'pre-wrap',
+    lineHeight: 1.6,
+    fontSize: '16px',
+    color: '#1f2937',
   },
 
   userBubbleText: {
     margin: 0,
-    fontSize: '17px',
-    lineHeight: 1.68,
-    color: '#0f172a',
     whiteSpace: 'pre-wrap',
+    lineHeight: 1.6,
+    fontSize: '16px',
+    color: '#ecf3ff',
   },
 
   inputCard: {
@@ -1176,199 +1305,191 @@ const styles = {
 
   inputHeaderRow: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'flex-start',
+    justifyContent: 'space-between',
     gap: '16px',
   },
 
   inputTitle: {
-    fontSize: '24px',
+    fontSize: '20px',
     fontWeight: 800,
-    color: '#f5f8ff',
-    marginTop: '4px',
+    color: '#f8fbff',
+    lineHeight: 1.1,
   },
 
   inputHint: {
-    fontSize: '13px',
-    color: '#cdd9f4',
-    textAlign: 'right',
-    maxWidth: '250px',
+    fontSize: '12px',
+    color: '#b5c5e8',
     lineHeight: 1.4,
+    textAlign: 'right',
   },
 
   mainTextarea: {
     width: '100%',
-    minHeight: '112px',
-    borderRadius: '22px',
-    border: '1px solid rgba(255,255,255,0.20)',
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.99) 0%, rgba(248,251,255,0.99) 100%)',
+    minHeight: '106px',
+    borderRadius: '20px',
+    border: '1px solid rgba(191, 205, 255, 0.18)',
+    background: '#eef3ff',
     color: '#0f172a',
-    padding: '18px',
-    fontSize: '18px',
-    lineHeight: 1.55,
+    padding: '16px',
+    fontSize: '16px',
+    lineHeight: 1.5,
     resize: 'none',
     outline: 'none',
     boxSizing: 'border-box',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.78), 0 18px 34px rgba(6,10,18,0.12)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
   },
 
   inputFooter: {
     display: 'flex',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: '16px',
   },
 
   footerPrompt: {
-    fontSize: '14px',
-    lineHeight: 1.45,
-    color: '#d5e0fb',
-    maxWidth: '520px',
+    fontSize: '13px',
+    color: '#c5d3f0',
+    lineHeight: 1.5,
   },
 
   sendButton: {
     border: 'none',
     borderRadius: '16px',
-    padding: '13px 24px',
+    padding: '13px 20px',
     fontSize: '15px',
     fontWeight: 800,
     color: '#07111e',
     background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
-    boxShadow: '0 14px 30px rgba(63, 241, 208, 0.24)',
-    whiteSpace: 'nowrap',
-  },
-
-  visualCard: {
-    marginTop: '12px',
-    background: '#ffffff',
-    border: '1px solid #d8e2ee',
-    borderRadius: '16px',
-    padding: '14px',
-    boxShadow: '0 10px 20px rgba(15,23,42,0.05)',
+    boxShadow: '0 12px 28px rgba(63,241,208,0.18)',
   },
 
   visualIdleCard: {
-    marginTop: '14px',
     position: 'relative',
+    marginTop: '16px',
+    borderRadius: '20px',
+    border: '1px solid rgba(173, 193, 255, 0.24)',
+    background: 'linear-gradient(135deg, rgba(234,240,255,0.98) 0%, rgba(225,248,245,0.96) 100%)',
     overflow: 'hidden',
-    borderRadius: '18px',
-    background:
-      'linear-gradient(135deg, rgba(238,242,255,0.92) 0%, rgba(232,250,246,0.82) 100%)',
-    border: '1px solid rgba(203,213,225,0.9)',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.7)',
   },
 
   visualIdleGlow: {
     position: 'absolute',
-    inset: 'auto auto -30px -20px',
-    width: '130px',
-    height: '130px',
-    borderRadius: '50%',
-    background: 'rgba(124,92,255,0.12)',
-    filter: 'blur(10px)',
+    inset: '-20%',
+    background: 'radial-gradient(circle at 20% 20%, rgba(124,92,255,0.14), transparent 35%)',
+    pointerEvents: 'none',
   },
 
   visualIdleInner: {
     position: 'relative',
     zIndex: 1,
     display: 'grid',
-    gridTemplateColumns: '98px 1fr',
-    gap: '16px',
+    gridTemplateColumns: '96px 1fr',
+    gap: '14px',
     alignItems: 'center',
     padding: '16px',
   },
 
   visualIdleLogo: {
-    width: '98px',
-    height: '98px',
+    width: '96px',
+    height: '64px',
     objectFit: 'contain',
-    opacity: 0.78,
-    filter: 'drop-shadow(0 8px 16px rgba(15,23,42,0.10))',
+    borderRadius: '14px',
+    background: 'rgba(255,255,255,0.82)',
+    padding: '10px',
+    boxSizing: 'border-box',
   },
 
   visualIdleTextWrap: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '6px',
+    minWidth: 0,
   },
 
   visualIdleTitle: {
     fontSize: '15px',
     fontWeight: 800,
-    color: '#25334f',
+    color: '#27344f',
+    marginBottom: '6px',
   },
 
   visualIdleText: {
-    fontSize: '13px',
+    fontSize: '14px',
     lineHeight: 1.5,
-    color: '#51617d',
-    maxWidth: '340px',
+    color: '#55627c',
+  },
+
+  visualCard: {
+    marginTop: '16px',
+    borderRadius: '20px',
+    background: '#ffffff',
+    border: '1px solid rgba(15,23,42,0.08)',
+    padding: '16px',
+    boxShadow: '0 12px 24px rgba(15,23,42,0.08)',
   },
 
   visualHeaderRow: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: '12px',
-    marginBottom: '12px',
+    gap: '10px',
+    marginBottom: '14px',
   },
 
   visualTitle: {
-    fontSize: '14px',
+    fontSize: '15px',
     fontWeight: 800,
     color: '#0f172a',
   },
 
   visualBadge: {
-    fontSize: '11px',
+    fontSize: '12px',
     fontWeight: 800,
-    color: '#4f46e5',
+    color: '#475569',
     background: '#eef2ff',
-    border: '1px solid #c7d2fe',
     borderRadius: '999px',
-    padding: '5px 9px',
+    padding: '7px 10px',
     whiteSpace: 'nowrap',
   },
 
   visualDescription: {
     fontSize: '14px',
-    lineHeight: 1.55,
-    color: '#334155',
+    lineHeight: 1.5,
+    color: '#475569',
   },
 
   fractionBarWrap: {
     display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(28px, 1fr))',
+    gridTemplateColumns: 'repeat(12, minmax(0, 1fr))',
     gap: '8px',
-    marginBottom: '12px',
+    marginBottom: '14px',
   },
 
   fractionPiece: {
-    height: '34px',
+    minHeight: '36px',
     borderRadius: '10px',
+    border: '1px solid rgba(15,23,42,0.06)',
   },
 
   numberLineWrap: {
     position: 'relative',
-    paddingTop: '14px',
-    paddingBottom: '6px',
+    padding: '24px 8px 8px',
+    marginBottom: '14px',
   },
 
   numberLineBase: {
     position: 'absolute',
-    left: 0,
-    right: 0,
-    top: '30px',
-    height: '3px',
+    left: '8px',
+    right: '8px',
+    top: '34px',
+    height: '4px',
     borderRadius: '999px',
     background: '#cbd5e1',
   },
 
   numberLineRow: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(38px, 1fr))',
-    gap: '4px',
     position: 'relative',
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(42px, 1fr))',
+    gap: '2px',
   },
 
   numberTickWrap: {
@@ -1376,14 +1497,13 @@ const styles = {
     flexDirection: 'column',
     alignItems: 'center',
     gap: '8px',
-    minWidth: 0,
   },
 
   numberDot: {
     width: '14px',
     height: '14px',
     borderRadius: '50%',
-    zIndex: 1,
+    marginTop: '3px',
   },
 
   numberLabel: {
@@ -1391,36 +1511,86 @@ const styles = {
   },
 
   vocabWord: {
-    fontSize: '20px',
+    fontSize: '24px',
     fontWeight: 800,
     color: '#0f172a',
     marginBottom: '8px',
   },
 
   vocabDefinition: {
-    fontSize: '14px',
-    lineHeight: 1.55,
+    fontSize: '15px',
+    lineHeight: 1.6,
     color: '#334155',
+    marginBottom: '12px',
   },
 
   vocabExampleBox: {
-    marginTop: '12px',
+    borderRadius: '14px',
     background: '#f8fafc',
     border: '1px solid #e2e8f0',
-    borderRadius: '12px',
     padding: '12px',
   },
 
   vocabExampleLabel: {
     fontSize: '12px',
     fontWeight: 800,
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
     color: '#64748b',
     marginBottom: '6px',
   },
 
   vocabExampleText: {
     fontSize: '14px',
-    color: '#334155',
     lineHeight: 1.5,
+    color: '#334155',
+  },
+
+  bottomInfoSection: {
+    maxWidth: '1440px',
+    margin: '0 auto',
+    padding: '0 18px 24px',
+    boxSizing: 'border-box',
+    position: 'relative',
+    zIndex: 2,
+  },
+
+  bottomInfoInner: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+    gap: '18px',
+  },
+
+  infoBlock: {
+    background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.74) 0%, rgba(9, 18, 38, 0.68) 100%)',
+    border: '1px solid rgba(145, 160, 255, 0.12)',
+    borderRadius: '24px',
+    padding: '18px',
+    boxShadow: '0 16px 36px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.03)',
+    backdropFilter: 'blur(12px)',
+  },
+
+  infoEyebrow: {
+    fontSize: '11px',
+    letterSpacing: '0.16em',
+    textTransform: 'uppercase',
+    color: '#9db2ff',
+    fontWeight: 800,
+    marginBottom: '8px',
+  },
+
+  infoTitle: {
+    fontSize: '18px',
+    fontWeight: 800,
+    color: '#f8fbff',
+    lineHeight: 1.2,
+    marginBottom: '8px',
+  },
+
+  infoText: {
+    margin: 0,
+    fontSize: '14px',
+    lineHeight: 1.6,
+    color: '#cad7f3',
   },
 }
