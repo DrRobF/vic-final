@@ -165,6 +165,7 @@ export default function AskVIC() {
       <div style={styles.backgroundGlowOne} />
       <div style={styles.backgroundGlowTwo} />
       <div style={styles.backgroundGlowThree} />
+      <div style={styles.backgroundGlowFour} />
       <div style={styles.backgroundMesh} />
       <div style={styles.backgroundSweep} />
 
@@ -174,6 +175,7 @@ export default function AskVIC() {
             <div style={styles.heroSparkle} />
             <div style={styles.heroTop}>
               <div style={styles.logoImageWrap}>
+                <div style={styles.logoImageGlow} />
                 <img
                   src="/vic-logo.png"
                   alt="VIC Virtual Co-Teacher logo"
@@ -194,18 +196,22 @@ export default function AskVIC() {
               <div style={styles.sectionEyebrow}>Start Learning</div>
               <div style={styles.subjectGrid}>
                 <button style={styles.subjectButton} onClick={() => startSubject('math')}>
+                  <span style={styles.subjectButtonGlow} />
                   <span style={styles.subjectButtonLabel}>Math</span>
                   <span style={styles.subjectButtonSub}>Start a math lesson</span>
                 </button>
                 <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
+                  <span style={styles.subjectButtonGlow} />
                   <span style={styles.subjectButtonLabel}>Reading</span>
                   <span style={styles.subjectButtonSub}>Practice comprehension</span>
                 </button>
                 <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
+                  <span style={styles.subjectButtonGlow} />
                   <span style={styles.subjectButtonLabel}>Writing</span>
                   <span style={styles.subjectButtonSub}>Draft and revise ideas</span>
                 </button>
                 <button style={styles.subjectButton} onClick={() => startSubject('science')}>
+                  <span style={styles.subjectButtonGlow} />
                   <span style={styles.subjectButtonLabel}>Science</span>
                   <span style={styles.subjectButtonSub}>Explore concepts step by step</span>
                 </button>
@@ -420,7 +426,7 @@ function VisualCardRenderer({ visual }) {
                 ...styles.fractionPiece,
                 background:
                   index < numerator
-                    ? 'linear-gradient(135deg, #7c5cff 0%, #43e7d0 100%)'
+                    ? 'linear-gradient(135deg, rgba(156,85,255,1) 0%, rgba(93,231,255,1) 100%)'
                     : '#e2e8f0',
               }}
             />
@@ -462,14 +468,14 @@ function VisualCardRenderer({ visual }) {
                   <div
                     style={{
                       ...styles.numberDot,
-                      background: isHighlight ? '#7c5cff' : '#94a3b8',
-                      boxShadow: isHighlight ? '0 0 0 5px rgba(124,92,255,0.14)' : 'none',
+                      background: isHighlight ? '#9c55ff' : '#94a3b8',
+                      boxShadow: isHighlight ? '0 0 0 5px rgba(156,85,255,0.18)' : 'none',
                     }}
                   />
                   <div
                     style={{
                       ...styles.numberLabel,
-                      color: isHighlight ? '#4338ca' : '#475569',
+                      color: isHighlight ? '#6d28d9' : '#475569',
                       fontWeight: isHighlight ? 700 : 600,
                     }}
                   >
@@ -611,8 +617,8 @@ const styles = {
   page: {
     height: '100vh',
     background:
-      'radial-gradient(circle at 14% 10%, rgba(124, 92, 255, 0.28), transparent 26%), radial-gradient(circle at 82% 88%, rgba(0, 255, 200, 0.12), transparent 28%), linear-gradient(135deg, #030816 0%, #08142d 48%, #09213a 100%)',
-    color: '#e8eefc',
+      'radial-gradient(circle at 14% 8%, rgba(159, 87, 255, 0.34), transparent 24%), radial-gradient(circle at 82% 84%, rgba(84, 248, 255, 0.16), transparent 26%), radial-gradient(circle at 50% 20%, rgba(247, 95, 255, 0.10), transparent 28%), linear-gradient(135deg, #060412 0%, #130925 42%, #0a1630 100%)',
+    color: '#f2edff',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
@@ -621,35 +627,47 @@ const styles = {
 
   backgroundGlowOne: {
     position: 'absolute',
-    top: '-100px',
-    left: '-80px',
-    width: '280px',
-    height: '280px',
-    background: 'rgba(110, 92, 255, 0.16)',
-    filter: 'blur(80px)',
+    top: '-120px',
+    left: '-90px',
+    width: '320px',
+    height: '320px',
+    background: 'rgba(166, 82, 255, 0.24)',
+    filter: 'blur(90px)',
     borderRadius: '50%',
     pointerEvents: 'none',
   },
 
   backgroundGlowTwo: {
     position: 'absolute',
-    bottom: '-100px',
-    right: '-60px',
-    width: '300px',
-    height: '300px',
-    background: 'rgba(0, 255, 200, 0.12)',
-    filter: 'blur(88px)',
+    bottom: '-120px',
+    right: '-70px',
+    width: '340px',
+    height: '340px',
+    background: 'rgba(84, 248, 255, 0.14)',
+    filter: 'blur(92px)',
     borderRadius: '50%',
     pointerEvents: 'none',
   },
 
   backgroundGlowThree: {
     position: 'absolute',
-    top: '34%',
-    right: '18%',
+    top: '26%',
+    right: '16%',
+    width: '240px',
+    height: '240px',
+    background: 'rgba(247, 95, 255, 0.12)',
+    filter: 'blur(82px)',
+    borderRadius: '50%',
+    pointerEvents: 'none',
+  },
+
+  backgroundGlowFour: {
+    position: 'absolute',
+    bottom: '12%',
+    left: '8%',
     width: '220px',
     height: '220px',
-    background: 'rgba(70, 130, 255, 0.10)',
+    background: 'rgba(130, 84, 255, 0.16)',
     filter: 'blur(75px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -659,9 +677,9 @@ const styles = {
     position: 'absolute',
     inset: 0,
     background:
-      'linear-gradient(rgba(255,255,255,0.018) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.018) 1px, transparent 1px)',
+      'linear-gradient(rgba(255,255,255,0.016) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.016) 1px, transparent 1px)',
     backgroundSize: '32px 32px',
-    maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.75), rgba(0,0,0,0.2))',
+    maskImage: 'linear-gradient(180deg, rgba(0,0,0,0.78), rgba(0,0,0,0.25))',
     pointerEvents: 'none',
   },
 
@@ -669,7 +687,7 @@ const styles = {
     position: 'absolute',
     inset: 0,
     background:
-      'linear-gradient(115deg, transparent 0%, transparent 36%, rgba(91, 208, 255, 0.035) 50%, transparent 64%, transparent 100%)',
+      'linear-gradient(115deg, transparent 0%, transparent 36%, rgba(186, 94, 255, 0.05) 50%, transparent 64%, transparent 100%)',
     pointerEvents: 'none',
   },
 
@@ -704,11 +722,12 @@ const styles = {
 
   heroCard: {
     minHeight: 0,
-    background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.90) 0%, rgba(9, 18, 38, 0.82) 100%)',
-    border: '1px solid rgba(145, 160, 255, 0.14)',
+    background: 'linear-gradient(180deg, rgba(18, 8, 38, 0.92) 0%, rgba(10, 15, 35, 0.84) 100%)',
+    border: '1px solid rgba(191, 141, 255, 0.22)',
     borderRadius: '28px',
     padding: '14px',
-    boxShadow: '0 20px 52px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow:
+      '0 20px 52px rgba(0,0,0,0.30), 0 0 0 1px rgba(255,255,255,0.02), 0 0 36px rgba(171, 91, 255, 0.12), inset 0 1px 0 rgba(255,255,255,0.05)',
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
@@ -719,11 +738,11 @@ const styles = {
 
   heroSparkle: {
     position: 'absolute',
-    top: '-18px',
-    right: '-10px',
-    width: '120px',
-    height: '120px',
-    background: 'radial-gradient(circle, rgba(63,241,208,0.16) 0%, rgba(63,241,208,0.0) 70%)',
+    top: '-26px',
+    right: '-14px',
+    width: '170px',
+    height: '170px',
+    background: 'radial-gradient(circle, rgba(84,248,255,0.18) 0%, rgba(84,248,255,0.0) 72%)',
     pointerEvents: 'none',
   },
 
@@ -737,14 +756,24 @@ const styles = {
   logoImageWrap: {
     width: '118px',
     height: '118px',
-    background: 'rgba(255,255,255,0.96)',
+    background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(246,238,255,0.96) 100%)',
     borderRadius: '22px',
     padding: '8px',
     boxSizing: 'border-box',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.72), 0 14px 34px rgba(0,0,0,0.18)',
+    boxShadow:
+      'inset 0 1px 0 rgba(255,255,255,0.78), 0 12px 28px rgba(0,0,0,0.22), 0 0 28px rgba(171, 91, 255, 0.16)',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+
+  logoImageGlow: {
+    position: 'absolute',
+    inset: '-20%',
+    background: 'radial-gradient(circle at 50% 35%, rgba(171, 91, 255, 0.22), transparent 48%)',
+    pointerEvents: 'none',
   },
 
   logoImage: {
@@ -754,6 +783,8 @@ const styles = {
     objectFit: 'contain',
     borderRadius: '16px',
     background: 'rgba(255,255,255,0.96)',
+    position: 'relative',
+    zIndex: 1,
   },
 
   heroTextWrap: {
@@ -767,12 +798,12 @@ const styles = {
     alignSelf: 'flex-start',
     fontSize: '11px',
     fontWeight: 800,
-    color: '#eaf0ff',
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.12)',
+    color: '#f5ebff',
+    background: 'linear-gradient(135deg, rgba(171,91,255,0.22), rgba(84,248,255,0.10))',
+    border: '1px solid rgba(203, 166, 255, 0.28)',
     borderRadius: '999px',
     padding: '6px 10px',
-    boxShadow: '0 6px 14px rgba(0,0,0,0.12)',
+    boxShadow: '0 0 18px rgba(171,91,255,0.18)',
   },
 
   heading: {
@@ -781,6 +812,8 @@ const styles = {
     lineHeight: 1.0,
     letterSpacing: '-0.03em',
     fontWeight: 700,
+    color: '#faf5ff',
+    textShadow: '0 0 22px rgba(171,91,255,0.12)',
     fontFamily:
       '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   },
@@ -789,7 +822,7 @@ const styles = {
     margin: 0,
     fontSize: '14px',
     lineHeight: 1.35,
-    color: '#cad7f3',
+    color: '#dccbff',
     maxWidth: '230px',
   },
 
@@ -807,15 +840,16 @@ const styles = {
     fontSize: '11px',
     letterSpacing: '0.16em',
     textTransform: 'uppercase',
-    color: '#9db2ff',
+    color: '#bca1ff',
     fontWeight: 800,
     marginBottom: '0px',
+    textShadow: '0 0 12px rgba(171,91,255,0.16)',
   },
 
   sectionTitle: {
     fontSize: '18px',
     fontWeight: 800,
-    color: '#f2f6ff',
+    color: '#faf5ff',
     marginTop: '2px',
     lineHeight: 1.15,
   },
@@ -828,16 +862,18 @@ const styles = {
   },
 
   subjectButton: {
-    border: '1px solid rgba(255,255,255,0.12)',
+    position: 'relative',
+    border: '1px solid rgba(200, 156, 255, 0.20)',
     background:
-      'linear-gradient(135deg, rgba(143,124,255,0.16) 0%, rgba(63,241,208,0.08) 100%)',
-    color: '#f7fbff',
+      'linear-gradient(135deg, rgba(67,43,112,0.70) 0%, rgba(18,28,65,0.82) 100%)',
+    color: '#f9f3ff',
     padding: '14px',
     borderRadius: '18px',
     fontSize: '15px',
     fontWeight: 800,
     textAlign: 'left',
-    boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
+    boxShadow:
+      '0 12px 28px rgba(0,0,0,0.20), 0 0 22px rgba(171,91,255,0.10), inset 0 1px 0 rgba(255,255,255,0.04)',
     display: 'flex',
     flexDirection: 'column',
     gap: '6px',
@@ -848,25 +884,38 @@ const styles = {
     cursor: 'pointer',
   },
 
+  subjectButtonGlow: {
+    position: 'absolute',
+    inset: '-35%',
+    background: 'radial-gradient(circle at 18% 18%, rgba(171,91,255,0.18), transparent 38%)',
+    pointerEvents: 'none',
+  },
+
   subjectButtonLabel: {
     fontSize: '16px',
     fontWeight: 800,
+    position: 'relative',
+    zIndex: 1,
+    textShadow: '0 0 14px rgba(171,91,255,0.14)',
   },
 
   subjectButtonSub: {
     fontSize: '11px',
     lineHeight: 1.3,
-    color: '#c7d6f5',
+    color: '#ddd0ff',
     fontWeight: 600,
+    position: 'relative',
+    zIndex: 1,
   },
 
   toolsCard: {
     minHeight: 0,
-    background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.90) 0%, rgba(9, 18, 38, 0.82) 100%)',
-    border: '1px solid rgba(145, 160, 255, 0.14)',
+    background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.92) 0%, rgba(9, 14, 31, 0.86) 100%)',
+    border: '1px solid rgba(191, 141, 255, 0.20)',
     borderRadius: '28px',
     padding: '16px',
-    boxShadow: '0 20px 52px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow:
+      '0 20px 52px rgba(0,0,0,0.30), 0 0 30px rgba(171,91,255,0.10), inset 0 1px 0 rgba(255,255,255,0.04)',
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
@@ -886,15 +935,15 @@ const styles = {
   },
 
   reportButton: {
-    border: '1px solid rgba(255,255,255,0.14)',
-    background: 'linear-gradient(135deg, rgba(255,255,255,0.10), rgba(255,255,255,0.05))',
-    color: '#f7fbff',
+    border: '1px solid rgba(206, 170, 255, 0.24)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.12), rgba(171,91,255,0.10))',
+    color: '#faf5ff',
     padding: '10px 14px',
     borderRadius: '14px',
     fontSize: '14px',
     fontWeight: 800,
     whiteSpace: 'nowrap',
-    boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+    boxShadow: '0 0 24px rgba(171,91,255,0.12)',
     alignSelf: 'start',
     cursor: 'pointer',
   },
@@ -902,7 +951,7 @@ const styles = {
   reportButtonDisabled: {
     border: '1px solid rgba(255,255,255,0.08)',
     background: 'rgba(255,255,255,0.05)',
-    color: '#90a3cd',
+    color: '#9d8dc4',
     padding: '10px 14px',
     borderRadius: '14px',
     fontSize: '14px',
@@ -918,27 +967,27 @@ const styles = {
   },
 
   toolToggle: {
-    background: 'rgba(255,255,255,0.08)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    color: '#eef4ff',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.07), rgba(171,91,255,0.06))',
+    border: '1px solid rgba(206, 170, 255, 0.18)',
+    color: '#f3edff',
     padding: '12px 14px',
     borderRadius: '15px',
     fontSize: '14px',
     fontWeight: 800,
-    boxShadow: '0 8px 18px rgba(0,0,0,0.12)',
+    boxShadow: '0 0 18px rgba(171,91,255,0.08)',
     cursor: 'pointer',
   },
 
   toolToggleActive: {
     background:
-      'linear-gradient(135deg, rgba(143,124,255,0.22) 0%, rgba(63,241,208,0.12) 100%)',
-    border: '1px solid rgba(143,124,255,0.32)',
+      'linear-gradient(135deg, rgba(171,91,255,0.26) 0%, rgba(84,248,255,0.12) 100%)',
+    border: '1px solid rgba(206, 170, 255, 0.28)',
     color: '#ffffff',
     padding: '12px 14px',
     borderRadius: '15px',
     fontSize: '14px',
     fontWeight: 800,
-    boxShadow: '0 8px 18px rgba(0,0,0,0.14)',
+    boxShadow: '0 0 24px rgba(171,91,255,0.16)',
     cursor: 'pointer',
   },
 
@@ -956,14 +1005,14 @@ const styles = {
 
   practiceHint: {
     fontSize: '12px',
-    color: '#aebee6',
+    color: '#ccbfff',
     lineHeight: 1.4,
   },
 
   miniLabel: {
     fontSize: '13px',
     fontWeight: 800,
-    color: '#e7efff',
+    color: '#faf5ff',
   },
 
   miniLabelDark: {
@@ -977,16 +1026,16 @@ const styles = {
     width: '100%',
     minHeight: '158px',
     borderRadius: '18px',
-    border: '1px solid rgba(173, 193, 255, 0.22)',
-    background: 'linear-gradient(180deg, rgba(38,58,104,0.92) 0%, rgba(28,43,82,0.92) 100%)',
-    color: '#eef4ff',
+    border: '1px solid rgba(200, 156, 255, 0.18)',
+    background: 'linear-gradient(180deg, rgba(53,45,101,0.96) 0%, rgba(34,36,82,0.94) 100%)',
+    color: '#f4efff',
     padding: '16px',
     fontSize: '15px',
     lineHeight: 1.5,
     resize: 'vertical',
     outline: 'none',
     boxSizing: 'border-box',
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 10px 24px rgba(0,0,0,0.14)',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 0 24px rgba(171,91,255,0.10)',
   },
 
   toolPanel: {
@@ -1023,8 +1072,8 @@ const styles = {
     fontSize: '14px',
     fontWeight: 800,
     color: '#07111e',
-    background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
-    boxShadow: '0 8px 20px rgba(63,241,208,0.18)',
+    background: 'linear-gradient(135deg, #a657ff 0%, #54f8ff 100%)',
+    boxShadow: '0 0 22px rgba(171,91,255,0.22)',
     cursor: 'pointer',
   },
 
