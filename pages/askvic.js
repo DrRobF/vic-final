@@ -163,24 +163,6 @@ export default function AskVIC() {
       <div style={styles.backgroundMesh} />
       <div style={styles.backgroundSweep} />
 
-      <div style={styles.topNav}>
-        <div style={styles.topNavInner}>
-          <div style={styles.topNavBrandWrap}>
-            <img src="/vic-logo.png" alt="VIC logo" style={styles.topNavLogo} />
-            <div>
-              <div style={styles.topNavBrand}>VIC</div>
-              <div style={styles.topNavSub}>Virtual Co-Teacher</div>
-            </div>
-          </div>
-
-          <div style={styles.topNavRight}>
-            <button style={styles.navLink} type="button">How it Works</button>
-            <button style={styles.navLink} type="button">Who It’s For</button>
-            <button style={styles.navLink} type="button">About</button>
-          </div>
-        </div>
-      </div>
-
       <div style={styles.shell}>
         <div style={styles.leftColumn}>
           <section style={styles.heroCard}>
@@ -210,17 +192,14 @@ export default function AskVIC() {
                   <span style={styles.subjectButtonLabel}>Math</span>
                   <span style={styles.subjectButtonSub}>Start a math lesson</span>
                 </button>
-
                 <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
                   <span style={styles.subjectButtonLabel}>Reading</span>
                   <span style={styles.subjectButtonSub}>Practice comprehension</span>
                 </button>
-
                 <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
                   <span style={styles.subjectButtonLabel}>Writing</span>
                   <span style={styles.subjectButtonSub}>Draft and revise ideas</span>
                 </button>
-
                 <button style={styles.subjectButton} onClick={() => startSubject('science')}>
                   <span style={styles.subjectButtonLabel}>Science</span>
                   <span style={styles.subjectButtonSub}>Explore concepts step by step</span>
@@ -321,29 +300,31 @@ export default function AskVIC() {
               </div>
             </div>
 
-            <div ref={messageAreaRef} style={styles.messageArea}>
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  style={msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble}
-                >
+            <div style={styles.chatCanvas}>
+              <div ref={messageAreaRef} style={styles.messageArea}>
+                {messages.map((msg, index) => (
                   <div
-                    style={
-                      msg.role === 'assistant' ? styles.bubbleLabel : styles.bubbleLabelUser
-                    }
+                    key={index}
+                    style={msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble}
                   >
-                    {msg.role === 'assistant' ? 'VIC' : 'YOU'}
+                    <div
+                      style={
+                        msg.role === 'assistant' ? styles.bubbleLabel : styles.bubbleLabelUser
+                      }
+                    >
+                      {msg.role === 'assistant' ? 'VIC' : 'YOU'}
+                    </div>
+
+                    <p style={msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText}>
+                      {msg.text}
+                    </p>
+
+                    {msg.role === 'assistant' && msg.visual ? (
+                      <VisualCardRenderer visual={msg.visual} />
+                    ) : null}
                   </div>
-
-                  <p style={msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText}>
-                    {msg.text}
-                  </p>
-
-                  {msg.role === 'assistant' && msg.visual ? (
-                    <VisualCardRenderer visual={msg.visual} />
-                  ) : null}
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </section>
 
@@ -386,37 +367,6 @@ export default function AskVIC() {
           </section>
         </div>
       </div>
-
-      <section style={styles.bottomInfoSection}>
-        <div style={styles.bottomInfoInner}>
-          <div style={styles.infoBlock}>
-            <div style={styles.infoEyebrow}>How VIC Works</div>
-            <div style={styles.infoTitle}>Teaching first. Answers second.</div>
-            <p style={styles.infoText}>
-              VIC explains the idea, models an example, guides practice, and checks understanding
-              step by step.
-            </p>
-          </div>
-
-          <div style={styles.infoBlock}>
-            <div style={styles.infoEyebrow}>Who It’s For</div>
-            <div style={styles.infoTitle}>Students, families, and teachers</div>
-            <p style={styles.infoText}>
-              Built to feel like an extra teacher in the room, not just a chatbot that spits out
-              answers.
-            </p>
-          </div>
-
-          <div style={styles.infoBlock}>
-            <div style={styles.infoEyebrow}>Why It Feels Different</div>
-            <div style={styles.infoTitle}>A real workspace, not a landing page</div>
-            <p style={styles.infoText}>
-              The tool stays first. Everything below is optional context so the learning experience
-              stays clean and fast.
-            </p>
-          </div>
-        </div>
-      </section>
     </div>
   )
 }
@@ -651,14 +601,14 @@ function extractVocabularyCard(text) {
 
 const styles = {
   page: {
-    minHeight: '100vh',
+    height: '100vh',
     background:
       'radial-gradient(circle at 14% 10%, rgba(124, 92, 255, 0.28), transparent 26%), radial-gradient(circle at 82% 88%, rgba(0, 255, 200, 0.12), transparent 28%), linear-gradient(135deg, #030816 0%, #08142d 48%, #09213a 100%)',
     color: '#e8eefc',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
-    overflowX: 'hidden',
+    overflow: 'hidden',
   },
 
   backgroundGlowOne: {
@@ -715,86 +665,9 @@ const styles = {
     pointerEvents: 'none',
   },
 
-  topNav: {
-    width: '100%',
-    padding: '14px 18px 0',
-    boxSizing: 'border-box',
-    position: 'relative',
-    zIndex: 2,
-  },
-
-  topNavInner: {
-    maxWidth: '1440px',
-    margin: '0 auto',
-    minHeight: '64px',
-    padding: '12px 18px',
-    borderRadius: '20px',
-    border: '1px solid rgba(145, 160, 255, 0.12)',
-    background: 'linear-gradient(180deg, rgba(8, 16, 34, 0.74) 0%, rgba(9, 18, 38, 0.58) 100%)',
-    boxShadow: '0 14px 36px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.04)',
-    backdropFilter: 'blur(14px)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: '18px',
-  },
-
-  topNavBrandWrap: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-    minWidth: 0,
-  },
-
-  topNavLogo: {
-    width: '34px',
-    height: '34px',
-    borderRadius: '10px',
-    objectFit: 'contain',
-    background: '#ffffff',
-    padding: '4px',
-    boxSizing: 'border-box',
-  },
-
-  topNavBrand: {
-    fontSize: '15px',
-    fontWeight: 800,
-    letterSpacing: '0.02em',
-    color: '#f7fbff',
-    lineHeight: 1.1,
-  },
-
-  topNavSub: {
-    fontSize: '11px',
-    color: '#9fb0d6',
-    fontWeight: 600,
-    lineHeight: 1.2,
-    marginTop: '2px',
-  },
-
-  topNavRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    flexWrap: 'wrap',
-    justifyContent: 'flex-end',
-  },
-
-  navLink: {
-    border: '1px solid rgba(255,255,255,0.10)',
-    background: 'rgba(255,255,255,0.05)',
-    color: '#dbe7ff',
-    padding: '10px 14px',
-    borderRadius: '999px',
-    fontSize: '13px',
-    fontWeight: 700,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-
   shell: {
     maxWidth: '1440px',
-    minHeight: 'calc(100vh - 112px)',
+    height: '100vh',
     margin: '0 auto',
     padding: '18px',
     boxSizing: 'border-box',
@@ -802,7 +675,7 @@ const styles = {
     gridTemplateColumns: '392px minmax(0, 1fr)',
     gap: '18px',
     position: 'relative',
-    zIndex: 2,
+    zIndex: 1,
   },
 
   leftColumn: {
@@ -896,7 +769,8 @@ const styles = {
     lineHeight: 1.02,
     letterSpacing: '-0.03em',
     fontWeight: 700,
-    fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
+    fontFamily:
+      '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   },
 
   tagline: {
@@ -955,7 +829,6 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '5px',
-    transition: 'transform 180ms ease, box-shadow 180ms ease',
     minHeight: '96px',
     overflow: 'hidden',
     justifyContent: 'space-between',
@@ -1176,6 +1049,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '16px',
+    overflow: 'hidden',
   },
 
   chatHeader: {
@@ -1183,6 +1057,7 @@ const styles = {
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: '16px',
+    flex: '0 0 auto',
   },
 
   chatEyebrow: {
@@ -1226,35 +1101,46 @@ const styles = {
     color: '#eef4ff',
   },
 
-  messageArea: {
+  chatCanvas: {
     flex: 1,
     minHeight: 0,
+    background: '#eef3ff',
+    borderRadius: '28px',
+    padding: '18px',
+    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
+    overflow: 'hidden',
+  },
+
+  messageArea: {
+    height: '100%',
     overflowY: 'auto',
-    paddingRight: '4px',
+    paddingRight: '6px',
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
+    alignItems: 'stretch',
+    justifyContent: 'flex-start',
   },
 
   assistantBubble: {
     alignSelf: 'flex-start',
     width: 'min(640px, 100%)',
-    background: 'rgba(239, 244, 255, 0.90)',
+    background: '#ffffff',
     color: '#0f172a',
     borderRadius: '26px',
     padding: '16px',
-    boxShadow: '0 12px 28px rgba(0,0,0,0.10)',
+    boxShadow: '0 12px 28px rgba(0,0,0,0.08)',
   },
 
   userBubble: {
     alignSelf: 'flex-end',
     width: 'min(540px, 100%)',
-    background: 'linear-gradient(135deg, rgba(124,92,255,0.22) 0%, rgba(63,241,208,0.12) 100%)',
-    color: '#ecf3ff',
-    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'linear-gradient(135deg, rgba(124,92,255,0.92) 0%, rgba(63,241,208,0.62) 100%)',
+    color: '#07111e',
+    border: '1px solid rgba(255,255,255,0.14)',
     borderRadius: '26px',
     padding: '16px',
-    boxShadow: '0 12px 28px rgba(0,0,0,0.16)',
+    boxShadow: '0 12px 28px rgba(0,0,0,0.12)',
   },
 
   bubbleLabel: {
@@ -1271,7 +1157,7 @@ const styles = {
     fontWeight: 900,
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
-    color: '#cddcff',
+    color: '#052035',
     marginBottom: '8px',
   },
 
@@ -1288,10 +1174,11 @@ const styles = {
     whiteSpace: 'pre-wrap',
     lineHeight: 1.6,
     fontSize: '16px',
-    color: '#ecf3ff',
+    color: '#052035',
   },
 
   inputCard: {
+    minHeight: 0,
     background: 'linear-gradient(180deg, rgba(8, 16, 34, 0.92) 0%, rgba(8, 15, 31, 0.84) 100%)',
     border: '1px solid rgba(145, 160, 255, 0.14)',
     borderRadius: '30px',
@@ -1301,6 +1188,7 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '14px',
+    overflow: 'hidden',
   },
 
   inputHeaderRow: {
@@ -1544,53 +1432,5 @@ const styles = {
     fontSize: '14px',
     lineHeight: 1.5,
     color: '#334155',
-  },
-
-  bottomInfoSection: {
-    maxWidth: '1440px',
-    margin: '0 auto',
-    padding: '0 18px 24px',
-    boxSizing: 'border-box',
-    position: 'relative',
-    zIndex: 2,
-  },
-
-  bottomInfoInner: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    gap: '18px',
-  },
-
-  infoBlock: {
-    background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.74) 0%, rgba(9, 18, 38, 0.68) 100%)',
-    border: '1px solid rgba(145, 160, 255, 0.12)',
-    borderRadius: '24px',
-    padding: '18px',
-    boxShadow: '0 16px 36px rgba(0,0,0,0.20), inset 0 1px 0 rgba(255,255,255,0.03)',
-    backdropFilter: 'blur(12px)',
-  },
-
-  infoEyebrow: {
-    fontSize: '11px',
-    letterSpacing: '0.16em',
-    textTransform: 'uppercase',
-    color: '#9db2ff',
-    fontWeight: 800,
-    marginBottom: '8px',
-  },
-
-  infoTitle: {
-    fontSize: '18px',
-    fontWeight: 800,
-    color: '#f8fbff',
-    lineHeight: 1.2,
-    marginBottom: '8px',
-  },
-
-  infoText: {
-    margin: 0,
-    fontSize: '14px',
-    lineHeight: 1.6,
-    color: '#cad7f3',
   },
 }
