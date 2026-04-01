@@ -114,7 +114,7 @@ export default function AskVIC() {
   }
 
   function handleKeyDown(e) {
-    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       sendMessage()
     }
@@ -320,7 +320,7 @@ export default function AskVIC() {
                         msg.role === 'assistant' ? styles.bubbleLabel : styles.bubbleLabelUser
                       }
                     >
-                      {msg.role === 'assistant' ? 'VIC' : 'YOU'}
+                      {msg.role === 'assistant' ? 'VIC' : 'You'}
                     </div>
 
                     <p style={msg.role === 'assistant' ? styles.bubbleText : styles.userBubbleText}>
@@ -343,7 +343,7 @@ export default function AskVIC() {
                 <div style={styles.inputTitle}>Your message</div>
               </div>
 
-              <div style={styles.inputHint}>Enter = new line • Ctrl/Cmd + Enter = send</div>
+              <div style={styles.inputHint}>Enter = send • Shift + Enter = new line</div>
             </div>
 
             <textarea
@@ -616,7 +616,7 @@ const styles = {
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
     position: 'relative',
-    overflow: 'hidden',
+    overflow: 'auto',
   },
 
   backgroundGlowOne: {
@@ -684,6 +684,7 @@ const styles = {
     gap: '18px',
     position: 'relative',
     zIndex: 1,
+    overflow: 'hidden',
   },
 
   leftColumn: {
@@ -822,7 +823,7 @@ const styles = {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
     gap: '12px',
-    paddingBottom: '8px',
+    paddingBottom: '10px',
   },
 
   subjectButton: {
@@ -830,7 +831,7 @@ const styles = {
     background:
       'linear-gradient(135deg, rgba(143,124,255,0.16) 0%, rgba(63,241,208,0.08) 100%)',
     color: '#f7fbff',
-    padding: '14px 16px',
+    padding: '16px',
     borderRadius: '18px',
     fontSize: '15px',
     fontWeight: 800,
@@ -839,9 +840,10 @@ const styles = {
     display: 'flex',
     flexDirection: 'column',
     gap: '5px',
-    minHeight: '96px',
+    minHeight: '110px',
     overflow: 'hidden',
     justifyContent: 'space-between',
+    alignItems: 'flex-start',
     cursor: 'pointer',
   },
 
