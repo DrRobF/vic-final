@@ -21,7 +21,7 @@ export default function AskVIC() {
   ])
 
   const messageAreaRef = useRef(null)
-  const previousMessageCountRef = useRef(messages.length)
+  const messageRefs = useRef([])
 
   const canGetReport = useMemo(() => messages.length > 1 && !loading, [messages.length, loading])
 
@@ -29,14 +29,19 @@ export default function AskVIC() {
     const container = messageAreaRef.current
     if (!container) return
 
-    if (messages.length > previousMessageCountRef.current) {
-      container.scrollTo({
-        top: container.scrollHeight,
-        behavior: 'smooth',
-      })
-    }
+    const lastMessage = messageRefs.current[messages.length - 1]
+    if (!lastMessage) return
 
-    previousMessageCountRef.current = messages.length
+    const containerRect = container.getBoundingClientRect()
+    const messageRect = lastMessage.getBoundingClientRect()
+    const currentScroll = container.scrollTop
+    const offsetTop = messageRect.top - containerRect.top + currentScroll
+    const targetTop = Math.max(offsetTop - 16, 0)
+
+    container.scrollTo({
+      top: targetTop,
+      behavior: 'smooth',
+    })
   }, [messages])
 
   async function sendMessage(customMessage) {
@@ -305,6 +310,9 @@ export default function AskVIC() {
                 {messages.map((msg, index) => (
                   <div
                     key={index}
+                    ref={(el) => {
+                      messageRefs.current[index] = el
+                    }}
                     style={msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble}
                   >
                     <div
@@ -719,17 +727,17 @@ const styles = {
 
   heroTop: {
     display: 'grid',
-    gridTemplateColumns: '126px 1fr',
+    gridTemplateColumns: '150px 1fr',
     gap: '18px',
     alignItems: 'center',
   },
 
   logoImageWrap: {
-    width: '126px',
-    height: '126px',
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(240,245,255,0.96) 100%)',
+    width: '150px',
+    height: '150px',
+    background: 'rgba(255,255,255,0.96)',
     borderRadius: '24px',
-    padding: '12px',
+    padding: '8px',
     boxSizing: 'border-box',
     display: 'flex',
     alignItems: 'center',
@@ -739,9 +747,11 @@ const styles = {
 
   logoImage: {
     width: '100%',
-    height: 'auto',
+    height: '100%',
     display: 'block',
     objectFit: 'contain',
+    borderRadius: '18px',
+    background: 'rgba(255,255,255,0.96)',
   },
 
   heroTextWrap: {
