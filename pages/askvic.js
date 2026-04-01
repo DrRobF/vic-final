@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-const BRAIN_VERSION = 'v3.2.2'
+const BRAIN_VERSION = 'v3.3'
 
 export default function AskVIC() {
   const [input, setInput] = useState('')
@@ -690,8 +690,9 @@ const styles = {
   leftColumn: {
     minHeight: 0,
     display: 'grid',
-    gridTemplateRows: '1fr 1fr',
+    gridTemplateRows: 'minmax(0, 1.1fr) minmax(0, 0.9fr)',
     gap: '18px',
+    overflow: 'hidden',
   },
 
   rightColumn: {
@@ -706,12 +707,12 @@ const styles = {
     background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.90) 0%, rgba(9, 18, 38, 0.82) 100%)',
     border: '1px solid rgba(145, 160, 255, 0.14)',
     borderRadius: '28px',
-    padding: '18px',
+    padding: '14px',
     boxShadow: '0 20px 52px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)',
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '16px',
+    gap: '10px',
     overflow: 'hidden',
     position: 'relative',
   },
@@ -728,16 +729,16 @@ const styles = {
 
   heroTop: {
     display: 'grid',
-    gridTemplateColumns: '150px 1fr',
-    gap: '18px',
+    gridTemplateColumns: '118px 1fr',
+    gap: '14px',
     alignItems: 'center',
   },
 
   logoImageWrap: {
-    width: '150px',
-    height: '150px',
+    width: '118px',
+    height: '118px',
     background: 'rgba(255,255,255,0.96)',
-    borderRadius: '24px',
+    borderRadius: '22px',
     padding: '8px',
     boxSizing: 'border-box',
     display: 'flex',
@@ -751,14 +752,14 @@ const styles = {
     height: '100%',
     display: 'block',
     objectFit: 'contain',
-    borderRadius: '18px',
+    borderRadius: '16px',
     background: 'rgba(255,255,255,0.96)',
   },
 
   heroTextWrap: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px',
+    gap: '6px',
     minWidth: 0,
   },
 
@@ -776,8 +777,8 @@ const styles = {
 
   heading: {
     margin: 0,
-    fontSize: '34px',
-    lineHeight: 1.02,
+    fontSize: '30px',
+    lineHeight: 1.0,
     letterSpacing: '-0.03em',
     fontWeight: 700,
     fontFamily:
@@ -786,10 +787,10 @@ const styles = {
 
   tagline: {
     margin: 0,
-    fontSize: '16px',
-    lineHeight: 1.45,
+    fontSize: '14px',
+    lineHeight: 1.35,
     color: '#cad7f3',
-    maxWidth: '320px',
+    maxWidth: '230px',
   },
 
   quickStartWrap: {
@@ -797,9 +798,9 @@ const styles = {
     minHeight: 0,
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px',
-    justifyContent: 'center',
-    paddingTop: '4px',
+    gap: '10px',
+    justifyContent: 'flex-start',
+    paddingTop: '2px',
   },
 
   sectionEyebrow: {
@@ -808,7 +809,7 @@ const styles = {
     textTransform: 'uppercase',
     color: '#9db2ff',
     fontWeight: 800,
-    marginBottom: '2px',
+    marginBottom: '0px',
   },
 
   sectionTitle: {
@@ -822,8 +823,8 @@ const styles = {
   subjectGrid: {
     display: 'grid',
     gridTemplateColumns: '1fr 1fr',
-    gap: '12px',
-    paddingBottom: '10px',
+    gap: '10px',
+    paddingBottom: '2px',
   },
 
   subjectButton: {
@@ -831,7 +832,7 @@ const styles = {
     background:
       'linear-gradient(135deg, rgba(143,124,255,0.16) 0%, rgba(63,241,208,0.08) 100%)',
     color: '#f7fbff',
-    padding: '16px',
+    padding: '14px',
     borderRadius: '18px',
     fontSize: '15px',
     fontWeight: 800,
@@ -839,8 +840,8 @@ const styles = {
     boxShadow: '0 10px 24px rgba(0,0,0,0.14)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '5px',
-    minHeight: '110px',
+    gap: '6px',
+    minHeight: '88px',
     overflow: 'hidden',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -854,7 +855,7 @@ const styles = {
 
   subjectButtonSub: {
     fontSize: '11px',
-    lineHeight: 1.35,
+    lineHeight: 1.3,
     color: '#c7d6f5',
     fontWeight: 600,
   },
@@ -864,12 +865,12 @@ const styles = {
     background: 'linear-gradient(180deg, rgba(12, 23, 48, 0.90) 0%, rgba(9, 18, 38, 0.82) 100%)',
     border: '1px solid rgba(145, 160, 255, 0.14)',
     borderRadius: '28px',
-    padding: '18px',
+    padding: '16px',
     boxShadow: '0 20px 52px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.04)',
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
-    gap: '14px',
+    gap: '12px',
     overflowY: 'auto',
   },
 
