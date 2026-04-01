@@ -758,7 +758,7 @@ const styles = {
     height: '118px',
     background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(246,238,255,0.96) 100%)',
     borderRadius: '22px',
-    padding: '8px',
+    padding: '2px',
     boxSizing: 'border-box',
     display: 'flex',
     alignItems: 'center',
@@ -780,7 +780,7 @@ const styles = {
     width: '100%',
     height: '100%',
     display: 'block',
-    objectFit: 'contain',
+    objectFit: 'cover',
     borderRadius: '16px',
     background: 'rgba(255,255,255,0.96)',
     position: 'relative',
@@ -950,7 +950,7 @@ const styles = {
 
   reportButtonDisabled: {
     border: '1px solid rgba(255,255,255,0.08)',
-    background: 'rgba(255,255,255,0.05)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.07), rgba(171,91,255,0.08))',
     color: '#9d8dc4',
     padding: '10px 14px',
     borderRadius: '14px',
@@ -1102,11 +1102,11 @@ const styles = {
 
   chatCard: {
     minHeight: 0,
-    background: 'linear-gradient(180deg, rgba(8, 16, 34, 0.92) 0%, rgba(8, 15, 31, 0.84) 100%)',
-    border: '1px solid rgba(145, 160, 255, 0.14)',
+    background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.94) 0%, rgba(9, 14, 31, 0.88) 100%)',
+    border: '1px solid rgba(191, 141, 255, 0.20)',
     borderRadius: '30px',
     padding: '18px',
-    boxShadow: '0 22px 60px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: '0 22px 60px rgba(0,0,0,0.30), 0 0 28px rgba(171,91,255,0.10), inset 0 1px 0 rgba(255,255,255,0.04)',
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
@@ -1126,7 +1126,7 @@ const styles = {
     fontSize: '11px',
     letterSpacing: '0.16em',
     textTransform: 'uppercase',
-    color: '#9db2ff',
+    color: '#bca1ff',
     fontWeight: 800,
     marginBottom: '4px',
   },
@@ -1134,7 +1134,7 @@ const styles = {
   chatTitle: {
     fontSize: '22px',
     fontWeight: 800,
-    color: '#f8fbff',
+    color: '#faf5ff',
     lineHeight: 1.1,
   },
 
@@ -1144,8 +1144,8 @@ const styles = {
     gap: '8px',
     padding: '10px 14px',
     borderRadius: '999px',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.10)',
+    background: 'linear-gradient(135deg, rgba(255,255,255,0.07), rgba(171,91,255,0.08))',
+    border: '1px solid rgba(206, 170, 255, 0.18)',
     whiteSpace: 'nowrap',
   },
 
@@ -1160,13 +1160,13 @@ const styles = {
   statusText: {
     fontSize: '14px',
     fontWeight: 700,
-    color: '#eef4ff',
+    color: '#f5ebff',
   },
 
   chatCanvas: {
     flex: 1,
     minHeight: 0,
-    background: '#eef3ff',
+    background: '#f3edff',
     borderRadius: '28px',
     padding: '18px',
     boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
@@ -1210,7 +1210,7 @@ const styles = {
     fontWeight: 900,
     letterSpacing: '0.12em',
     textTransform: 'uppercase',
-    color: '#516182',
+    color: '#6a518f',
     marginBottom: '8px',
   },
 
@@ -1241,11 +1241,11 @@ const styles = {
 
   inputCard: {
     minHeight: 0,
-    background: 'linear-gradient(180deg, rgba(8, 16, 34, 0.92) 0%, rgba(8, 15, 31, 0.84) 100%)',
-    border: '1px solid rgba(145, 160, 255, 0.14)',
+    background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.94) 0%, rgba(9, 14, 31, 0.88) 100%)',
+    border: '1px solid rgba(191, 141, 255, 0.20)',
     borderRadius: '30px',
     padding: '18px',
-    boxShadow: '0 22px 60px rgba(0,0,0,0.30), inset 0 1px 0 rgba(255,255,255,0.04)',
+    boxShadow: '0 22px 60px rgba(0,0,0,0.30), 0 0 28px rgba(171,91,255,0.10), inset 0 1px 0 rgba(255,255,255,0.04)',
     backdropFilter: 'blur(16px)',
     display: 'flex',
     flexDirection: 'column',
@@ -1263,13 +1263,13 @@ const styles = {
   inputTitle: {
     fontSize: '20px',
     fontWeight: 800,
-    color: '#f8fbff',
+    color: '#faf5ff',
     lineHeight: 1.1,
   },
 
   inputHint: {
     fontSize: '12px',
-    color: '#b5c5e8',
+    color: '#d7c7ff',
     lineHeight: 1.4,
     textAlign: 'right',
   },
@@ -1279,7 +1279,7 @@ const styles = {
     minHeight: '106px',
     borderRadius: '20px',
     border: '1px solid rgba(191, 205, 255, 0.18)',
-    background: '#eef3ff',
+    background: '#f3edff',
     color: '#0f172a',
     padding: '16px',
     fontSize: '16px',
@@ -1299,7 +1299,7 @@ const styles = {
 
   footerPrompt: {
     fontSize: '13px',
-    color: '#c5d3f0',
+    color: '#d7c7ff',
     lineHeight: 1.5,
   },
 
@@ -1310,8 +1310,8 @@ const styles = {
     fontSize: '15px',
     fontWeight: 800,
     color: '#07111e',
-    background: 'linear-gradient(135deg, #8f7cff 0%, #3ff1d0 100%)',
-    boxShadow: '0 12px 28px rgba(63,241,208,0.18)',
+    background: 'linear-gradient(135deg, #a657ff 0%, #54f8ff 100%)',
+    boxShadow: '0 12px 28px rgba(171,91,255,0.22)',
   },
 
   visualIdleCard: {
@@ -1343,7 +1343,7 @@ const styles = {
   visualIdleLogo: {
     width: '96px',
     height: '64px',
-    objectFit: 'contain',
+    objectFit: 'cover',
     borderRadius: '14px',
     background: 'rgba(255,255,255,0.82)',
     padding: '10px',
