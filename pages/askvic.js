@@ -780,7 +780,7 @@ const styles = {
     width: '100%',
     height: '100%',
     display: 'block',
-    objectFit: 'contain', transform: 'scale(1.15)' ,
+    objectFit: 'contain', transform: 'scale(1.28)' ,
     borderRadius: '16px',
     background: 'rgba(255,255,255,0.96)',
     position: 'relative',
@@ -1269,7 +1269,7 @@ const styles = {
 
   inputHint: {
     fontSize: '12px',
-    color: '#d7c7ff',
+    color: '#e4d6ff',
     lineHeight: 1.4,
     textAlign: 'right',
   },
@@ -1299,7 +1299,7 @@ const styles = {
 
   footerPrompt: {
     fontSize: '13px',
-    color: '#d7c7ff',
+    color: '#e0d0ff',
     lineHeight: 1.5,
   },
 
@@ -1343,7 +1343,7 @@ const styles = {
   visualIdleLogo: {
     width: '96px',
     height: '64px',
-    objectFit: 'contain', transform: 'scale(1.15)' ,
+    objectFit: 'contain', transform: 'scale(1.28)' ,
     borderRadius: '14px',
     background: 'rgba(255,255,255,0.82)',
     padding: '10px',
