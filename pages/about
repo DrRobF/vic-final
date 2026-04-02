@@ -1,1 +1,67 @@
+export default function AboutVIC() {
+  return (
+    <div style={styles.page}>
+      <div style={styles.container}>
+        
+        <h1 style={styles.title}>About VIC</h1>
 
+        <p style={styles.text}>
+          VIC (Virtual Co-Teacher) was built to do something simple — actually teach.
+          Not just give answers, but guide, explain, and help people understand.
+        </p>
+
+        <p style={styles.text}>
+          The idea didn’t start with AI.
+        </p>
+
+        <p style={styles.text}>
+          Years ago, my dad created his own version of something like this. People would send him questions,
+          and he would route them to experts, research the answers, and respond with thoughtful explanations.
+          He had systems, stock responses, and ways of organizing knowledge long before tools like this existed.
+        </p>
+
+        <p style={styles.text}>
+          He was doing, in a human way, what AI is just starting to do now.
+        </p>
+
+        <p style={styles.text}>
+          VIC is my way of continuing that idea — bringing real teaching into a modern tool.
+        </p>
+
+        <p style={styles.text}>
+          I’ve spent my career in education — as a principal, teacher, and someone who’s worked directly with students and families.
+          VIC is built from that experience, not just technology.
+        </p>
+
+        <p style={styles.text}>
+          The goal is simple:
+          to create something that helps people learn in a way that actually makes sense.
+        </p>
+
+      </div>
+    </div>
+  )
+}
+
+const styles = {
+  page: {
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #070312 0%, #17092b 50%, #10061d 100%)',
+    color: '#f3edff',
+    padding: '40px 20px',
+    fontFamily: 'sans-serif',
+  },
+  container: {
+    maxWidth: '700px',
+    margin: '0 auto',
+    lineHeight: 1.7,
+  },
+  title: {
+    fontSize: '32px',
+    marginBottom: '20px',
+  },
+  text: {
+    fontSize: '16px',
+    marginBottom: '16px',
+  },
+}
