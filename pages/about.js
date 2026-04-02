@@ -41,7 +41,9 @@ export default function AboutVIC() {
     </div>
   )
 }
-
+<a href="/askvic" style={{ color: '#cba6ff', fontWeight: 600 }}>
+  ← Back to VIC
+</a>
 const styles = {
   page: {
     minHeight: '100vh',
