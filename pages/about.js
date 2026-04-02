@@ -2,6 +2,7 @@ export default function AboutVIC() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
+        
         <h1 style={styles.title}>About VIC</h1>
 
         <p style={styles.text}>
@@ -37,13 +38,19 @@ export default function AboutVIC() {
           leader. VIC is being built from that experience, with the goal of making
           learning feel more personal, more guided, and more human.
         </p>
+
+        {/* 👇 THIS IS THE BACK LINK — DO NOT MOVE IT */}
+        <div style={styles.backWrap}>
+          <a href="/askvic" style={styles.backLink}>
+            ← Back to VIC
+          </a>
+        </div>
+
       </div>
     </div>
   )
 }
-<a href="/askvic" style={{ color: '#cba6ff', fontWeight: 600 }}>
-  ← Back to VIC
-</a>
+
 const styles = {
   page: {
     minHeight: '100vh',
@@ -64,5 +71,14 @@ const styles = {
   text: {
     fontSize: '17px',
     marginBottom: '16px',
+  },
+  backWrap: {
+    marginTop: '40px',
+  },
+  backLink: {
+    color: '#cba6ff',
+    fontWeight: 700,
+    textDecoration: 'none',
+    fontSize: '16px',
   },
 }
