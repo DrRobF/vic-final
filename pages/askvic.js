@@ -199,7 +199,7 @@ export default function AskVIC() {
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.lineWidth = isErasingRef.current ? 18 : 3
-    ctx.strokeStyle = isErasingRef.current ? 'rgba(0,0,0,1)' : '#f8f3ff'
+    ctx.strokeStyle = isErasingRef.current ? '#ffffff' : '#000000'
     isDrawingRef.current = true
   }
 
@@ -293,39 +293,6 @@ export default function AskVIC() {
           </p>
         </div>
       </div>
-
-      <div style={styles.quickStartWrap}>
-        <div style={styles.sectionEyebrow}>Start Learning</div>
-        <div style={styles.quickStartText}>
-          Pick a subject or ask a question. VIC works best one thought at a time.
-        </div>
-
-        <div style={styles.subjectGrid}>
-          <button style={styles.subjectButton} onClick={() => startSubject('math')}>
-            <span style={styles.subjectButtonGlow} />
-            <span style={styles.subjectButtonLabel}>Math</span>
-            <span style={styles.subjectButtonSub}>Start a math lesson</span>
-          </button>
-
-          <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
-            <span style={styles.subjectButtonGlow} />
-            <span style={styles.subjectButtonLabel}>Reading</span>
-            <span style={styles.subjectButtonSub}>Practice comprehension</span>
-          </button>
-
-          <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
-            <span style={styles.subjectButtonGlow} />
-            <span style={styles.subjectButtonLabel}>Writing</span>
-            <span style={styles.subjectButtonSub}>Draft and revise ideas</span>
-          </button>
-
-          <button style={styles.subjectButton} onClick={() => startSubject('science')}>
-            <span style={styles.subjectButtonGlow} />
-            <span style={styles.subjectButtonLabel}>Science</span>
-            <span style={styles.subjectButtonSub}>Explore step by step</span>
-          </button>
-        </div>
-      </div>
     </section>
   )
 
@@ -334,7 +301,7 @@ export default function AskVIC() {
     <section style={styles.toolsCard}>
       <div style={styles.toolsHeaderRow}>
         <div style={styles.toolsHeaderText}>
-          <div style={styles.sectionEyebrow}>Student Tools</div>
+          <div style={styles.sectionEyebrow}>Workspace</div>
           <div style={styles.sectionTitle}>Student Tools</div>
           <div style={styles.toolsSubtext}>Work while VIC teaches.</div>
         </div>
@@ -553,8 +520,8 @@ export default function AskVIC() {
         <div style={styles.shell}>
           {!isCompact ? (
             <div style={styles.leftColumn}>
-              {toolsSection}
               {heroSection}
+              {toolsSection}
             </div>
           ) : null}
 
@@ -571,6 +538,16 @@ export default function AskVIC() {
                 <div style={styles.statusWrap}>
                   <span style={styles.statusDot} />
                   <span style={styles.statusText}>{loading ? 'Thinking' : 'Ready'}</span>
+                </div>
+              </div>
+
+              <div style={styles.quickStartInline}>
+                <div style={styles.quickStartInlineLabel}>Quick starts</div>
+                <div style={styles.quickStartInlineButtons}>
+                  <button style={styles.quickStartPill} onClick={() => startSubject('math')}>Math</button>
+                  <button style={styles.quickStartPill} onClick={() => startSubject('reading')}>Reading</button>
+                  <button style={styles.quickStartPill} onClick={() => startSubject('writing')}>Writing</button>
+                  <button style={styles.quickStartPill} onClick={() => startSubject('science')}>Science</button>
                 </div>
               </div>
 
@@ -1140,7 +1117,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     leftColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: 'minmax(0, 1fr) auto',
+      gridTemplateRows: 'auto minmax(0, 1fr)',
       gap: '18px',
       overflow: 'hidden',
     },
@@ -1163,7 +1140,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       backdropFilter: 'blur(16px)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '14px',
+      gap: '10px',
       overflow: 'hidden',
       position: 'relative',
       flexShrink: 0,
@@ -1181,14 +1158,14 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     heroTop: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '102px 1fr',
+      gridTemplateColumns: isMobile ? '1fr' : '86px 1fr',
       gap: isMobile ? '12px' : '14px',
       alignItems: isMobile ? 'start' : 'center',
     },
 
     logoImageWrap: {
-      width: isMobile ? '88px' : '100px',
-      height: isMobile ? '88px' : '100px',
+      width: isMobile ? '82px' : '86px',
+      height: isMobile ? '82px' : '86px',
       background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(246,238,255,0.96) 100%)',
       borderRadius: '22px',
       display: 'flex',
@@ -1229,7 +1206,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     heading: {
       margin: 0,
-      fontSize: isMobile ? '26px' : isTablet ? '28px' : '30px',
+      fontSize: isMobile ? '24px' : isTablet ? '25px' : '26px',
       lineHeight: 1.02,
       letterSpacing: '-0.03em',
       fontWeight: 700,
@@ -1241,8 +1218,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     tagline: {
       margin: 0,
-      fontSize: isMobile ? '14px' : '15px',
-      lineHeight: 1.4,
+      fontSize: isMobile ? '13px' : '14px',
+      lineHeight: 1.35,
       color: '#dccbff',
       maxWidth: '420px',
     },
@@ -1329,6 +1306,39 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       zIndex: 1,
     },
 
+    quickStartInline: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      gap: '10px',
+      padding: '0 4px 4px 4px',
+    },
+
+    quickStartInlineLabel: {
+      fontSize: '12px',
+      fontWeight: 800,
+      color: '#d8c7ff',
+      whiteSpace: 'nowrap',
+    },
+
+    quickStartInlineButtons: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '8px',
+    },
+
+    quickStartPill: {
+      background: 'rgba(255,255,255,0.08)',
+      border: '1px solid rgba(255,255,255,0.12)',
+      color: '#f8f4ff',
+      padding: '8px 12px',
+      borderRadius: '999px',
+      fontSize: '13px',
+      fontWeight: 800,
+      cursor: 'pointer',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+    },
+
     toolsCard: {
       minHeight: 0,
       background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.90) 0%, rgba(9, 14, 31, 0.84) 100%)',
@@ -1342,6 +1352,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       flexDirection: 'column',
       gap: '10px',
       overflowY: 'auto',
+      flex: 1,
     },
 
     toolsHeaderRow: {
@@ -1406,6 +1417,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
+      flex: 1,
+      minHeight: 0,
     },
 
     supportRowTwoUp: {
@@ -1487,8 +1500,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     sketchCanvas: {
       width: '100%',
-      minHeight: isMobile ? '240px' : '320px',
-      height: isMobile ? '240px' : '320px',
+      minHeight: isMobile ? '280px' : '420px',
+      height: isMobile ? '280px' : '420px',
       borderRadius: '18px',
       border: '1px solid rgba(216, 220, 235, 0.95)',
       background: '#ffffff',
@@ -2280,4 +2293,3 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: '#334155',
     },
   }
-}
