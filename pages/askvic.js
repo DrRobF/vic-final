@@ -178,64 +178,59 @@ export default function AskVIC() {
     }
   }
 
-  const dynamicStyles = buildStyles({ isMobile, isTablet, isCompact, loading, input })
+  const styles = buildStyles({ isMobile, isTablet, isCompact })
 
   const heroSection = (
-    <section style={dynamicStyles.heroCard}>
-      <div style={dynamicStyles.heroSparkle} />
+    <section style={styles.heroCard}>
+      <div style={styles.heroSparkle} />
 
-      <div style={dynamicStyles.heroTop}>
-        <div style={dynamicStyles.logoBlock}>
-          <div style={dynamicStyles.logoFrame}>
-            <img
-              src="/vic-logo.png"
-              alt="VIC Virtual Co-Teacher logo"
-              style={dynamicStyles.logoImage}
-            />
-          </div>
+      <div style={styles.heroTop}>
+        <div style={styles.logoImageWrap}>
+          <img
+            src="/vic-logo.png"
+            alt="VIC Virtual Co-Teacher logo"
+            style={styles.logoImage}
+          />
         </div>
 
-        <div style={dynamicStyles.heroTextWrap}>
-          <div style={dynamicStyles.versionPill}>Brain {BRAIN_VERSION}</div>
-          <h1 style={dynamicStyles.heading}>More than answers. Real teaching.</h1>
-          <p style={dynamicStyles.tagline}>
+        <div style={styles.heroTextWrap}>
+          <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
+          <h1 style={styles.heading}>More than answers. Real teaching.</h1>
+          <p style={styles.tagline}>
             Guided help that feels calm, clear, and personal.
-          </p>
-          <p style={dynamicStyles.supportLine}>
-            Extra support for students. Reinforcement for teachers.
           </p>
         </div>
       </div>
 
-      <div style={dynamicStyles.quickStartWrap}>
-        <div style={dynamicStyles.sectionEyebrow}>Start Learning</div>
-        <div style={dynamicStyles.quickStartText}>
+      <div style={styles.quickStartWrap}>
+        <div style={styles.sectionEyebrow}>Start Learning</div>
+        <div style={styles.quickStartText}>
           Pick a subject or ask a question. VIC works best one thought at a time.
         </div>
 
-        <div style={dynamicStyles.subjectGrid}>
-          <button style={dynamicStyles.subjectButton} onClick={() => startSubject('math')}>
-            <span style={dynamicStyles.subjectButtonGlow} />
-            <span style={dynamicStyles.subjectButtonLabel}>Math</span>
-            <span style={dynamicStyles.subjectButtonSub}>Start a math lesson</span>
+        <div style={styles.subjectGrid}>
+          <button style={styles.subjectButton} onClick={() => startSubject('math')}>
+            <span style={styles.subjectButtonGlow} />
+            <span style={styles.subjectButtonLabel}>Math</span>
+            <span style={styles.subjectButtonSub}>Start a math lesson</span>
           </button>
 
-          <button style={dynamicStyles.subjectButton} onClick={() => startSubject('reading')}>
-            <span style={dynamicStyles.subjectButtonGlow} />
-            <span style={dynamicStyles.subjectButtonLabel}>Reading</span>
-            <span style={dynamicStyles.subjectButtonSub}>Practice comprehension</span>
+          <button style={styles.subjectButton} onClick={() => startSubject('reading')}>
+            <span style={styles.subjectButtonGlow} />
+            <span style={styles.subjectButtonLabel}>Reading</span>
+            <span style={styles.subjectButtonSub}>Practice comprehension</span>
           </button>
 
-          <button style={dynamicStyles.subjectButton} onClick={() => startSubject('writing')}>
-            <span style={dynamicStyles.subjectButtonGlow} />
-            <span style={dynamicStyles.subjectButtonLabel}>Writing</span>
-            <span style={dynamicStyles.subjectButtonSub}>Draft and revise ideas</span>
+          <button style={styles.subjectButton} onClick={() => startSubject('writing')}>
+            <span style={styles.subjectButtonGlow} />
+            <span style={styles.subjectButtonLabel}>Writing</span>
+            <span style={styles.subjectButtonSub}>Draft and revise ideas</span>
           </button>
 
-          <button style={dynamicStyles.subjectButton} onClick={() => startSubject('science')}>
-            <span style={dynamicStyles.subjectButtonGlow} />
-            <span style={dynamicStyles.subjectButtonLabel}>Science</span>
-            <span style={dynamicStyles.subjectButtonSub}>Explore step by step</span>
+          <button style={styles.subjectButton} onClick={() => startSubject('science')}>
+            <span style={styles.subjectButtonGlow} />
+            <span style={styles.subjectButtonLabel}>Science</span>
+            <span style={styles.subjectButtonSub}>Explore step by step</span>
           </button>
         </div>
       </div>
@@ -243,81 +238,98 @@ export default function AskVIC() {
   )
 
   const toolsSection = (
-    <section style={dynamicStyles.toolsCard}>
-      <div style={dynamicStyles.toolsHeaderRow}>
-        <div style={dynamicStyles.toolsHeaderText}>
-          <div style={dynamicStyles.sectionEyebrow}>Workspace Tools</div>
-          <div style={dynamicStyles.sectionTitle}>Practice, notes, and report</div>
-          <div style={dynamicStyles.toolsSubtext}>
+    <section style={styles.toolsCard}>
+      <div style={styles.toolsHeaderRow}>
+        <div style={styles.toolsHeaderText}>
+          <div style={styles.sectionEyebrow}>Workspace Tools</div>
+          <div style={styles.sectionTitle}>Practice, notes, and report</div>
+          <div style={styles.toolsSubtext}>
             Keep your work here while VIC teaches.
           </div>
         </div>
-
-        <button
-          style={canGetReport ? dynamicStyles.reportButton : dynamicStyles.reportButtonDisabled}
-          onClick={requestReport}
-          disabled={!canGetReport}
-        >
-          Get Report
-        </button>
       </div>
 
-      <div style={dynamicStyles.toolToggleRow}>
+      <div style={styles.reportFeatureCard}>
+        <div style={styles.reportFeatureTop}>
+          <div>
+            <div style={styles.reportFeatureLabel}>Featured Tool</div>
+            <div style={styles.reportFeatureTitle}>Session Reports</div>
+          </div>
+
+          <button
+            style={canGetReport ? styles.reportButton : styles.reportButtonDisabled}
+            onClick={requestReport}
+            disabled={!canGetReport}
+          >
+            Get Report
+          </button>
+        </div>
+
+        <div style={styles.reportFeatureText}>
+          Turn a VIC session into a clean downloadable report you can review, save, or share.
+        </div>
+
+        <div style={styles.reportFeatureMini}>
+          Great for school follow-up, parent communication, and showing what learning happened.
+        </div>
+      </div>
+
+      <div style={styles.toolToggleRow}>
         <button
-          style={showCalculator ? dynamicStyles.toolToggleActive : dynamicStyles.toolToggle}
+          style={showCalculator ? styles.toolToggleActive : styles.toolToggle}
           onClick={() => setShowCalculator(!showCalculator)}
         >
           Calculator
         </button>
 
         <button
-          style={showNotes ? dynamicStyles.toolToggleActive : dynamicStyles.toolToggle}
+          style={showNotes ? styles.toolToggleActive : styles.toolToggle}
           onClick={() => setShowNotes(!showNotes)}
         >
           Notes
         </button>
       </div>
 
-      <div style={dynamicStyles.practiceWrap}>
-        <div style={dynamicStyles.practiceHeaderRow}>
-          <div style={dynamicStyles.miniLabel}>Practice Area</div>
-          <div style={dynamicStyles.practiceHint}>Work it out here while VIC teaches.</div>
+      <div style={styles.practiceWrap}>
+        <div style={styles.practiceHeaderRow}>
+          <div style={styles.miniLabel}>Practice Area</div>
+          <div style={styles.practiceHint}>Work it out here while VIC teaches.</div>
         </div>
 
         <textarea
           value={workArea}
           onChange={(e) => setWorkArea(e.target.value)}
           placeholder="Let’s practice here..."
-          style={dynamicStyles.sideTextarea}
+          style={styles.sideTextarea}
         />
       </div>
 
       {showCalculator ? (
-        <div style={dynamicStyles.toolPanel}>
-          <div style={dynamicStyles.miniLabelDark}>Calculator</div>
+        <div style={styles.toolPanel}>
+          <div style={styles.miniLabelDark}>Calculator</div>
           <input
             value={calcInput}
             onChange={(e) => setCalcInput(e.target.value)}
             placeholder="Example: 12 * (4 + 3)"
-            style={dynamicStyles.calcInput}
+            style={styles.calcInput}
           />
-          <div style={dynamicStyles.calcRow}>
-            <button style={dynamicStyles.smallButton} onClick={runCalculator}>
+          <div style={styles.calcRow}>
+            <button style={styles.smallButton} onClick={runCalculator}>
               Calculate
             </button>
-            <div style={dynamicStyles.calcResult}>{calcResult}</div>
+            <div style={styles.calcResult}>{calcResult}</div>
           </div>
         </div>
       ) : null}
 
       {showNotes ? (
-        <div style={dynamicStyles.toolPanel}>
-          <div style={dynamicStyles.miniLabelDark}>Notes</div>
+        <div style={styles.toolPanel}>
+          <div style={styles.miniLabelDark}>Notes</div>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Keep notes here..."
-            style={dynamicStyles.notesTextarea}
+            style={styles.notesTextarea}
           />
         </div>
       ) : null}
@@ -325,70 +337,73 @@ export default function AskVIC() {
   )
 
   return (
-    <div style={dynamicStyles.page}>
-      <div style={dynamicStyles.backgroundGlowOne} />
-      <div style={dynamicStyles.backgroundGlowTwo} />
-      <div style={dynamicStyles.backgroundGlowThree} />
-      <div style={dynamicStyles.backgroundGlowFour} />
-      <div style={dynamicStyles.backgroundMesh} />
-      <div style={dynamicStyles.backgroundSweep} />
+    <div style={styles.page}>
+      <div style={styles.backgroundGlowOne} />
+      <div style={styles.backgroundGlowTwo} />
+      <div style={styles.backgroundGlowThree} />
+      <div style={styles.backgroundGlowFour} />
+      <div style={styles.backgroundMesh} />
+      <div style={styles.backgroundSweep} />
 
-      <div style={dynamicStyles.appFrame}>
-        <header style={dynamicStyles.topNav}>
-          <a href="/" style={dynamicStyles.brandLink}>
-            <div style={dynamicStyles.brandBadge}>V</div>
-            <div style={dynamicStyles.brandTextWrap}>
-              <div style={dynamicStyles.brandTitle}>VIC</div>
-              <div style={dynamicStyles.brandSub}>Your AI co-teacher</div>
+      <div style={styles.appFrame}>
+        <header style={styles.topNav}>
+          <a href="/" style={styles.brandLink}>
+            <div style={styles.brandLogoWrap}>
+              <img src="/vic-logo.png" alt="VIC logo" style={styles.brandLogoImage} />
+            </div>
+
+            <div style={styles.brandTextWrap}>
+              <div style={styles.brandTitle}>VIC</div>
+              <div style={styles.brandSub}>Your AI co-teacher</div>
             </div>
           </a>
 
-          <nav style={dynamicStyles.navLinks}>
-            <a href="/about" style={dynamicStyles.navLink}>
+          <nav style={styles.navLinks}>
+            <a href="/about" style={styles.navLink}>
               About
             </a>
           </nav>
         </header>
 
-        <div style={dynamicStyles.shell}>
+        <div style={styles.shell}>
           {!isCompact ? (
-            <div style={dynamicStyles.leftColumn}>
+            <div style={styles.leftColumn}>
               {heroSection}
               {toolsSection}
             </div>
           ) : null}
 
-          <div style={dynamicStyles.rightColumn}>
+          <div style={styles.rightColumn}>
             {isCompact ? heroSection : null}
 
-            <section style={dynamicStyles.chatCard}>
-              <div style={dynamicStyles.chatHeader}>
+            <section style={styles.chatCard}>
+              <div style={styles.chatHeader}>
                 <div>
-                  <div style={dynamicStyles.chatEyebrow}>Guided Session</div>
-                  <div style={dynamicStyles.chatTitle}>Conversation</div>
+                  <div style={styles.chatEyebrow}>Guided Session</div>
+                  <div style={styles.chatTitle}>Conversation</div>
                 </div>
 
-                <div style={dynamicStyles.statusWrap}>
-                  <span style={dynamicStyles.statusDot} />
-                  <span style={dynamicStyles.statusText}>{loading ? 'Thinking' : 'Ready'}</span>
+                <div style={styles.statusWrap}>
+                  <span style={styles.statusDot} />
+                  <span style={styles.statusText}>{loading ? 'Thinking' : 'Ready'}</span>
                 </div>
               </div>
 
-              <div style={dynamicStyles.chatCanvas}>
-                <div ref={messageAreaRef} style={dynamicStyles.messageArea}>
+              <div style={styles.chatCanvas}>
+                <div ref={messageAreaRef} style={styles.messageArea}>
                   {messages.map((msg, index) => (
                     <div
                       key={index}
                       ref={(el) => {
                         messageRefs.current[index] = el
                       }}
-                      style={msg.role === 'assistant' ? dynamicStyles.assistantBubble : dynamicStyles.userBubble}
+                      style={msg.role === 'assistant' ? styles.assistantBubble : styles.userBubble}
                     >
                       <div
                         style={
                           msg.role === 'assistant'
-                            ? dynamicStyles.bubbleLabel
-                            : dynamicStyles.bubbleLabelUser
+                            ? styles.bubbleLabel
+                            : styles.bubbleLabelUser
                         }
                       >
                         {msg.role === 'assistant' ? 'VIC' : 'You'}
@@ -397,15 +412,15 @@ export default function AskVIC() {
                       <p
                         style={
                           msg.role === 'assistant'
-                            ? dynamicStyles.bubbleText
-                            : dynamicStyles.userBubbleText
+                            ? styles.bubbleText
+                            : styles.userBubbleText
                         }
                       >
                         {msg.text}
                       </p>
 
                       {msg.role === 'assistant' && msg.visual ? (
-                        <VisualCardRenderer visual={msg.visual} styles={dynamicStyles} />
+                        <VisualCardRenderer visual={msg.visual} styles={styles} />
                       ) : null}
                     </div>
                   ))}
@@ -413,15 +428,15 @@ export default function AskVIC() {
               </div>
             </section>
 
-            <section style={dynamicStyles.inputCard}>
-              <div style={dynamicStyles.inputHeaderRow}>
+            <section style={styles.inputCard}>
+              <div style={styles.inputHeaderRow}>
                 <div>
-                  <div style={dynamicStyles.chatEyebrow}>Write to VIC</div>
-                  <div style={dynamicStyles.inputTitle}>Your message</div>
+                  <div style={styles.chatEyebrow}>Write to VIC</div>
+                  <div style={styles.inputTitle}>Your message</div>
                 </div>
 
                 {!isMobile ? (
-                  <div style={dynamicStyles.inputHint}>Enter = send • Shift + Enter = new line</div>
+                  <div style={styles.inputHint}>Enter = send • Shift + Enter = new line</div>
                 ) : null}
               </div>
 
@@ -431,11 +446,11 @@ export default function AskVIC() {
                 onKeyDown={handleKeyDown}
                 rows={isMobile ? 3 : 4}
                 placeholder="Type here..."
-                style={dynamicStyles.mainTextarea}
+                style={styles.mainTextarea}
               />
 
-              <div style={dynamicStyles.inputFooter}>
-                <div style={dynamicStyles.footerPrompt}>
+              <div style={styles.inputFooter}>
+                <div style={styles.footerPrompt}>
                   Pick a subject or ask a question. One thought at a time works best.
                 </div>
 
@@ -443,7 +458,7 @@ export default function AskVIC() {
                   onClick={() => sendMessage()}
                   disabled={loading || !input.trim()}
                   style={{
-                    ...dynamicStyles.sendButton,
+                    ...styles.sendButton,
                     opacity: loading || !input.trim() ? 0.6 : 1,
                     cursor: loading || !input.trim() ? 'not-allowed' : 'pointer',
                   }}
@@ -799,18 +814,26 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       minWidth: 0,
     },
 
-    brandBadge: {
-      width: isMobile ? '38px' : '42px',
-      height: isMobile ? '38px' : '42px',
+    brandLogoWrap: {
+      width: isMobile ? '42px' : '46px',
+      height: isMobile ? '42px' : '46px',
       borderRadius: '14px',
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(246,238,255,0.96) 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
-      background: 'linear-gradient(135deg, rgba(171,91,255,0.28), rgba(84,248,255,0.12))',
-      border: '1px solid rgba(206,170,255,0.22)',
-      fontWeight: 800,
-      fontSize: isMobile ? '18px' : '20px',
-      boxShadow: '0 0 20px rgba(171,91,255,0.16)',
+      overflow: 'hidden',
+      boxShadow:
+        'inset 0 1px 0 rgba(255,255,255,0.78), 0 8px 18px rgba(0,0,0,0.18), 0 0 18px rgba(171, 91, 255, 0.10)',
+      flexShrink: 0,
+    },
+
+    brandLogoImage: {
+      width: '100%',
+      height: '100%',
+      objectFit: 'contain',
+      transform: 'scale(1.18)',
+      background: '#fff',
     },
 
     brandTextWrap: {
@@ -860,7 +883,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     leftColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: 'minmax(0, 1.05fr) minmax(0, 0.95fr)',
+      gridTemplateRows: 'minmax(0, 1.02fr) minmax(0, 0.98fr)',
       gap: '18px',
     },
 
@@ -899,27 +922,22 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     heroTop: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '110px 1fr',
+      gridTemplateColumns: isMobile ? '1fr' : '102px 1fr',
       gap: isMobile ? '12px' : '14px',
       alignItems: isMobile ? 'start' : 'center',
     },
 
-    logoBlock: {
-      display: 'flex',
-      justifyContent: isMobile ? 'flex-start' : 'center',
-    },
-
-    logoFrame: {
-      width: isMobile ? '88px' : '108px',
-      height: isMobile ? '88px' : '108px',
-      borderRadius: isMobile ? '20px' : '22px',
+    logoImageWrap: {
+      width: isMobile ? '88px' : '100px',
+      height: isMobile ? '88px' : '100px',
       background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(246,238,255,0.96) 100%)',
+      borderRadius: '22px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
       boxShadow:
-        'inset 0 1px 0 rgba(255,255,255,0.78), 0 12px 28px rgba(0,0,0,0.22), 0 0 24px rgba(171, 91, 255, 0.12)',
+        'inset 0 1px 0 rgba(255,255,255,0.78), 0 12px 28px rgba(0,0,0,0.22), 0 0 20px rgba(171, 91, 255, 0.12)',
     },
 
     logoImage: {
@@ -958,7 +976,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontWeight: 700,
       color: '#faf5ff',
       textShadow: '0 0 18px rgba(171,91,255,0.10)',
-      fontFamily: '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
+      fontFamily:
+        '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
     },
 
     tagline: {
@@ -967,14 +986,6 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       lineHeight: 1.4,
       color: '#dccbff',
       maxWidth: '420px',
-    },
-
-    supportLine: {
-      margin: 0,
-      fontSize: '13px',
-      lineHeight: 1.35,
-      color: '#bca1ff',
-      fontWeight: 700,
     },
 
     quickStartWrap: {
@@ -1009,7 +1020,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     subjectGrid: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr',
+      gridTemplateColumns: '1fr 1fr',
       gap: '10px',
     },
 
@@ -1076,7 +1087,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     toolsHeaderRow: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
+      gridTemplateColumns: '1fr',
       alignItems: 'start',
       gap: '12px',
     },
@@ -1092,9 +1103,56 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       marginTop: '6px',
     },
 
+    reportFeatureCard: {
+      borderRadius: '20px',
+      padding: '16px',
+      background:
+        'linear-gradient(135deg, rgba(171,91,255,0.16), rgba(84,248,255,0.06))',
+      border: '1px solid rgba(206, 170, 255, 0.18)',
+      boxShadow: '0 0 22px rgba(171,91,255,0.08)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '8px',
+    },
+
+    reportFeatureTop: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
+      gap: '12px',
+      alignItems: 'start',
+    },
+
+    reportFeatureLabel: {
+      fontSize: '11px',
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase',
+      color: '#dbc1ff',
+      fontWeight: 800,
+      marginBottom: '4px',
+    },
+
+    reportFeatureTitle: {
+      fontSize: '20px',
+      lineHeight: 1.05,
+      fontWeight: 800,
+      color: '#fff8ff',
+    },
+
+    reportFeatureText: {
+      fontSize: '14px',
+      lineHeight: 1.55,
+      color: '#f3eaff',
+    },
+
+    reportFeatureMini: {
+      fontSize: '12px',
+      lineHeight: 1.45,
+      color: '#e0d1ff',
+    },
+
     reportButton: {
       border: '1px solid rgba(206, 170, 255, 0.24)',
-      background: 'linear-gradient(135deg, rgba(255,255,255,0.11), rgba(171,91,255,0.10))',
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.14), rgba(171,91,255,0.12))',
       color: '#faf5ff',
       padding: '10px 14px',
       borderRadius: '14px',
@@ -1323,6 +1381,11 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       flex: 1,
       minHeight: 0,
       display: 'flex',
+      background: '#f7f7fb',
+      borderRadius: '22px',
+      padding: isMobile ? '12px' : '14px',
+      border: '1px solid rgba(213, 218, 232, 0.8)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
     },
 
     messageArea: {
@@ -1339,20 +1402,20 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       alignSelf: 'flex-start',
       maxWidth: isMobile ? '94%' : '82%',
       borderRadius: '20px 20px 20px 8px',
-      background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'linear-gradient(180deg, #2b2448 0%, #231d3e 100%)',
+      border: '1px solid rgba(255,255,255,0.08)',
       padding: '14px 15px',
-      boxShadow: '0 12px 24px rgba(0,0,0,0.16)',
+      boxShadow: '0 10px 22px rgba(17,24,39,0.14)',
     },
 
     userBubble: {
       alignSelf: 'flex-end',
       maxWidth: isMobile ? '94%' : '78%',
       borderRadius: '20px 20px 8px 20px',
-      background: 'linear-gradient(135deg, rgba(171,91,255,0.28), rgba(84,248,255,0.10))',
-      border: '1px solid rgba(206, 170, 255, 0.16)',
+      background: '#e8ecf8',
+      border: '1px solid #d8def0',
       padding: '14px 15px',
-      boxShadow: '0 12px 24px rgba(0,0,0,0.16)',
+      boxShadow: '0 10px 20px rgba(17,24,39,0.08)',
     },
 
     bubbleLabel: {
@@ -1360,7 +1423,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontWeight: 800,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
-      color: '#bca1ff',
+      color: '#c7b2ff',
       marginBottom: '8px',
     },
 
@@ -1369,16 +1432,16 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontWeight: 800,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
-      color: '#ecfeff',
+      color: '#475569',
       marginBottom: '8px',
     },
 
     bubbleText: {
       margin: 0,
       whiteSpace: 'pre-wrap',
-      fontSize: isMobile ? '15px' : '15px',
+      fontSize: '15px',
       lineHeight: 1.55,
-      color: '#f5f0ff',
+      color: '#ffffff',
     },
 
     userBubbleText: {
@@ -1386,7 +1449,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       whiteSpace: 'pre-wrap',
       fontSize: '15px',
       lineHeight: 1.55,
-      color: '#ffffff',
+      color: '#1e293b',
     },
 
     inputCard: {
@@ -1429,13 +1492,14 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       resize: 'vertical',
       borderRadius: '18px',
       border: '1px solid rgba(206, 170, 255, 0.14)',
-      background: 'rgba(255,255,255,0.04)',
-      color: '#f5f0ff',
+      background: '#ffffff',
+      color: '#1e293b',
       padding: '14px 15px',
       boxSizing: 'border-box',
       outline: 'none',
-      fontSize: isMobile ? '15px' : '15px',
+      fontSize: '15px',
       lineHeight: 1.45,
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)',
     },
 
     inputFooter: {
@@ -1470,8 +1534,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       marginTop: '12px',
       borderRadius: '18px',
       overflow: 'hidden',
-      background: 'linear-gradient(180deg, rgba(255,255,255,0.07), rgba(255,255,255,0.04))',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.04))',
+      border: '1px solid rgba(255,255,255,0.08)',
     },
 
     visualIdleGlow: {
