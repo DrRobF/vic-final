@@ -7,8 +7,8 @@ export default function AskVIC() {
   const [loading, setLoading] = useState(false)
   const [workArea, setWorkArea] = useState('')
   const [notes, setNotes] = useState('')
+  const [activeTool, setActiveTool] = useState('practice')
   const [showCalculator, setShowCalculator] = useState(false)
-  const [showNotes, setShowNotes] = useState(false)
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
   const [viewportWidth, setViewportWidth] = useState(1400)
@@ -27,6 +27,9 @@ export default function AskVIC() {
 
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
+  const canvasRef = useRef(null)
+  const isDrawingRef = useRef(false)
+  const isErasingRef = useRef(false)
 
   useEffect(() => {
     const updateViewport = () => {
@@ -182,6 +185,92 @@ export default function AskVIC() {
     }
   }
 
+
+  function startCanvasStroke(e) {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
+    const ctx = canvas.getContext('2d')
+    ctx.beginPath()
+    ctx.moveTo(x, y)
+    ctx.lineCap = 'round'
+    ctx.lineJoin = 'round'
+    ctx.lineWidth = isErasingRef.current ? 18 : 3
+    ctx.strokeStyle = isErasingRef.current ? 'rgba(0,0,0,1)' : '#f8f3ff'
+    isDrawingRef.current = true
+  }
+
+  function moveCanvasStroke(e) {
+    if (!isDrawingRef.current) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
+    const ctx = canvas.getContext('2d')
+    ctx.lineTo(x, y)
+    ctx.stroke()
+  }
+
+  function stopCanvasStroke() {
+    isDrawingRef.current = false
+  }
+
+  function setCanvasMode(mode) {
+    isErasingRef.current = mode === 'erase'
+  }
+
+  function clearCanvas() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+  }
+
+  function sendWorkspacePrompt(prompt) {
+    setInput(prompt)
+  }
+
+  function requestHint() {
+    const context =
+      activeTool === 'practice'
+        ? workArea.trim()
+        : activeTool === 'notes'
+          ? notes.trim()
+          : ''
+
+    const prompt = context
+      ? `Give me a hint without giving away the full answer. Here is what I have so far:\n\n${context}`
+      : activeTool === 'sketch'
+        ? 'Help me think through my sketch. Ask me to describe what I drew and then guide me from there.'
+        : 'Give me a hint for the problem I am working on without giving away the full answer.'
+
+    sendWorkspacePrompt(prompt)
+  }
+
+  function requestCheckMyWork() {
+    const context =
+      activeTool === 'practice'
+        ? workArea.trim()
+        : activeTool === 'notes'
+          ? notes.trim()
+          : ''
+
+    const prompt = context
+      ? `Check my work and tell me what is right, what needs fixing, and what to try next:\n\n${context}`
+      : activeTool === 'sketch'
+        ? 'I made a sketch in my workspace. Ask me to describe it and then help me check whether the idea makes sense.'
+        : 'Help me check my work step by step.'
+
+    sendWorkspacePrompt(prompt)
+  }
+
   const styles = buildStyles({ isMobile, isTablet, isCompact })
 
   const heroSection = (
@@ -241,55 +330,120 @@ export default function AskVIC() {
     </section>
   )
 
+
   const toolsSection = (
     <section style={styles.toolsCard}>
       <div style={styles.toolsHeaderRow}>
         <div style={styles.toolsHeaderText}>
           <div style={styles.sectionEyebrow}>Student Tools</div>
-          <div style={styles.sectionTitle}>Calculator, notes, and practice</div>
+          <div style={styles.sectionTitle}>Think, draw, and keep track</div>
           <div style={styles.toolsSubtext}>
-            Use these while VIC teaches. Reports come after the work is done.
+            Practice is for working things out, Sketch is for drawing ideas, and Notes
+            is for saving the important parts.
           </div>
         </div>
       </div>
 
-      <div style={styles.toolStripCard}>
-        <div style={styles.toolStripHeader}>
-          <div>
-            <div style={styles.toolStripLabel}>Quick Tools</div>
-            <div style={styles.toolStripTitle}>Open what you need fast</div>
-          </div>
-        </div>
-
-        <div style={styles.toolToggleRow}>
-          <button
-            style={showCalculator ? styles.toolToggleActive : styles.toolToggle}
-            onClick={() => setShowCalculator(!showCalculator)}
-          >
-            Calculator
-          </button>
-
-          <button
-            style={showNotes ? styles.toolToggleActive : styles.toolToggle}
-            onClick={() => setShowNotes(!showNotes)}
-          >
-            Notes
-          </button>
-        </div>
+      <div style={styles.toolTabsWrap}>
+        <button
+          style={activeTool === 'practice' ? styles.toolTabActive : styles.toolTab}
+          onClick={() => setActiveTool('practice')}
+        >
+          Practice
+        </button>
+        <button
+          style={activeTool === 'sketch' ? styles.toolTabActive : styles.toolTab}
+          onClick={() => setActiveTool('sketch')}
+        >
+          Sketch
+        </button>
+        <button
+          style={activeTool === 'notes' ? styles.toolTabActive : styles.toolTab}
+          onClick={() => setActiveTool('notes')}
+        >
+          Notes
+        </button>
       </div>
 
-      <div style={styles.practiceWrap}>
-        <div style={styles.practiceHeaderRow}>
-          <div style={styles.miniLabel}>Practice Area</div>
-          <div style={styles.practiceHint}>Work it out here while VIC teaches.</div>
-        </div>
+      {activeTool === 'practice' ? (
+        <div style={styles.workspacePanel}>
+          <div style={styles.practiceHeaderRow}>
+            <div style={styles.miniLabel}>Practice</div>
+            <div style={styles.practiceHint}>Work out your thinking here.</div>
+          </div>
 
-        <textarea
-          value={workArea}
-          onChange={(e) => setWorkArea(e.target.value)}
-          placeholder="Let’s practice here..."
-          style={styles.sideTextarea}
-        />
+          <textarea
+            value={workArea}
+            onChange={(e) => setWorkArea(e.target.value)}
+            placeholder="Work out your thinking here..."
+            style={styles.sideTextarea}
+          />
+        </div>
+      ) : null}
+
+      {activeTool === 'sketch' ? (
+        <div style={styles.workspacePanel}>
+          <div style={styles.practiceHeaderRow}>
+            <div style={styles.miniLabel}>Sketch</div>
+            <div style={styles.practiceHint}>
+              Draw a model, label a science idea, or sketch out a math problem.
+            </div>
+          </div>
+
+          <div style={styles.sketchToolbar}>
+            <button style={styles.sketchToolButton} onClick={() => setCanvasMode('draw')}>
+              Pen
+            </button>
+            <button style={styles.sketchToolButton} onClick={() => setCanvasMode('erase')}>
+              Erase
+            </button>
+            <button style={styles.sketchToolButton} onClick={clearCanvas}>
+              Clear
+            </button>
+          </div>
+
+          <canvas
+            ref={canvasRef}
+            width={900}
+            height={440}
+            style={styles.sketchCanvas}
+            onPointerDown={startCanvasStroke}
+            onPointerMove={moveCanvasStroke}
+            onPointerUp={stopCanvasStroke}
+            onPointerLeave={stopCanvasStroke}
+          />
+        </div>
+      ) : null}
+
+      {activeTool === 'notes' ? (
+        <div style={styles.workspacePanel}>
+          <div style={styles.practiceHeaderRow}>
+            <div style={styles.miniLabel}>Notes</div>
+            <div style={styles.practiceHint}>Save the important ideas cleanly here.</div>
+          </div>
+
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder="Save important ideas here..."
+            style={styles.notesTextareaLarge}
+          />
+        </div>
+      ) : null}
+
+      <div style={styles.supportRow}>
+        <button style={styles.supportButton} onClick={requestHint}>
+          Hint
+        </button>
+        <button style={styles.supportButton} onClick={requestCheckMyWork}>
+          {activeTool === 'sketch' ? 'Discuss My Sketch' : 'Check My Work'}
+        </button>
+        <button
+          style={showCalculator ? styles.supportButtonActive : styles.supportButton}
+          onClick={() => setShowCalculator(!showCalculator)}
+        >
+          Calculator
+        </button>
       </div>
 
       {showCalculator ? (
@@ -310,18 +464,6 @@ export default function AskVIC() {
         </div>
       ) : null}
 
-      {showNotes ? (
-        <div style={styles.toolPanel}>
-          <div style={styles.miniLabelDark}>Notes</div>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Keep notes here..."
-            style={styles.notesTextarea}
-          />
-        </div>
-      ) : null}
-
       <div style={styles.reportFeatureCardCompact}>
         <div style={styles.reportFeatureTopCompact}>
           <div>
@@ -339,7 +481,8 @@ export default function AskVIC() {
         </div>
 
         <div style={styles.reportFeatureTextCompact}>
-          Generate a summary after the lesson so adults can review what VIC taught and practiced.
+          Generate a summary when the lesson is done so adults can review what VIC
+          taught and practiced.
         </div>
 
         <div style={styles.reportPreviewInline}>
@@ -349,6 +492,7 @@ export default function AskVIC() {
       </div>
     </section>
   )
+
 
   return (
     <div style={styles.page}>
@@ -1202,6 +1346,101 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       lineHeight: 1.4,
       marginTop: '6px',
     },
+
+    toolTabsWrap: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+      gap: '10px',
+    },
+
+    toolTab: {
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(171,91,255,0.05))',
+      border: '1px solid rgba(206, 170, 255, 0.14)',
+      color: '#f3edff',
+      padding: '12px 12px',
+      borderRadius: '15px',
+      fontSize: '14px',
+      fontWeight: 800,
+      cursor: 'pointer',
+    },
+
+    toolTabActive: {
+      background:
+        'linear-gradient(135deg, rgba(171,91,255,0.24) 0%, rgba(84,248,255,0.10) 100%)',
+      border: '1px solid rgba(206, 170, 255, 0.24)',
+      color: '#ffffff',
+      padding: '12px 12px',
+      borderRadius: '15px',
+      fontSize: '14px',
+      fontWeight: 800,
+      boxShadow: '0 0 18px rgba(171,91,255,0.12)',
+      cursor: 'pointer',
+    },
+
+    workspacePanel: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+    },
+
+    supportRow: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, minmax(0, 1fr))',
+      gap: '10px',
+    },
+
+    supportButton: {
+      background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(171,91,255,0.05))',
+      border: '1px solid rgba(206, 170, 255, 0.14)',
+      color: '#f3edff',
+      padding: '11px 12px',
+      borderRadius: '14px',
+      fontSize: '13px',
+      fontWeight: 800,
+      cursor: 'pointer',
+    },
+
+    supportButtonActive: {
+      background:
+        'linear-gradient(135deg, rgba(171,91,255,0.24) 0%, rgba(84,248,255,0.10) 100%)',
+      border: '1px solid rgba(206, 170, 255, 0.24)',
+      color: '#ffffff',
+      padding: '11px 12px',
+      borderRadius: '14px',
+      fontSize: '13px',
+      fontWeight: 800,
+      boxShadow: '0 0 18px rgba(171,91,255,0.12)',
+      cursor: 'pointer',
+    },
+
+    sketchToolbar: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '8px',
+    },
+
+    sketchToolButton: {
+      border: '1px solid rgba(206, 170, 255, 0.18)',
+      background: 'rgba(255,255,255,0.05)',
+      color: '#f3edff',
+      padding: '9px 12px',
+      borderRadius: '12px',
+      fontSize: '13px',
+      fontWeight: 800,
+      cursor: 'pointer',
+    },
+
+    sketchCanvas: {
+      width: '100%',
+      minHeight: isMobile ? '220px' : '260px',
+      height: isMobile ? '220px' : '260px',
+      borderRadius: '18px',
+      border: '1px solid rgba(206, 170, 255, 0.14)',
+      background: 'rgba(8, 12, 27, 0.88)',
+      touchAction: 'none',
+      boxSizing: 'border-box',
+    },
+
     toolStripCard: {
       borderRadius: '18px',
       padding: '14px',
@@ -1512,6 +1751,22 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontSize: '14px',
       color: '#d8c7ff',
       wordBreak: 'break-word',
+    },
+
+
+    notesTextareaLarge: {
+      width: '100%',
+      minHeight: isMobile ? '150px' : '180px',
+      resize: 'vertical',
+      borderRadius: '16px',
+      border: '1px solid rgba(206, 170, 255, 0.14)',
+      background: 'rgba(255,255,255,0.04)',
+      color: '#f5f0ff',
+      padding: '14px',
+      boxSizing: 'border-box',
+      outline: 'none',
+      fontSize: '14px',
+      lineHeight: 1.45,
     },
 
     notesTextarea: {
