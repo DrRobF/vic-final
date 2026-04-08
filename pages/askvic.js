@@ -711,8 +711,11 @@ function extractVocabularyCard(text) {
 }
 
 function buildStyles({ isMobile, isTablet, isCompact }) {
+  const desktopFixedHeight = !isCompact
+
   return {
     page: {
+      height: desktopFixedHeight ? '100vh' : 'auto',
       minHeight: '100vh',
       background:
         'radial-gradient(circle at 14% 8%, rgba(171, 91, 255, 0.38), transparent 24%), radial-gradient(circle at 82% 84%, rgba(171, 91, 255, 0.18), transparent 26%), radial-gradient(circle at 50% 20%, rgba(247, 95, 255, 0.14), transparent 28%), radial-gradient(circle at 78% 72%, rgba(140, 88, 255, 0.14), transparent 26%), linear-gradient(135deg, #070312 0%, #17092b 44%, #10061d 100%)',
@@ -721,6 +724,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
       position: 'relative',
       overflowX: 'hidden',
+      overflowY: desktopFixedHeight ? 'hidden' : 'visible',
     },
 
     backgroundGlowOne: {
@@ -791,11 +795,15 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     appFrame: {
       maxWidth: '1440px',
+      height: desktopFixedHeight ? '100vh' : 'auto',
       margin: '0 auto',
       padding: isMobile ? '14px' : '18px',
       boxSizing: 'border-box',
       position: 'relative',
       zIndex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: isMobile ? '14px' : '18px',
     },
 
     topNav: {
@@ -803,7 +811,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: '16px',
-      marginBottom: isMobile ? '14px' : '18px',
+      flexShrink: 0,
       padding: isMobile ? '12px 14px' : '14px 16px',
       borderRadius: '22px',
       background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.82) 0%, rgba(9, 14, 31, 0.74) 100%)',
@@ -882,28 +890,31 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     shell: {
+      flex: 1,
+      minHeight: 0,
       display: 'grid',
       gridTemplateColumns: isCompact ? '1fr' : '380px minmax(0, 1fr)',
       gap: isMobile ? '14px' : '18px',
-      minHeight: isCompact ? 'auto' : 'calc(100vh - 116px)',
+      overflow: desktopFixedHeight ? 'hidden' : 'visible',
     },
 
     leftColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: 'minmax(0, 1.02fr) minmax(0, 0.98fr)',
+      gridTemplateRows: 'auto minmax(0, 1fr)',
       gap: '18px',
+      overflow: 'hidden',
     },
 
     rightColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: isCompact ? 'auto minmax(340px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
-      gap: isMobile ? '14px' : '16px',
+      gridTemplateRows: isCompact ? 'auto minmax(320px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
+      gap: isMobile ? '14px' : '14px',
+      overflow: 'hidden',
     },
 
     heroCard: {
-      minHeight: 0,
       background: 'linear-gradient(180deg, rgba(18, 8, 38, 0.92) 0%, rgba(10, 15, 35, 0.84) 100%)',
       border: '1px solid rgba(191, 141, 255, 0.18)',
       borderRadius: isMobile ? '24px' : '28px',
@@ -916,6 +927,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       gap: '14px',
       overflow: 'hidden',
       position: 'relative',
+      flexShrink: 0,
     },
 
     heroSparkle: {
@@ -1090,7 +1102,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
-      overflow: 'hidden',
+      overflowY: 'auto',
     },
 
     toolsHeaderRow: {
@@ -1338,17 +1350,18 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     chatCard: {
-      minHeight: isCompact ? '340px' : 0,
+      minHeight: isCompact ? '320px' : 0,
       background: 'linear-gradient(180deg, rgba(12, 8, 26, 0.92) 0%, rgba(9, 14, 31, 0.88) 100%)',
       border: '1px solid rgba(191, 141, 255, 0.16)',
       borderRadius: isMobile ? '24px' : '28px',
-      padding: isMobile ? '14px' : '16px',
+      padding: isMobile ? '14px' : '14px',
       boxShadow:
         '0 24px 60px rgba(0,0,0,0.30), 0 0 26px rgba(171,91,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       minWidth: 0,
+      minHeight: 0,
     },
 
     chatHeader: {
@@ -1356,9 +1369,10 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: '12px',
-      marginBottom: '10px',
+      marginBottom: '8px',
       paddingBottom: '8px',
       borderBottom: '1px solid rgba(255,255,255,0.06)',
+      flexShrink: 0,
     },
 
     chatEyebrow: {
@@ -1411,6 +1425,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       padding: isMobile ? '12px' : '14px',
       border: '1px solid rgba(213, 218, 232, 0.8)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
+      overflow: 'hidden',
     },
 
     messageArea: {
@@ -1481,12 +1496,13 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.90) 0%, rgba(9, 14, 31, 0.84) 100%)',
       border: '1px solid rgba(191, 141, 255, 0.16)',
       borderRadius: isMobile ? '24px' : '28px',
-      padding: isMobile ? '14px' : '16px',
+      padding: isMobile ? '14px' : '14px',
       boxShadow:
         '0 18px 42px rgba(0,0,0,0.26), 0 0 22px rgba(171,91,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
+      flexShrink: 0,
     },
 
     inputHeaderRow: {
@@ -1513,7 +1529,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     mainTextarea: {
       width: '100%',
-      minHeight: isMobile ? '84px' : '94px',
+      minHeight: isMobile ? '84px' : '80px',
       resize: 'vertical',
       borderRadius: '18px',
       border: '1px solid rgba(206, 170, 255, 0.14)',
