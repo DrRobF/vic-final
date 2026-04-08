@@ -12,6 +12,9 @@ export default function AskVIC() {
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
   const [viewportWidth, setViewportWidth] = useState(1400)
+  const [lastReportText, setLastReportText] = useState(
+    'No report yet. Run a short session and generate one to preview it here.'
+  )
 
   const [messages, setMessages] = useState([
     {
@@ -146,6 +149,7 @@ export default function AskVIC() {
   async function requestReport() {
     const finalReply = await sendMessage('Generate a clean structured session report for download.')
     if (finalReply) {
+      setLastReportText(finalReply.slice(0, 280) + (finalReply.length > 280 ? '...' : ''))
       downloadReport(finalReply)
     }
   }
@@ -253,7 +257,7 @@ export default function AskVIC() {
         <div style={styles.reportFeatureTop}>
           <div>
             <div style={styles.reportFeatureLabel}>Featured Tool</div>
-            <div style={styles.reportFeatureTitle}>Session Reports</div>
+            <div style={styles.reportFeatureTitle}>Reports</div>
           </div>
 
           <button
@@ -266,11 +270,12 @@ export default function AskVIC() {
         </div>
 
         <div style={styles.reportFeatureText}>
-          Turn a VIC session into a clean downloadable report you can review, save, or share.
+          Turn a VIC session into a clean downloadable summary of what was taught and practiced.
         </div>
 
-        <div style={styles.reportFeatureMini}>
-          Great for school follow-up, parent communication, and showing what learning happened.
+        <div style={styles.reportPreviewCard}>
+          <div style={styles.reportPreviewLabel}>Last Report Preview</div>
+          <div style={styles.reportPreviewText}>{lastReportText}</div>
         </div>
       </div>
 
@@ -359,6 +364,9 @@ export default function AskVIC() {
           </a>
 
           <nav style={styles.navLinks}>
+            <a href="/reports" style={styles.navLink}>
+              Reports
+            </a>
             <a href="/about" style={styles.navLink}>
               About
             </a>
@@ -444,7 +452,7 @@ export default function AskVIC() {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
-                rows={isMobile ? 3 : 4}
+                rows={isMobile ? 3 : 3}
                 placeholder="Type here..."
                 style={styles.mainTextarea}
               />
@@ -858,7 +866,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     navLinks: {
       display: 'flex',
       alignItems: 'center',
-      gap: '14px',
+      gap: '10px',
       flexShrink: 0,
     },
 
@@ -890,8 +898,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     rightColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: isCompact ? 'auto minmax(380px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
-      gap: isMobile ? '14px' : '18px',
+      gridTemplateRows: isCompact ? 'auto minmax(340px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
+      gap: isMobile ? '14px' : '16px',
     },
 
     heroCard: {
@@ -1112,7 +1120,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       boxShadow: '0 0 22px rgba(171,91,255,0.08)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
+      gap: '10px',
     },
 
     reportFeatureTop: {
@@ -1144,10 +1152,27 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: '#f3eaff',
     },
 
-    reportFeatureMini: {
-      fontSize: '12px',
-      lineHeight: 1.45,
-      color: '#e0d1ff',
+    reportPreviewCard: {
+      marginTop: '4px',
+      padding: '12px 13px',
+      borderRadius: '16px',
+      background: 'rgba(255,255,255,0.08)',
+      border: '1px solid rgba(255,255,255,0.08)',
+    },
+
+    reportPreviewLabel: {
+      fontSize: '11px',
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase',
+      fontWeight: 800,
+      color: '#e7d7ff',
+      marginBottom: '8px',
+    },
+
+    reportPreviewText: {
+      fontSize: '13px',
+      lineHeight: 1.5,
+      color: '#f7f0ff',
     },
 
     reportButton: {
@@ -1313,7 +1338,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     chatCard: {
-      minHeight: isCompact ? '420px' : 0,
+      minHeight: isCompact ? '340px' : 0,
       background: 'linear-gradient(180deg, rgba(12, 8, 26, 0.92) 0%, rgba(9, 14, 31, 0.88) 100%)',
       border: '1px solid rgba(191, 141, 255, 0.16)',
       borderRadius: isMobile ? '24px' : '28px',
@@ -1331,8 +1356,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       alignItems: 'center',
       justifyContent: 'space-between',
       gap: '12px',
-      marginBottom: '12px',
-      paddingBottom: '10px',
+      marginBottom: '10px',
+      paddingBottom: '8px',
       borderBottom: '1px solid rgba(255,255,255,0.06)',
     },
 
@@ -1461,7 +1486,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
         '0 18px 42px rgba(0,0,0,0.26), 0 0 22px rgba(171,91,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px',
+      gap: '10px',
     },
 
     inputHeaderRow: {
@@ -1488,7 +1513,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     mainTextarea: {
       width: '100%',
-      minHeight: isMobile ? '96px' : '118px',
+      minHeight: isMobile ? '84px' : '94px',
       resize: 'vertical',
       borderRadius: '18px',
       border: '1px solid rgba(206, 170, 255, 0.14)',
