@@ -245,54 +245,37 @@ export default function AskVIC() {
     <section style={styles.toolsCard}>
       <div style={styles.toolsHeaderRow}>
         <div style={styles.toolsHeaderText}>
-          <div style={styles.sectionEyebrow}>Workspace Tools</div>
-          <div style={styles.sectionTitle}>Practice, notes, and report</div>
+          <div style={styles.sectionEyebrow}>Student Tools</div>
+          <div style={styles.sectionTitle}>Calculator, notes, and practice</div>
           <div style={styles.toolsSubtext}>
-            Keep your work here while VIC teaches.
+            Use these while VIC teaches. Reports come after the work is done.
           </div>
         </div>
       </div>
 
-      <div style={styles.reportFeatureCard}>
-        <div style={styles.reportFeatureTop}>
+      <div style={styles.toolStripCard}>
+        <div style={styles.toolStripHeader}>
           <div>
-            <div style={styles.reportFeatureLabel}>Featured Tool</div>
-            <div style={styles.reportFeatureTitle}>Reports</div>
+            <div style={styles.toolStripLabel}>Quick Tools</div>
+            <div style={styles.toolStripTitle}>Open what you need fast</div>
           </div>
+        </div>
+
+        <div style={styles.toolToggleRow}>
+          <button
+            style={showCalculator ? styles.toolToggleActive : styles.toolToggle}
+            onClick={() => setShowCalculator(!showCalculator)}
+          >
+            Calculator
+          </button>
 
           <button
-            style={canGetReport ? styles.reportButton : styles.reportButtonDisabled}
-            onClick={requestReport}
-            disabled={!canGetReport}
+            style={showNotes ? styles.toolToggleActive : styles.toolToggle}
+            onClick={() => setShowNotes(!showNotes)}
           >
-            Get Report
+            Notes
           </button>
         </div>
-
-        <div style={styles.reportFeatureText}>
-          Turn a VIC session into a clean downloadable summary of what was taught and practiced.
-        </div>
-
-        <div style={styles.reportPreviewCard}>
-          <div style={styles.reportPreviewLabel}>Last Report Preview</div>
-          <div style={styles.reportPreviewText}>{lastReportText}</div>
-        </div>
-      </div>
-
-      <div style={styles.toolToggleRow}>
-        <button
-          style={showCalculator ? styles.toolToggleActive : styles.toolToggle}
-          onClick={() => setShowCalculator(!showCalculator)}
-        >
-          Calculator
-        </button>
-
-        <button
-          style={showNotes ? styles.toolToggleActive : styles.toolToggle}
-          onClick={() => setShowNotes(!showNotes)}
-        >
-          Notes
-        </button>
       </div>
 
       <div style={styles.practiceWrap}>
@@ -338,6 +321,32 @@ export default function AskVIC() {
           />
         </div>
       ) : null}
+
+      <div style={styles.reportFeatureCardCompact}>
+        <div style={styles.reportFeatureTopCompact}>
+          <div>
+            <div style={styles.reportFeatureLabelCompact}>Session Report</div>
+            <div style={styles.reportFeatureTitleCompact}>Progress summary</div>
+          </div>
+
+          <button
+            style={canGetReport ? styles.reportButton : styles.reportButtonDisabled}
+            onClick={requestReport}
+            disabled={!canGetReport}
+          >
+            Get Report
+          </button>
+        </div>
+
+        <div style={styles.reportFeatureTextCompact}>
+          Generate a summary after the lesson so adults can review what VIC taught and practiced.
+        </div>
+
+        <div style={styles.reportPreviewInline}>
+          <div style={styles.reportPreviewInlineLabel}>Last report</div>
+          <div style={styles.reportPreviewInlineText}>{lastReportText}</div>
+        </div>
+      </div>
     </section>
   )
 
@@ -1111,7 +1120,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     subjectGrid: {
       display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
       gap: '10px',
     },
 
@@ -1192,6 +1201,106 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: '#d7c7ff',
       lineHeight: 1.4,
       marginTop: '6px',
+    },
+    toolStripCard: {
+      borderRadius: '18px',
+      padding: '14px',
+      background:
+        'linear-gradient(135deg, rgba(171,91,255,0.10), rgba(84,248,255,0.04))',
+      border: '1px solid rgba(206, 170, 255, 0.14)',
+      boxShadow: '0 0 18px rgba(171,91,255,0.06)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+    },
+
+    toolStripHeader: {
+      display: 'flex',
+      alignItems: 'start',
+      justifyContent: 'space-between',
+      gap: '10px',
+    },
+
+    toolStripLabel: {
+      fontSize: '11px',
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase',
+      color: '#dbc1ff',
+      fontWeight: 800,
+      marginBottom: '4px',
+    },
+
+    toolStripTitle: {
+      fontSize: '17px',
+      lineHeight: 1.1,
+      fontWeight: 800,
+      color: '#fff8ff',
+    },
+
+
+    reportFeatureCardCompact: {
+      borderRadius: '18px',
+      padding: '14px',
+      background: 'rgba(255,255,255,0.04)',
+      border: '1px solid rgba(206, 170, 255, 0.12)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '10px',
+    },
+
+    reportFeatureTopCompact: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
+      gap: '12px',
+      alignItems: 'start',
+    },
+
+    reportFeatureLabelCompact: {
+      fontSize: '11px',
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase',
+      color: '#dbc1ff',
+      fontWeight: 800,
+      marginBottom: '4px',
+    },
+
+    reportFeatureTitleCompact: {
+      fontSize: '16px',
+      lineHeight: 1.1,
+      fontWeight: 800,
+      color: '#fff8ff',
+    },
+
+    reportFeatureTextCompact: {
+      fontSize: '13px',
+      lineHeight: 1.5,
+      color: '#dccfff',
+    },
+
+    reportPreviewInline: {
+      paddingTop: '6px',
+      borderTop: '1px solid rgba(255,255,255,0.06)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+    },
+
+    reportPreviewInlineLabel: {
+      fontSize: '11px',
+      letterSpacing: '0.12em',
+      textTransform: 'uppercase',
+      fontWeight: 800,
+      color: '#cdb8f5',
+    },
+
+    reportPreviewInlineText: {
+      fontSize: '12px',
+      lineHeight: 1.45,
+      color: '#e8dcff',
+      display: '-webkit-box',
+      WebkitLineClamp: 3,
+      WebkitBoxOrient: 'vertical',
+      overflow: 'hidden',
     },
 
     reportFeatureCard: {
@@ -1286,7 +1395,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     toolToggleRow: {
       display: 'grid',
-      gridTemplateColumns: '1fr 1fr',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
       gap: '10px',
     },
 
