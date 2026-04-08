@@ -352,25 +352,34 @@ export default function AskVIC() {
 
       <div style={styles.appFrame}>
         <header style={styles.topNav}>
-          <a href="/" style={styles.brandLink}>
-            <div style={styles.brandLogoWrap}>
-              <img src="/vic-logo.png" alt="VIC logo" style={styles.brandLogoImage} />
-            </div>
+          <div style={styles.topNavLeft}>
+            <a href="/" style={styles.brandLink}>
+              <div style={styles.brandLogoWrap}>
+                <img src="/vic-logo.png" alt="VIC logo" style={styles.brandLogoImage} />
+              </div>
 
-            <div style={styles.brandTextWrap}>
-              <div style={styles.brandTitle}>VIC</div>
-              <div style={styles.brandSub}>Your AI co-teacher</div>
-            </div>
-          </a>
+              <div style={styles.brandTextWrap}>
+                <div style={styles.brandTitle}>VIC</div>
+                <div style={styles.brandSub}>Your AI co-teacher</div>
+              </div>
+            </a>
 
-          <nav style={styles.navLinks}>
-            <a href="/reports" style={styles.navLink}>
-              Reports
-            </a>
-            <a href="/about" style={styles.navLink}>
-              About
-            </a>
-          </nav>
+            <nav style={styles.navLinks}>
+              <a href="/" style={styles.navLinkCurrent}>
+                Ask VIC
+              </a>
+              <a href="/reports" style={styles.navLinkPrimary}>
+                Progress
+              </a>
+              <a href="/about" style={styles.navLink}>
+                About
+              </a>
+            </nav>
+          </div>
+
+          <div style={styles.topNavRight}>
+            <div style={styles.headerBadge}>Brain {BRAIN_VERSION}</div>
+          </div>
         </header>
 
         <div style={styles.shell}>
@@ -812,13 +821,45 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       justifyContent: 'space-between',
       gap: '16px',
       flexShrink: 0,
-      padding: isMobile ? '12px 14px' : '14px 16px',
+      flexWrap: 'wrap',
+      padding: isMobile ? '12px 14px' : '14px 18px',
       borderRadius: '22px',
-      background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.82) 0%, rgba(9, 14, 31, 0.74) 100%)',
+      background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.86) 0%, rgba(9, 14, 31, 0.78) 100%)',
       border: '1px solid rgba(191, 141, 255, 0.16)',
       boxShadow:
         '0 14px 36px rgba(0,0,0,0.24), 0 0 24px rgba(171,91,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)',
       backdropFilter: 'blur(14px)',
+    },
+
+    topNavLeft: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: isMobile ? '12px' : '18px',
+      flexWrap: 'wrap',
+      minWidth: 0,
+      flex: 1,
+    },
+
+    topNavRight: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      flexShrink: 0,
+      marginLeft: 'auto',
+    },
+
+    headerBadge: {
+      fontSize: '11px',
+      fontWeight: 800,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      color: '#f5ebff',
+      padding: '8px 12px',
+      borderRadius: '999px',
+      background: 'linear-gradient(135deg, rgba(171,91,255,0.22), rgba(84,248,255,0.12))',
+      border: '1px solid rgba(203, 166, 255, 0.24)',
+      boxShadow: '0 0 16px rgba(171,91,255,0.12)',
+      whiteSpace: 'nowrap',
     },
 
     brandLink: {
@@ -828,6 +869,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       textDecoration: 'none',
       color: '#faf5ff',
       minWidth: 0,
+      flexShrink: 0,
     },
 
     brandLogoWrap: {
@@ -874,19 +916,48 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     navLinks: {
       display: 'flex',
       alignItems: 'center',
-      gap: '10px',
-      flexShrink: 0,
+      gap: '8px',
+      flexWrap: 'wrap',
+      minWidth: 0,
     },
 
     navLink: {
       textDecoration: 'none',
-      color: '#f3edff',
-      fontSize: isMobile ? '14px' : '15px',
-      fontWeight: 700,
-      padding: '8px 12px',
+      color: '#eadcff',
+      fontSize: isMobile ? '13px' : '14px',
+      fontWeight: 800,
+      padding: isMobile ? '9px 12px' : '10px 14px',
       borderRadius: '12px',
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'rgba(255,255,255,0.05)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
+      whiteSpace: 'nowrap',
+    },
+
+    navLinkPrimary: {
+      textDecoration: 'none',
+      color: '#f9f5ff',
+      fontSize: isMobile ? '13px' : '14px',
+      fontWeight: 800,
+      padding: isMobile ? '9px 12px' : '10px 14px',
+      borderRadius: '12px',
+      background: 'linear-gradient(135deg, rgba(171,91,255,0.24), rgba(84,248,255,0.10))',
+      border: '1px solid rgba(203, 166, 255, 0.24)',
+      boxShadow: '0 0 18px rgba(171,91,255,0.10), inset 0 1px 0 rgba(255,255,255,0.06)',
+      whiteSpace: 'nowrap',
+    },
+
+    navLinkCurrent: {
+      textDecoration: 'none',
+      color: '#ffffff',
+      fontSize: isMobile ? '13px' : '14px',
+      fontWeight: 800,
+      padding: isMobile ? '9px 12px' : '10px 14px',
+      borderRadius: '12px',
+      background: 'rgba(255,255,255,0.10)',
+      border: '1px solid rgba(255,255,255,0.14)',
+      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08)',
+      whiteSpace: 'nowrap',
     },
 
     shell: {
