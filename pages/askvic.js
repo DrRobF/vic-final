@@ -8,7 +8,6 @@ export default function AskVIC() {
   const [workArea, setWorkArea] = useState('')
   const [notes, setNotes] = useState('')
   const [activeTool, setActiveTool] = useState('practice')
-  const [showCalculator, setShowCalculator] = useState(false)
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
   const [viewportWidth, setViewportWidth] = useState(1400)
@@ -338,38 +337,46 @@ export default function AskVIC() {
           <div style={styles.sectionEyebrow}>Student Tools</div>
           <div style={styles.sectionTitle}>Think, draw, and keep track</div>
           <div style={styles.toolsSubtext}>
-            Practice is for working things out, Sketch is for drawing ideas, and Notes
-            is for saving the important parts.
+            Practice is for working things out, Sketch is for drawing ideas, Notes
+            keeps the important parts, and Calculator is ready when it truly helps.
           </div>
         </div>
       </div>
 
-      <div style={styles.toolTabsWrap}>
-        <button
-          style={activeTool === 'practice' ? styles.toolTabActive : styles.toolTab}
-          onClick={() => setActiveTool('practice')}
-        >
-          Practice
-        </button>
-        <button
-          style={activeTool === 'sketch' ? styles.toolTabActive : styles.toolTab}
-          onClick={() => setActiveTool('sketch')}
-        >
-          Sketch
-        </button>
-        <button
-          style={activeTool === 'notes' ? styles.toolTabActive : styles.toolTab}
-          onClick={() => setActiveTool('notes')}
-        >
-          Notes
-        </button>
+      <div style={styles.toolTabsStickyWrap}>
+        <div style={styles.toolTabsWrap}>
+          <button
+            style={activeTool === 'practice' ? styles.toolTabActive : styles.toolTab}
+            onClick={() => setActiveTool('practice')}
+          >
+            Practice
+          </button>
+          <button
+            style={activeTool === 'sketch' ? styles.toolTabActive : styles.toolTab}
+            onClick={() => setActiveTool('sketch')}
+          >
+            Sketch
+          </button>
+          <button
+            style={activeTool === 'notes' ? styles.toolTabActive : styles.toolTab}
+            onClick={() => setActiveTool('notes')}
+          >
+            Notes
+          </button>
+          <button
+            style={activeTool === 'calculator' ? styles.toolTabActive : styles.toolTab}
+            onClick={() => setActiveTool('calculator')}
+          >
+            Calculator
+          </button>
+        </div>
       </div>
 
       {activeTool === 'practice' ? (
         <div style={styles.workspacePanel}>
           <div style={styles.practiceHeaderRow}>
-            <div style={styles.miniLabel}>Practice</div>
-            <div style={styles.practiceHint}>Work out your thinking here.</div>
+            <div style={styles.miniLabelDarkText}>Practice</div>
+            <div style={styles.practiceHintDarkText}>Work out your thinking here.</div>
           </div>
 
           <textarea
@@ -384,8 +391,8 @@ export default function AskVIC() {
       {activeTool === 'sketch' ? (
         <div style={styles.workspacePanel}>
           <div style={styles.practiceHeaderRow}>
-            <div style={styles.miniLabel}>Sketch</div>
-            <div style={styles.practiceHint}>
+            <div style={styles.miniLabelDarkText}>Sketch</div>
+            <div style={styles.practiceHintDarkText}>
               Draw a model, label a science idea, or sketch out a math problem.
             </div>
           </div>
@@ -405,7 +412,7 @@ export default function AskVIC() {
           <canvas
             ref={canvasRef}
             width={900}
-            height={440}
+            height={520}
             style={styles.sketchCanvas}
             onPointerDown={startCanvasStroke}
             onPointerMove={moveCanvasStroke}
@@ -418,8 +425,8 @@ export default function AskVIC() {
       {activeTool === 'notes' ? (
         <div style={styles.workspacePanel}>
           <div style={styles.practiceHeaderRow}>
-            <div style={styles.miniLabel}>Notes</div>
-            <div style={styles.practiceHint}>Save the important ideas cleanly here.</div>
+            <div style={styles.miniLabelDarkText}>Notes</div>
+            <div style={styles.practiceHintDarkText}>Save the important ideas cleanly here.</div>
           </div>
 
           <textarea
@@ -431,36 +438,49 @@ export default function AskVIC() {
         </div>
       ) : null}
 
-      <div style={styles.supportRow}>
-        <button style={styles.supportButton} onClick={requestHint}>
-          Hint
-        </button>
-        <button style={styles.supportButton} onClick={requestCheckMyWork}>
-          {activeTool === 'sketch' ? 'Discuss My Sketch' : 'Check My Work'}
-        </button>
-        <button
-          style={showCalculator ? styles.supportButtonActive : styles.supportButton}
-          onClick={() => setShowCalculator(!showCalculator)}
-        >
-          Calculator
-        </button>
-      </div>
-
-      {showCalculator ? (
-        <div style={styles.toolPanel}>
-          <div style={styles.miniLabelDark}>Calculator</div>
-          <input
-            value={calcInput}
-            onChange={(e) => setCalcInput(e.target.value)}
-            placeholder="Example: 12 * (4 + 3)"
-            style={styles.calcInput}
-          />
-          <div style={styles.calcRow}>
-            <button style={styles.smallButton} onClick={runCalculator}>
-              Calculate
-            </button>
-            <div style={styles.calcResult}>{calcResult}</div>
+      {activeTool === 'calculator' ? (
+        <div style={styles.workspacePanel}>
+          <div style={styles.practiceHeaderRow}>
+            <div style={styles.miniLabelDarkText}>Calculator</div>
+            <div style={styles.practiceHintDarkText}>Use it when it helps — not before you think.</div>
           </div>
+
+          <div style={styles.toolPanelWhite}>
+            <input
+              value={calcInput}
+              onChange={(e) => setCalcInput(e.target.value)}
+              placeholder="Example: 12 * (4 + 3)"
+              style={styles.calcInput}
+            />
+            <div style={styles.calcRow}>
+              <button style={styles.smallButtonDark} onClick={runCalculator}>
+                Calculate
+              </button>
+              <div style={styles.calcResultDark}>{calcResult || 'Result will appear here.'}</div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {activeTool === 'practice' ? (
+        <div style={styles.supportRowTwoUp}>
+          <button style={styles.supportButtonWhite} onClick={requestHint}>
+            Hint
+          </button>
+          <button style={styles.supportButtonWhiteStrong} onClick={requestCheckMyWork}>
+            Check My Work
+          </button>
+        </div>
+      ) : null}
+
+      {activeTool === 'sketch' ? (
+        <div style={styles.supportRowTwoUp}>
+          <button style={styles.supportButtonWhite} onClick={requestHint}>
+            Hint
+          </button>
+          <button style={styles.supportButtonWhiteStrong} onClick={requestCheckMyWork}>
+            Discuss My Sketch
+          </button>
         </div>
       ) : null}
 
@@ -468,11 +488,11 @@ export default function AskVIC() {
         <div style={styles.reportFeatureTopCompact}>
           <div>
             <div style={styles.reportFeatureLabelCompact}>Session Report</div>
-            <div style={styles.reportFeatureTitleCompact}>Progress summary</div>
+            <div style={styles.reportFeatureTitleCompact}>Download the session summary</div>
           </div>
 
           <button
-            style={canGetReport ? styles.reportButton : styles.reportButtonDisabled}
+            style={canGetReport ? styles.reportButtonCompact : styles.reportButtonDisabledCompact}
             onClick={requestReport}
             disabled={!canGetReport}
           >
@@ -481,18 +501,16 @@ export default function AskVIC() {
         </div>
 
         <div style={styles.reportFeatureTextCompact}>
-          Generate a summary when the lesson is done so adults can review what VIC
-          taught and practiced.
+          Generate a clean summary when the session is finished.
         </div>
 
         <div style={styles.reportPreviewInline}>
-          <div style={styles.reportPreviewInlineLabel}>Last report</div>
+          <div style={styles.reportPreviewInlineLabel}>Last Report Preview</div>
           <div style={styles.reportPreviewInlineText}>{lastReportText}</div>
         </div>
       </div>
     </section>
   )
-
 
   return (
     <div style={styles.page}>
@@ -538,8 +556,8 @@ export default function AskVIC() {
         <div style={styles.shell}>
           {!isCompact ? (
             <div style={styles.leftColumn}>
-              {heroSection}
               {toolsSection}
+              {heroSection}
             </div>
           ) : null}
 
@@ -1117,7 +1135,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       flex: 1,
       minHeight: 0,
       display: 'grid',
-      gridTemplateColumns: isCompact ? '1fr' : '380px minmax(0, 1fr)',
+      gridTemplateColumns: isCompact ? '1fr' : '420px minmax(0, 1fr)',
       gap: isMobile ? '14px' : '18px',
       overflow: desktopFixedHeight ? 'hidden' : 'visible',
     },
@@ -1125,7 +1143,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     leftColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: 'auto minmax(0, 1fr)',
+      gridTemplateRows: 'minmax(0, 1fr) auto',
       gap: '18px',
       overflow: 'hidden',
     },
@@ -1347,16 +1365,25 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       marginTop: '6px',
     },
 
+    toolTabsStickyWrap: {
+      position: 'sticky',
+      top: 0,
+      zIndex: 6,
+      background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.98) 0%, rgba(16, 8, 34, 0.90) 100%)',
+      paddingTop: '2px',
+      paddingBottom: '2px',
+    },
+
     toolTabsWrap: {
       display: 'grid',
-      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+      gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))',
       gap: '10px',
     },
 
     toolTab: {
-      background: 'linear-gradient(135deg, rgba(255,255,255,0.06), rgba(171,91,255,0.05))',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
-      color: '#f3edff',
+      background: '#ffffff',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      color: '#24163f',
       padding: '12px 12px',
       borderRadius: '15px',
       fontSize: '14px',
@@ -1365,21 +1392,26 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     toolTabActive: {
-      background:
-        'linear-gradient(135deg, rgba(171,91,255,0.24) 0%, rgba(84,248,255,0.10) 100%)',
-      border: '1px solid rgba(206, 170, 255, 0.24)',
-      color: '#ffffff',
+      background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(240,244,255,1) 100%)',
+      border: '2px solid rgba(126, 92, 255, 0.50)',
+      color: '#1d1236',
       padding: '12px 12px',
       borderRadius: '15px',
       fontSize: '14px',
       fontWeight: 800,
-      boxShadow: '0 0 18px rgba(171,91,255,0.12)',
+      boxShadow: '0 10px 22px rgba(0,0,0,0.16), 0 0 0 1px rgba(126,92,255,0.08)',
       cursor: 'pointer',
     },
 
     workspacePanel: {
       display: 'flex',
       flexDirection: 'column',
+      gap: '10px',
+    },
+
+    supportRowTwoUp: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
       gap: '10px',
     },
 
@@ -1409,7 +1441,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       borderRadius: '14px',
       fontSize: '13px',
       fontWeight: 800,
-      boxShadow: '0 0 18px rgba(171,91,255,0.12)',
+      boxShadow: '0 10px 22px rgba(0,0,0,0.16), 0 0 0 1px rgba(126,92,255,0.08)',
       cursor: 'pointer',
     },
 
@@ -1419,10 +1451,34 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       gap: '8px',
     },
 
+    supportButtonWhite: {
+      background: '#ffffff',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      color: '#24163f',
+      padding: '12px 14px',
+      borderRadius: '14px',
+      fontSize: '13px',
+      fontWeight: 800,
+      cursor: 'pointer',
+      boxShadow: '0 10px 22px rgba(0,0,0,0.12)',
+    },
+
+    supportButtonWhiteStrong: {
+      background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(244,247,255,1) 100%)',
+      border: '2px solid rgba(126, 92, 255, 0.45)',
+      color: '#1d1236',
+      padding: '12px 14px',
+      borderRadius: '14px',
+      fontSize: '13px',
+      fontWeight: 800,
+      cursor: 'pointer',
+      boxShadow: '0 10px 22px rgba(0,0,0,0.14)',
+    },
+
     sketchToolButton: {
-      border: '1px solid rgba(206, 170, 255, 0.18)',
-      background: 'rgba(255,255,255,0.05)',
-      color: '#f3edff',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: '#ffffff',
+      color: '#24163f',
       padding: '9px 12px',
       borderRadius: '12px',
       fontSize: '13px',
@@ -1432,11 +1488,11 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     sketchCanvas: {
       width: '100%',
-      minHeight: isMobile ? '220px' : '260px',
-      height: isMobile ? '220px' : '260px',
+      minHeight: isMobile ? '240px' : '320px',
+      height: isMobile ? '240px' : '320px',
       borderRadius: '18px',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
-      background: 'rgba(8, 12, 27, 0.88)',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: '#ffffff',
       touchAction: 'none',
       boxSizing: 'border-box',
     },
@@ -1480,8 +1536,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     reportFeatureCardCompact: {
       borderRadius: '18px',
       padding: '14px',
-      background: 'rgba(255,255,255,0.04)',
-      border: '1px solid rgba(206, 170, 255, 0.12)',
+      background: 'rgba(255,255,255,0.07)',
+      border: '1px solid rgba(255,255,255,0.10)',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
@@ -1658,7 +1714,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       borderRadius: '15px',
       fontSize: '14px',
       fontWeight: 800,
-      boxShadow: '0 0 18px rgba(171,91,255,0.12)',
+      boxShadow: '0 10px 22px rgba(0,0,0,0.16), 0 0 0 1px rgba(126,92,255,0.08)',
       cursor: 'pointer',
     },
 
@@ -1680,10 +1736,22 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       lineHeight: 1.4,
     },
 
+    practiceHintDarkText: {
+      fontSize: '12px',
+      color: '#5b6072',
+      lineHeight: 1.4,
+    },
+
     miniLabel: {
       fontSize: '13px',
       fontWeight: 800,
       color: '#faf5ff',
+    },
+
+    miniLabelDarkText: {
+      fontSize: '13px',
+      fontWeight: 800,
+      color: '#24163f',
     },
 
     miniLabelDark: {
@@ -1695,12 +1763,12 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     sideTextarea: {
       width: '100%',
-      minHeight: isMobile ? '120px' : '140px',
+      minHeight: isMobile ? '160px' : '220px',
       resize: 'vertical',
       borderRadius: '16px',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
-      background: 'rgba(255,255,255,0.04)',
-      color: '#f5f0ff',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: '#ffffff',
+      color: '#24163f',
       padding: '14px',
       boxSizing: 'border-box',
       outline: 'none',
@@ -1715,12 +1783,20 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       padding: '14px',
     },
 
+    toolPanelWhite: {
+      borderRadius: '18px',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: '#ffffff',
+      padding: '14px',
+      boxShadow: '0 12px 26px rgba(0,0,0,0.12)',
+    },
+
     calcInput: {
       width: '100%',
       borderRadius: '14px',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
-      background: 'rgba(9, 14, 31, 0.70)',
-      color: '#f5f0ff',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: '#f8f9fc',
+      color: '#24163f',
       padding: '12px 14px',
       boxSizing: 'border-box',
       outline: 'none',
@@ -1753,15 +1829,33 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       wordBreak: 'break-word',
     },
 
+    smallButtonDark: {
+      border: '1px solid rgba(126, 92, 255, 0.28)',
+      background: 'linear-gradient(135deg, rgba(126,92,255,0.12), rgba(84,248,255,0.06))',
+      color: '#24163f',
+      padding: '10px 14px',
+      borderRadius: '12px',
+      fontSize: '14px',
+      fontWeight: 800,
+      cursor: 'pointer',
+    },
+
+    calcResultDark: {
+      minHeight: '20px',
+      fontSize: '14px',
+      color: '#4b5568',
+      wordBreak: 'break-word',
+    },
+
 
     notesTextareaLarge: {
       width: '100%',
-      minHeight: isMobile ? '150px' : '180px',
+      minHeight: isMobile ? '160px' : '220px',
       resize: 'vertical',
       borderRadius: '16px',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
-      background: 'rgba(255,255,255,0.04)',
-      color: '#f5f0ff',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: '#ffffff',
+      color: '#24163f',
       padding: '14px',
       boxSizing: 'border-box',
       outline: 'none',
