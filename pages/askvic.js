@@ -2293,3 +2293,4 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: '#334155',
     },
   }
+}
