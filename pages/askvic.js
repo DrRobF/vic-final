@@ -1487,7 +1487,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
-      flex: 1,
+      flexShrink: 0,
       minHeight: 0,
     },
 
@@ -1497,7 +1497,6 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       gap: '10px',
       flexShrink: 0,
       position: 'relative',
-      zIndex: 2,
     },
 
     supportRow: {
@@ -1539,8 +1538,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     sketchCanvasWrap: {
       width: '100%',
-      minHeight: isMobile ? '300px' : '460px',
-      height: isMobile ? '300px' : '460px',
+      minHeight: isMobile ? '340px' : '560px',
+      height: isMobile ? '340px' : '560px',
       borderRadius: '18px',
       border: '1px solid rgba(216, 220, 235, 0.95)',
       background: '#ffffff',
@@ -1634,6 +1633,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     reportFeatureCardCompact: {
       borderRadius: '18px',
       padding: '14px',
+      marginTop: '4px',
       background: 'linear-gradient(180deg, rgba(27, 16, 52, 0.98) 0%, rgba(18, 13, 38, 0.98) 100%)',
       border: '1px solid rgba(191, 141, 255, 0.16)',
       display: 'flex',
