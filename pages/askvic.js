@@ -442,14 +442,16 @@ export default function AskVIC() {
             </button>
           </div>
 
-          <canvas
-            ref={canvasRef}
-            style={styles.sketchCanvas}
-            onPointerDown={startCanvasStroke}
-            onPointerMove={moveCanvasStroke}
-            onPointerUp={stopCanvasStroke}
-            onPointerLeave={stopCanvasStroke}
-          />
+          <div style={styles.sketchCanvasWrap}>
+            <canvas
+              ref={canvasRef}
+              style={styles.sketchCanvas}
+              onPointerDown={startCanvasStroke}
+              onPointerMove={moveCanvasStroke}
+              onPointerUp={stopCanvasStroke}
+              onPointerLeave={stopCanvasStroke}
+            />
+          </div>
         </div>
       ) : null}
 
@@ -1493,6 +1495,9 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       display: 'grid',
       gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
       gap: '10px',
+      flexShrink: 0,
+      position: 'relative',
+      zIndex: 2,
     },
 
     supportRow: {
@@ -1529,6 +1534,21 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       display: 'flex',
       flexWrap: 'wrap',
       gap: '8px',
+      flexShrink: 0,
+    },
+
+    sketchCanvasWrap: {
+      width: '100%',
+      minHeight: isMobile ? '300px' : '460px',
+      height: isMobile ? '300px' : '460px',
+      borderRadius: '18px',
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: '#ffffff',
+      overflow: 'hidden',
+      boxSizing: 'border-box',
+      flexShrink: 0,
+      position: 'relative',
+      zIndex: 1,
     },
 
     supportButtonWhite: {
@@ -1568,10 +1588,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     sketchCanvas: {
       width: '100%',
-      minHeight: isMobile ? '300px' : '460px',
-      height: isMobile ? '300px' : '460px',
-      borderRadius: '18px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
+      height: '100%',
+      display: 'block',
       background: '#ffffff',
       touchAction: 'none',
       boxSizing: 'border-box',
@@ -1616,11 +1634,15 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     reportFeatureCardCompact: {
       borderRadius: '18px',
       padding: '14px',
-      background: 'rgba(255,255,255,0.07)',
-      border: '1px solid rgba(255,255,255,0.10)',
+      background: 'linear-gradient(180deg, rgba(27, 16, 52, 0.98) 0%, rgba(18, 13, 38, 0.98) 100%)',
+      border: '1px solid rgba(191, 141, 255, 0.16)',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
+      position: 'relative',
+      zIndex: 2,
+      overflow: 'hidden',
+      flexShrink: 0,
     },
 
     reportFeatureTopCompact: {
