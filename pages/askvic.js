@@ -46,6 +46,51 @@ export default function AskVIC() {
   const isTablet = viewportWidth > 768 && viewportWidth <= 1100
   const isCompact = viewportWidth <= 1100
 
+  useEffect(() => {
+    if (activeTool !== 'sketch') return
+
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const syncCanvasSize = () => {
+      const rect = canvas.getBoundingClientRect()
+      const width = Math.max(Math.floor(rect.width), 1)
+      const height = Math.max(Math.floor(rect.height), 1)
+
+      if (canvas.width === width && canvas.height === height) return
+
+      const snapshot = document.createElement('canvas')
+      snapshot.width = canvas.width || width
+      snapshot.height = canvas.height || height
+      const snapshotCtx = snapshot.getContext('2d')
+      if (snapshotCtx && canvas.width && canvas.height) {
+        snapshotCtx.drawImage(canvas, 0, 0)
+      }
+
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+      ctx.fillStyle = '#ffffff'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.lineCap = 'round'
+      ctx.lineJoin = 'round'
+
+      if (snapshot.width && snapshot.height) {
+        ctx.drawImage(snapshot, 0, 0, snapshot.width, snapshot.height, 0, 0, width, height)
+      }
+    }
+
+    const raf = window.requestAnimationFrame(syncCanvasSize)
+    window.addEventListener('resize', syncCanvasSize)
+
+    return () => {
+      window.cancelAnimationFrame(raf)
+      window.removeEventListener('resize', syncCanvasSize)
+    }
+  }, [activeTool, isCompact, isMobile, viewportWidth])
+
   const canGetReport = useMemo(() => messages.length > 1 && !loading, [messages.length, loading])
 
   useEffect(() => {
@@ -68,11 +113,21 @@ export default function AskVIC() {
   }, [messages])
 
   async function sendMessage(customMessage) {
-    const outgoing = typeof customMessage === 'string' ? customMessage : input
+    const outgoing =
+      typeof customMessage === 'string'
+        ? customMessage
+        : customMessage?.text || input
+    const sketchImage =
+      typeof customMessage === 'object' && customMessage?.sketchImage
+        ? customMessage.sketchImage
+        : null
 
     if (!outgoing.trim() || loading) return null
 
-    const userMessage = { role: 'user', text: outgoing }
+    const userTextForThread = sketchImage ? `${outgoing}
+
+[Sketch attached]` : outgoing
+    const userMessage = { role: 'user', text: userTextForThread }
     const nextMessages = [...messages, userMessage]
 
     setMessages([
@@ -95,7 +150,7 @@ export default function AskVIC() {
       const res = await fetch('/api/vic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages }),
+        body: JSON.stringify({ messages: apiMessages, sketchImage }),
       })
 
       if (!res.ok) {
@@ -230,6 +285,20 @@ export default function AskVIC() {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }
+
+  async function discussSketch() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const sketchImage = canvas.toDataURL('image/png')
+    await sendMessage({
+      text:
+        'Look at my sketch and respond like a calm teacher. First describe what you see in simple terms. Then tell me what looks correct, what might need fixing, and what I should try next.',
+      sketchImage,
+    })
   }
 
   function sendWorkspacePrompt(prompt) {
@@ -375,8 +444,6 @@ export default function AskVIC() {
 
           <canvas
             ref={canvasRef}
-            width={900}
-            height={520}
             style={styles.sketchCanvas}
             onPointerDown={startCanvasStroke}
             onPointerMove={moveCanvasStroke}
@@ -442,7 +509,7 @@ export default function AskVIC() {
           <button style={styles.supportButtonWhite} onClick={requestHint}>
             Hint
           </button>
-          <button style={styles.supportButtonWhiteStrong} onClick={requestCheckMyWork}>
+          <button style={styles.supportButtonWhiteStrong} onClick={discussSketch}>
             Discuss My Sketch
           </button>
         </div>
@@ -1108,6 +1175,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     shell: {
       flex: 1,
       minHeight: 0,
+      overflow: 'visible',
       display: 'grid',
       gridTemplateColumns: isCompact ? '1fr' : '420px minmax(0, 1fr)',
       gap: isMobile ? '14px' : '18px',
@@ -1500,8 +1568,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     sketchCanvas: {
       width: '100%',
-      minHeight: isMobile ? '280px' : '420px',
-      height: isMobile ? '280px' : '420px',
+      minHeight: isMobile ? '300px' : '460px',
+      height: isMobile ? '300px' : '460px',
       borderRadius: '18px',
       border: '1px solid rgba(216, 220, 235, 0.95)',
       background: '#ffffff',
