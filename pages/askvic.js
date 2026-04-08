@@ -335,11 +335,8 @@ export default function AskVIC() {
       <div style={styles.toolsHeaderRow}>
         <div style={styles.toolsHeaderText}>
           <div style={styles.sectionEyebrow}>Student Tools</div>
-          <div style={styles.sectionTitle}>Think, draw, and keep track</div>
-          <div style={styles.toolsSubtext}>
-            Practice is for working things out, Sketch is for drawing ideas, Notes
-            keeps the important parts, and Calculator is ready when it truly helps.
-          </div>
+          <div style={styles.sectionTitle}>Student Tools</div>
+          <div style={styles.toolsSubtext}>Work while VIC teaches.</div>
         </div>
       </div>
 
@@ -367,7 +364,7 @@ export default function AskVIC() {
             style={activeTool === 'calculator' ? styles.toolTabActive : styles.toolTab}
             onClick={() => setActiveTool('calculator')}
           >
-            Calculator
+            Calc
           </button>
         </div>
       </div>
@@ -1273,11 +1270,11 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     sectionTitle: {
-      fontSize: isMobile ? '17px' : '18px',
+      fontSize: isMobile ? '16px' : '17px',
       fontWeight: 800,
       color: '#faf5ff',
-      marginTop: '2px',
-      lineHeight: 1.15,
+      marginTop: '0',
+      lineHeight: 1.1,
     },
 
     subjectGrid: {
@@ -1343,7 +1340,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       backdropFilter: 'blur(16px)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '12px',
+      gap: '10px',
       overflowY: 'auto',
     },
 
@@ -1359,10 +1356,10 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     toolsSubtext: {
-      fontSize: '13px',
+      fontSize: '12px',
       color: '#d7c7ff',
-      lineHeight: 1.4,
-      marginTop: '6px',
+      lineHeight: 1.3,
+      marginTop: '4px',
     },
 
     toolTabsStickyWrap: {
@@ -1377,16 +1374,17 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     toolTabsWrap: {
       display: 'grid',
       gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4, minmax(0, 1fr))',
-      gap: '10px',
+      gap: '8px',
     },
 
     toolTab: {
       background: '#ffffff',
       border: '1px solid rgba(216, 220, 235, 0.95)',
       color: '#24163f',
-      padding: '12px 12px',
+      padding: '12px 8px',
       borderRadius: '15px',
-      fontSize: '14px',
+      fontSize: isMobile ? '14px' : '13px',
+      lineHeight: 1,
       fontWeight: 800,
       cursor: 'pointer',
     },
@@ -1395,9 +1393,10 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(240,244,255,1) 100%)',
       border: '2px solid rgba(126, 92, 255, 0.50)',
       color: '#1d1236',
-      padding: '12px 12px',
+      padding: '12px 8px',
       borderRadius: '15px',
-      fontSize: '14px',
+      fontSize: isMobile ? '14px' : '13px',
+      lineHeight: 1,
       fontWeight: 800,
       boxShadow: '0 10px 22px rgba(0,0,0,0.16), 0 0 0 1px rgba(126,92,255,0.08)',
       cursor: 'pointer',
