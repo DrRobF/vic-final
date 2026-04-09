@@ -1,3 +1,11 @@
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '8mb',
+    },
+  },
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -11,13 +19,41 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { messages } = req.body || {}
+  const { messages, sketchImage } = req.body || {}
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Missing messages array' })
   }
 
   try {
+    const input = messages.map((msg, index) => {
+      const isLastUserMessage =
+        index === messages.length - 1 && msg.role === 'user'
+
+      if (
+        isLastUserMessage &&
+        typeof sketchImage === 'string' &&
+        sketchImage.startsWith('data:image/')
+      ) {
+        return {
+          role: msg.role,
+          content: [
+            {
+              type: 'input_text',
+              text: typeof msg.content === 'string' ? msg.content : '',
+            },
+            {
+              type: 'input_image',
+              image_url: sketchImage,
+              detail: 'high',
+            },
+          ],
+        }
+      }
+
+      return msg
+    })
+
     const response = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST',
       headers: {
@@ -29,7 +65,7 @@ export default async function handler(req, res) {
         prompt: {
           id: 'pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b',
         },
-        input: messages,
+        input,
       }),
     })
 
