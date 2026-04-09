@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
-const BRAIN_VERSION = 'v3.4'
+const BRAIN_VERSION = 'v3.3'
 
 export default function AskVIC() {
   const [input, setInput] = useState('')
@@ -14,8 +14,6 @@ export default function AskVIC() {
   const [lastReportText, setLastReportText] = useState(
     'No report yet. Run a short session and generate one to preview it here.'
   )
-  const [canvasMode, setCanvasModeState] = useState('draw')
-  const [isSketchExpanded, setIsSketchExpanded] = useState(false)
 
   const [messages, setMessages] = useState([
     {
@@ -29,7 +27,6 @@ export default function AskVIC() {
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
   const canvasRef = useRef(null)
-  const expandedCanvasRef = useRef(null)
   const isDrawingRef = useRef(false)
   const isErasingRef = useRef(false)
 
@@ -50,15 +47,12 @@ export default function AskVIC() {
   const isCompact = viewportWidth <= 1100
 
   useEffect(() => {
-    isErasingRef.current = canvasMode === 'erase'
-  }, [canvasMode])
-
-  useEffect(() => {
     if (activeTool !== 'sketch') return
 
-    const syncSingleCanvas = (canvas) => {
-      if (!canvas) return
+    const canvas = canvasRef.current
+    if (!canvas) return
 
+    const syncCanvasSize = () => {
       const rect = canvas.getBoundingClientRect()
       const width = Math.max(Math.floor(rect.width), 1)
       const height = Math.max(Math.floor(rect.height), 1)
@@ -88,11 +82,6 @@ export default function AskVIC() {
       }
     }
 
-    const syncCanvasSize = () => {
-      syncSingleCanvas(canvasRef.current)
-      syncSingleCanvas(expandedCanvasRef.current)
-    }
-
     const raf = window.requestAnimationFrame(syncCanvasSize)
     window.addEventListener('resize', syncCanvasSize)
 
@@ -100,25 +89,7 @@ export default function AskVIC() {
       window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', syncCanvasSize)
     }
-  }, [activeTool, isCompact, isMobile, viewportWidth, isSketchExpanded])
-
-  useEffect(() => {
-    if (!isSketchExpanded) return
-
-    const handleEscape = (e) => {
-      if (e.key === 'Escape') {
-        closeExpandedSketch(true)
-      }
-    }
-
-    document.addEventListener('keydown', handleEscape)
-    document.body.style.overflow = 'hidden'
-
-    return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.body.style.overflow = ''
-    }
-  }, [isSketchExpanded])
+  }, [activeTool, isCompact, isMobile, viewportWidth])
 
   const canGetReport = useMemo(() => messages.length > 1 && !loading, [messages.length, loading])
 
@@ -268,70 +239,16 @@ export default function AskVIC() {
     }
   }
 
-  function getCanvasPoint(e, canvas) {
+
+  function startCanvasStroke(e) {
+    const canvas = canvasRef.current
+    if (!canvas) return
     const rect = canvas.getBoundingClientRect()
     const scaleX = canvas.width / rect.width
     const scaleY = canvas.height / rect.height
-
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    }
-  }
-
-  function getTargetCanvas(target = 'main') {
-    return target === 'expanded' ? expandedCanvasRef.current : canvasRef.current
-  }
-
-  function copyCanvasContents(sourceCanvas, targetCanvas) {
-    if (!sourceCanvas || !targetCanvas) return
-
-    const targetCtx = targetCanvas.getContext('2d')
-    if (!targetCtx) return
-
-    targetCtx.fillStyle = '#ffffff'
-    targetCtx.fillRect(0, 0, targetCanvas.width, targetCanvas.height)
-    targetCtx.drawImage(
-      sourceCanvas,
-      0,
-      0,
-      sourceCanvas.width,
-      sourceCanvas.height,
-      0,
-      0,
-      targetCanvas.width,
-      targetCanvas.height
-    )
-  }
-
-  function openExpandedSketch() {
-    setIsSketchExpanded(true)
-
-    requestAnimationFrame(() => {
-      const mainCanvas = canvasRef.current
-      const expandedCanvas = expandedCanvasRef.current
-      if (!mainCanvas || !expandedCanvas) return
-      copyCanvasContents(mainCanvas, expandedCanvas)
-    })
-  }
-
-  function closeExpandedSketch(saveChanges = true) {
-    if (saveChanges) {
-      const mainCanvas = canvasRef.current
-      const expandedCanvas = expandedCanvasRef.current
-      if (mainCanvas && expandedCanvas) {
-        copyCanvasContents(expandedCanvas, mainCanvas)
-      }
-    }
-    setIsSketchExpanded(false)
-  }
-
-  function startCanvasStroke(e, target = 'main') {
-    const canvas = getTargetCanvas(target)
-    if (!canvas) return
-    const { x, y } = getCanvasPoint(e, canvas)
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
     ctx.beginPath()
     ctx.moveTo(x, y)
     ctx.lineCap = 'round'
@@ -341,13 +258,16 @@ export default function AskVIC() {
     isDrawingRef.current = true
   }
 
-  function moveCanvasStroke(e, target = 'main') {
+  function moveCanvasStroke(e) {
     if (!isDrawingRef.current) return
-    const canvas = getTargetCanvas(target)
+    const canvas = canvasRef.current
     if (!canvas) return
-    const { x, y } = getCanvasPoint(e, canvas)
+    const rect = canvas.getBoundingClientRect()
+    const scaleX = canvas.width / rect.width
+    const scaleY = canvas.height / rect.height
+    const x = (e.clientX - rect.left) * scaleX
+    const y = (e.clientY - rect.top) * scaleY
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
     ctx.lineTo(x, y)
     ctx.stroke()
   }
@@ -357,38 +277,26 @@ export default function AskVIC() {
   }
 
   function setCanvasMode(mode) {
-    setCanvasModeState(mode)
     isErasingRef.current = mode === 'erase'
   }
 
-  function clearCanvas(target = 'main') {
-    const canvases =
-      target === 'both'
-        ? [canvasRef.current, expandedCanvasRef.current]
-        : [getTargetCanvas(target)]
-
-    canvases.forEach((canvas) => {
-      if (!canvas) return
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.clearRect(0, 0, canvas.width, canvas.height)
-      ctx.fillStyle = '#ffffff'
-      ctx.fillRect(0, 0, canvas.width, canvas.height)
-    })
+  function clearCanvas() {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = '#ffffff'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
   }
 
   async function discussSketch() {
-    const canvas = isSketchExpanded ? expandedCanvasRef.current : canvasRef.current
+    const canvas = canvasRef.current
     if (!canvas) return
-
-    if (isSketchExpanded && canvasRef.current && expandedCanvasRef.current) {
-      copyCanvasContents(expandedCanvasRef.current, canvasRef.current)
-    }
 
     const sketchImage = canvas.toDataURL('image/png')
     await sendMessage({
       text:
-        'You are a patient teacher. Describe what you see. Say what is correct. Say what needs fixing. Give one next step.',
+        'Look at my sketch and respond like a calm teacher. First describe what you see in simple terms. Then tell me what looks correct, what might need fixing, and what I should try next.',
       sketchImage,
     })
   }
@@ -414,7 +322,7 @@ export default function AskVIC() {
     sendWorkspacePrompt(prompt)
   }
 
-  function requestCheckMyWork() {
+  async function requestAskVICAboutThis() {
     const context =
       activeTool === 'practice'
         ? workArea.trim()
@@ -422,16 +330,29 @@ export default function AskVIC() {
           ? notes.trim()
           : ''
 
-    const prompt = context
-      ? `Check my work and tell me what is right, what needs fixing, and what to try next:\n\n${context}`
-      : activeTool === 'sketch'
-        ? 'I made a sketch in my workspace. Ask me to describe it and then help me check whether the idea makes sense.'
-        : 'Help me check my work step by step.'
+    if (!context) {
+      const fallbackPrompt =
+        activeTool === 'notes'
+          ? 'I do not have notes written yet. Help me decide what notes I should take next.'
+          : 'I do not have work written yet. Help me get started step by step.'
 
-    sendWorkspacePrompt(prompt)
+      await sendMessage(fallbackPrompt)
+      return
+    }
+
+    const prompt =
+      activeTool === 'notes'
+        ? `Here are my notes. Respond like a patient teacher. Help me understand them, point out anything important or missing, and give me one next step:
+
+${context}`
+        : `Here is my work. Respond like a patient teacher. Say what is correct, what needs fixing, and give me one next step:
+
+${context}`
+
+    await sendMessage(prompt)
   }
 
-  const styles = buildStyles({ isMobile, isTablet, isCompact, isSketchExpanded })
+  const styles = buildStyles({ isMobile, isTablet, isCompact })
 
   const heroSection = (
     <section style={styles.heroCard}>
@@ -515,16 +436,22 @@ export default function AskVIC() {
 
       {activeTool === 'sketch' ? (
         <div style={styles.workspacePanel}>
-          <div style={styles.sketchHeaderRow}>
-            <div style={styles.practiceHeaderRow}>
-              <div style={styles.miniLabelDarkText}>Sketch</div>
-              <div style={styles.practiceHintDarkText}>
-                Draw a model, label a science idea, or sketch out a math problem.
-              </div>
+          <div style={styles.practiceHeaderRow}>
+            <div style={styles.miniLabelDarkText}>Sketch</div>
+            <div style={styles.practiceHintDarkText}>
+              Draw a model, label a science idea, or sketch out a math problem.
             </div>
+          </div>
 
-            <button style={styles.expandSketchButton} onClick={openExpandedSketch}>
-              Expand Sketch
+          <div style={styles.sketchToolbar}>
+            <button style={styles.sketchToolButton} onClick={() => setCanvasMode('draw')}>
+              Pen
+            </button>
+            <button style={styles.sketchToolButton} onClick={() => setCanvasMode('erase')}>
+              Erase
+            </button>
+            <button style={styles.sketchToolButton} onClick={clearCanvas}>
+              Clear
             </button>
           </div>
 
@@ -532,29 +459,11 @@ export default function AskVIC() {
             <canvas
               ref={canvasRef}
               style={styles.sketchCanvas}
-              onPointerDown={(e) => startCanvasStroke(e, 'main')}
-              onPointerMove={(e) => moveCanvasStroke(e, 'main')}
+              onPointerDown={startCanvasStroke}
+              onPointerMove={moveCanvasStroke}
               onPointerUp={stopCanvasStroke}
               onPointerLeave={stopCanvasStroke}
             />
-          </div>
-
-          <div style={styles.sketchToolbar}>
-            <button
-              style={canvasMode === 'draw' ? styles.sketchToolButtonActive : styles.sketchToolButton}
-              onClick={() => setCanvasMode('draw')}
-            >
-              Pen
-            </button>
-            <button
-              style={canvasMode === 'erase' ? styles.sketchToolButtonActive : styles.sketchToolButton}
-              onClick={() => setCanvasMode('erase')}
-            >
-              Erase
-            </button>
-            <button style={styles.sketchToolButton} onClick={() => clearCanvas('both')}>
-              Clear
-            </button>
           </div>
         </div>
       ) : null}
@@ -572,6 +481,17 @@ export default function AskVIC() {
             placeholder="Save important ideas here..."
             style={styles.notesTextareaLarge}
           />
+        </div>
+      ) : null}
+
+      {activeTool === 'notes' ? (
+        <div style={styles.supportRowTwoUp}>
+          <button style={styles.supportButtonWhite} onClick={requestHint}>
+            Hint
+          </button>
+          <button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>
+            Ask VIC About This
+          </button>
         </div>
       ) : null}
 
@@ -604,8 +524,8 @@ export default function AskVIC() {
           <button style={styles.supportButtonWhite} onClick={requestHint}>
             Hint
           </button>
-          <button style={styles.supportButtonWhiteStrong} onClick={requestCheckMyWork}>
-            Check My Work
+          <button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>
+            Ask VIC About This
           </button>
         </div>
       ) : null}
@@ -807,57 +727,6 @@ export default function AskVIC() {
           </div>
         </div>
       </div>
-
-      {isSketchExpanded ? (
-        <div style={styles.sketchOverlay}>
-          <div style={styles.sketchOverlayCard}>
-            <div style={styles.sketchOverlayHeader}>
-              <div>
-                <div style={styles.sketchOverlayTitle}>Expanded Sketch</div>
-                <div style={styles.sketchOverlayText}>
-                  A larger workspace so students can draw more clearly for VIC.
-                </div>
-              </div>
-
-              <button style={styles.sketchOverlayCloseButton} onClick={() => closeExpandedSketch(true)}>
-                Save & Close
-              </button>
-            </div>
-
-            <div style={styles.sketchOverlayCanvasWrap}>
-              <canvas
-                ref={expandedCanvasRef}
-                style={styles.sketchCanvas}
-                onPointerDown={(e) => startCanvasStroke(e, 'expanded')}
-                onPointerMove={(e) => moveCanvasStroke(e, 'expanded')}
-                onPointerUp={stopCanvasStroke}
-                onPointerLeave={stopCanvasStroke}
-              />
-            </div>
-
-            <div style={styles.sketchOverlayToolbar}>
-              <button
-                style={canvasMode === 'draw' ? styles.sketchToolButtonActive : styles.sketchToolButton}
-                onClick={() => setCanvasMode('draw')}
-              >
-                Pen
-              </button>
-              <button
-                style={canvasMode === 'erase' ? styles.sketchToolButtonActive : styles.sketchToolButton}
-                onClick={() => setCanvasMode('erase')}
-              >
-                Erase
-              </button>
-              <button style={styles.sketchToolButton} onClick={() => clearCanvas('expanded')}>
-                Clear
-              </button>
-              <button style={styles.supportButtonWhiteStrong} onClick={discussSketch}>
-                Discuss My Sketch
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </div>
   )
 }
@@ -1088,7 +957,7 @@ function extractVocabularyCard(text) {
   }
 }
 
-function buildStyles({ isMobile, isTablet, isCompact, isSketchExpanded }) {
+function buildStyles({ isMobile, isTablet, isCompact }) {
   const desktopFixedHeight = !isCompact
 
   return {
@@ -1684,38 +1553,17 @@ function buildStyles({ isMobile, isTablet, isCompact, isSketchExpanded }) {
       cursor: 'pointer',
     },
 
-    sketchHeaderRow: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: isMobile ? 'flex-start' : 'center',
-      gap: '10px',
-      flexWrap: 'wrap',
-    },
-
-    expandSketchButton: {
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: '#ffffff',
-      color: '#24163f',
-      padding: '9px 12px',
-      borderRadius: '12px',
-      fontSize: '13px',
-      fontWeight: 800,
-      cursor: 'pointer',
-      flexShrink: 0,
-    },
-
     sketchToolbar: {
       display: 'flex',
       flexWrap: 'wrap',
       gap: '8px',
       flexShrink: 0,
-      order: 3,
     },
 
     sketchCanvasWrap: {
       width: '100%',
-      minHeight: isMobile ? '260px' : '360px',
-      height: isMobile ? '260px' : '360px',
+      minHeight: isMobile ? '340px' : '560px',
+      height: isMobile ? '340px' : '560px',
       borderRadius: '18px',
       border: '1px solid rgba(216, 220, 235, 0.95)',
       background: '#ffffff',
@@ -1761,18 +1609,6 @@ function buildStyles({ isMobile, isTablet, isCompact, isSketchExpanded }) {
       cursor: 'pointer',
     },
 
-    sketchToolButtonActive: {
-      border: '2px solid rgba(126, 92, 255, 0.50)',
-      background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(244,247,255,1) 100%)',
-      color: '#1d1236',
-      padding: '9px 12px',
-      borderRadius: '12px',
-      fontSize: '13px',
-      fontWeight: 800,
-      cursor: 'pointer',
-      boxShadow: '0 10px 22px rgba(0,0,0,0.12)',
-    },
-
     sketchCanvas: {
       width: '100%',
       height: '100%',
@@ -1780,83 +1616,6 @@ function buildStyles({ isMobile, isTablet, isCompact, isSketchExpanded }) {
       background: '#ffffff',
       touchAction: 'none',
       boxSizing: 'border-box',
-    },
-
-    sketchOverlay: {
-      position: 'fixed',
-      inset: 0,
-      zIndex: 1000,
-      background: 'rgba(12, 8, 24, 0.78)',
-      backdropFilter: 'blur(8px)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: isMobile ? '12px' : '20px',
-    },
-
-    sketchOverlayCard: {
-      width: 'min(1200px, 100%)',
-      height: isMobile ? '92vh' : '86vh',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '12px',
-      borderRadius: '24px',
-      padding: isMobile ? '16px' : '20px',
-      background:
-        'linear-gradient(180deg, rgba(19, 12, 39, 0.98) 0%, rgba(12, 9, 25, 0.96) 100%)',
-      border: '1px solid rgba(206, 170, 255, 0.16)',
-      boxShadow: '0 24px 70px rgba(0,0,0,0.34)',
-    },
-
-    sketchOverlayHeader: {
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: isMobile ? 'flex-start' : 'center',
-      gap: '12px',
-      flexWrap: 'wrap',
-    },
-
-    sketchOverlayTitle: {
-      fontSize: isMobile ? '20px' : '24px',
-      fontWeight: 800,
-      color: '#ffffff',
-    },
-
-    sketchOverlayText: {
-      fontSize: '13px',
-      color: '#ccbfff',
-      lineHeight: 1.4,
-      marginTop: '4px',
-    },
-
-    sketchOverlayCloseButton: {
-      background: '#ffffff',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      color: '#24163f',
-      padding: '10px 14px',
-      borderRadius: '14px',
-      fontSize: '13px',
-      fontWeight: 800,
-      cursor: 'pointer',
-      boxShadow: '0 10px 22px rgba(0,0,0,0.12)',
-    },
-
-    sketchOverlayCanvasWrap: {
-      width: '100%',
-      minHeight: 0,
-      flex: 1,
-      borderRadius: '18px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: '#ffffff',
-      overflow: 'hidden',
-      boxSizing: 'border-box',
-    },
-
-    sketchOverlayToolbar: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '8px',
-      flexShrink: 0,
     },
 
     toolStripCard: {
