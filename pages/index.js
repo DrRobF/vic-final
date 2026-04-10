@@ -9,11 +9,14 @@ export default function Home() {
         <main className="hero">
           <div className="badge">Virtual Co-Teacher</div>
 
-          <img
-            src="/vic-logo.png"
-            alt="VIC Logo"
-            className="vicLogo"
-          />
+          <div className="logoWrap">
+            <div className="logoGlow"></div>
+            <img
+              src="/vic-logo.png"
+              alt="VIC Logo"
+              className="vicLogo"
+            />
+          </div>
 
           <h2 className="headline">
             Most AI gives answers.
@@ -97,12 +100,40 @@ export default function Home() {
           margin-bottom: 22px;
         }
 
+        .logoWrap {
+          position: relative;
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          margin: 0 auto 22px;
+          width: 100%;
+          min-height: 220px;
+        }
+
+        .logoGlow {
+          position: absolute;
+          width: 360px;
+          height: 360px;
+          border-radius: 50%;
+          background: radial-gradient(
+            circle,
+            rgba(120, 130, 255, 0.26) 0%,
+            rgba(120, 130, 255, 0.14) 35%,
+            rgba(120, 130, 255, 0.06) 52%,
+            transparent 72%
+          );
+          filter: blur(42px);
+          z-index: 0;
+          pointer-events: none;
+        }
+
         .vicLogo {
-          width: min(240px, 55vw);
+          width: min(320px, 70vw);
           height: auto;
           display: block;
-          margin: 0 auto 22px;
-          filter: drop-shadow(0 0 18px rgba(120, 130, 255, 0.35));
+          position: relative;
+          z-index: 1;
+          filter: drop-shadow(0 0 28px rgba(120, 130, 255, 0.45));
         }
 
         .headline {
@@ -181,9 +212,18 @@ export default function Home() {
             padding: 34px 18px;
           }
 
+          .logoWrap {
+            min-height: 170px;
+            margin-bottom: 16px;
+          }
+
+          .logoGlow {
+            width: 250px;
+            height: 250px;
+          }
+
           .vicLogo {
-            width: min(190px, 62vw);
-            margin-bottom: 18px;
+            width: min(220px, 68vw);
           }
 
           .subtext {
