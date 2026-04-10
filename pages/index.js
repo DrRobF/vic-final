@@ -9,22 +9,70 @@ const SUGGESTIONS = [
 
 export default function Home() {
   const router = useRouter();
-  const [question, setQuestion] = useState("");
 
-  function launchVIC(e) {
-    if (e) e.preventDefault();
+  const [question, setQuestion] = useState("");
+  const [submittedQuestion, setSubmittedQuestion] = useState("");
+  const [reply, setReply] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleAsk(e) {
+    e.preventDefault();
 
     const trimmed = question.trim();
+    if (!trimmed || isLoading) return;
 
-    if (trimmed) {
-      router.push(`/askvic?starter=${encodeURIComponent(trimmed)}`);
-    } else {
-      router.push("/askvic");
+    setIsLoading(true);
+    setError("");
+    setReply("");
+    setSubmittedQuestion(trimmed);
+
+    try {
+      const response = await fetch("/api/vic", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: [{ role: "user", content: trimmed }],
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "VIC could not respond right now.");
+      }
+
+      setReply(data?.reply || "VIC could not respond right now.");
+    } catch (err) {
+      setError(err.message || "VIC could not respond right now.");
+    } finally {
+      setIsLoading(false);
     }
   }
 
   function useSuggestion(text) {
     setQuestion(text);
+    setError("");
+  }
+
+  function resetPreview() {
+    setQuestion("");
+    setSubmittedQuestion("");
+    setReply("");
+    setError("");
+    setIsLoading(false);
+  }
+
+  function openFullVIC() {
+    const starter = (submittedQuestion || question).trim();
+
+    if (starter) {
+      router.push(`/askvic?starter=${encodeURIComponent(starter)}`);
+    } else {
+      router.push("/askvic");
+    }
   }
 
   return (
@@ -37,32 +85,33 @@ export default function Home() {
         <main className="shell">
           <div className="brand">
             <img src="/vic-logo.png" alt="VIC Logo" className="brandLogo" />
-            <span className="brandText">VIC</span>
+            <div className="brandTextWrap">
+              <div className="brandText">VIC</div>
+              <div className="brandSub">Virtual Co-Teacher</div>
+            </div>
           </div>
-
-          <div className="topBadge">Virtual Co-Teacher</div>
 
           <section className="hero">
             <div className="heroLeft">
-              <div className="eyebrow">Not another answer machine</div>
+              <div className="eyebrow">Built to guide real learning</div>
 
               <h1 className="headline">
-                This doesn’t just answer questions.
-                <span> It teaches students how to think.</span>
+                VIC helps students
+                <span> think things through.</span>
               </h1>
 
               <p className="subtext">
-                Start with a real question. VIC takes it from there.
+                Ask one real question and watch VIC respond right here.
               </p>
 
               <div className="quietProof">
                 <span>Guides thinking</span>
-                <span>Checks understanding</span>
-                <span>Hints, not shortcuts</span>
+                <span>Builds understanding</span>
+                <span>Step-by-step support</span>
               </div>
 
               <div className="heroActions">
-                <button className="primaryButton" onClick={launchVIC}>
+                <button className="primaryButton" onClick={openFullVIC}>
                   Open Full VIC
                 </button>
               </div>
@@ -73,64 +122,92 @@ export default function Home() {
                 <div className="phoneGlow" />
 
                 <div className="phoneShell">
-                  <div className="phoneTopBar">
-                    <div className="phoneCam" />
-                    <div className="phoneTitle">VIC</div>
-                    <div className="phoneStatus">Launch</div>
-                  </div>
-
                   <div className="miniApp">
-                    <div className="miniHeader">
-                      <img
-                        src="/vic-logo.png"
-                        alt="VIC Logo"
-                        className="miniLogo"
-                      />
-                      <div className="miniHeaderText">
-                        <div className="miniHeaderTitle">Start with a question</div>
-                        <div className="miniHeaderSub">
-                          Your question opens a real VIC session
-                        </div>
-                      </div>
-                    </div>
+                    <div className="launcherCard">
+                      {!reply && !submittedQuestion ? (
+                        <>
+                          <label className="inputLabel" htmlFor="vic-question">
+                            Ask VIC one question
+                          </label>
 
-                    <div className="miniWorkspace">
-                      <div className="workspaceTabs">
-                        <span className="tab active">Chat</span>
-                        <span className="tab">Practice</span>
-                        <span className="tab">Sketch</span>
-                      </div>
+                          <textarea
+                            id="vic-question"
+                            value={question}
+                            onChange={(e) => setQuestion(e.target.value)}
+                            placeholder="Type your question here..."
+                            rows={6}
+                            disabled={isLoading}
+                          />
 
-                      <form className="launcherCard" onSubmit={launchVIC}>
-                        <label className="inputLabel" htmlFor="vic-question">
-                          Ask VIC something
-                        </label>
+                          <div className="suggestions">
+                            {SUGGESTIONS.map((item) => (
+                              <button
+                                key={item}
+                                type="button"
+                                className="suggestionChip"
+                                onClick={() => useSuggestion(item)}
+                                disabled={isLoading}
+                              >
+                                {item}
+                              </button>
+                            ))}
+                          </div>
 
-                        <textarea
-                          id="vic-question"
-                          value={question}
-                          onChange={(e) => setQuestion(e.target.value)}
-                          placeholder="Type your question here..."
-                          rows={6}
-                        />
+                          <button
+                            type="button"
+                            className="launchButton"
+                            onClick={handleAsk}
+                            disabled={!question.trim() || isLoading}
+                          >
+                            {isLoading ? "VIC is thinking..." : "Ask VIC"}
+                          </button>
 
-                        <div className="suggestions">
-                          {SUGGESTIONS.map((item) => (
+                          {error ? <div className="errorBox">{error}</div> : null}
+                        </>
+                      ) : (
+                        <>
+                          <div className="conversation">
+                            <div className="bubble userBubble">
+                              <div className="bubbleLabel">You</div>
+                              <p>{submittedQuestion}</p>
+                            </div>
+
+                            {isLoading ? (
+                              <div className="bubble vicBubble">
+                                <div className="bubbleLabel">VIC</div>
+                                <p>Thinking it through...</p>
+                              </div>
+                            ) : null}
+
+                            {!isLoading && reply ? (
+                              <div className="bubble vicBubble">
+                                <div className="bubbleLabel">VIC</div>
+                                <p>{reply}</p>
+                              </div>
+                            ) : null}
+
+                            {error ? <div className="errorBox">{error}</div> : null}
+                          </div>
+
+                          <div className="followupActions">
                             <button
-                              key={item}
                               type="button"
-                              className="suggestionChip"
-                              onClick={() => useSuggestion(item)}
+                              className="launchButton"
+                              onClick={openFullVIC}
                             >
-                              {item}
+                              Continue in Full VIC
                             </button>
-                          ))}
-                        </div>
 
-                        <button type="submit" className="launchButton">
-                          Ask VIC
-                        </button>
-                      </form>
+                            <button
+                              type="button"
+                              className="secondaryButton"
+                              onClick={resetPreview}
+                            >
+                              Ask another question
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -211,7 +288,7 @@ export default function Home() {
             linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
           background-size: 46px 46px;
-          mask-image: linear-gradient(180deg, rgba(255,255,255,0.24), transparent 78%);
+          mask-image: linear-gradient(180deg, rgba(255,255,255,0.22), transparent 78%);
           pointer-events: none;
         }
 
@@ -225,54 +302,52 @@ export default function Home() {
         }
 
         .brand {
-          position: absolute;
-          top: 18px;
-          left: 22px;
           display: flex;
           align-items: center;
-          gap: 10px;
-          z-index: 5;
+          gap: 16px;
+          margin-bottom: 26px;
         }
 
         .brandLogo {
-          width: 42px;
-          height: 42px;
+          width: 84px;
+          height: 84px;
           object-fit: contain;
-          filter: drop-shadow(0 0 16px rgba(126, 137, 255, 0.25));
+          filter: drop-shadow(0 0 22px rgba(126, 137, 255, 0.28));
+          flex-shrink: 0;
+        }
+
+        .brandTextWrap {
+          display: flex;
+          flex-direction: column;
+          gap: 3px;
         }
 
         .brandText {
-          font-size: 16px;
+          font-size: 30px;
           font-weight: 800;
-          letter-spacing: 0.08em;
-          color: rgba(255,255,255,0.88);
+          letter-spacing: 0.04em;
+          color: rgba(255,255,255,0.96);
+          line-height: 1;
         }
 
-        .topBadge {
-          width: fit-content;
-          margin: 0 auto 20px;
-          padding: 10px 16px;
-          border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.1);
-          background: rgba(255,255,255,0.04);
-          color: rgba(255,255,255,0.8);
-          font-size: 12px;
+        .brandSub {
+          font-size: 13px;
           letter-spacing: 0.16em;
           text-transform: uppercase;
-          backdrop-filter: blur(10px);
+          color: rgba(255,255,255,0.58);
         }
 
         .hero {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(380px, 420px);
+          grid-template-columns: minmax(0, 1fr) minmax(390px, 430px);
           gap: 48px;
           align-items: start;
-          min-height: calc(100vh - 120px);
+          min-height: calc(100vh - 170px);
         }
 
         .heroLeft {
-          padding-top: 54px;
-          max-width: 720px;
+          padding-top: 28px;
+          max-width: 760px;
         }
 
         .eyebrow {
@@ -285,11 +360,11 @@ export default function Home() {
 
         .headline {
           margin: 0;
-          font-size: clamp(44px, 6vw, 78px);
-          line-height: 0.96;
+          font-size: clamp(46px, 6vw, 82px);
+          line-height: 0.95;
           letter-spacing: -0.065em;
           font-weight: 800;
-          max-width: 680px;
+          max-width: 760px;
         }
 
         .headline span {
@@ -298,11 +373,11 @@ export default function Home() {
         }
 
         .subtext {
-          max-width: 580px;
+          max-width: 600px;
           margin: 24px 0 0;
-          font-size: 20px;
+          font-size: 21px;
           line-height: 1.65;
-          color: rgba(255,255,255,0.7);
+          color: rgba(255,255,255,0.72);
         }
 
         .quietProof {
@@ -317,24 +392,21 @@ export default function Home() {
           border-radius: 999px;
           border: 1px solid rgba(255,255,255,0.08);
           background: rgba(255,255,255,0.04);
-          color: rgba(255,255,255,0.78);
+          color: rgba(255,255,255,0.8);
           font-size: 14px;
         }
 
         .heroActions {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          flex-wrap: wrap;
           margin-top: 30px;
         }
 
         .primaryButton,
-        .launchButton {
+        .launchButton,
+        .secondaryButton {
           border: none;
           cursor: pointer;
           font-weight: 800;
-          transition: transform 0.16s ease, box-shadow 0.16s ease;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
         }
 
         .primaryButton {
@@ -347,6 +419,7 @@ export default function Home() {
 
         .primaryButton:hover,
         .launchButton:hover,
+        .secondaryButton:hover,
         .suggestionChip:hover {
           transform: translateY(-1px);
         }
@@ -355,13 +428,13 @@ export default function Home() {
           display: flex;
           justify-content: flex-end;
           align-items: flex-start;
-          padding-top: 6px;
+          padding-top: 12px;
         }
 
         .phoneWrap {
           position: relative;
           width: 100%;
-          max-width: 390px;
+          max-width: 400px;
           margin-left: auto;
         }
 
@@ -386,138 +459,42 @@ export default function Home() {
             inset 0 1px 0 rgba(255,255,255,0.05);
         }
 
-        .phoneTopBar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          padding: 8px 10px 14px;
-          color: rgba(255,255,255,0.76);
-          font-size: 13px;
-        }
-
-        .phoneCam {
-          width: 42px;
-          height: 8px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.12);
-          flex-shrink: 0;
-        }
-
-        .phoneTitle {
-          font-weight: 700;
-          letter-spacing: 0.04em;
-        }
-
-        .phoneStatus {
-          color: #9db0ff;
-          font-size: 12px;
-          white-space: nowrap;
-        }
-
         .miniApp {
           border-radius: 28px;
           overflow: hidden;
           background: #f5f7fb;
           color: #101418;
-          height: 620px;
+          min-height: 620px;
           display: flex;
           flex-direction: column;
-        }
-
-        .miniHeader {
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 16px 16px 14px;
-          background: white;
-          border-bottom: 1px solid #e8edf5;
-        }
-
-        .miniLogo {
-          width: 36px;
-          height: 36px;
-          object-fit: contain;
-          border-radius: 10px;
-          background: #eff3ff;
-          padding: 5px;
-          flex-shrink: 0;
-        }
-
-        .miniHeaderText {
-          min-width: 0;
-        }
-
-        .miniHeaderTitle {
-          font-size: 18px;
-          font-weight: 800;
-          color: #0f1720;
-          line-height: 1.2;
-        }
-
-        .miniHeaderSub {
-          margin-top: 4px;
-          font-size: 13px;
-          color: #68768a;
-          line-height: 1.35;
-        }
-
-        .miniWorkspace {
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-          padding: 12px;
-          gap: 10px;
-        }
-
-        .workspaceTabs {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .tab {
-          padding: 7px 12px;
-          border-radius: 999px;
-          background: #e9eef8;
-          color: #55657c;
-          font-size: 12px;
-          font-weight: 700;
-        }
-
-        .tab.active {
-          background: #dfe7ff;
-          color: #3251d2;
         }
 
         .launcherCard {
           flex: 1;
-          background: white;
-          border: 1px solid #e6ebf2;
-          border-radius: 18px;
-          padding: 14px;
+          background: #f5f7fb;
+          padding: 18px;
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 14px;
         }
 
         .inputLabel {
-          font-size: 13px;
-          font-weight: 700;
-          color: #516178;
+          font-size: 18px;
+          font-weight: 800;
+          color: #132033;
         }
 
         .launcherCard textarea {
           width: 100%;
-          border: 1px solid #e6ebf2;
-          border-radius: 14px;
+          border: 1px solid #dde6f3;
+          border-radius: 16px;
           outline: none;
           resize: none;
-          background: #fbfcfe;
+          background: #ffffff;
           color: #17212b;
           font-size: 15px;
           line-height: 1.55;
-          min-height: 130px;
+          min-height: 140px;
           padding: 14px;
         }
 
@@ -533,9 +510,9 @@ export default function Home() {
 
         .suggestionChip {
           border: none;
-          background: #eef2f8;
-          color: #4d5f79;
-          padding: 7px 10px;
+          background: #e8eef8;
+          color: #41536e;
+          padding: 8px 11px;
           border-radius: 999px;
           font-size: 12px;
           cursor: pointer;
@@ -543,15 +520,95 @@ export default function Home() {
         }
 
         .suggestionChip:hover {
-          background: #e4ebf8;
+          background: #dfe8f7;
         }
 
         .launchButton {
           border-radius: 14px;
-          padding: 14px 16px;
+          padding: 15px 16px;
           color: white;
           background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
           box-shadow: 0 10px 24px rgba(97,113,255,0.22);
+        }
+
+        .launchButton:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .conversation {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+        }
+
+        .bubble {
+          padding: 14px 15px;
+          border-radius: 18px;
+          line-height: 1.6;
+          box-shadow: 0 8px 20px rgba(21, 33, 52, 0.06);
+        }
+
+        .bubbleLabel {
+          font-size: 10px;
+          letter-spacing: 0.13em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+          font-weight: 800;
+        }
+
+        .bubble p {
+          margin: 0;
+          font-size: 15px;
+          line-height: 1.6;
+          white-space: pre-wrap;
+        }
+
+        .userBubble {
+          align-self: flex-start;
+          background: #ffffff;
+          border: 1px solid #e3e9f3;
+          color: #17212b;
+        }
+
+        .userBubble .bubbleLabel {
+          color: #7a8798;
+        }
+
+        .vicBubble {
+          align-self: flex-start;
+          background: linear-gradient(135deg, #edf1ff 0%, #e5ebff 100%);
+          border: 1px solid #d2ddff;
+          color: #1f2950;
+        }
+
+        .vicBubble .bubbleLabel {
+          color: #5670d8;
+        }
+
+        .followupActions {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 4px;
+        }
+
+        .secondaryButton {
+          border-radius: 14px;
+          padding: 13px 16px;
+          background: #e9eef8;
+          color: #30425c;
+        }
+
+        .errorBox {
+          border-radius: 14px;
+          padding: 12px 14px;
+          background: #fff1f3;
+          border: 1px solid #f2c9d0;
+          color: #b23a4a;
+          font-size: 14px;
+          line-height: 1.5;
         }
 
         .footer {
@@ -563,26 +620,15 @@ export default function Home() {
         }
 
         @media (max-width: 1100px) {
-          .brand {
-            position: relative;
-            top: auto;
-            left: auto;
-            margin-bottom: 18px;
-          }
-
-          .topBadge {
-            margin-top: 0;
-          }
-
           .hero {
             grid-template-columns: 1fr;
-            gap: 28px;
+            gap: 32px;
             min-height: auto;
           }
 
           .heroLeft {
-            padding-top: 20px;
             max-width: 100%;
+            padding-top: 12px;
           }
 
           .heroRight {
@@ -599,21 +645,26 @@ export default function Home() {
             padding: 18px 14px 32px;
           }
 
-          .headline {
-            font-size: clamp(38px, 11vw, 58px);
-          }
-
-          .subtext {
-            font-size: 17px;
+          .brand {
+            gap: 12px;
+            margin-bottom: 20px;
           }
 
           .brandLogo {
-            width: 38px;
-            height: 38px;
+            width: 62px;
+            height: 62px;
           }
 
           .brandText {
-            font-size: 15px;
+            font-size: 24px;
+          }
+
+          .headline {
+            font-size: clamp(40px, 12vw, 62px);
+          }
+
+          .subtext {
+            font-size: 18px;
           }
 
           .phoneWrap {
@@ -621,7 +672,7 @@ export default function Home() {
           }
 
           .miniApp {
-            height: 600px;
+            min-height: 600px;
           }
         }
       `}</style>
