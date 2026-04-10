@@ -6,115 +6,36 @@ export default function Home() {
   return (
     <>
       <div className="page">
-        <div className="bg-grid" />
-        <div className="glow glow-1" />
-        <div className="glow glow-2" />
-        <div className="glow glow-3" />
-        <div className="noise" />
-        <div className="vignette" />
-
         <main className="hero">
           <div className="badge">Virtual Co-Teacher</div>
 
-          <div className="logoWrap">
-            <div className="logoRing ring-1" />
-            <div className="logoRing ring-2" />
-            <div className="logoCore" />
-            <h1 className="logo">VIC</h1>
-          </div>
+          <h1 className="logo">VIC</h1>
 
-          <div className="heroShell">
-            <section className="heroCopy">
-              <p className="eyebrow">The next evolution of learning support</p>
+          <h2 className="headline">
+            Most AI gives answers.
+            <br />
+            <span>VIC teaches students how to think.</span>
+          </h2>
 
-              <h2 className="headline">
-                Most AI gives answers.
-                <br />
-                <span>VIC teaches students how to think.</span>
-              </h2>
-
-              <p className="subtext">
-                A premium AI co-teacher built to guide, check, and adapt like
-                real academic support.
-              </p>
-
-              <div className="ctaBlock">
-                <button
-                  className="cta"
-                  onClick={() => router.push("/askvic")}
-                >
-                  Try VIC Now
-                </button>
-                <p className="ctaSub">No signup. Instant help.</p>
-              </div>
-
-              <div className="microFeatures">
-                <span>Guides step-by-step</span>
-                <span>Checks understanding</span>
-                <span>Adapts to the learner</span>
-              </div>
-            </section>
-
-            <section className="demoWrap">
-              <p className="demoIntro">See how VIC teaches:</p>
-
-              <div className="demoCard">
-                <div className="demoTop">
-                  <div className="dots">
-                    <span />
-                    <span />
-                    <span />
-                  </div>
-                  <div className="demoLabel">Live preview</div>
-                </div>
-
-                <div className="demoBody">
-                  <div className="chatRow user">
-                    <div className="bubble userBubble">
-                      <div className="bubbleLabel">You</div>
-                      <div className="bubbleText">
-                        I don’t get this… why do we flip the fraction?
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="chatRow vic">
-                    <div className="bubble vicBubble">
-                      <div className="bubbleLabel vicName">VIC</div>
-                      <div className="bubbleText responseText">
-                        Great question. Let’s slow it down.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="chatRow vic">
-                    <div className="bubble vicBubble">
-                      <div className="bubbleText responseText">
-                        Dividing by a fraction means multiplying by its reciprocal.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="chatRow vic">
-                    <div className="bubble vicBubble">
-                      <div className="bubbleText responseText">
-                        So 3/4 ÷ 1/2 becomes 3/4 × 2. Now what do you get?
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="demoBottom">
-                  <span>Personalized help</span>
-                  <span>Step-by-step guidance</span>
-                </div>
-              </div>
-            </section>
-          </div>
-
-          <p className="bottomLine">
-            Built for students, parents, and teachers
+          <p className="subtext">
+            A premium AI co-teacher built to guide, check, and adapt like real academic support.
           </p>
+
+          <button className="cta" onClick={() => router.push("/askvic")}>
+            Try VIC Now
+          </button>
+
+          <p className="ctaSub">No signup. Instant help.</p>
+
+          <div className="demoCard">
+            <div className="demoLabel">Example</div>
+            <p className="userLine">
+              <strong>You:</strong> I don’t get this… why do we flip the fraction?
+            </p>
+            <p className="vicLine">
+              <strong>VIC:</strong> Great question. Dividing by a fraction means multiplying by its reciprocal. So 3/4 ÷ 1/2 becomes 3/4 × 2.
+            </p>
+          </div>
         </main>
       </div>
 
@@ -126,9 +47,9 @@ export default function Home() {
           padding: 0;
           width: 100%;
           min-height: 100%;
-          background: #030303;
-          font-family: Inter, ui-sans-serif, system-ui, -apple-system,
-            BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font-family: Inter, Arial, sans-serif;
+          background: #050505;
+          color: white;
         }
 
         * {
@@ -136,574 +57,132 @@ export default function Home() {
         }
 
         .page {
-          position: relative;
           min-height: 100vh;
-          overflow: hidden;
           background:
-            radial-gradient(circle at 18% 22%, rgba(72, 103, 255, 0.18), transparent 26%),
-            radial-gradient(circle at 82% 24%, rgba(123, 73, 255, 0.16), transparent 24%),
-            radial-gradient(circle at 48% 76%, rgba(0, 194, 255, 0.10), transparent 28%),
-            linear-gradient(180deg, #050505 0%, #07070a 45%, #040404 100%);
-          color: white;
-        }
-
-        .bg-grid {
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-          background-size: 46px 46px;
-          mask-image: radial-gradient(circle at center, black 38%, transparent 88%);
-          opacity: 0.35;
-          pointer-events: none;
-        }
-
-        .noise {
-          position: absolute;
-          inset: 0;
-          background-image: radial-gradient(rgba(255,255,255,0.03) 0.7px, transparent 0.7px);
-          background-size: 10px 10px;
-          opacity: 0.16;
-          mix-blend-mode: soft-light;
-          pointer-events: none;
-        }
-
-        .vignette {
-          position: absolute;
-          inset: 0;
-          background: radial-gradient(circle at center, transparent 42%, rgba(0, 0, 0, 0.42) 100%);
-          pointer-events: none;
-        }
-
-        .glow {
-          position: absolute;
-          border-radius: 999px;
-          filter: blur(100px);
-          opacity: 0.56;
-          animation: floatGlow 12s ease-in-out infinite;
-          pointer-events: none;
-        }
-
-        .glow-1 {
-          width: 360px;
-          height: 360px;
-          top: 8%;
-          left: 12%;
-          background: rgba(83, 108, 255, 0.34);
-        }
-
-        .glow-2 {
-          width: 300px;
-          height: 300px;
-          right: 10%;
-          top: 18%;
-          background: rgba(127, 74, 255, 0.28);
-          animation-delay: 1.4s;
-        }
-
-        .glow-3 {
-          width: 340px;
-          height: 340px;
-          left: 36%;
-          bottom: 8%;
-          background: rgba(0, 188, 255, 0.14);
-          animation-delay: 2.2s;
+            radial-gradient(circle at top left, rgba(72, 103, 255, 0.18), transparent 30%),
+            radial-gradient(circle at bottom right, rgba(123, 73, 255, 0.14), transparent 28%),
+            linear-gradient(180deg, #050505 0%, #0a0a0f 100%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
         }
 
         .hero {
-          position: relative;
-          z-index: 2;
-          min-height: 100vh;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          padding: 34px 20px 28px;
+          width: 100%;
+          max-width: 900px;
           text-align: center;
+          padding: 48px 28px;
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 28px;
+          background: rgba(255,255,255,0.04);
+          backdrop-filter: blur(10px);
+          box-shadow: 0 20px 60px rgba(0,0,0,0.45);
         }
 
         .badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 10px 16px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
+          display: inline-block;
+          padding: 8px 14px;
           border-radius: 999px;
-          background: rgba(255, 255, 255, 0.05);
-          backdrop-filter: blur(16px);
-          color: rgba(255, 255, 255, 0.85);
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.05);
           font-size: 12px;
-          letter-spacing: 0.16em;
+          letter-spacing: 0.14em;
           text-transform: uppercase;
-          margin-bottom: 18px;
-          box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
-        }
-
-        .logoWrap {
-          position: relative;
-          width: 100%;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          margin-bottom: 16px;
-          min-height: 145px;
-        }
-
-        .logoRing,
-        .logoCore {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          border-radius: 999px;
-          pointer-events: none;
-        }
-
-        .logoRing {
-          border: 1px solid rgba(145, 157, 255, 0.16);
-          animation: pulseRing 5s ease-in-out infinite;
-        }
-
-        .ring-1 {
-          width: 180px;
-          height: 180px;
-        }
-
-        .ring-2 {
-          width: 236px;
-          height: 236px;
-          animation-delay: 1.2s;
-          opacity: 0.55;
-        }
-
-        .logoCore {
-          width: 164px;
-          height: 164px;
-          background: radial-gradient(circle, rgba(97, 113, 255, 0.25) 0%, rgba(97, 113, 255, 0.08) 45%, transparent 74%);
-          filter: blur(18px);
+          color: rgba(255,255,255,0.8);
+          margin-bottom: 22px;
         }
 
         .logo {
-          position: relative;
-          margin: 0;
-          font-size: clamp(82px, 13vw, 162px);
+          margin: 0 0 18px;
+          font-size: clamp(72px, 12vw, 130px);
+          line-height: 0.9;
           font-weight: 900;
-          line-height: 0.88;
           letter-spacing: -0.08em;
-          background: linear-gradient(180deg, #ffffff 0%, #edf0ff 38%, #c6d0ff 100%);
+          background: linear-gradient(180deg, #ffffff 0%, #d7deff 100%);
           -webkit-background-clip: text;
           -webkit-text-fill-color: transparent;
           background-clip: text;
-          text-shadow:
-            0 0 24px rgba(123, 133, 255, 0.18),
-            0 0 50px rgba(123, 133, 255, 0.12);
-        }
-
-        .heroShell {
-          width: 100%;
-          max-width: 1220px;
-          display: grid;
-          grid-template-columns: minmax(0, 1fr) 420px;
-          gap: 24px;
-          align-items: center;
-        }
-
-        .heroCopy {
-          border-radius: 30px;
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          background: linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.08) 0%,
-            rgba(255, 255, 255, 0.04) 100%
-          );
-          backdrop-filter: blur(22px);
-          box-shadow:
-            0 20px 80px rgba(0, 0, 0, 0.55),
-            inset 0 1px 0 rgba(255,255,255,0.08);
-          text-align: left;
-          padding: 38px 38px 34px;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          min-height: 560px;
-        }
-
-        .eyebrow {
-          margin: 0 0 16px;
-          font-size: 12px;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          color: rgba(180, 188, 255, 0.80);
         }
 
         .headline {
           margin: 0;
-          font-size: clamp(44px, 5vw, 82px);
-          line-height: 0.98;
-          font-weight: 850;
+          font-size: clamp(34px, 5vw, 62px);
+          line-height: 1.02;
+          font-weight: 800;
           letter-spacing: -0.05em;
-          color: #ffffff;
         }
 
         .headline span {
-          display: inline-block;
-          background: linear-gradient(90deg, #ffffff 0%, #ccd5ff 42%, #92a5ff 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+          color: #9fb0ff;
         }
 
         .subtext {
-          max-width: 720px;
-          margin: 20px 0 0;
-          font-size: clamp(18px, 2vw, 23px);
-          line-height: 1.55;
-          color: rgba(255, 255, 255, 0.74);
-        }
-
-        .ctaBlock {
-          margin-top: 28px;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-start;
+          max-width: 680px;
+          margin: 20px auto 0;
+          font-size: 18px;
+          line-height: 1.6;
+          color: rgba(255,255,255,0.72);
         }
 
         .cta {
-          appearance: none;
+          margin-top: 30px;
           border: none;
-          cursor: pointer;
-          padding: 20px 38px;
-          min-width: 240px;
           border-radius: 18px;
+          padding: 18px 34px;
+          min-width: 230px;
           font-size: 22px;
           font-weight: 800;
           color: white;
+          cursor: pointer;
           background: linear-gradient(135deg, #6574ff 0%, #7b61ff 55%, #4c7dff 100%);
-          box-shadow:
-            0 18px 48px rgba(97, 113, 255, 0.42),
-            0 0 34px rgba(97, 113, 255, 0.26);
-          transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-          animation: pulseButton 3s ease-in-out infinite;
-        }
-
-        .cta:hover {
-          transform: translateY(-2px) scale(1.015);
-          box-shadow:
-            0 22px 58px rgba(97, 113, 255, 0.54),
-            0 0 42px rgba(97, 113, 255, 0.32);
-          filter: brightness(1.06);
+          box-shadow: 0 16px 44px rgba(97,113,255,0.38);
         }
 
         .ctaSub {
-          margin: 10px 0 0;
+          margin-top: 10px;
           font-size: 14px;
-          color: rgba(255, 255, 255, 0.62);
-        }
-
-        .microFeatures {
-          margin-top: 24px;
-          display: flex;
-          flex-wrap: wrap;
-          gap: 12px;
-        }
-
-        .microFeatures span {
-          padding: 11px 16px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.07);
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          color: rgba(255, 255, 255, 0.90);
-          font-size: 14px;
-          font-weight: 500;
-          backdrop-filter: blur(10px);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
-        }
-
-        .demoWrap {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          align-self: stretch;
-          justify-content: center;
-        }
-
-        .demoIntro {
-          margin: 0 4px;
-          text-align: left;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.72);
-          letter-spacing: 0.01em;
+          color: rgba(255,255,255,0.58);
         }
 
         .demoCard {
-          border-radius: 28px;
-          border: 1px solid rgba(255, 255, 255, 0.10);
-          background: linear-gradient(
-            180deg,
-            rgba(255, 255, 255, 0.08) 0%,
-            rgba(255, 255, 255, 0.04) 100%
-          );
-          backdrop-filter: blur(22px);
-          box-shadow:
-            0 20px 80px rgba(0, 0, 0, 0.55),
-            inset 0 1px 0 rgba(255,255,255,0.08);
-          padding: 18px 18px 16px;
-          display: flex;
-          flex-direction: column;
-          min-height: 470px;
+          margin: 32px auto 0;
+          max-width: 640px;
           text-align: left;
-          overflow: hidden;
-          position: relative;
-        }
-
-        .demoCard::before {
-          content: "";
-          position: absolute;
-          inset: 0;
-          background:
-            radial-gradient(circle at top right, rgba(103, 114, 255, 0.16), transparent 32%),
-            radial-gradient(circle at bottom left, rgba(0, 194, 255, 0.10), transparent 34%);
-          pointer-events: none;
-        }
-
-        .demoTop,
-        .demoBody,
-        .demoBottom {
-          position: relative;
-          z-index: 1;
-        }
-
-        .demoTop {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 2px 4px 14px;
-        }
-
-        .dots {
-          display: flex;
-          gap: 7px;
-        }
-
-        .dots span {
-          width: 10px;
-          height: 10px;
-          border-radius: 50%;
-        }
-
-        .dots span:nth-child(1) {
-          background: rgba(255, 110, 110, 0.7);
-        }
-
-        .dots span:nth-child(2) {
-          background: rgba(255, 205, 90, 0.75);
-        }
-
-        .dots span:nth-child(3) {
-          background: rgba(98, 214, 121, 0.72);
+          padding: 20px;
+          border-radius: 22px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.05);
         }
 
         .demoLabel {
           font-size: 12px;
+          text-transform: uppercase;
           letter-spacing: 0.14em;
-          text-transform: uppercase;
-          color: rgba(190, 198, 255, 0.78);
+          color: rgba(190,198,255,0.78);
+          margin-bottom: 14px;
         }
 
-        .demoBody {
-          display: flex;
-          flex-direction: column;
-          gap: 12px;
-          margin-top: 6px;
-          flex: 1;
-          justify-content: flex-start;
-          padding-top: 6px;
+        .userLine,
+        .vicLine {
+          margin: 0 0 12px;
+          font-size: 16px;
+          line-height: 1.6;
+          color: rgba(255,255,255,0.9);
         }
 
-        .chatRow {
-          display: flex;
-          width: 100%;
-        }
-
-        .chatRow.user {
-          justify-content: flex-end;
-        }
-
-        .chatRow.vic {
-          justify-content: flex-start;
-        }
-
-        .bubble {
-          width: min(100%, 320px);
-          border-radius: 20px;
-          padding: 14px 14px 12px;
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
-        }
-
-        .userBubble {
-          background: linear-gradient(135deg, rgba(101, 116, 255, 0.92), rgba(120, 97, 255, 0.88));
-        }
-
-        .vicBubble {
-          background: rgba(255, 255, 255, 0.06);
-          backdrop-filter: blur(12px);
-        }
-
-        .bubbleLabel {
-          font-size: 11px;
-          font-weight: 700;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.82);
-          margin-bottom: 8px;
-        }
-
-        .vicName {
-          color: rgba(200, 208, 255, 0.92);
-        }
-
-        .bubbleText {
-          font-size: 15px;
-          line-height: 1.5;
-          color: white;
-          word-break: break-word;
-        }
-
-        .responseText {
-          color: rgba(255, 255, 255, 0.88);
-        }
-
-        .demoBottom {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          padding-top: 14px;
-        }
-
-        .demoBottom span {
-          padding: 10px 14px;
-          border-radius: 999px;
-          background: rgba(255, 255, 255, 0.06);
-          border: 1px solid rgba(255, 255, 255, 0.08);
-          color: rgba(255, 255, 255, 0.82);
-          font-size: 13px;
-        }
-
-        .bottomLine {
-          margin-top: 18px;
-          font-size: 14px;
-          color: rgba(255, 255, 255, 0.50);
-          letter-spacing: 0.02em;
-        }
-
-        @keyframes floatGlow {
-          0%, 100% {
-            transform: translateY(0px) translateX(0px) scale(1);
-          }
-          50% {
-            transform: translateY(-18px) translateX(10px) scale(1.04);
-          }
-        }
-
-        @keyframes pulseRing {
-          0%, 100% {
-            opacity: 0.45;
-            transform: translate(-50%, -50%) scale(1);
-          }
-          50% {
-            opacity: 0.75;
-            transform: translate(-50%, -50%) scale(1.03);
-          }
-        }
-
-        @keyframes pulseButton {
-          0%, 100% {
-            box-shadow:
-              0 18px 48px rgba(97, 113, 255, 0.42),
-              0 0 34px rgba(97, 113, 255, 0.26);
-          }
-          50% {
-            box-shadow:
-              0 22px 56px rgba(97, 113, 255, 0.56),
-              0 0 44px rgba(97, 113, 255, 0.34);
-          }
-        }
-
-        @media (max-width: 1100px) {
-          .heroShell {
-            grid-template-columns: 1fr;
-            max-width: 860px;
-          }
-
-          .heroCopy,
-          .demoCard {
-            min-height: auto;
-          }
-
-          .heroCopy {
-            text-align: center;
-            padding: 30px 24px 28px;
-          }
-
-          .ctaBlock {
-            align-items: center;
-          }
-
-          .microFeatures {
-            justify-content: center;
-          }
-
-          .demoIntro {
-            text-align: center;
-          }
+        .vicLine {
+          margin-bottom: 0;
+          color: rgba(255,255,255,0.82);
         }
 
         @media (max-width: 768px) {
           .hero {
-            padding: 28px 14px 24px;
-          }
-
-          .logoWrap {
-            min-height: 118px;
-            margin-bottom: 12px;
-          }
-
-          .ring-1 {
-            width: 138px;
-            height: 138px;
-          }
-
-          .ring-2 {
-            width: 182px;
-            height: 182px;
-          }
-
-          .logoCore {
-            width: 126px;
-            height: 126px;
-          }
-
-          .heroCopy,
-          .demoCard {
-            border-radius: 22px;
-          }
-
-          .heroCopy {
-            padding: 24px 18px 22px;
-          }
-
-          .demoCard {
-            padding: 16px 14px 14px;
-          }
-
-          .headline {
-            font-size: clamp(34px, 10vw, 52px);
+            padding: 34px 18px;
           }
 
           .subtext {
-            font-size: 17px;
+            font-size: 16px;
           }
 
           .cta {
@@ -712,11 +191,8 @@ export default function Home() {
             font-size: 20px;
           }
 
-          .bubble {
-            width: 100%;
-          }
-
-          .bubbleText {
+          .userLine,
+          .vicLine {
             font-size: 15px;
           }
         }
