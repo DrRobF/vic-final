@@ -9,7 +9,11 @@ export default function Home() {
         <main className="hero">
           <div className="badge">Virtual Co-Teacher</div>
 
-          <h1 className="logo">VIC</h1>
+          <img
+            src="/vic-logo.png"
+            alt="VIC Logo"
+            className="vicLogo"
+          />
 
           <h2 className="headline">
             Most AI gives answers.
@@ -93,16 +97,12 @@ export default function Home() {
           margin-bottom: 22px;
         }
 
-        .logo {
-          margin: 0 0 18px;
-          font-size: clamp(72px, 12vw, 130px);
-          line-height: 0.9;
-          font-weight: 900;
-          letter-spacing: -0.08em;
-          background: linear-gradient(180deg, #ffffff 0%, #d7deff 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          background-clip: text;
+        .vicLogo {
+          width: min(240px, 55vw);
+          height: auto;
+          display: block;
+          margin: 0 auto 22px;
+          filter: drop-shadow(0 0 18px rgba(120, 130, 255, 0.35));
         }
 
         .headline {
@@ -179,6 +179,11 @@ export default function Home() {
         @media (max-width: 768px) {
           .hero {
             padding: 34px 18px;
+          }
+
+          .vicLogo {
+            width: min(190px, 62vw);
+            margin-bottom: 18px;
           }
 
           .subtext {
