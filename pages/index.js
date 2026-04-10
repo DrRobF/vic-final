@@ -10,7 +10,7 @@ export default function Home() {
 
   async function askVIC(e) {
     e.preventDefault();
-    if (!question.trim()) return;
+    if (!question.trim() || loading) return;
 
     setLoading(true);
     setReply("");
@@ -26,7 +26,7 @@ export default function Home() {
             {
               role: "system",
               content:
-                "You are VIC, a helpful teacher. Answer the student's question clearly and simply in 2–4 sentences. Do NOT ask follow-up questions. Do NOT ask for grade level. Just help them understand.",
+                "You are VIC, a helpful teacher. Answer the student's question clearly and simply in 2 to 4 sentences. Do not ask follow-up questions. Do not ask for grade level. Just help them understand.",
             },
             {
               role: "user",
@@ -37,17 +37,19 @@ export default function Home() {
       });
 
       const data = await res.json();
-      setReply(data.reply);
+      setReply(data.reply || "Sorry, I had trouble responding.");
     } catch (err) {
       setReply("Something went wrong.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
-  function openFull() {
-    if (question.trim()) {
-      router.push(`/askvic?starter=${encodeURIComponent(question)}`);
+  function openFullVIC() {
+    const trimmed = question.trim();
+
+    if (trimmed) {
+      router.push(`/askvic?starter=${encodeURIComponent(trimmed)}`);
     } else {
       router.push("/askvic");
     }
@@ -56,178 +58,614 @@ export default function Home() {
   return (
     <>
       <div className="page">
-        <main className="container">
+        <div className="ambient ambientLeft" />
+        <div className="ambient ambientRight" />
+        <div className="gridFade" />
 
-          {/* 🔥 BIG LOGO */}
-          <div className="logoWrap">
-            <img src="/vic-logo.png" className="logo" />
-          </div>
+        <main className="shell">
+          <section className="hero">
+            <div className="heroLeft">
+              <div className="brandBlock">
+                <div className="logoStage">
+                  <div className="logoHalo" />
+                  <div className="logoRing ringOne" />
+                  <div className="logoRing ringTwo" />
+                  <img src="/vic-logo.png" alt="VIC Logo" className="heroLogo" />
+                </div>
 
-          <div className="content">
-
-            {/* LEFT */}
-            <div className="left">
-              <h1>
-                VIC helps students
-                <br />
-                think things through.
-              </h1>
-
-              <p>
-                Ask a real question. Watch how VIC responds.
-              </p>
-
-              <button onClick={openFull} className="mainBtn">
-                Open Full VIC
-              </button>
-            </div>
-
-            {/* RIGHT */}
-            <div className="right">
-
-              <div className="card">
-
-                {!reply ? (
-                  <form onSubmit={askVIC}>
-                    <textarea
-                      placeholder="Ask VIC anything..."
-                      value={question}
-                      onChange={(e) => setQuestion(e.target.value)}
-                    />
-
-                    <button disabled={loading}>
-                      {loading ? "Thinking..." : "Ask VIC"}
-                    </button>
-                  </form>
-                ) : (
-                  <>
-                    <div className="bubble user">{question}</div>
-                    <div className="bubble vic">{reply}</div>
-
-                    <button onClick={openFull} className="continue">
-                      Continue in Full VIC
-                    </button>
-                  </>
-                )}
-
+                <div className="brandTextWrap">
+                  <div className="brandName">VIC</div>
+                  <div className="brandSub">Virtual Co-Teacher</div>
+                </div>
               </div>
 
+              <div className="eyebrow">Built to guide real learning</div>
+
+              <h1 className="headline">
+                VIC helps students
+                <span> think things through.</span>
+              </h1>
+
+              <p className="subtext">
+                Ask one real question and watch VIC respond right here.
+              </p>
+
+              <div className="quietProof">
+                <span>Guides thinking</span>
+                <span>Builds understanding</span>
+                <span>Step-by-step support</span>
+              </div>
+
+              <div className="heroActions">
+                <button className="primaryButton" onClick={openFullVIC}>
+                  Open Full VIC
+                </button>
+              </div>
             </div>
 
-          </div>
+            <div className="heroRight">
+              <div className="previewWrap">
+                <div className="previewGlow" />
 
-          <footer>
-            © {new Date().getFullYear()} Dr. L Robert Furman
+                <div className="phoneShell">
+                  <div className="phoneTop">
+                    <div className="phoneDot" />
+                    <div className="phoneTitle">VIC Preview</div>
+                  </div>
+
+                  <div className="previewCard">
+                    {!reply ? (
+                      <form onSubmit={askVIC} className="askForm">
+                        <label className="inputLabel" htmlFor="vic-question">
+                          Ask VIC one question
+                        </label>
+
+                        <textarea
+                          id="vic-question"
+                          value={question}
+                          onChange={(e) => setQuestion(e.target.value)}
+                          placeholder="Type your question here..."
+                          rows={6}
+                          disabled={loading}
+                        />
+
+                        <button
+                          type="submit"
+                          className="askButton"
+                          disabled={!question.trim() || loading}
+                        >
+                          {loading ? "VIC is thinking..." : "Ask VIC"}
+                        </button>
+                      </form>
+                    ) : (
+                      <div className="responseView">
+                        <div className="bubble userBubble">
+                          <div className="bubbleLabel">You</div>
+                          <p>{question}</p>
+                        </div>
+
+                        <div className="bubble vicBubble">
+                          <div className="bubbleLabel">VIC</div>
+                          <p>{reply}</p>
+                        </div>
+
+                        <button
+                          type="button"
+                          className="continueButton"
+                          onClick={openFullVIC}
+                        >
+                          Continue in Full VIC
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <footer className="footer">
+            © {new Date().getFullYear()} Designed by Dr. L Robert Furman — All rights reserved
           </footer>
-
         </main>
       </div>
 
       <style jsx global>{`
-        body {
+        html,
+        body,
+        #__next {
           margin: 0;
-          font-family: Arial;
+          padding: 0;
+          width: 100%;
+          min-height: 100%;
+          font-family: Inter, Arial, sans-serif;
           background: #050505;
           color: white;
         }
 
-        .container {
-          max-width: 1200px;
-          margin: auto;
-          padding: 40px 20px;
+        * {
+          box-sizing: border-box;
         }
 
-        /* 🔥 BIG LOGO */
-        .logoWrap {
-          margin-bottom: 30px;
+        body {
+          overflow-x: hidden;
+          background:
+            radial-gradient(circle at top left, rgba(74, 101, 255, 0.1), transparent 24%),
+            radial-gradient(circle at bottom right, rgba(103, 72, 255, 0.08), transparent 26%),
+            linear-gradient(180deg, #040404 0%, #090910 48%, #040404 100%);
         }
 
-        .logo {
-          width: 120px;
-        }
-
-        .content {
-          display: flex;
-          gap: 40px;
-        }
-
-        .left {
-          flex: 1;
-        }
-
-        h1 {
-          font-size: 60px;
-          line-height: 1;
-        }
-
-        p {
-          opacity: 0.7;
-          margin-top: 20px;
-        }
-
-        .mainBtn {
-          margin-top: 30px;
-          padding: 15px 25px;
-          border-radius: 10px;
-          border: none;
-          background: #5b6cff;
-          color: white;
-          font-weight: bold;
-        }
-
-        .right {
-          width: 350px;
-        }
-
-        .card {
-          background: #f2f4f8;
-          color: black;
-          border-radius: 20px;
-          padding: 20px;
-        }
-
+        button,
         textarea {
-          width: 100%;
-          height: 120px;
-          border-radius: 10px;
-          border: none;
-          padding: 10px;
+          font: inherit;
         }
 
-        button {
-          margin-top: 10px;
+        .page {
+          position: relative;
+          min-height: 100vh;
+          overflow: hidden;
+        }
+
+        .ambient {
+          position: absolute;
+          border-radius: 999px;
+          filter: blur(110px);
+          pointer-events: none;
+          opacity: 0.85;
+        }
+
+        .ambientLeft {
+          width: 460px;
+          height: 460px;
+          left: -140px;
+          top: 40px;
+          background: rgba(74, 101, 255, 0.16);
+        }
+
+        .ambientRight {
+          width: 460px;
+          height: 460px;
+          right: -120px;
+          top: 80px;
+          background: rgba(111, 77, 255, 0.14);
+        }
+
+        .gridFade {
+          position: absolute;
+          inset: 0;
+          background-image:
+            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+          background-size: 46px 46px;
+          mask-image: linear-gradient(180deg, rgba(255,255,255,0.22), transparent 80%);
+          pointer-events: none;
+        }
+
+        .shell {
+          position: relative;
+          z-index: 1;
           width: 100%;
-          padding: 12px;
-          border-radius: 10px;
+          max-width: 1320px;
+          margin: 0 auto;
+          padding: 36px 28px 42px;
+        }
+
+        .hero {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) 430px;
+          gap: 56px;
+          align-items: start;
+          min-height: calc(100vh - 120px);
+        }
+
+        .heroLeft {
+          padding-top: 6px;
+          max-width: 760px;
+        }
+
+        .brandBlock {
+          display: flex;
+          align-items: center;
+          gap: 20px;
+          margin-bottom: 28px;
+        }
+
+        .logoStage {
+          position: relative;
+          width: 170px;
+          height: 170px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        }
+
+        .logoHalo {
+          position: absolute;
+          width: 150px;
+          height: 150px;
+          border-radius: 50%;
+          background: radial-gradient(
+            circle,
+            rgba(110, 126, 255, 0.28) 0%,
+            rgba(110, 126, 255, 0.1) 45%,
+            transparent 78%
+          );
+          filter: blur(26px);
+        }
+
+        .logoRing {
+          position: absolute;
+          border-radius: 50%;
+          border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .ringOne {
+          width: 112px;
+          height: 112px;
+        }
+
+        .ringTwo {
+          width: 148px;
+          height: 148px;
+          opacity: 0.5;
+        }
+
+        .heroLogo {
+          position: relative;
+          z-index: 2;
+          width: 110px;
+          height: auto;
+          filter: drop-shadow(0 0 24px rgba(126, 137, 255, 0.35));
+        }
+
+        .brandTextWrap {
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .brandName {
+          font-size: 40px;
+          font-weight: 800;
+          letter-spacing: 0.02em;
+          line-height: 1;
+          color: rgba(255,255,255,0.96);
+        }
+
+        .brandSub {
+          font-size: 14px;
+          letter-spacing: 0.18em;
+          text-transform: uppercase;
+          color: rgba(255,255,255,0.56);
+        }
+
+        .eyebrow {
+          margin-bottom: 18px;
+          font-size: 13px;
+          letter-spacing: 0.17em;
+          text-transform: uppercase;
+          color: #8fa2ff;
+        }
+
+        .headline {
+          margin: 0;
+          font-size: clamp(50px, 6.2vw, 86px);
+          line-height: 0.95;
+          letter-spacing: -0.065em;
+          font-weight: 800;
+          max-width: 760px;
+        }
+
+        .headline span {
+          display: block;
+          color: rgba(255,255,255,0.92);
+        }
+
+        .subtext {
+          max-width: 620px;
+          margin: 26px 0 0;
+          font-size: 22px;
+          line-height: 1.62;
+          color: rgba(255,255,255,0.72);
+        }
+
+        .quietProof {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 30px;
+        }
+
+        .quietProof span {
+          padding: 10px 14px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.04);
+          color: rgba(255,255,255,0.8);
+          font-size: 14px;
+        }
+
+        .heroActions {
+          margin-top: 34px;
+        }
+
+        .primaryButton,
+        .askButton,
+        .continueButton {
           border: none;
-          background: #5b6cff;
+          cursor: pointer;
+          font-weight: 800;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+        }
+
+        .primaryButton {
+          border-radius: 18px;
+          padding: 16px 26px;
           color: white;
-          font-weight: bold;
+          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
+          box-shadow: 0 16px 44px rgba(97,113,255,0.32);
+        }
+
+        .primaryButton:hover,
+        .askButton:hover,
+        .continueButton:hover {
+          transform: translateY(-1px);
+        }
+
+        .heroRight {
+          display: flex;
+          justify-content: flex-end;
+          align-items: flex-start;
+          padding-top: 10px;
+        }
+
+        .previewWrap {
+          position: relative;
+          width: 100%;
+          max-width: 410px;
+        }
+
+        .previewGlow {
+          position: absolute;
+          inset: 36px 16px 18px 16px;
+          border-radius: 38px;
+          background: radial-gradient(circle, rgba(96,112,255,0.2), transparent 74%);
+          filter: blur(44px);
+          pointer-events: none;
+        }
+
+        .phoneShell {
+          position: relative;
+          z-index: 2;
+          border-radius: 38px;
+          padding: 14px;
+          background: linear-gradient(180deg, #161616 0%, #0b0b0b 100%);
+          border: 1px solid rgba(255,255,255,0.08);
+          box-shadow:
+            0 30px 80px rgba(0,0,0,0.44),
+            inset 0 1px 0 rgba(255,255,255,0.05);
+        }
+
+        .phoneTop {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          padding: 8px 10px 14px;
+        }
+
+        .phoneDot {
+          width: 38px;
+          height: 8px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.14);
+          flex-shrink: 0;
+        }
+
+        .phoneTitle {
+          font-size: 14px;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          color: rgba(255,255,255,0.9);
+        }
+
+        .previewCard {
+          border-radius: 28px;
+          overflow: hidden;
+          background: #f5f7fb;
+          color: #101418;
+          min-height: 620px;
+          display: flex;
+          flex-direction: column;
+        }
+
+        .askForm,
+        .responseView {
+          padding: 18px;
+          display: flex;
+          flex-direction: column;
+          gap: 14px;
+          min-height: 620px;
+        }
+
+        .inputLabel {
+          font-size: 22px;
+          font-weight: 800;
+          color: #132033;
+        }
+
+        .askForm textarea {
+          width: 100%;
+          border: 1px solid #dde6f3;
+          border-radius: 16px;
+          outline: none;
+          resize: none;
+          background: #ffffff;
+          color: #17212b;
+          font-size: 15px;
+          line-height: 1.55;
+          min-height: 180px;
+          padding: 15px;
+        }
+
+        .askForm textarea::placeholder {
+          color: #8b96a8;
+        }
+
+        .askButton {
+          border-radius: 14px;
+          padding: 15px 16px;
+          color: white;
+          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
+          box-shadow: 0 10px 24px rgba(97,113,255,0.22);
+        }
+
+        .askButton:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+          transform: none;
+        }
+
+        .conversation {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
         }
 
         .bubble {
-          padding: 10px;
-          border-radius: 10px;
-          margin-bottom: 10px;
+          padding: 14px 15px;
+          border-radius: 18px;
+          line-height: 1.6;
+          box-shadow: 0 8px 20px rgba(21, 33, 52, 0.06);
         }
 
-        .user {
-          background: #ddd;
+        .bubbleLabel {
+          font-size: 10px;
+          letter-spacing: 0.13em;
+          text-transform: uppercase;
+          margin-bottom: 6px;
+          font-weight: 800;
         }
 
-        .vic {
-          background: #cfd8ff;
+        .bubble p {
+          margin: 0;
+          font-size: 15px;
+          line-height: 1.6;
+          white-space: pre-wrap;
         }
 
-        .continue {
-          margin-top: 15px;
-          background: black;
+        .userBubble {
+          background: #ffffff;
+          border: 1px solid #e3e9f3;
+          color: #17212b;
         }
 
-        footer {
-          margin-top: 40px;
-          opacity: 0.5;
+        .userBubble .bubbleLabel {
+          color: #7a8798;
+        }
+
+        .vicBubble {
+          background: linear-gradient(135deg, #edf1ff 0%, #e5ebff 100%);
+          border: 1px solid #d2ddff;
+          color: #1f2950;
+        }
+
+        .vicBubble .bubbleLabel {
+          color: #5670d8;
+        }
+
+        .continueButton {
+          margin-top: auto;
+          border-radius: 14px;
+          padding: 15px 16px;
+          color: white;
+          background: #0f0f12;
+          box-shadow: 0 10px 24px rgba(0,0,0,0.16);
+        }
+
+        .footer {
+          margin-top: 26px;
           text-align: center;
+          font-size: 13px;
+          color: rgba(255,255,255,0.42);
+          padding-bottom: 8px;
+        }
+
+        @media (max-width: 1100px) {
+          .hero {
+            grid-template-columns: 1fr;
+            gap: 32px;
+            min-height: auto;
+          }
+
+          .heroRight {
+            justify-content: center;
+          }
+
+          .previewWrap {
+            max-width: 430px;
+          }
+        }
+
+        @media (max-width: 768px) {
+          .shell {
+            padding: 20px 14px 34px;
+          }
+
+          .brandBlock {
+            gap: 14px;
+            margin-bottom: 22px;
+          }
+
+          .logoStage {
+            width: 120px;
+            height: 120px;
+          }
+
+          .logoHalo {
+            width: 105px;
+            height: 105px;
+          }
+
+          .ringOne {
+            width: 82px;
+            height: 82px;
+          }
+
+          .ringTwo {
+            width: 108px;
+            height: 108px;
+          }
+
+          .heroLogo {
+            width: 78px;
+          }
+
+          .brandName {
+            font-size: 28px;
+          }
+
+          .brandSub {
+            font-size: 12px;
+          }
+
+          .headline {
+            font-size: clamp(40px, 12vw, 62px);
+          }
+
+          .subtext {
+            font-size: 18px;
+          }
+
+          .previewWrap {
+            max-width: 100%;
+          }
+
+          .previewCard,
+          .askForm,
+          .responseView {
+            min-height: 580px;
+          }
         }
       `}</style>
     </>
