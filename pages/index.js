@@ -4,41 +4,129 @@ import { useRouter } from "next/router";
 export default function Home() {
   const router = useRouter();
 
-  const promptText = "Help me solve 3/4 ÷ 1/2 step by step";
-  const responseText =
-    "Let’s walk through it together. Dividing by 1/2 means multiplying by 2...";
+  const userPrompt = "I don’t get this… why do we flip the fraction?";
+  const vicLines = [
+    "Great question. Let’s slow it down.",
+    "Dividing by a fraction means multiplying by its reciprocal.",
+    "So 3/4 ÷ 1/2 becomes 3/4 × 2.",
+    "Now try the next step—what do you get?",
+  ];
 
   const [typedPrompt, setTypedPrompt] = useState("");
-  const [typedResponse, setTypedResponse] = useState("");
+  const [visibleVicLines, setVisibleVicLines] = useState([]);
 
   useEffect(() => {
     let promptIndex = 0;
-    let responseIndex = 0;
-    let responseTimer;
+    let lineIndex = 0;
+    let charIndex = 0;
+    let promptTimer;
+    let lineTimer;
+    let pauseTimer;
 
-    const promptTimer = setInterval(() => {
+    promptTimer = setInterval(() => {
       promptIndex += 1;
-      setTypedPrompt(promptText.slice(0, promptIndex));
+      setTypedPrompt(userPrompt.slice(0, promptIndex));
 
-      if (promptIndex >= promptText.length) {
+      if (promptIndex >= userPrompt.length) {
         clearInterval(promptTimer);
 
-        setTimeout(() => {
-          responseTimer = setInterval(() => {
-            responseIndex += 1;
-            setTypedResponse(responseText.slice(0, responseIndex));
+        pauseTimer = setTimeout(() => {
+          setVisibleVicLines([""]);
 
-            if (responseIndex >= responseText.length) {
-              clearInterval(responseTimer);
+          lineTimer = setInterval(() => {
+            const currentLine = vicLines[lineIndex];
+            charIndex += 1;
+
+            setVisibleVicLines((prev) => {
+              const next = [...prev];
+              next[lineIndex] = currentLine.slice(0, charIndex);
+              return next;
+            });
+
+            if (charIndex >= currentLine.length) {
+              clearInterval(lineTimer);
+
+              lineIndex += 1;
+              charIndex = 0;
+
+              if (lineIndex < vicLines.length) {
+                pauseTimer = setTimeout(() => {
+                  setVisibleVicLines((prev) => [...prev, ""]);
+
+                  lineTimer = setInterval(() => {
+                    const nextLine = vicLines[lineIndex];
+                    charIndex += 1;
+
+                    setVisibleVicLines((prev) => {
+                      const next = [...prev];
+                      next[lineIndex] = nextLine.slice(0, charIndex);
+                      return next;
+                    });
+
+                    if (charIndex >= nextLine.length) {
+                      clearInterval(lineTimer);
+
+                      lineIndex += 1;
+                      charIndex = 0;
+
+                      if (lineIndex < vicLines.length) {
+                        pauseTimer = setTimeout(() => {
+                          setVisibleVicLines((prev) => [...prev, ""]);
+
+                          lineTimer = setInterval(() => {
+                            const futureLine = vicLines[lineIndex];
+                            charIndex += 1;
+
+                            setVisibleVicLines((prev) => {
+                              const next = [...prev];
+                              next[lineIndex] = futureLine.slice(0, charIndex);
+                              return next;
+                            });
+
+                            if (charIndex >= futureLine.length) {
+                              clearInterval(lineTimer);
+
+                              lineIndex += 1;
+                              charIndex = 0;
+
+                              if (lineIndex < vicLines.length) {
+                                pauseTimer = setTimeout(() => {
+                                  setVisibleVicLines((prev) => [...prev, ""]);
+
+                                  lineTimer = setInterval(() => {
+                                    const lastLine = vicLines[lineIndex];
+                                    charIndex += 1;
+
+                                    setVisibleVicLines((prev) => {
+                                      const next = [...prev];
+                                      next[lineIndex] = lastLine.slice(0, charIndex);
+                                      return next;
+                                    });
+
+                                    if (charIndex >= lastLine.length) {
+                                      clearInterval(lineTimer);
+                                    }
+                                  }, 18);
+                                }, 400);
+                              }
+                            }
+                          }, 18);
+                        }, 400);
+                      }
+                    }
+                  }, 18);
+                }, 400);
+              }
             }
-          }, 28);
+          }, 26);
         }, 500);
       }
-    }, 42);
+    }, 32);
 
     return () => {
       clearInterval(promptTimer);
-      clearInterval(responseTimer);
+      clearInterval(lineTimer);
+      clearTimeout(pauseTimer);
     };
   }, []);
 
@@ -77,13 +165,14 @@ export default function Home() {
                 real academic support.
               </p>
 
-              <div className="ctaRow">
+              <div className="ctaBlock">
                 <button
                   className="cta"
                   onClick={() => router.push("/askvic")}
                 >
-                  Talk to VIC
+                  Try VIC Now
                 </button>
+                <p className="ctaSub">No signup. Instant help.</p>
               </div>
 
               <div className="microFeatures">
@@ -93,43 +182,54 @@ export default function Home() {
               </div>
             </section>
 
-            <section className="demoCard">
-              <div className="demoTop">
-                <div className="dots">
-                  <span />
-                  <span />
-                  <span />
-                </div>
-                <div className="demoLabel">Live preview</div>
-              </div>
+            <section className="demoWrap">
+              <p className="demoIntro">Watch how VIC responds:</p>
 
-              <div className="demoBody">
-                <div className="chatRow user">
-                  <div className="bubble userBubble">
-                    <div className="bubbleLabel">You</div>
-                    <div className="bubbleText">
-                      {typedPrompt}
-                      <span className="cursor">|</span>
+              <div className="demoCard">
+                <div className="demoTop">
+                  <div className="dots">
+                    <span />
+                    <span />
+                    <span />
+                  </div>
+                  <div className="demoLabel">Live preview</div>
+                </div>
+
+                <div className="demoBody">
+                  <div className="chatRow user">
+                    <div className="bubble userBubble">
+                      <div className="bubbleLabel">You</div>
+                      <div className="bubbleText">
+                        {typedPrompt}
+                        {typedPrompt.length < userPrompt.length && (
+                          <span className="cursor">|</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="chatRow vic">
-                  <div className="bubble vicBubble">
-                    <div className="bubbleLabel vicName">VIC</div>
-                    <div className="bubbleText responseText">
-                      {typedResponse}
-                      {typedResponse.length < responseText.length && (
-                        <span className="cursor">|</span>
-                      )}
+                  {visibleVicLines.map((line, index) => (
+                    <div className="chatRow vic" key={index}>
+                      <div className="bubble vicBubble">
+                        {index === 0 && (
+                          <div className="bubbleLabel vicName">VIC</div>
+                        )}
+                        <div className="bubbleText responseText">
+                          {line}
+                          {index === visibleVicLines.length - 1 &&
+                            line.length < vicLines[index].length && (
+                              <span className="cursor">|</span>
+                            )}
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              </div>
 
-              <div className="demoBottom">
-                <span>Personalized help</span>
-                <span>Step-by-step guidance</span>
+                <div className="demoBottom">
+                  <span>Personalized help</span>
+                  <span>Step-by-step guidance</span>
+                </div>
               </div>
             </section>
           </div>
@@ -241,7 +341,7 @@ export default function Home() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          padding: 42px 20px 32px;
+          padding: 34px 20px 28px;
           text-align: center;
         }
 
@@ -258,7 +358,7 @@ export default function Home() {
           font-size: 12px;
           letter-spacing: 0.16em;
           text-transform: uppercase;
-          margin-bottom: 22px;
+          margin-bottom: 18px;
           box-shadow: 0 0 0 1px rgba(255,255,255,0.02) inset;
         }
 
@@ -268,8 +368,8 @@ export default function Home() {
           display: flex;
           justify-content: center;
           align-items: center;
-          margin-bottom: 22px;
-          min-height: 160px;
+          margin-bottom: 16px;
+          min-height: 145px;
         }
 
         .logoRing,
@@ -288,20 +388,20 @@ export default function Home() {
         }
 
         .ring-1 {
-          width: 190px;
-          height: 190px;
+          width: 180px;
+          height: 180px;
         }
 
         .ring-2 {
-          width: 250px;
-          height: 250px;
+          width: 236px;
+          height: 236px;
           animation-delay: 1.2s;
           opacity: 0.55;
         }
 
         .logoCore {
-          width: 170px;
-          height: 170px;
+          width: 164px;
+          height: 164px;
           background: radial-gradient(circle, rgba(97, 113, 255, 0.25) 0%, rgba(97, 113, 255, 0.08) 45%, transparent 74%);
           filter: blur(18px);
         }
@@ -309,7 +409,7 @@ export default function Home() {
         .logo {
           position: relative;
           margin: 0;
-          font-size: clamp(88px, 14vw, 170px);
+          font-size: clamp(82px, 13vw, 162px);
           font-weight: 900;
           line-height: 0.88;
           letter-spacing: -0.08em;
@@ -326,13 +426,12 @@ export default function Home() {
           width: 100%;
           max-width: 1220px;
           display: grid;
-          grid-template-columns: 1.1fr 0.9fr;
-          gap: 26px;
-          align-items: stretch;
+          grid-template-columns: minmax(0, 1fr) 420px;
+          gap: 24px;
+          align-items: center;
         }
 
-        .heroCopy,
-        .demoCard {
+        .heroCopy {
           border-radius: 30px;
           border: 1px solid rgba(255, 255, 255, 0.10);
           background: linear-gradient(
@@ -344,15 +443,12 @@ export default function Home() {
           box-shadow:
             0 20px 80px rgba(0, 0, 0, 0.55),
             inset 0 1px 0 rgba(255,255,255,0.08);
-        }
-
-        .heroCopy {
           text-align: left;
           padding: 38px 38px 34px;
           display: flex;
           flex-direction: column;
           justify-content: center;
-          min-height: 520px;
+          min-height: 560px;
         }
 
         .eyebrow {
@@ -365,7 +461,7 @@ export default function Home() {
 
         .headline {
           margin: 0;
-          font-size: clamp(42px, 5vw, 78px);
+          font-size: clamp(44px, 5vw, 82px);
           line-height: 0.98;
           font-weight: 850;
           letter-spacing: -0.05em;
@@ -381,46 +477,54 @@ export default function Home() {
         }
 
         .subtext {
-          max-width: 700px;
-          margin: 22px 0 0;
+          max-width: 720px;
+          margin: 20px 0 0;
           font-size: clamp(18px, 2vw, 23px);
           line-height: 1.55;
           color: rgba(255, 255, 255, 0.74);
         }
 
-        .ctaRow {
+        .ctaBlock {
+          margin-top: 28px;
           display: flex;
-          justify-content: flex-start;
-          margin-top: 30px;
+          flex-direction: column;
+          align-items: flex-start;
         }
 
         .cta {
           appearance: none;
           border: none;
           cursor: pointer;
-          padding: 18px 34px;
-          min-width: 220px;
-          border-radius: 16px;
-          font-size: 20px;
+          padding: 20px 38px;
+          min-width: 240px;
+          border-radius: 18px;
+          font-size: 22px;
           font-weight: 800;
           color: white;
           background: linear-gradient(135deg, #6574ff 0%, #7b61ff 55%, #4c7dff 100%);
           box-shadow:
-            0 16px 44px rgba(97, 113, 255, 0.38),
-            0 0 30px rgba(97, 113, 255, 0.24);
+            0 18px 48px rgba(97, 113, 255, 0.42),
+            0 0 34px rgba(97, 113, 255, 0.26);
           transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+          animation: pulseButton 3s ease-in-out infinite;
         }
 
         .cta:hover {
           transform: translateY(-2px) scale(1.015);
           box-shadow:
-            0 20px 54px rgba(97, 113, 255, 0.50),
-            0 0 38px rgba(97, 113, 255, 0.30);
+            0 22px 58px rgba(97, 113, 255, 0.54),
+            0 0 42px rgba(97, 113, 255, 0.32);
           filter: brightness(1.06);
         }
 
         .cta:active {
           transform: translateY(0);
+        }
+
+        .ctaSub {
+          margin: 10px 0 0;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.62);
         }
 
         .microFeatures {
@@ -442,12 +546,38 @@ export default function Home() {
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.05);
         }
 
+        .demoWrap {
+          display: flex;
+          flex-direction: column;
+          gap: 12px;
+          align-self: stretch;
+          justify-content: center;
+        }
+
+        .demoIntro {
+          margin: 0 4px;
+          text-align: left;
+          font-size: 14px;
+          color: rgba(255, 255, 255, 0.72);
+          letter-spacing: 0.01em;
+        }
+
         .demoCard {
+          border-radius: 28px;
+          border: 1px solid rgba(255, 255, 255, 0.10);
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.08) 0%,
+            rgba(255, 255, 255, 0.04) 100%
+          );
+          backdrop-filter: blur(22px);
+          box-shadow:
+            0 20px 80px rgba(0, 0, 0, 0.55),
+            inset 0 1px 0 rgba(255,255,255,0.08);
           padding: 18px 18px 16px;
           display: flex;
           flex-direction: column;
-          justify-content: space-between;
-          min-height: 520px;
+          min-height: 470px;
           text-align: left;
           overflow: hidden;
           position: relative;
@@ -511,10 +641,11 @@ export default function Home() {
         .demoBody {
           display: flex;
           flex-direction: column;
-          gap: 18px;
-          margin-top: 8px;
+          gap: 12px;
+          margin-top: 6px;
           flex: 1;
-          justify-content: center;
+          justify-content: flex-start;
+          padding-top: 6px;
         }
 
         .chatRow {
@@ -531,9 +662,9 @@ export default function Home() {
         }
 
         .bubble {
-          width: min(100%, 340px);
-          border-radius: 22px;
-          padding: 16px 16px 14px;
+          width: min(100%, 320px);
+          border-radius: 20px;
+          padding: 14px 14px 12px;
           border: 1px solid rgba(255, 255, 255, 0.08);
           box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
         }
@@ -553,7 +684,7 @@ export default function Home() {
           letter-spacing: 0.12em;
           text-transform: uppercase;
           color: rgba(255, 255, 255, 0.82);
-          margin-bottom: 10px;
+          margin-bottom: 8px;
         }
 
         .vicName {
@@ -561,10 +692,9 @@ export default function Home() {
         }
 
         .bubbleText {
-          font-size: 16px;
-          line-height: 1.55;
+          font-size: 15px;
+          line-height: 1.5;
           color: white;
-          min-height: 48px;
           word-break: break-word;
         }
 
@@ -582,7 +712,7 @@ export default function Home() {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
-          padding-top: 12px;
+          padding-top: 14px;
         }
 
         .demoBottom span {
@@ -595,7 +725,7 @@ export default function Home() {
         }
 
         .bottomLine {
-          margin-top: 20px;
+          margin-top: 18px;
           font-size: 14px;
           color: rgba(255, 255, 255, 0.50);
           letter-spacing: 0.02em;
@@ -634,7 +764,21 @@ export default function Home() {
           }
         }
 
-        @media (max-width: 1050px) {
+        @keyframes pulseButton {
+          0%,
+          100% {
+            box-shadow:
+              0 18px 48px rgba(97, 113, 255, 0.42),
+              0 0 34px rgba(97, 113, 255, 0.26);
+          }
+          50% {
+            box-shadow:
+              0 22px 56px rgba(97, 113, 255, 0.56),
+              0 0 44px rgba(97, 113, 255, 0.34);
+          }
+        }
+
+        @media (max-width: 1100px) {
           .heroShell {
             grid-template-columns: 1fr;
             max-width: 860px;
@@ -650,12 +794,16 @@ export default function Home() {
             padding: 30px 24px 28px;
           }
 
-          .ctaRow {
-            justify-content: center;
+          .ctaBlock {
+            align-items: center;
           }
 
           .microFeatures {
             justify-content: center;
+          }
+
+          .demoIntro {
+            text-align: center;
           }
         }
 
@@ -665,23 +813,23 @@ export default function Home() {
           }
 
           .logoWrap {
-            min-height: 120px;
-            margin-bottom: 14px;
+            min-height: 118px;
+            margin-bottom: 12px;
           }
 
           .ring-1 {
-            width: 140px;
-            height: 140px;
+            width: 138px;
+            height: 138px;
           }
 
           .ring-2 {
-            width: 185px;
-            height: 185px;
+            width: 182px;
+            height: 182px;
           }
 
           .logoCore {
-            width: 130px;
-            height: 130px;
+            width: 126px;
+            height: 126px;
           }
 
           .heroCopy,
@@ -708,7 +856,7 @@ export default function Home() {
           .cta {
             width: 100%;
             max-width: 320px;
-            font-size: 18px;
+            font-size: 20px;
           }
 
           .bubble {
