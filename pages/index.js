@@ -47,7 +47,7 @@ export default function Home() {
               </h1>
 
               <p className="subtext">
-                Ask one real question on the right. VIC will take it from there.
+                Ask one real question on the right. VIC takes it from there.
               </p>
 
               <div className="quietProof">
@@ -60,10 +60,6 @@ export default function Home() {
                 <button className="primaryButton" onClick={goToFullVIC}>
                   Open Full VIC
                 </button>
-
-                <div className="heroNote">
-                  Start in the preview or jump straight into the full portal.
-                </div>
               </div>
             </div>
 
@@ -75,7 +71,7 @@ export default function Home() {
                   <div className="phoneTopBar">
                     <div className="phoneCam" />
                     <div className="phoneTitle">VIC</div>
-                    <div className="phoneStatus">Start here</div>
+                    <div className="phoneStatus">Preview</div>
                   </div>
 
                   <div className="miniApp">
@@ -88,7 +84,7 @@ export default function Home() {
                       <div className="miniHeaderText">
                         <div className="miniHeaderTitle">Ask VIC a question</div>
                         <div className="miniHeaderSub">
-                          This opens a full session in VIC
+                          Opens a full session in VIC
                         </div>
                       </div>
                     </div>
@@ -115,7 +111,7 @@ export default function Home() {
 
                         <div className="bubble vic soft">
                           <div className="bubbleLabel">VIC</div>
-                          <p>Type your own question below to continue in full VIC.</p>
+                          <p>Type your own question below.</p>
                         </div>
                       </div>
 
@@ -141,8 +137,13 @@ export default function Home() {
                         </div>
 
                         <div className="inputActions">
-                          <button type="submit" className="smallPrimaryButton">
-                            Ask VIC
+                          <button
+                            type="submit"
+                            className="smallPrimaryButton"
+                            aria-label="Send question to VIC"
+                            title="Send"
+                          >
+                            Send
                           </button>
 
                           <button
@@ -326,13 +327,6 @@ export default function Home() {
           gap: 18px;
           flex-wrap: wrap;
           margin-top: 30px;
-        }
-
-        .heroNote {
-          color: rgba(255,255,255,0.58);
-          font-size: 15px;
-          max-width: 320px;
-          line-height: 1.55;
         }
 
         .primaryButton,
@@ -662,14 +656,6 @@ export default function Home() {
 
           .subtext {
             font-size: 17px;
-          }
-
-          .heroActions {
-            align-items: flex-start;
-          }
-
-          .heroNote {
-            max-width: none;
           }
 
           .phoneWrap {
