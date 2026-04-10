@@ -11,36 +11,42 @@ export default function Home() {
 
           <div className="logoWrap">
             <div className="logoGlow"></div>
-            <img
-              src="/vic-logo.png"
-              alt="VIC Logo"
-              className="vicLogo"
-            />
+            <img src="/vic-logo.png" alt="VIC Logo" className="vicLogo" />
           </div>
 
           <h2 className="headline">
-            Most AI gives answers.
+            If AI just gives you answers…
             <br />
-            <span>VIC teaches students how to think.</span>
+            <span>you’re not actually learning.</span>
           </h2>
 
           <p className="subtext">
-            A premium AI co-teacher built to guide, check, and adapt like real academic support.
+            VIC works differently. It guides you, checks your thinking, and helps you understand step-by-step — like a real teacher sitting next to you.
           </p>
 
           <button className="cta" onClick={() => router.push("/askvic")}>
-            Try VIC Now
+            Try VIC — See How It Teaches
           </button>
 
-          <p className="ctaSub">No signup. Instant help.</p>
+          <p className="ctaSub">Takes 10 seconds. No signup.</p>
 
           <div className="demoCard">
-            <div className="demoLabel">Example</div>
+            <div className="demoLabel">What it feels like</div>
+
             <p className="userLine">
               <strong>You:</strong> I don’t get this… why do we flip the fraction?
             </p>
+
             <p className="vicLine">
-              <strong>VIC:</strong> Great question. Dividing by a fraction means multiplying by its reciprocal. So 3/4 ÷ 1/2 becomes 3/4 × 2.
+              <strong>VIC:</strong> Good question. Before we flip it—what does dividing actually mean here?
+            </p>
+
+            <p className="vicLine">
+              <strong>VIC:</strong> If you’re dividing by 1/2, you’re really asking: how many halves fit into something.
+            </p>
+
+            <p className="vicLine highlight">
+              <strong>VIC:</strong> That’s why we multiply by 2. You’re counting how many halves there are.
             </p>
           </div>
         </main>
@@ -124,13 +130,11 @@ export default function Home() {
           );
           filter: blur(42px);
           z-index: 0;
-          pointer-events: none;
         }
 
         .vicLogo {
           width: min(320px, 70vw);
           height: auto;
-          display: block;
           position: relative;
           z-index: 1;
           filter: drop-shadow(0 0 28px rgba(120, 130, 255, 0.45));
@@ -161,13 +165,19 @@ export default function Home() {
           border: none;
           border-radius: 18px;
           padding: 18px 34px;
-          min-width: 230px;
+          min-width: 260px;
           font-size: 22px;
           font-weight: 800;
           color: white;
           cursor: pointer;
           background: linear-gradient(135deg, #6574ff 0%, #7b61ff 55%, #4c7dff 100%);
           box-shadow: 0 16px 44px rgba(97,113,255,0.38);
+          transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .cta:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 22px 60px rgba(97,113,255,0.5);
         }
 
         .ctaSub {
@@ -177,10 +187,10 @@ export default function Home() {
         }
 
         .demoCard {
-          margin: 32px auto 0;
+          margin: 36px auto 0;
           max-width: 640px;
           text-align: left;
-          padding: 20px;
+          padding: 22px;
           border-radius: 22px;
           border: 1px solid rgba(255,255,255,0.08);
           background: rgba(255,255,255,0.05);
@@ -202,24 +212,13 @@ export default function Home() {
           color: rgba(255,255,255,0.9);
         }
 
-        .vicLine {
-          margin-bottom: 0;
-          color: rgba(255,255,255,0.82);
+        .highlight {
+          color: #c6d0ff;
         }
 
         @media (max-width: 768px) {
           .hero {
             padding: 34px 18px;
-          }
-
-          .logoWrap {
-            min-height: 170px;
-            margin-bottom: 16px;
-          }
-
-          .logoGlow {
-            width: 250px;
-            height: 250px;
           }
 
           .vicLogo {
