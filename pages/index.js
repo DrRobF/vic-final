@@ -1,20 +1,107 @@
+import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
+
+const PREVIEW_API_ENDPOINT = "/api/askvic-preview";
+
+const SUGGESTIONS = [
+  "Why do we flip fractions?",
+  "What is the difference between area and perimeter?",
+  "Can you help me solve 3x + 5 = 17?",
+  "Why does dividing by 1/2 make the number bigger?"
+];
 
 export default function Home() {
   const router = useRouter();
+  const [question, setQuestion] = useState("");
+  const [submittedQuestion, setSubmittedQuestion] = useState("");
+  const [previewAnswer, setPreviewAnswer] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasUsedPreview, setHasUsedPreview] = useState(false);
+  const [error, setError] = useState("");
+
+  const canSubmit = useMemo(() => {
+    return question.trim().length > 0 && !isLoading && !hasUsedPreview;
+  }, [question, isLoading, hasUsedPreview]);
+
+  async function handlePreviewSubmit(e) {
+    e.preventDefault();
+
+    if (!canSubmit) return;
+
+    const trimmed = question.trim();
+    setIsLoading(true);
+    setError("");
+    setSubmittedQuestion(trimmed);
+    setPreviewAnswer("");
+
+    try {
+      const response = await fetch(PREVIEW_API_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          message: trimmed,
+          preview: true,
+          mode: "landing-preview"
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Preview request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      const answer =
+        data?.answer ||
+        data?.message ||
+        data?.reply ||
+        data?.output ||
+        "";
+
+      if (!answer || typeof answer !== "string") {
+        throw new Error("Preview API returned no usable answer.");
+      }
+
+      setPreviewAnswer(answer.trim());
+      setHasUsedPreview(true);
+    } catch (err) {
+      console.error(err);
+      setError(
+        "The preview box is ready, but the VIC preview endpoint is not connected yet. Point PREVIEW_API_ENDPOINT to the same backend route your /askvic page uses."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function handleSuggestionClick(text) {
+    if (hasUsedPreview || isLoading) return;
+    setQuestion(text);
+  }
+
+  function openFullVIC() {
+    const starter = (submittedQuestion || question).trim();
+
+    if (starter) {
+      router.push(`/askvic?starter=${encodeURIComponent(starter)}`);
+      return;
+    }
+
+    router.push("/askvic");
+  }
 
   return (
     <>
       <div className="page">
-        <div className="ambient ambientOne"></div>
-        <div className="ambient ambientTwo"></div>
-        <div className="gridFade"></div>
+        <div className="ambient ambientLeft" />
+        <div className="ambient ambientRight" />
+        <div className="gridFade" />
 
         <main className="shell">
           <section className="hero">
-            <div className="heroTop">
-              <div className="badge">Virtual Co-Teacher</div>
-            </div>
+            <div className="topBadge">Virtual Co-Teacher</div>
 
             <div className="heroGrid">
               <div className="heroCopy">
@@ -26,164 +113,159 @@ export default function Home() {
                 </h1>
 
                 <p className="subtext">
-                  VIC guides step-by-step, checks student thinking, gives hints
-                  instead of shortcuts, and helps learning actually stick — like
-                  a real teacher sitting beside them.
+                  A calm first look at VIC. Ask one real question below and feel
+                  the difference before stepping into the full experience.
                 </p>
 
-                <div className="ctaRow">
-                  <button
-                    className="cta"
-                    onClick={() => router.push("/askvic")}
-                  >
-                    Step Into VIC
-                  </button>
-
-                  <div className="ctaMeta">
-                    <div className="metaStrong">Try the teaching experience</div>
-                    <div className="metaSoft">No signup. Takes about 10 seconds.</div>
-                  </div>
-                </div>
-
-                <div className="proofRow">
-                  <div className="proofPill">Guides step-by-step</div>
-                  <div className="proofPill">Checks thinking</div>
-                  <div className="proofPill">Hints, not shortcuts</div>
+                <div className="quietProof">
+                  <span>Guides thinking</span>
+                  <span>Checks understanding</span>
+                  <span>Hints, not shortcuts</span>
                 </div>
               </div>
 
               <div className="heroVisual">
                 <div className="logoStage">
-                  <div className="logoHalo"></div>
-                  <div className="logoRing"></div>
+                  <div className="logoHalo" />
+                  <div className="logoRing ringOne" />
+                  <div className="logoRing ringTwo" />
                   <img src="/vic-logo.png" alt="VIC Logo" className="vicLogo" />
                 </div>
 
-                <div className="floatingCard floatingPrompt">
-                  <span className="floatingLabel">Student moment</span>
-                  “Wait… why do we flip the fraction?”
+                <div className="floatingCard floatingCardTop">
+                  <div className="floatingLabel">Student moment</div>
+                  Wait… why do we flip the fraction?
                 </div>
 
-                <div className="floatingCard floatingResponse">
-                  <span className="floatingLabel">VIC response</span>
-                  “Before we flip it, what does dividing mean here?”
+                <div className="floatingCard floatingCardBottom">
+                  <div className="floatingLabel">VIC response</div>
+                  Before we flip it, what does dividing mean here?
                 </div>
               </div>
             </div>
           </section>
 
-          <section className="transitionBand">
-            <p className="transitionText">
-              Most AI tools rush to the answer.
-            </p>
-            <p className="transitionText dim">
-              VIC slows down, reads the student, and teaches through the moment.
-            </p>
-          </section>
-
-          <section className="revealSection">
-            <div className="sectionIntro">
-              <div className="sectionKicker">The reveal</div>
-              <h2 className="sectionTitle">What a live teaching moment feels like</h2>
+          <section className="previewSection">
+            <div className="previewIntro">
+              <div className="sectionKicker">One-question preview</div>
+              <h2 className="sectionTitle">Try one moment with VIC</h2>
               <p className="sectionCopy">
-                This is the difference. VIC does not just display information —
-                it responds like a teacher who is watching how a student is thinking.
+                Ask a real question. VIC answers once here. Then, if you want to
+                keep going, step into the full portal.
               </p>
             </div>
 
-            <div className="demoWrap">
-              <div className="demoGlow"></div>
-
-              <div className="demoCard">
-                <div className="demoHeader">
-                  <div>
-                    <div className="demoEyebrow">Live teaching moment</div>
-                    <div className="demoTitle">Fraction division</div>
-                  </div>
-
-                  <div className="demoStatus">
-                    <span className="statusDot"></span>
-                    Teaching live
-                  </div>
+            <div className="previewCard">
+              <div className="previewHeader">
+                <div>
+                  <div className="previewEyebrow">Preview window</div>
+                  <div className="previewTitle">Ask VIC one question</div>
                 </div>
 
-                <div className="chatFlow">
-                  <div className="msg student">
-                    <div className="msgLabel">Student</div>
-                    <p>I don’t get this… why do we flip the fraction?</p>
-                  </div>
-
-                  <div className="msg vic">
-                    <div className="msgLabel">VIC</div>
-                    <p>
-                      Good question. Before we flip it, let’s slow down.
-                      What does dividing mean here?
-                    </p>
-                  </div>
-
-                  <div className="msg vic">
-                    <div className="msgLabel">VIC</div>
-                    <p>
-                      If you’re dividing by <strong>1/2</strong>, you’re really
-                      asking: <em>how many halves fit into something?</em>
-                    </p>
-                  </div>
-
-                  <div className="msg highlight">
-                    <div className="msgLabel">VIC</div>
-                    <p>
-                      That’s why multiplying by 2 works — you’re counting how
-                      many halves there are.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="demoFooter">
-                  <div className="footerItem">Responds to confusion</div>
-                  <div className="footerItem">Builds understanding</div>
-                  <div className="footerItem">Teaches, not just solves</div>
+                <div className="previewStatus">
+                  <span className="statusDot" />
+                  {hasUsedPreview ? "Preview used" : "One response available"}
                 </div>
               </div>
-            </div>
-          </section>
 
-          <section className="compareSection">
-            <div className="compareCard muted">
-              <div className="compareLabel">Typical AI</div>
-              <h3>Fast answers</h3>
-              <ul>
-                <li>Jumps to the solution</li>
-                <li>Doesn’t check student thinking</li>
-                <li>Can make learning feel shallow</li>
-              </ul>
-            </div>
+              <form onSubmit={handlePreviewSubmit} className="previewForm">
+                <label htmlFor="vic-preview" className="srOnly">
+                  Ask VIC a question
+                </label>
 
-            <div className="compareCard featured">
-              <div className="compareLabel">VIC</div>
-              <h3>Real teaching behavior</h3>
-              <ul>
-                <li>Guides step-by-step</li>
-                <li>Adapts to the student</li>
-                <li>Turns confusion into understanding</li>
-              </ul>
-            </div>
-          </section>
+                <textarea
+                  id="vic-preview"
+                  className="previewInput"
+                  placeholder="Type a question for VIC..."
+                  value={question}
+                  onChange={(e) => setQuestion(e.target.value)}
+                  disabled={hasUsedPreview || isLoading}
+                  rows={4}
+                />
 
-          <section className="finalCta">
-            <div className="finalCard">
-              <div className="sectionKicker">Try it now</div>
-              <h2 className="finalTitle">Step into a tutoring experience that actually teaches</h2>
-              <p className="finalCopy">
-                Not shortcuts. Not generic AI chatter. A real teaching moment,
-                built to help students think, understand, and grow.
-              </p>
+                <div className="suggestionRow">
+                  {SUGGESTIONS.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className="suggestionChip"
+                      onClick={() => handleSuggestionClick(item)}
+                      disabled={hasUsedPreview || isLoading}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
 
-              <button
-                className="cta large"
-                onClick={() => router.push("/askvic")}
-              >
-                Start a Session with VIC
-              </button>
+                <div className="previewActions">
+                  <button
+                    type="submit"
+                    className="primaryButton"
+                    disabled={!canSubmit}
+                  >
+                    {isLoading ? "VIC is thinking..." : "Ask VIC"}
+                  </button>
+
+                  <button
+                    type="button"
+                    className="secondaryButton"
+                    onClick={openFullVIC}
+                  >
+                    Go to full VIC
+                  </button>
+                </div>
+              </form>
+
+              {error ? (
+                <div className="errorBox">{error}</div>
+              ) : null}
+
+              {submittedQuestion ? (
+                <div className="conversation">
+                  <div className="message student">
+                    <div className="messageLabel">Student</div>
+                    <p>{submittedQuestion}</p>
+                  </div>
+
+                  {isLoading ? (
+                    <div className="message vic typing">
+                      <div className="messageLabel">VIC</div>
+                      <p>Thinking through it carefully...</p>
+                    </div>
+                  ) : null}
+
+                  {!isLoading && previewAnswer ? (
+                    <>
+                      <div className="message vic highlight">
+                        <div className="messageLabel">VIC</div>
+                        <p>{previewAnswer}</p>
+                      </div>
+
+                      <div className="continueCard">
+                        <div className="continueKicker">
+                          Want to keep going?
+                        </div>
+                        <h3 className="continueTitle">
+                          Step into the full VIC experience
+                        </h3>
+                        <p className="continueCopy">
+                          This preview gives one answer. The full portal lets VIC
+                          stay with the student, guide step-by-step, and keep
+                          teaching through the moment.
+                        </p>
+
+                        <button
+                          type="button"
+                          className="primaryButton large"
+                          onClick={openFullVIC}
+                        >
+                          Start a full session
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
           </section>
         </main>
@@ -198,7 +280,7 @@ export default function Home() {
           width: 100%;
           min-height: 100%;
           font-family: Inter, Arial, sans-serif;
-          background: #050505;
+          background: #040404;
           color: white;
         }
 
@@ -209,8 +291,14 @@ export default function Home() {
         body {
           overflow-x: hidden;
           background:
-            radial-gradient(circle at top, rgba(76, 100, 255, 0.12), transparent 22%),
-            linear-gradient(180deg, #050505 0%, #090910 45%, #050505 100%);
+            radial-gradient(circle at top left, rgba(74, 101, 255, 0.1), transparent 24%),
+            radial-gradient(circle at bottom right, rgba(103, 72, 255, 0.08), transparent 26%),
+            linear-gradient(180deg, #040404 0%, #090910 48%, #040404 100%);
+        }
+
+        button,
+        textarea {
+          font: inherit;
         }
 
         .page {
@@ -222,35 +310,35 @@ export default function Home() {
         .ambient {
           position: absolute;
           border-radius: 999px;
-          filter: blur(80px);
+          filter: blur(90px);
           pointer-events: none;
-          opacity: 0.8;
+          opacity: 0.85;
         }
 
-        .ambientOne {
+        .ambientLeft {
           width: 420px;
           height: 420px;
+          left: -120px;
           top: 80px;
-          left: -80px;
-          background: rgba(88, 110, 255, 0.16);
+          background: rgba(73, 100, 255, 0.14);
         }
 
-        .ambientTwo {
+        .ambientRight {
           width: 380px;
           height: 380px;
-          top: 440px;
-          right: -100px;
-          background: rgba(123, 73, 255, 0.14);
+          right: -120px;
+          bottom: 140px;
+          background: rgba(100, 72, 255, 0.12);
         }
 
         .gridFade {
           position: absolute;
           inset: 0;
           background-image:
-            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
-          background-size: 48px 48px;
-          mask-image: linear-gradient(180deg, rgba(255,255,255,0.22), transparent 70%);
+            linear-gradient(rgba(255,255,255,0.028) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255,255,255,0.028) 1px, transparent 1px);
+          background-size: 46px 46px;
+          mask-image: linear-gradient(180deg, rgba(255,255,255,0.28), transparent 78%);
           pointer-events: none;
         }
 
@@ -260,147 +348,88 @@ export default function Home() {
           width: 100%;
           max-width: 1220px;
           margin: 0 auto;
-          padding: 32px 20px 80px;
+          padding: 30px 20px 72px;
         }
 
         .hero {
-          position: relative;
-          padding: 26px 0 24px;
+          padding: 10px 0 26px;
         }
 
-        .heroTop {
-          display: flex;
-          justify-content: center;
-          margin-bottom: 26px;
-        }
-
-        .badge {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 8px 14px;
+        .topBadge {
+          width: fit-content;
+          margin: 0 auto 26px;
+          padding: 10px 16px;
           border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.12);
-          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          background: rgba(255,255,255,0.04);
+          color: rgba(255,255,255,0.78);
           font-size: 12px;
           letter-spacing: 0.16em;
           text-transform: uppercase;
-          color: rgba(255,255,255,0.78);
           backdrop-filter: blur(10px);
         }
 
         .heroGrid {
           display: grid;
-          grid-template-columns: 1.05fr 0.95fr;
-          gap: 40px;
+          grid-template-columns: 1.02fr 0.98fr;
+          gap: 34px;
           align-items: center;
+          min-height: 540px;
         }
 
         .heroCopy {
-          position: relative;
-          padding: 24px 6px 24px 0;
+          padding-right: 12px;
         }
 
         .eyebrow {
-          font-size: 13px;
-          letter-spacing: 0.18em;
-          text-transform: uppercase;
-          color: #9fb0ff;
           margin-bottom: 18px;
+          font-size: 13px;
+          letter-spacing: 0.17em;
+          text-transform: uppercase;
+          color: #8fa2ff;
         }
 
         .headline {
           margin: 0;
-          font-size: clamp(42px, 6vw, 78px);
+          max-width: 740px;
+          font-size: clamp(42px, 6vw, 82px);
           line-height: 0.96;
+          letter-spacing: -0.065em;
           font-weight: 800;
-          letter-spacing: -0.06em;
-          max-width: 720px;
         }
 
         .headline span {
           display: block;
-          color: rgba(255,255,255,0.82);
+          color: rgba(255,255,255,0.9);
         }
 
         .subtext {
-          max-width: 650px;
-          margin: 22px 0 0;
-          font-size: 19px;
-          line-height: 1.7;
-          color: rgba(255,255,255,0.72);
-        }
-
-        .ctaRow {
-          display: flex;
-          align-items: center;
-          gap: 18px;
-          margin-top: 30px;
-          flex-wrap: wrap;
-        }
-
-        .cta {
-          border: none;
-          border-radius: 18px;
-          padding: 18px 30px;
-          min-width: 220px;
+          max-width: 640px;
+          margin: 24px 0 0;
           font-size: 20px;
-          font-weight: 800;
-          color: white;
-          cursor: pointer;
-          background: linear-gradient(135deg, #6574ff 0%, #7b61ff 58%, #4c7dff 100%);
-          box-shadow: 0 18px 50px rgba(97,113,255,0.34);
-          transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+          line-height: 1.7;
+          color: rgba(255,255,255,0.68);
         }
 
-        .cta:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 24px 64px rgba(97,113,255,0.48);
-        }
-
-        .cta.large {
-          margin-top: 10px;
-          min-width: 280px;
-          font-size: 22px;
-          padding: 20px 34px;
-        }
-
-        .ctaMeta {
+        .quietProof {
           display: flex;
-          flex-direction: column;
-          gap: 4px;
-        }
-
-        .metaStrong {
-          font-size: 15px;
-          font-weight: 700;
-          color: rgba(255,255,255,0.92);
-        }
-
-        .metaSoft {
-          font-size: 14px;
-          color: rgba(255,255,255,0.58);
-        }
-
-        .proofRow {
-          display: flex;
-          gap: 10px;
           flex-wrap: wrap;
+          gap: 10px;
           margin-top: 28px;
         }
 
-        .proofPill {
+        .quietProof span {
           padding: 10px 14px;
           border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.05);
-          color: rgba(255,255,255,0.8);
+          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(255,255,255,0.04);
+          color: rgba(255,255,255,0.74);
           font-size: 14px;
         }
 
         .heroVisual {
           position: relative;
-          min-height: 620px;
+          min-height: 520px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -418,344 +447,392 @@ export default function Home() {
 
         .logoHalo {
           position: absolute;
-          width: 420px;
-          height: 420px;
+          width: 380px;
+          height: 380px;
           border-radius: 50%;
           background: radial-gradient(
             circle,
-            rgba(120, 130, 255, 0.28) 0%,
-            rgba(120, 130, 255, 0.14) 36%,
-            rgba(120, 130, 255, 0.05) 58%,
-            transparent 74%
+            rgba(116, 130, 255, 0.22) 0%,
+            rgba(116, 130, 255, 0.1) 42%,
+            rgba(116, 130, 255, 0.03) 62%,
+            transparent 75%
           );
-          filter: blur(34px);
+          filter: blur(30px);
         }
 
         .logoRing {
           position: absolute;
-          width: 320px;
-          height: 320px;
           border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.08);
-          box-shadow:
-            0 0 0 26px rgba(255,255,255,0.015),
-            0 0 0 56px rgba(255,255,255,0.01);
+          border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .ringOne {
+          width: 310px;
+          height: 310px;
+        }
+
+        .ringTwo {
+          width: 390px;
+          height: 390px;
+          opacity: 0.35;
         }
 
         .vicLogo {
-          width: min(360px, 72vw);
-          height: auto;
           position: relative;
           z-index: 2;
-          filter: drop-shadow(0 0 34px rgba(120, 130, 255, 0.34));
+          width: min(330px, 70vw);
+          height: auto;
+          filter: drop-shadow(0 0 28px rgba(118, 128, 255, 0.32));
         }
 
         .floatingCard {
           position: absolute;
           z-index: 3;
-          max-width: 240px;
+          max-width: 250px;
           padding: 14px 16px;
           border-radius: 18px;
           border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(10, 10, 20, 0.78);
+          background: rgba(10, 10, 18, 0.72);
           backdrop-filter: blur(12px);
-          box-shadow: 0 16px 40px rgba(0,0,0,0.34);
+          box-shadow: 0 18px 40px rgba(0,0,0,0.28);
           color: rgba(255,255,255,0.88);
-          font-size: 14px;
-          line-height: 1.5;
+          line-height: 1.45;
+          font-size: 15px;
         }
 
-        .floatingPrompt {
-          top: 82px;
-          right: 8px;
+        .floatingCardTop {
+          top: 78px;
+          right: 0;
           transform: rotate(3deg);
         }
 
-        .floatingResponse {
-          bottom: 74px;
-          left: 0;
+        .floatingCardBottom {
+          bottom: 76px;
+          left: 8px;
           transform: rotate(-4deg);
         }
 
         .floatingLabel {
-          display: block;
-          margin-bottom: 6px;
+          margin-bottom: 8px;
           font-size: 11px;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.15em;
           text-transform: uppercase;
-          color: #aeb9ff;
+          color: #a7b3ff;
         }
 
-        .transitionBand {
-          margin-top: 8px;
-          padding: 34px 0 12px;
-          text-align: center;
-        }
-
-        .transitionText {
-          margin: 0;
-          font-size: clamp(24px, 3vw, 38px);
-          font-weight: 700;
-          letter-spacing: -0.04em;
-          color: rgba(255,255,255,0.94);
-        }
-
-        .transitionText.dim {
+        .previewSection {
           margin-top: 10px;
-          color: rgba(255,255,255,0.5);
         }
 
-        .revealSection {
-          margin-top: 46px;
-        }
-
-        .sectionIntro {
+        .previewIntro {
           max-width: 760px;
-          margin: 0 0 24px 0;
+          margin-bottom: 22px;
         }
 
         .sectionKicker {
-          font-size: 12px;
-          letter-spacing: 0.16em;
-          text-transform: uppercase;
-          color: #9fb0ff;
           margin-bottom: 10px;
+          font-size: 12px;
+          letter-spacing: 0.17em;
+          text-transform: uppercase;
+          color: #8fa2ff;
         }
 
         .sectionTitle {
           margin: 0;
-          font-size: clamp(32px, 4vw, 54px);
+          font-size: clamp(34px, 4.5vw, 58px);
           line-height: 1.02;
-          font-weight: 800;
           letter-spacing: -0.05em;
+          font-weight: 800;
         }
 
         .sectionCopy {
+          max-width: 730px;
           margin: 16px 0 0;
-          font-size: 18px;
+          font-size: 19px;
           line-height: 1.7;
-          color: rgba(255,255,255,0.68);
-          max-width: 720px;
+          color: rgba(255,255,255,0.66);
         }
 
-        .demoWrap {
+        .previewCard {
           position: relative;
-          margin-top: 26px;
-          display: flex;
-          justify-content: flex-end;
-        }
-
-        .demoGlow {
-          position: absolute;
-          width: 520px;
-          height: 520px;
-          right: 70px;
-          top: 20px;
-          border-radius: 50%;
-          background: radial-gradient(circle, rgba(101,116,255,0.18), transparent 70%);
-          filter: blur(44px);
-          pointer-events: none;
-        }
-
-        .demoCard {
-          position: relative;
-          z-index: 1;
-          width: min(820px, 100%);
           padding: 24px;
           border-radius: 28px;
           border: 1px solid rgba(255,255,255,0.08);
           background:
-            linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.035));
+            radial-gradient(circle at top right, rgba(74, 99, 255, 0.09), transparent 28%),
+            linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.03));
           backdrop-filter: blur(12px);
           box-shadow:
-            0 24px 80px rgba(0,0,0,0.38),
-            inset 0 1px 0 rgba(255,255,255,0.04);
+            0 24px 70px rgba(0,0,0,0.34),
+            inset 0 1px 0 rgba(255,255,255,0.03);
         }
 
-        .demoHeader {
+        .previewHeader {
           display: flex;
-          align-items: center;
           justify-content: space-between;
+          align-items: center;
           gap: 16px;
-          margin-bottom: 22px;
           flex-wrap: wrap;
+          margin-bottom: 20px;
         }
 
-        .demoEyebrow {
+        .previewEyebrow {
           font-size: 12px;
           letter-spacing: 0.16em;
           text-transform: uppercase;
-          color: rgba(174, 185, 255, 0.78);
+          color: rgba(167, 179, 255, 0.8);
         }
 
-        .demoTitle {
+        .previewTitle {
           margin-top: 6px;
-          font-size: 24px;
+          font-size: 28px;
           font-weight: 800;
+          letter-spacing: -0.04em;
           color: white;
         }
 
-        .demoStatus {
+        .previewStatus {
           display: inline-flex;
           align-items: center;
           gap: 8px;
           padding: 10px 12px;
           border-radius: 999px;
-          background: rgba(255,255,255,0.05);
           border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.04);
+          color: rgba(255,255,255,0.76);
           font-size: 13px;
-          color: rgba(255,255,255,0.78);
         }
 
         .statusDot {
           width: 8px;
           height: 8px;
           border-radius: 50%;
-          background: #8fa0ff;
-          box-shadow: 0 0 14px rgba(143,160,255,0.9);
+          background: #90a0ff;
+          box-shadow: 0 0 12px rgba(144,160,255,0.9);
         }
 
-        .chatFlow {
+        .previewForm {
+          display: block;
+        }
+
+        .previewInput {
+          width: 100%;
+          min-height: 112px;
+          resize: vertical;
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 20px;
+          background: rgba(255,255,255,0.035);
+          color: white;
+          padding: 18px 18px;
+          outline: none;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+          transition: border-color 0.16s ease, box-shadow 0.16s ease;
+        }
+
+        .previewInput::placeholder {
+          color: rgba(255,255,255,0.38);
+        }
+
+        .previewInput:focus {
+          border-color: rgba(139, 157, 255, 0.34);
+          box-shadow:
+            inset 0 1px 0 rgba(255,255,255,0.03),
+            0 0 0 4px rgba(93, 110, 255, 0.08);
+        }
+
+        .previewInput:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
+        .suggestionRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-top: 14px;
+        }
+
+        .suggestionChip {
+          padding: 10px 14px;
+          border-radius: 999px;
+          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(255,255,255,0.035);
+          color: rgba(255,255,255,0.76);
+          cursor: pointer;
+          transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+        }
+
+        .suggestionChip:hover:enabled {
+          transform: translateY(-1px);
+          background: rgba(255,255,255,0.055);
+        }
+
+        .suggestionChip:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+
+        .previewActions {
+          display: flex;
+          gap: 12px;
+          flex-wrap: wrap;
+          margin-top: 18px;
+        }
+
+        .primaryButton,
+        .secondaryButton {
+          border: none;
+          border-radius: 18px;
+          padding: 16px 24px;
+          font-weight: 800;
+          cursor: pointer;
+          transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+        }
+
+        .primaryButton {
+          color: white;
+          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
+          box-shadow: 0 16px 44px rgba(97,113,255,0.32);
+        }
+
+        .primaryButton:hover:enabled {
+          transform: translateY(-2px);
+          box-shadow: 0 22px 56px rgba(97,113,255,0.45);
+        }
+
+        .primaryButton:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          transform: none;
+          box-shadow: none;
+        }
+
+        .primaryButton.large {
+          min-width: 230px;
+          padding: 18px 28px;
+          font-size: 18px;
+        }
+
+        .secondaryButton {
+          color: rgba(255,255,255,0.88);
+          background: rgba(255,255,255,0.06);
+          border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .secondaryButton:hover {
+          transform: translateY(-1px);
+          background: rgba(255,255,255,0.08);
+        }
+
+        .errorBox {
+          margin-top: 18px;
+          padding: 14px 16px;
+          border-radius: 18px;
+          border: 1px solid rgba(255,120,120,0.16);
+          background: rgba(255,90,90,0.08);
+          color: rgba(255,220,220,0.9);
+          line-height: 1.55;
+        }
+
+        .conversation {
+          margin-top: 24px;
           display: flex;
           flex-direction: column;
           gap: 14px;
         }
 
-        .msg {
-          max-width: 78%;
+        .message {
+          max-width: 84%;
           padding: 16px 18px;
-          border-radius: 18px;
+          border-radius: 20px;
           border: 1px solid rgba(255,255,255,0.06);
-          font-size: 16px;
-          line-height: 1.65;
-          box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+          box-shadow: 0 12px 28px rgba(0,0,0,0.18);
         }
 
-        .msg p {
+        .message p {
           margin: 0;
+          line-height: 1.7;
+          font-size: 17px;
           color: rgba(255,255,255,0.92);
+          white-space: pre-wrap;
         }
 
-        .msgLabel {
+        .messageLabel {
           margin-bottom: 8px;
           font-size: 11px;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.15em;
           text-transform: uppercase;
           color: rgba(255,255,255,0.56);
         }
 
-        .msg.student {
+        .message.student {
           align-self: flex-start;
-          background: rgba(255,255,255,0.055);
+          background: rgba(255,255,255,0.05);
         }
 
-        .msg.vic {
+        .message.vic {
           align-self: flex-end;
-          background: rgba(98, 116, 255, 0.14);
+          background: rgba(92, 109, 255, 0.12);
         }
 
-        .msg.highlight {
-          align-self: flex-end;
-          background: linear-gradient(135deg, rgba(101,116,255,0.2), rgba(123,97,255,0.18));
-          border-color: rgba(159,176,255,0.18);
+        .message.highlight {
+          background: linear-gradient(135deg, rgba(96,112,255,0.17), rgba(120,97,255,0.15));
+          border-color: rgba(156, 172, 255, 0.16);
         }
 
-        .demoFooter {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-          margin-top: 20px;
-          padding-top: 18px;
-          border-top: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .footerItem {
-          padding: 10px 12px;
-          border-radius: 999px;
-          background: rgba(255,255,255,0.04);
-          color: rgba(255,255,255,0.74);
-          font-size: 13px;
-        }
-
-        .compareSection {
-          margin-top: 42px;
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 18px;
-        }
-
-        .compareCard {
-          padding: 26px;
-          border-radius: 24px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.04);
-        }
-
-        .compareCard.featured {
-          background: linear-gradient(180deg, rgba(91,108,255,0.14), rgba(255,255,255,0.04));
-          box-shadow: 0 20px 50px rgba(45, 62, 170, 0.16);
-        }
-
-        .compareCard.muted {
+        .message.typing {
           opacity: 0.88;
         }
 
-        .compareLabel {
-          font-size: 12px;
-          letter-spacing: 0.15em;
-          text-transform: uppercase;
-          color: #9fb0ff;
-          margin-bottom: 10px;
+        .continueCard {
+          margin-top: 10px;
+          padding: 22px;
+          border-radius: 22px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background:
+            radial-gradient(circle at top left, rgba(82, 101, 255, 0.08), transparent 28%),
+            rgba(255,255,255,0.035);
         }
 
-        .compareCard h3 {
-          margin: 0 0 14px;
-          font-size: 28px;
+        .continueKicker {
+          margin-bottom: 8px;
+          font-size: 12px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: #9eb0ff;
+        }
+
+        .continueTitle {
+          margin: 0;
+          font-size: clamp(24px, 3vw, 38px);
+          line-height: 1.05;
           letter-spacing: -0.04em;
         }
 
-        .compareCard ul {
-          margin: 0;
-          padding-left: 18px;
-          color: rgba(255,255,255,0.74);
-          line-height: 1.8;
-          font-size: 16px;
-        }
-
-        .finalCta {
-          margin-top: 42px;
-        }
-
-        .finalCard {
-          padding: 34px 28px;
-          border-radius: 28px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background:
-            radial-gradient(circle at top left, rgba(99,115,255,0.12), transparent 32%),
-            rgba(255,255,255,0.04);
-          text-align: center;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.28);
-        }
-
-        .finalTitle {
-          margin: 0;
-          font-size: clamp(30px, 4vw, 50px);
-          line-height: 1.04;
-          letter-spacing: -0.05em;
-        }
-
-        .finalCopy {
+        .continueCopy {
           max-width: 760px;
-          margin: 16px auto 0;
-          font-size: 18px;
-          line-height: 1.7;
+          margin: 14px 0 0;
           color: rgba(255,255,255,0.7);
+          line-height: 1.7;
+          font-size: 17px;
+        }
+
+        .srOnly {
+          position: absolute;
+          width: 1px;
+          height: 1px;
+          padding: 0;
+          margin: -1px;
+          overflow: hidden;
+          clip: rect(0, 0, 0, 0);
+          border: 0;
         }
 
         @media (max-width: 980px) {
           .heroGrid {
             grid-template-columns: 1fr;
-            gap: 26px;
+            gap: 24px;
+            min-height: auto;
           }
 
           .heroCopy {
@@ -763,56 +840,55 @@ export default function Home() {
           }
 
           .heroVisual {
-            min-height: 500px;
+            min-height: 420px;
           }
 
-          .demoWrap {
-            justify-content: center;
-          }
-
-          .compareSection {
-            grid-template-columns: 1fr;
+          .logoStage {
+            height: 420px;
           }
         }
 
         @media (max-width: 768px) {
           .shell {
-            padding: 18px 16px 60px;
+            padding: 18px 14px 54px;
           }
 
           .headline {
-            font-size: clamp(38px, 11vw, 56px);
+            font-size: clamp(38px, 12vw, 58px);
           }
 
           .subtext,
           .sectionCopy,
-          .finalCopy {
+          .continueCopy {
             font-size: 16px;
           }
 
           .heroVisual {
-            min-height: 420px;
+            display: block;
+            min-height: auto;
           }
 
           .logoStage {
-            height: 380px;
+            height: 340px;
           }
 
           .logoHalo {
-            width: 300px;
-            height: 300px;
+            width: 280px;
+            height: 280px;
           }
 
-          .logoRing {
-            width: 240px;
-            height: 240px;
-            box-shadow:
-              0 0 0 18px rgba(255,255,255,0.015),
-              0 0 0 40px rgba(255,255,255,0.01);
+          .ringOne {
+            width: 220px;
+            height: 220px;
+          }
+
+          .ringTwo {
+            width: 280px;
+            height: 280px;
           }
 
           .vicLogo {
-            width: min(250px, 72vw);
+            width: min(220px, 62vw);
           }
 
           .floatingCard {
@@ -822,34 +898,27 @@ export default function Home() {
             margin-top: 12px;
           }
 
-          .heroVisual {
-            display: block;
-          }
-
-          .ctaRow {
-            align-items: flex-start;
-          }
-
-          .cta,
-          .cta.large {
-            width: 100%;
-            min-width: 0;
-          }
-
-          .msg {
-            max-width: 100%;
-          }
-
-          .demoCard {
+          .previewCard {
             padding: 18px;
+            border-radius: 22px;
           }
 
-          .demoTitle {
-            font-size: 21px;
-          }
-
-          .transitionText {
+          .previewTitle {
             font-size: 24px;
+          }
+
+          .previewActions {
+            flex-direction: column;
+          }
+
+          .primaryButton,
+          .secondaryButton,
+          .primaryButton.large {
+            width: 100%;
+          }
+
+          .message {
+            max-width: 100%;
           }
         }
       `}</style>
