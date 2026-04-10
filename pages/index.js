@@ -1,134 +1,7 @@
-import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 
 export default function Home() {
   const router = useRouter();
-
-  const userPrompt = "I don’t get this… why do we flip the fraction?";
-  const vicLines = [
-    "Great question. Let’s slow it down.",
-    "Dividing by a fraction means multiplying by its reciprocal.",
-    "So 3/4 ÷ 1/2 becomes 3/4 × 2.",
-    "Now try the next step—what do you get?",
-  ];
-
-  const [typedPrompt, setTypedPrompt] = useState("");
-  const [visibleVicLines, setVisibleVicLines] = useState([]);
-
-  useEffect(() => {
-    let promptIndex = 0;
-    let lineIndex = 0;
-    let charIndex = 0;
-    let promptTimer;
-    let lineTimer;
-    let pauseTimer;
-
-    promptTimer = setInterval(() => {
-      promptIndex += 1;
-      setTypedPrompt(userPrompt.slice(0, promptIndex));
-
-      if (promptIndex >= userPrompt.length) {
-        clearInterval(promptTimer);
-
-        pauseTimer = setTimeout(() => {
-          setVisibleVicLines([""]);
-
-          lineTimer = setInterval(() => {
-            const currentLine = vicLines[lineIndex];
-            charIndex += 1;
-
-            setVisibleVicLines((prev) => {
-              const next = [...prev];
-              next[lineIndex] = currentLine.slice(0, charIndex);
-              return next;
-            });
-
-            if (charIndex >= currentLine.length) {
-              clearInterval(lineTimer);
-
-              lineIndex += 1;
-              charIndex = 0;
-
-              if (lineIndex < vicLines.length) {
-                pauseTimer = setTimeout(() => {
-                  setVisibleVicLines((prev) => [...prev, ""]);
-
-                  lineTimer = setInterval(() => {
-                    const nextLine = vicLines[lineIndex];
-                    charIndex += 1;
-
-                    setVisibleVicLines((prev) => {
-                      const next = [...prev];
-                      next[lineIndex] = nextLine.slice(0, charIndex);
-                      return next;
-                    });
-
-                    if (charIndex >= nextLine.length) {
-                      clearInterval(lineTimer);
-
-                      lineIndex += 1;
-                      charIndex = 0;
-
-                      if (lineIndex < vicLines.length) {
-                        pauseTimer = setTimeout(() => {
-                          setVisibleVicLines((prev) => [...prev, ""]);
-
-                          lineTimer = setInterval(() => {
-                            const futureLine = vicLines[lineIndex];
-                            charIndex += 1;
-
-                            setVisibleVicLines((prev) => {
-                              const next = [...prev];
-                              next[lineIndex] = futureLine.slice(0, charIndex);
-                              return next;
-                            });
-
-                            if (charIndex >= futureLine.length) {
-                              clearInterval(lineTimer);
-
-                              lineIndex += 1;
-                              charIndex = 0;
-
-                              if (lineIndex < vicLines.length) {
-                                pauseTimer = setTimeout(() => {
-                                  setVisibleVicLines((prev) => [...prev, ""]);
-
-                                  lineTimer = setInterval(() => {
-                                    const lastLine = vicLines[lineIndex];
-                                    charIndex += 1;
-
-                                    setVisibleVicLines((prev) => {
-                                      const next = [...prev];
-                                      next[lineIndex] = lastLine.slice(0, charIndex);
-                                      return next;
-                                    });
-
-                                    if (charIndex >= lastLine.length) {
-                                      clearInterval(lineTimer);
-                                    }
-                                  }, 18);
-                                }, 400);
-                              }
-                            }
-                          }, 18);
-                        }, 400);
-                      }
-                    }
-                  }, 18);
-                }, 400);
-              }
-            }
-          }, 26);
-        }, 500);
-      }
-    }, 32);
-
-    return () => {
-      clearInterval(promptTimer);
-      clearInterval(lineTimer);
-      clearTimeout(pauseTimer);
-    };
-  }, []);
 
   return (
     <>
@@ -161,7 +34,7 @@ export default function Home() {
               </h2>
 
               <p className="subtext">
-                A premium AI co-teacher designed to guide, check, and adapt like
+                A premium AI co-teacher built to guide, check, and adapt like
                 real academic support.
               </p>
 
@@ -183,7 +56,7 @@ export default function Home() {
             </section>
 
             <section className="demoWrap">
-              <p className="demoIntro">Watch how VIC responds:</p>
+              <p className="demoIntro">See how VIC teaches:</p>
 
               <div className="demoCard">
                 <div className="demoTop">
@@ -200,30 +73,35 @@ export default function Home() {
                     <div className="bubble userBubble">
                       <div className="bubbleLabel">You</div>
                       <div className="bubbleText">
-                        {typedPrompt}
-                        {typedPrompt.length < userPrompt.length && (
-                          <span className="cursor">|</span>
-                        )}
+                        I don’t get this… why do we flip the fraction?
                       </div>
                     </div>
                   </div>
 
-                  {visibleVicLines.map((line, index) => (
-                    <div className="chatRow vic" key={index}>
-                      <div className="bubble vicBubble">
-                        {index === 0 && (
-                          <div className="bubbleLabel vicName">VIC</div>
-                        )}
-                        <div className="bubbleText responseText">
-                          {line}
-                          {index === visibleVicLines.length - 1 &&
-                            line.length < vicLines[index].length && (
-                              <span className="cursor">|</span>
-                            )}
-                        </div>
+                  <div className="chatRow vic">
+                    <div className="bubble vicBubble">
+                      <div className="bubbleLabel vicName">VIC</div>
+                      <div className="bubbleText responseText">
+                        Great question. Let’s slow it down.
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  <div className="chatRow vic">
+                    <div className="bubble vicBubble">
+                      <div className="bubbleText responseText">
+                        Dividing by a fraction means multiplying by its reciprocal.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="chatRow vic">
+                    <div className="bubble vicBubble">
+                      <div className="bubbleText responseText">
+                        So 3/4 ÷ 1/2 becomes 3/4 × 2. Now what do you get?
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="demoBottom">
@@ -517,10 +395,6 @@ export default function Home() {
           filter: brightness(1.06);
         }
 
-        .cta:active {
-          transform: translateY(0);
-        }
-
         .ctaSub {
           margin: 10px 0 0;
           font-size: 14px;
@@ -616,7 +490,6 @@ export default function Home() {
           width: 10px;
           height: 10px;
           border-radius: 50%;
-          background: rgba(255, 255, 255, 0.18);
         }
 
         .dots span:nth-child(1) {
@@ -702,12 +575,6 @@ export default function Home() {
           color: rgba(255, 255, 255, 0.88);
         }
 
-        .cursor {
-          display: inline-block;
-          opacity: 0.85;
-          animation: blink 1s steps(1) infinite;
-        }
-
         .demoBottom {
           display: flex;
           flex-wrap: wrap;
@@ -732,8 +599,7 @@ export default function Home() {
         }
 
         @keyframes floatGlow {
-          0%,
-          100% {
+          0%, 100% {
             transform: translateY(0px) translateX(0px) scale(1);
           }
           50% {
@@ -741,20 +607,8 @@ export default function Home() {
           }
         }
 
-        @keyframes blink {
-          0%,
-          50% {
-            opacity: 1;
-          }
-          51%,
-          100% {
-            opacity: 0;
-          }
-        }
-
         @keyframes pulseRing {
-          0%,
-          100% {
+          0%, 100% {
             opacity: 0.45;
             transform: translate(-50%, -50%) scale(1);
           }
@@ -765,8 +619,7 @@ export default function Home() {
         }
 
         @keyframes pulseButton {
-          0%,
-          100% {
+          0%, 100% {
             box-shadow:
               0 18px 48px rgba(97, 113, 255, 0.42),
               0 0 34px rgba(97, 113, 255, 0.26);
