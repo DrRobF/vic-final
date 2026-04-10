@@ -1,8 +1,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/router";
 
-const PREVIEW_API_ENDPOINT = "/api/askvic-preview";
-
+const PREVIEW_API_ENDPOINT = "/api/vic";
 const SUGGESTIONS = [
   "Why do we flip fractions?",
   "What is the difference between area and perimeter?",
