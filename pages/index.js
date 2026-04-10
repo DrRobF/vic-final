@@ -11,11 +11,7 @@ export default function Home() {
   const router = useRouter();
   const [question, setQuestion] = useState("");
 
-  function useSuggestion(text) {
-    setQuestion(text);
-  }
-
-  function goToFullVIC(e) {
+  function launchVIC(e) {
     if (e) e.preventDefault();
 
     const trimmed = question.trim();
@@ -25,6 +21,10 @@ export default function Home() {
     } else {
       router.push("/askvic");
     }
+  }
+
+  function useSuggestion(text) {
+    setQuestion(text);
   }
 
   return (
@@ -47,7 +47,7 @@ export default function Home() {
               </h1>
 
               <p className="subtext">
-                Ask one real question on the right. VIC takes it from there.
+                Start with a real question. VIC takes it from there.
               </p>
 
               <div className="quietProof">
@@ -57,7 +57,7 @@ export default function Home() {
               </div>
 
               <div className="heroActions">
-                <button className="primaryButton" onClick={goToFullVIC}>
+                <button className="primaryButton" onClick={launchVIC}>
                   Open Full VIC
                 </button>
               </div>
@@ -71,7 +71,7 @@ export default function Home() {
                   <div className="phoneTopBar">
                     <div className="phoneCam" />
                     <div className="phoneTitle">VIC</div>
-                    <div className="phoneStatus">Preview</div>
+                    <div className="phoneStatus">Launch</div>
                   </div>
 
                   <div className="miniApp">
@@ -82,9 +82,9 @@ export default function Home() {
                         className="miniLogo"
                       />
                       <div className="miniHeaderText">
-                        <div className="miniHeaderTitle">Ask VIC a question</div>
+                        <div className="miniHeaderTitle">Start with a question</div>
                         <div className="miniHeaderSub">
-                          Opens a full session in VIC
+                          Your question opens a real VIC session
                         </div>
                       </div>
                     </div>
@@ -96,31 +96,17 @@ export default function Home() {
                         <span className="tab">Sketch</span>
                       </div>
 
-                      <div className="chatArea">
-                        <div className="bubble student">
-                          <div className="bubbleLabel">Student</div>
-                          <p>Wait... why do we flip the fraction?</p>
-                        </div>
+                      <form className="launcherCard" onSubmit={launchVIC}>
+                        <label className="inputLabel" htmlFor="vic-question">
+                          Ask VIC something
+                        </label>
 
-                        <div className="bubble vic">
-                          <div className="bubbleLabel">VIC</div>
-                          <p>
-                            Before we flip it, what does dividing mean here?
-                          </p>
-                        </div>
-
-                        <div className="bubble vic soft">
-                          <div className="bubbleLabel">VIC</div>
-                          <p>Type your own question below.</p>
-                        </div>
-                      </div>
-
-                      <form className="inputZone" onSubmit={goToFullVIC}>
                         <textarea
+                          id="vic-question"
                           value={question}
                           onChange={(e) => setQuestion(e.target.value)}
-                          placeholder="Type your question..."
-                          rows={3}
+                          placeholder="Type your question here..."
+                          rows={6}
                         />
 
                         <div className="suggestions">
@@ -136,24 +122,9 @@ export default function Home() {
                           ))}
                         </div>
 
-                        <div className="inputActions">
-                          <button
-                            type="submit"
-                            className="smallPrimaryButton"
-                            aria-label="Send question to VIC"
-                            title="Send"
-                          >
-                            Send
-                          </button>
-
-                          <button
-                            type="button"
-                            className="smallSecondaryButton"
-                            onClick={goToFullVIC}
-                          >
-                            Full VIC
-                          </button>
-                        </div>
+                        <button type="submit" className="launchButton">
+                          Ask VIC
+                        </button>
                       </form>
                     </div>
                   </div>
@@ -330,12 +301,11 @@ export default function Home() {
         }
 
         .primaryButton,
-        .smallPrimaryButton,
-        .smallSecondaryButton {
+        .launchButton {
           border: none;
           cursor: pointer;
           font-weight: 800;
-          transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+          transition: transform 0.16s ease, box-shadow 0.16s ease;
         }
 
         .primaryButton {
@@ -347,8 +317,8 @@ export default function Home() {
         }
 
         .primaryButton:hover,
-        .smallPrimaryButton:hover,
-        .smallSecondaryButton:hover {
+        .launchButton:hover,
+        .suggestionChip:hover {
           transform: translateY(-1px);
         }
 
@@ -491,85 +461,38 @@ export default function Home() {
           color: #3251d2;
         }
 
-        .chatArea {
+        .launcherCard {
           flex: 1;
-          overflow-y: auto;
-          display: flex;
-          flex-direction: column;
-          gap: 10px;
-          padding: 6px 4px;
-        }
-
-        .bubble {
-          max-width: 88%;
-          padding: 12px 14px;
+          background: white;
+          border: 1px solid #e6ebf2;
           border-radius: 18px;
-          box-shadow: 0 8px 20px rgba(21, 33, 52, 0.06);
-        }
-
-        .bubbleLabel {
-          font-size: 10px;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          margin-bottom: 6px;
-          font-weight: 700;
-        }
-
-        .bubble p {
-          margin: 0;
-          font-size: 15px;
-          line-height: 1.55;
-        }
-
-        .bubble.student {
-          align-self: flex-start;
-          background: white;
-          color: #17212b;
-          border: 1px solid #e6ebf2;
-        }
-
-        .bubble.student .bubbleLabel {
-          color: #7a8798;
-        }
-
-        .bubble.vic {
-          align-self: flex-end;
-          background: linear-gradient(135deg, #eef2ff 0%, #e7ecff 100%);
-          color: #1f2950;
-          border: 1px solid #d7e0ff;
-        }
-
-        .bubble.vic .bubbleLabel {
-          color: #5870d8;
-        }
-
-        .bubble.soft {
-          background: #f8faff;
-        }
-
-        .inputZone {
-          background: white;
-          border: 1px solid #e6ebf2;
-          border-radius: 16px;
-          padding: 10px;
+          padding: 14px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 12px;
         }
 
-        .inputZone textarea {
+        .inputLabel {
+          font-size: 13px;
+          font-weight: 700;
+          color: #516178;
+        }
+
+        .launcherCard textarea {
           width: 100%;
-          border: none;
+          border: 1px solid #e6ebf2;
+          border-radius: 14px;
           outline: none;
           resize: none;
-          background: transparent;
+          background: #fbfcfe;
           color: #17212b;
           font-size: 15px;
           line-height: 1.55;
-          min-height: 72px;
+          min-height: 130px;
+          padding: 14px;
         }
 
-        .inputZone textarea::placeholder {
+        .launcherCard textarea::placeholder {
           color: #8b96a8;
         }
 
@@ -591,29 +514,15 @@ export default function Home() {
         }
 
         .suggestionChip:hover {
-          transform: translateY(-1px);
           background: #e4ebf8;
         }
 
-        .inputActions {
-          display: flex;
-          gap: 8px;
-          flex-wrap: wrap;
-        }
-
-        .smallPrimaryButton {
+        .launchButton {
           border-radius: 14px;
-          padding: 11px 14px;
+          padding: 14px 16px;
           color: white;
           background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
-          box-shadow: 0 10px 24px rgba(97,113,255,0.2);
-        }
-
-        .smallSecondaryButton {
-          border-radius: 14px;
-          padding: 11px 14px;
-          color: #30425c;
-          background: #eef2f8;
+          box-shadow: 0 10px 24px rgba(97,113,255,0.22);
         }
 
         .footer {
