@@ -35,6 +35,11 @@ export default function Home() {
         <div className="gridFade" />
 
         <main className="shell">
+          <div className="brand">
+            <img src="/vic-logo.png" alt="VIC Logo" className="brandLogo" />
+            <span className="brandText">VIC</span>
+          </div>
+
           <div className="topBadge">Virtual Co-Teacher</div>
 
           <section className="hero">
@@ -64,77 +69,68 @@ export default function Home() {
             </div>
 
             <div className="heroRight">
-              <div className="rightStage">
-                <div className="logoStage">
-                  <div className="logoHalo" />
-                  <div className="logoRing logoRingOne" />
-                  <div className="logoRing logoRingTwo" />
-                  <img src="/vic-logo.png" alt="VIC Logo" className="heroLogo" />
-                </div>
+              <div className="phoneWrap">
+                <div className="phoneGlow" />
 
-                <div className="phoneWrap">
-                  <div className="phoneGlow" />
+                <div className="phoneShell">
+                  <div className="phoneTopBar">
+                    <div className="phoneCam" />
+                    <div className="phoneTitle">VIC</div>
+                    <div className="phoneStatus">Launch</div>
+                  </div>
 
-                  <div className="phoneShell">
-                    <div className="phoneTopBar">
-                      <div className="phoneCam" />
-                      <div className="phoneTitle">VIC</div>
-                      <div className="phoneStatus">Launch</div>
+                  <div className="miniApp">
+                    <div className="miniHeader">
+                      <img
+                        src="/vic-logo.png"
+                        alt="VIC Logo"
+                        className="miniLogo"
+                      />
+                      <div className="miniHeaderText">
+                        <div className="miniHeaderTitle">Start with a question</div>
+                        <div className="miniHeaderSub">
+                          Your question opens a real VIC session
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="miniApp">
-                      <div className="miniHeader">
-                        <img
-                          src="/vic-logo.png"
-                          alt="VIC Logo"
-                          className="miniLogo"
+                    <div className="miniWorkspace">
+                      <div className="workspaceTabs">
+                        <span className="tab active">Chat</span>
+                        <span className="tab">Practice</span>
+                        <span className="tab">Sketch</span>
+                      </div>
+
+                      <form className="launcherCard" onSubmit={launchVIC}>
+                        <label className="inputLabel" htmlFor="vic-question">
+                          Ask VIC something
+                        </label>
+
+                        <textarea
+                          id="vic-question"
+                          value={question}
+                          onChange={(e) => setQuestion(e.target.value)}
+                          placeholder="Type your question here..."
+                          rows={6}
                         />
-                        <div className="miniHeaderText">
-                          <div className="miniHeaderTitle">Start with a question</div>
-                          <div className="miniHeaderSub">
-                            Your question opens a real VIC session
-                          </div>
+
+                        <div className="suggestions">
+                          {SUGGESTIONS.map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              className="suggestionChip"
+                              onClick={() => useSuggestion(item)}
+                            >
+                              {item}
+                            </button>
+                          ))}
                         </div>
-                      </div>
 
-                      <div className="miniWorkspace">
-                        <div className="workspaceTabs">
-                          <span className="tab active">Chat</span>
-                          <span className="tab">Practice</span>
-                          <span className="tab">Sketch</span>
-                        </div>
-
-                        <form className="launcherCard" onSubmit={launchVIC}>
-                          <label className="inputLabel" htmlFor="vic-question">
-                            Ask VIC something
-                          </label>
-
-                          <textarea
-                            id="vic-question"
-                            value={question}
-                            onChange={(e) => setQuestion(e.target.value)}
-                            placeholder="Type your question here..."
-                            rows={6}
-                          />
-
-                          <div className="suggestions">
-                            {SUGGESTIONS.map((item) => (
-                              <button
-                                key={item}
-                                type="button"
-                                className="suggestionChip"
-                                onClick={() => useSuggestion(item)}
-                              >
-                                {item}
-                              </button>
-                            ))}
-                          </div>
-
-                          <button type="submit" className="launchButton">
-                            Ask VIC
-                          </button>
-                        </form>
-                      </div>
+                        <button type="submit" className="launchButton">
+                          Ask VIC
+                        </button>
+                      </form>
                     </div>
                   </div>
                 </div>
@@ -228,6 +224,30 @@ export default function Home() {
           padding: 28px 22px 40px;
         }
 
+        .brand {
+          position: absolute;
+          top: 18px;
+          left: 22px;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          z-index: 5;
+        }
+
+        .brandLogo {
+          width: 42px;
+          height: 42px;
+          object-fit: contain;
+          filter: drop-shadow(0 0 16px rgba(126, 137, 255, 0.25));
+        }
+
+        .brandText {
+          font-size: 16px;
+          font-weight: 800;
+          letter-spacing: 0.08em;
+          color: rgba(255,255,255,0.88);
+        }
+
         .topBadge {
           width: fit-content;
           margin: 0 auto 20px;
@@ -244,7 +264,7 @@ export default function Home() {
 
         .hero {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(380px, 500px);
+          grid-template-columns: minmax(0, 1fr) minmax(380px, 420px);
           gap: 48px;
           align-items: start;
           min-height: calc(100vh - 120px);
@@ -338,74 +358,11 @@ export default function Home() {
           padding-top: 6px;
         }
 
-        .rightStage {
-          position: relative;
-          width: 100%;
-          max-width: 460px;
-          min-height: 780px;
-        }
-
-        .logoStage {
-          position: absolute;
-          top: 0;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 420px;
-          height: 420px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 1;
-          pointer-events: none;
-        }
-
-        .logoHalo {
-          position: absolute;
-          width: 360px;
-          height: 360px;
-          border-radius: 50%;
-          background: radial-gradient(
-            circle,
-            rgba(110, 126, 255, 0.24) 0%,
-            rgba(110, 126, 255, 0.1) 42%,
-            transparent 74%
-          );
-          filter: blur(32px);
-        }
-
-        .logoRing {
-          position: absolute;
-          border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.06);
-        }
-
-        .logoRingOne {
-          width: 260px;
-          height: 260px;
-        }
-
-        .logoRingTwo {
-          width: 340px;
-          height: 340px;
-          opacity: 0.45;
-        }
-
-        .heroLogo {
-          position: relative;
-          z-index: 2;
-          width: 290px;
-          height: auto;
-          opacity: 0.98;
-          filter: drop-shadow(0 0 30px rgba(126, 137, 255, 0.35));
-        }
-
         .phoneWrap {
-          position: absolute;
-          right: 0;
-          top: 165px;
+          position: relative;
           width: 100%;
           max-width: 390px;
-          z-index: 2;
+          margin-left: auto;
         }
 
         .phoneGlow {
@@ -606,6 +563,17 @@ export default function Home() {
         }
 
         @media (max-width: 1100px) {
+          .brand {
+            position: relative;
+            top: auto;
+            left: auto;
+            margin-bottom: 18px;
+          }
+
+          .topBadge {
+            margin-top: 0;
+          }
+
           .hero {
             grid-template-columns: 1fr;
             gap: 28px;
@@ -621,25 +589,8 @@ export default function Home() {
             justify-content: center;
           }
 
-          .rightStage {
-            max-width: 420px;
-            min-height: 720px;
-            margin: 0 auto;
-          }
-
-          .logoStage {
-            width: 360px;
-            height: 360px;
-          }
-
-          .heroLogo {
-            width: 240px;
-          }
-
           .phoneWrap {
-            left: 50%;
-            transform: translateX(-50%);
-            right: auto;
+            margin-left: 0;
           }
         }
 
@@ -656,40 +607,16 @@ export default function Home() {
             font-size: 17px;
           }
 
-          .rightStage {
-            max-width: 100%;
-            min-height: 660px;
+          .brandLogo {
+            width: 38px;
+            height: 38px;
           }
 
-          .logoStage {
-            width: 280px;
-            height: 280px;
-          }
-
-          .logoHalo {
-            width: 250px;
-            height: 250px;
-          }
-
-          .logoRingOne {
-            width: 180px;
-            height: 180px;
-          }
-
-          .logoRingTwo {
-            width: 240px;
-            height: 240px;
-          }
-
-          .heroLogo {
-            width: 170px;
+          .brandText {
+            font-size: 15px;
           }
 
           .phoneWrap {
-            position: relative;
-            top: 70px;
-            left: auto;
-            transform: none;
             max-width: 100%;
           }
 
