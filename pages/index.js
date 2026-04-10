@@ -64,6 +64,11 @@ export default function Home() {
             </div>
 
             <div className="heroRight">
+              <div className="logoAura">
+                <div className="logoHalo" />
+                <img src="/vic-logo.png" alt="VIC Logo" className="heroLogo" />
+              </div>
+
               <div className="phoneWrap">
                 <div className="phoneGlow" />
 
@@ -235,7 +240,7 @@ export default function Home() {
 
         .hero {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
+          grid-template-columns: minmax(0, 1fr) minmax(380px, 460px);
           gap: 48px;
           align-items: start;
           min-height: calc(100vh - 120px);
@@ -323,17 +328,56 @@ export default function Home() {
         }
 
         .heroRight {
+          position: relative;
           display: flex;
           justify-content: flex-end;
           align-items: flex-start;
           padding-top: 6px;
+          min-height: 760px;
+        }
+
+        .logoAura {
+          position: absolute;
+          top: -10px;
+          right: 30px;
+          width: 380px;
+          height: 380px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          pointer-events: none;
+          z-index: 1;
+        }
+
+        .logoHalo {
+          position: absolute;
+          width: 340px;
+          height: 340px;
+          border-radius: 50%;
+          background: radial-gradient(
+            circle,
+            rgba(110, 126, 255, 0.22) 0%,
+            rgba(110, 126, 255, 0.08) 45%,
+            transparent 72%
+          );
+          filter: blur(30px);
+        }
+
+        .heroLogo {
+          position: relative;
+          width: 260px;
+          height: auto;
+          opacity: 0.95;
+          filter: drop-shadow(0 0 28px rgba(126, 137, 255, 0.28));
         }
 
         .phoneWrap {
           position: relative;
           width: 100%;
-          max-width: 380px;
+          max-width: 390px;
           margin-left: auto;
+          margin-top: 130px;
+          z-index: 2;
         }
 
         .phoneGlow {
@@ -547,10 +591,19 @@ export default function Home() {
 
           .heroRight {
             justify-content: center;
+            min-height: auto;
+          }
+
+          .logoAura {
+            position: relative;
+            top: auto;
+            right: auto;
+            margin: 0 auto 16px;
           }
 
           .phoneWrap {
             margin-left: 0;
+            margin-top: 0;
           }
         }
 
@@ -569,6 +622,15 @@ export default function Home() {
 
           .phoneWrap {
             max-width: 100%;
+          }
+
+          .logoAura {
+            width: 280px;
+            height: 280px;
+          }
+
+          .heroLogo {
+            width: 190px;
           }
 
           .miniApp {
