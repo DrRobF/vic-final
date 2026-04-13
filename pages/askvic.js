@@ -18,6 +18,9 @@ const [sessionMode, setSessionMode] = useState('student_directed')
   )
 
   const [messages, setMessages] = useState([
+    function resetConversation() {
+  setMessages([])
+}
     {
       role: 'assistant',
       text:
