@@ -642,6 +642,21 @@ ${context}`
 
               <div style={styles.quickStartInline}>
                 <div style={styles.quickStartInlineLabel}>Quick starts</div>
+            <select
+  value={selectedStudentId}
+  onChange={(e) => setSelectedStudentId(Number(e.target.value))}
+  style={{
+    padding: '10px 12px',
+    borderRadius: '10px',
+    border: '1px solid rgba(255,255,255,0.15)',
+    background: 'rgba(255,255,255,0.08)',
+    color: '#fff',
+    marginBottom: '10px',
+  }}
+>
+  <option value={2}>Jake Student</option>
+  <option value={3}>Maya Student</option>
+</select>
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
   <button
     style={styles.quickStartPill}
