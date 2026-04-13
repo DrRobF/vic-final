@@ -150,8 +150,14 @@ export default function AskVIC() {
       const res = await fetch('/api/vic', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: apiMessages, sketchImage }),
-      })
+       body: JSON.stringify({
+  messages: apiMessages,
+  sketchImage,
+  sessionMode: TEST_SESSION_MODE,
+  assignedLesson: TEST_ASSIGNED_LESSON,
+  studentMode: TEST_STUDENT_MODE,
+  studentInterest: TEST_STUDENT_INTEREST,
+}),
 
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`)
