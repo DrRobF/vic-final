@@ -647,7 +647,10 @@ ${context}`
                 <div style={styles.quickStartInlineLabel}>Quick starts</div>
             <select
   value={selectedStudentId}
-  onChange={(e) => setSelectedStudentId(Number(e.target.value))}
+onChange={(e) => {
+  setSelectedStudentId(Number(e.target.value))
+  resetConversation()
+}}
   style={{
     padding: '10px 12px',
     borderRadius: '10px',
