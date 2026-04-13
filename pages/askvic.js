@@ -5,6 +5,8 @@ const BRAIN_VERSION = 'v3.3'
 export default function AskVIC() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [selectedStudentId, setSelectedStudentId] = useState(2)
+const [sessionMode, setSessionMode] = useState('student_directed')
   const [workArea, setWorkArea] = useState('')
   const [notes, setNotes] = useState('')
   const [activeTool, setActiveTool] = useState('practice')
