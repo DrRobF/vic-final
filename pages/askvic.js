@@ -642,6 +642,25 @@ ${context}`
 
               <div style={styles.quickStartInline}>
                 <div style={styles.quickStartInlineLabel}>Quick starts</div>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
+  <button
+    style={styles.quickStartPill}
+    onClick={() => setSessionMode('teacher_directed')}
+  >
+    My Assigned Lesson
+  </button>
+
+  <button
+    style={styles.quickStartPill}
+    onClick={() => setSessionMode('student_directed')}
+  >
+    Ask VIC Freely
+  </button>
+</div>
+
+<div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
+  Current mode: {sessionMode === 'teacher_directed' ? 'Assigned Lesson' : 'Free Ask VIC'}
+</div>
                 <div style={styles.quickStartInlineButtons}>
                   <button style={styles.quickStartPill} onClick={() => startSubject('math')}>Math</button>
                   <button style={styles.quickStartPill} onClick={() => startSubject('reading')}>Reading</button>
