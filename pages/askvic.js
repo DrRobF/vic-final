@@ -1,17 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 const BRAIN_VERSION = 'v3.3'
-const TEST_SESSION_MODE = 'teacher_directed'
 
-const TEST_ASSIGNED_LESSON = {
-  subject: 'Math',
-  title: 'Adding Fractions',
-  lesson_text:
-    'Students will learn how to add fractions with unlike denominators by finding a common denominator, adding the numerators, and simplifying the answer.',
-}
-
-const TEST_STUDENT_MODE = 'remediation'
-const TEST_STUDENT_INTEREST = 'music'
 export default function AskVIC() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -160,14 +150,10 @@ export default function AskVIC() {
      const res = await fetch('/api/vic', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    messages: apiMessages,
-    sketchImage,
-    sessionMode: TEST_SESSION_MODE,
-    assignedLesson: TEST_ASSIGNED_LESSON,
-    studentMode: TEST_STUDENT_MODE,
-    studentInterest: TEST_STUDENT_INTEREST,
-  }),
+ body: JSON.stringify({
+  messages: apiMessages,
+  sketchImage,
+}),
 })
 
       if (!res.ok) {
