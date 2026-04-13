@@ -6,8 +6,6 @@ export const config = {
   },
 }
 
-const CURRENT_STUDENT_ID = 2
-
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
@@ -25,6 +23,7 @@ export default async function handler(req, res) {
     messages,
     sketchImage,
     sessionMode,
+    studentId,
     assignedLesson,
     studentMode,
     studentInterest,
@@ -43,13 +42,28 @@ export default async function handler(req, res) {
     let resolvedStudentMode = studentMode || ''
     let resolvedStudentInterest = studentInterest || ''
 
-    // If the frontend did not send a teacher-directed lesson,
-    // try loading one directly from Supabase for the current student.
-    if (!resolvedAssignedLesson && supabaseUrl && supabaseKey) {
+    const resolvedStudentId =
+      typeof studentId === 'number'
+        ? studentId
+        : typeof studentId === 'string' && studentId.trim()
+          ? Number(studentId)
+          : null
+
+    // Only load an assigned lesson if:
+    // 1) session is teacher_directed
+    // 2) no assigned lesson was already passed in
+    // 3) we have a valid student id
+    if (
+      resolvedSessionMode === 'teacher_directed' &&
+      !resolvedAssignedLesson &&
+      resolvedStudentId &&
+      supabaseUrl &&
+      supabaseKey
+    ) {
       try {
-        // 1) Get latest assignment for the student
+        // Get latest assignment for this student
         const assignmentRes = await fetch(
-          `${supabaseUrl}/rest/v1/assignments?student_id=eq.${CURRENT_STUDENT_ID}&select=id,lesson_id,student_id,mode,status,assigned_at&order=assigned_at.desc&limit=1`,
+          `${supabaseUrl}/rest/v1/assignments?student_id=eq.${resolvedStudentId}&select=id,lesson_id,student_id,mode,status,assigned_at&order=assigned_at.desc&limit=1`,
           {
             method: 'GET',
             headers: {
@@ -65,7 +79,7 @@ export default async function handler(req, res) {
         if (assignmentRes.ok && Array.isArray(assignmentData) && assignmentData.length > 0) {
           const assignment = assignmentData[0]
 
-          // 2) Get the linked lesson
+          // Get the linked lesson
           const lessonRes = await fetch(
             `${supabaseUrl}/rest/v1/lessons?id=eq.${assignment.lesson_id}&select=id,subject,title,lesson_text,is_active&limit=1`,
             {
@@ -80,9 +94,9 @@ export default async function handler(req, res) {
 
           const lessonData = await lessonRes.json()
 
-          // 3) Get student interest
+          // Get student interest
           const studentRes = await fetch(
-            `${supabaseUrl}/rest/v1/users?id=eq.${CURRENT_STUDENT_ID}&select=id,interest_tags&limit=1`,
+            `${supabaseUrl}/rest/v1/users?id=eq.${resolvedStudentId}&select=id,interest_tags&limit=1`,
             {
               method: 'GET',
               headers: {
@@ -98,7 +112,6 @@ export default async function handler(req, res) {
           if (lessonRes.ok && Array.isArray(lessonData) && lessonData.length > 0) {
             resolvedAssignedLesson = lessonData[0]
             resolvedStudentMode = assignment.mode || ''
-            resolvedSessionMode = 'teacher_directed'
 
             if (studentRes.ok && Array.isArray(studentData) && studentData.length > 0) {
               const interestTags = studentData[0]?.interest_tags
@@ -117,7 +130,6 @@ export default async function handler(req, res) {
 
     const contextMessages = []
 
-    // Only add teacher-directed lesson context when a lesson is actually assigned
     if (resolvedSessionMode === 'teacher_directed' && resolvedAssignedLesson) {
       const lessonContext = `
 TEACHER-ASSIGNED SESSION CONTEXT:
@@ -212,6 +224,7 @@ IMPORTANT:
     return res.status(200).json({
       reply,
       debug: {
+        studentId: resolvedStudentId,
         sessionMode: resolvedSessionMode,
         assignedLessonTitle: resolvedAssignedLesson?.title || null,
         studentMode: resolvedStudentMode || null,
