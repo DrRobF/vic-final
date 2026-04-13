@@ -19,16 +19,60 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { messages, sketchImage } = req.body || {}
+  const {
+    messages,
+    sketchImage,
+    sessionMode,
+    assignedLesson,
+    studentMode,
+    studentInterest,
+  } = req.body || {}
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Missing messages array' })
   }
 
   try {
-    const input = messages.map((msg, index) => {
+    const contextMessages = []
+
+    // Only add teacher-directed lesson context when a lesson is actually assigned
+    if (sessionMode === 'teacher_directed' && assignedLesson) {
+      const lessonContext = `
+TEACHER-ASSIGNED SESSION CONTEXT:
+- Session mode: teacher_directed
+- Do not run the normal multi-step lesson entry unless key information is missing.
+- The teacher has already chosen the lesson focus.
+- Use the assigned lesson immediately.
+- Keep VIC's existing teaching style, pacing, interest integration, and one-step-at-a-time behavior.
+
+ASSIGNED LESSON:
+Subject: ${assignedLesson.subject || ''}
+Title: ${assignedLesson.title || ''}
+Lesson: ${assignedLesson.lesson_text || ''}
+
+STUDENT SUPPORT MODE:
+${studentMode || ''}
+
+STUDENT INTEREST:
+${studentInterest || ''}
+
+IMPORTANT:
+- If student interest is already known, do not ask for it again.
+- Begin by teaching the assigned lesson directly.
+- Adapt instruction to the support mode.
+`
+
+      contextMessages.push({
+        role: 'system',
+        content: lessonContext,
+      })
+    }
+
+    const combinedMessages = [...contextMessages, ...messages]
+
+    const input = combinedMessages.map((msg, index) => {
       const isLastUserMessage =
-        index === messages.length - 1 && msg.role === 'user'
+        index === combinedMessages.length - 1 && msg.role === 'user'
 
       if (
         isLastUserMessage &&
