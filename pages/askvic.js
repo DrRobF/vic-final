@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 const BRAIN_VERSION = 'v3.3'
+const TEST_SESSION_MODE = 'teacher_directed'
 
+const TEST_ASSIGNED_LESSON = {
+  subject: 'Math',
+  title: 'Adding Fractions',
+  lesson_text:
+    'Students will learn how to add fractions with unlike denominators by finding a common denominator, adding the numerators, and simplifying the answer.',
+}
+
+const TEST_STUDENT_MODE = 'remediation'
+const TEST_STUDENT_INTEREST = 'music'
 export default function AskVIC() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
