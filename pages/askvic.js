@@ -152,12 +152,13 @@ const [sessionMode, setSessionMode] = useState('student_directed')
      const res = await fetch('/api/vic', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
- body: JSON.stringify({
+body: JSON.stringify({
   messages: apiMessages,
   sketchImage,
-}),
+  studentId: selectedStudentId,
+  sessionMode,
 })
-
+})
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`)
       }
