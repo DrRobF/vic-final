@@ -666,14 +666,20 @@ onChange={(e) => {
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
   <button
     style={styles.quickStartPill}
-    onClick={() => setSessionMode('teacher_directed')}
+   onClick={() => {
+  setSessionMode('teacher_directed')
+  resetConversation()
+}}
   >
     My Assigned Lesson
   </button>
 
   <button
     style={styles.quickStartPill}
-    onClick={() => setSessionMode('student_directed')}
+   onClick={() => {
+  setSessionMode('student_directed')
+  resetConversation()
+}}
   >
     Ask VIC Freely
   </button>
