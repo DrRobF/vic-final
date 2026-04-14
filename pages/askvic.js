@@ -363,7 +363,7 @@ ${context}`
     await sendMessage(prompt)
   }
 
-  const styles = buildStyles({ isMobile, isTablet, isCompact })
+  const styles = buildStyles({ isMobile, isTablet, isCompact, sketchExpanded })
 
   const heroSection = (
     <section style={styles.heroCard}>
