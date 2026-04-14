@@ -17,6 +17,7 @@ export default function AskVIC() {
   const [workArea, setWorkArea] = useState('')
   const [notes, setNotes] = useState('')
   const [activeTool, setActiveTool] = useState('practice')
+  const [activeTool, setActiveTool] = useState('practice')
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
   const [viewportWidth, setViewportWidth] = useState(1400)
@@ -465,8 +466,15 @@ ${context}`
               Clear
             </button>
           </div>
+                 <div style={styles.sketchCanvasWrap}>
+            <button
+              type="button"
+              style={styles.sketchExpandButton}
+              onClick={() => setSketchExpanded(!sketchExpanded)}
+            >
+              {sketchExpanded ? 'Close Large Pad' : 'Open Large Pad'}
+            </button>
 
-          <div style={styles.sketchCanvasWrap}>
             <canvas
               ref={canvasRef}
               style={styles.sketchCanvas}
