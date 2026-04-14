@@ -2,21 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 
 const BRAIN_VERSION = 'v3.3'
 
-export default function AskVIC() {
-  const [input, setInput] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [selectedStudentId, setSelectedStudentId] = useState(2)
-const [sessionMode, setSessionMode] = useState('student_directed')
-  const [workArea, setWorkArea] = useState('')
-  const [notes, setNotes] = useState('')
-  const [activeTool, setActiveTool] = useState('practice')
-  const [calcInput, setCalcInput] = useState('')
-  const [calcResult, setCalcResult] = useState('')
-  const [viewportWidth, setViewportWidth] = useState(1400)
-  const [lastReportText, setLastReportText] = useState(
-    'No report yet. Run a short session and generate one to preview it here.'
-  )
-  const INITIAL_MESSAGES = [
+const INITIAL_MESSAGES = [
   {
     role: 'assistant',
     text:
@@ -44,7 +30,8 @@ export default function AskVIC() {
   function resetConversation() {
     setMessages(INITIAL_MESSAGES)
   }
- const messageAreaRef = useRef(null)
+
+  const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
   const canvasRef = useRef(null)
   const isDrawingRef = useRef(false)
