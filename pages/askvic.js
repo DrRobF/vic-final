@@ -1018,7 +1018,7 @@ function extractVocabularyCard(text) {
   }
 }
 
-function buildStyles({ isMobile, isTablet, isCompact }) {
+function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded }) {
   const desktopFixedHeight = !isCompact
 
   return {
