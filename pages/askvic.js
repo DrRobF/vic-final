@@ -1622,23 +1622,10 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       flexShrink: 0,
     },
 
-    sketchCanvasWrap: {
+      sketchCanvasWrap: {
       width: '100%',
-      minHeight: isMobile ? '340px' : '560px',
-      height: isMobile ? '340px' : '560px',
-      borderRadius: '18px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: '#ffffff',
-      overflow: 'hidden',
-      boxSizing: 'border-box',
-      flexShrink: 0,
-      position: 'relative',
-      zIndex: 1,
-    },
-    sketchCanvasWrap: {
-      width: '100%',
-      minHeight: isMobile ? '340px' : '560px',
-      height: isMobile ? '340px' : '70vh',
+      minHeight: isMobile ? '340px' : sketchExpanded ? '78vh' : '560px',
+      height: isMobile ? '340px' : sketchExpanded ? '78vh' : '560px',
       maxHeight: isMobile ? '340px' : '900px',
       borderRadius: '18px',
       border: '1px solid rgba(216, 220, 235, 0.95)',
@@ -1648,6 +1635,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       flexShrink: 0,
       position: 'relative',
       zIndex: 1,
+    },
     },
     supportButtonWhiteStrong: {
       background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(244,247,255,1) 100%)',
