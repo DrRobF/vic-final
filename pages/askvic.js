@@ -1627,19 +1627,20 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       position: 'relative',
       zIndex: 1,
     },
-
-    supportButtonWhite: {
-      background: '#ffffff',
+    sketchCanvasWrap: {
+      width: '100%',
+      minHeight: isMobile ? '340px' : '560px',
+      height: isMobile ? '340px' : '70vh',
+      maxHeight: isMobile ? '340px' : '900px',
+      borderRadius: '18px',
       border: '1px solid rgba(216, 220, 235, 0.95)',
-      color: '#24163f',
-      padding: '12px 14px',
-      borderRadius: '14px',
-      fontSize: '13px',
-      fontWeight: 800,
-      cursor: 'pointer',
-      boxShadow: '0 10px 22px rgba(0,0,0,0.12)',
+      background: '#ffffff',
+      overflow: 'hidden',
+      boxSizing: 'border-box',
+      flexShrink: 0,
+      position: 'relative',
+      zIndex: 1,
     },
-
     supportButtonWhiteStrong: {
       background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(244,247,255,1) 100%)',
       border: '2px solid rgba(126, 92, 255, 0.45)',
