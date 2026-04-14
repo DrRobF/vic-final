@@ -1636,7 +1636,6 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       position: 'relative',
       zIndex: 1,
     },
-    },
     supportButtonWhiteStrong: {
       background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(244,247,255,1) 100%)',
       border: '2px solid rgba(126, 92, 255, 0.45)',
