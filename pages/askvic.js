@@ -16,20 +16,35 @@ const [sessionMode, setSessionMode] = useState('student_directed')
   const [lastReportText, setLastReportText] = useState(
     'No report yet. Run a short session and generate one to preview it here.'
   )
+  const INITIAL_MESSAGES = [
+  {
+    role: 'assistant',
+    text:
+      'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nOr pick a subject below to begin.',
+    visual: { type: 'idle', title: 'Visual Support' },
+  },
+]
 
-  const [messages, setMessages] = useState([
-    function resetConversation() {
-  setMessages([])
-}
-    {
-      role: 'assistant',
-      text:
-        'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nOr pick a subject below to begin.',
-      visual: { type: 'idle', title: 'Visual Support' },
-    },
-  ])
+export default function AskVIC() {
+  const [input, setInput] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [workArea, setWorkArea] = useState('')
+  const [notes, setNotes] = useState('')
+  const [activeTool, setActiveTool] = useState('practice')
+  const [calcInput, setCalcInput] = useState('')
+  const [calcResult, setCalcResult] = useState('')
+  const [viewportWidth, setViewportWidth] = useState(1400)
+  const [lastReportText, setLastReportText] = useState(
+    'No report yet. Run a short session and generate one to preview it here.'
+  )
+  const [selectedStudentId, setSelectedStudentId] = useState(2)
+  const [sessionMode, setSessionMode] = useState('student_directed')
+  const [messages, setMessages] = useState(INITIAL_MESSAGES)
 
-  const messageAreaRef = useRef(null)
+  function resetConversation() {
+    setMessages(INITIAL_MESSAGES)
+  }
+ const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
   const canvasRef = useRef(null)
   const isDrawingRef = useRef(false)
