@@ -1659,7 +1659,21 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontWeight: 800,
       cursor: 'pointer',
     },
-
+    sketchExpandButton: {
+      position: 'absolute',
+      top: '10px',
+      right: '10px',
+      zIndex: 3,
+      border: '1px solid rgba(216, 220, 235, 0.95)',
+      background: 'rgba(255,255,255,0.96)',
+      color: '#24163f',
+      padding: '8px 10px',
+      borderRadius: '10px',
+      fontSize: '12px',
+      fontWeight: 800,
+      cursor: 'pointer',
+      boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
+    },
     sketchCanvas: {
       width: '100%',
       height: '100%',
