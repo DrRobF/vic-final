@@ -3,7 +3,9 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 
 const INVALID_ROLE_MESSAGE =
-  'Your account does not have a valid role yet. Please contact your teacher or administrator.'
+  'Your account does not have a valid role yet in your profile. Please contact your teacher or administrator.'
+const MISSING_PROFILE_MESSAGE =
+  'No user profile was found for this account. Please contact your teacher or administrator.'
 
 export default function LoginPage() {
   const router = useRouter()
@@ -20,8 +22,10 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+      const normalizedEmail = email.trim().toLowerCase()
+
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
         password,
       })
 
@@ -30,8 +34,25 @@ export default function LoginPage() {
         return
       }
 
-      const user = data?.user
-      const role = user?.app_metadata?.role || user?.user_metadata?.role
+      const { data: userRows, error: userLookupError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('email', normalizedEmail)
+        .order('id', { ascending: true })
+        .limit(1)
+
+      const userRow = userRows?.[0]
+      const role = userRow?.role
+
+      if (userLookupError) {
+        setError(userLookupError.message || MISSING_PROFILE_MESSAGE)
+        return
+      }
+
+      if (!userRow) {
+        setError(MISSING_PROFILE_MESSAGE)
+        return
+      }
 
       if (role === 'teacher') {
         router.push('/teacher')
@@ -39,7 +60,7 @@ export default function LoginPage() {
       }
 
       if (role === 'student') {
-        router.push('/student')
+        router.push('/askvic')
         return
       }
 
