@@ -48,9 +48,24 @@ export default function TeacherPage() {
         return
       }
 
-      setTeacher(user)
+      const { data: teacherRow, error: teacherLookupError } = await supabase
+        .from('users')
+        .select('id, email')
+        .eq('email', user.email)
+        .single()
+
+      if (!active) return
+
+      if (teacherLookupError || !teacherRow?.id) {
+        setTeacher(null)
+        setError(teacherLookupError?.message || 'Could not find teacher profile for this user.')
+        setLoadingTeacher(false)
+        return
+      }
+
+      setTeacher(teacherRow)
       setLoadingTeacher(false)
-      await loadClasses(user.id)
+      await loadClasses(teacherRow.id)
     }
 
     loadTeacherAndClasses()
