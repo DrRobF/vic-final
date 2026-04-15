@@ -74,7 +74,7 @@ export default function SignupPage() {
         .insert({
           id: createdUserId,
           email: normalizedEmail,
-          full_name: normalizedName,
+          name: normalizedName,
           role,
         })
         .select('id')
