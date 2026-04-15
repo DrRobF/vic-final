@@ -1719,10 +1719,11 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded }) {
       justifyContent: 'center',
       lineHeight: 1,
     },
-           sketchOverlay: {
+         sketchOverlay: {
       position: 'fixed',
       top: '110px',
-      right: '24px',
+      left: '24px',
+      right: 'auto',
       width: isMobile ? 'calc(100vw - 24px)' : '50vw',
       height: isMobile ? '72vh' : '74vh',
       maxWidth: '920px',
@@ -1739,7 +1740,6 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded }) {
       gap: '12px',
       overflow: 'hidden',
     },
-
     sketchOverlayTopBar: {
       display: 'flex',
       alignItems: 'center',
