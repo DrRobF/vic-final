@@ -18,10 +18,10 @@ export default function SignupPage() {
 
   const showClassCode = useMemo(() => role === ROLE_STUDENT, [role])
 
-  async function rollbackUserProfile(userId) {
-    if (!userId) return
+  async function rollbackUserProfile(userProfileId) {
+    if (!userProfileId) return
 
-    await supabase.from('users').delete().eq('id', userId)
+    await supabase.from('users').delete().eq('id', userProfileId)
   }
 
   async function handleSubmit(e) {
@@ -44,7 +44,8 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    let createdUserId = ''
+    let createdAuthUserId = ''
+    let createdProfileId = null
 
     try {
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -61,10 +62,10 @@ export default function SignupPage() {
       }
 
       const authUser = signUpData?.user
-      createdUserId = authUser?.id || ''
+      createdAuthUserId = authUser?.id || ''
       const likelyDuplicate = Array.isArray(authUser?.identities) && authUser.identities.length === 0
 
-      if (!createdUserId || likelyDuplicate) {
+      if (!createdAuthUserId || likelyDuplicate) {
         setError('That email is already registered.')
         return
       }
@@ -72,7 +73,6 @@ export default function SignupPage() {
       const { data: insertedUsers, error: userInsertError } = await supabase
         .from('users')
         .insert({
-          id: createdUserId,
           email: normalizedEmail,
           name: normalizedName,
           role,
@@ -81,9 +81,12 @@ export default function SignupPage() {
         .single()
 
       if (userInsertError || !insertedUsers?.id) {
+        createdProfileId = null
         setError(`Profile creation failed: ${userInsertError?.message || 'Could not create user profile.'}`)
         return
       }
+
+      createdProfileId = insertedUsers.id
 
       if (role === ROLE_TEACHER) {
         router.push('/teacher')
@@ -99,13 +102,13 @@ export default function SignupPage() {
       const matchedClass = classRows?.[0]
 
       if (classLookupError) {
-        await rollbackUserProfile(createdUserId)
+        await rollbackUserProfile(createdProfileId)
         setError(`Class lookup failed: ${classLookupError.message || 'Could not find class.'}`)
         return
       }
 
       if (!matchedClass?.id) {
-        await rollbackUserProfile(createdUserId)
+        await rollbackUserProfile(createdProfileId)
         setError('Invalid class code. Please check your class code and try again.')
         return
       }
@@ -116,7 +119,7 @@ export default function SignupPage() {
       })
 
       if (enrollmentError) {
-        await rollbackUserProfile(createdUserId)
+        await rollbackUserProfile(createdProfileId)
         setError(`Enrollment failed: ${enrollmentError.message || 'Could not enroll in class.'}`)
         return
       }
