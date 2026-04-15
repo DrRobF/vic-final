@@ -1069,7 +1069,7 @@ function extractVocabularyCard(text) {
   }
 }
 
-function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded }) {
+function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMinimized }) {
   const desktopFixedHeight = !isCompact
 
   return {
