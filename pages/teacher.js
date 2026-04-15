@@ -48,11 +48,13 @@ export default function TeacherPage() {
         return
       }
 
-      const { data: teacherRow, error: teacherLookupError } = await supabase
+      const { data: teacherRows, error: teacherLookupError } = await supabase
         .from('users')
         .select('id, email')
         .eq('email', user.email)
-        .single()
+        .order('id', { ascending: true })
+
+      const teacherRow = teacherRows?.[0]
 
       if (!active) return
 
