@@ -797,13 +797,21 @@ onChange={(e) => {
                 <div style={styles.sketchOverlayTopBar}>
                   <div style={styles.sketchOverlayTitle}>Large Sketch Pad</div>
 
-                  <div style={{ display: 'flex', gap: '10px' }}>
+                                    <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                       type="button"
                       style={styles.sketchSendButton}
                       onClick={discussSketch}
                     >
                       Send to VIC
+                    </button>
+
+                    <button
+                      type="button"
+                      style={styles.sketchOverlayCloseButton}
+                      onClick={() => setSketchMinimized(!sketchMinimized)}
+                    >
+                      {sketchMinimized ? 'Expand' : 'Shrink'}
                     </button>
 
                     <button
