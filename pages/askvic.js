@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { createClient } from '@supabase/supabase-js'
 
 const BRAIN_VERSION = 'v3.3'
 
@@ -25,19 +26,122 @@ export default function AskVIC() {
   const [lastReportText, setLastReportText] = useState(
     'No report yet. Run a short session and generate one to preview it here.'
   )
-  const [selectedStudentId, setSelectedStudentId] = useState(2)
+  const [selectedStudentId, setSelectedStudentId] = useState(null)
+  const [assignedLesson, setAssignedLesson] = useState(null)
+  const [studentMode, setStudentMode] = useState('')
+  const [studentInterest, setStudentInterest] = useState('')
+  const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
-
-  function resetConversation() {
-    setMessages(INITIAL_MESSAGES)
-  }
 
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
   const canvasRef = useRef(null)
   const isDrawingRef = useRef(false)
   const isErasingRef = useRef(false)
+
+  useEffect(() => {
+    let active = true
+
+    async function detectStudentAndLesson() {
+      setStudentLookupStatus('Loading student...')
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+
+      if (!supabaseUrl || !supabaseKey) {
+        setSelectedStudentId(null)
+        setAssignedLesson(null)
+        setSessionMode('student_directed')
+        setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
+        return
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseKey)
+
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser()
+
+      if (!active) return
+
+      if (userError || !user?.email) {
+        setSelectedStudentId(null)
+        setAssignedLesson(null)
+        setSessionMode('student_directed')
+        setStudentLookupStatus('No student found. You can still chat with VIC.')
+        return
+      }
+
+      const role = user?.app_metadata?.role || user?.user_metadata?.role
+      if (role && role !== 'student') {
+        setSelectedStudentId(null)
+        setAssignedLesson(null)
+        setSessionMode('student_directed')
+        setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
+        return
+      }
+
+      const { data: studentRows, error: studentLookupError } = await supabase
+        .from('users')
+        .select('id, interest_tags')
+        .eq('email', user.email)
+        .order('id', { ascending: true })
+        .limit(1)
+
+      if (!active) return
+
+      const student = studentRows?.[0]
+
+      if (studentLookupError || !student?.id) {
+        setSelectedStudentId(null)
+        setAssignedLesson(null)
+        setSessionMode('student_directed')
+        setStudentLookupStatus('Could not match your student profile. Using free mode.')
+        return
+      }
+
+      setSelectedStudentId(student.id)
+      const interests = Array.isArray(student.interest_tags) ? student.interest_tags : []
+      setStudentInterest(interests.join(', '))
+
+      const { data: assignmentRows, error: assignmentError } = await supabase
+        .from('assignments')
+        .select(
+          'id, mode, assigned_at, lessons:lesson_id (id, subject, title, lesson_text, is_active)'
+        )
+        .eq('student_id', student.id)
+        .order('assigned_at', { ascending: false })
+        .limit(1)
+
+      if (!active) return
+
+      const latestAssignment = assignmentRows?.[0]
+      const lessonRow = Array.isArray(latestAssignment?.lessons)
+        ? latestAssignment.lessons[0]
+        : latestAssignment?.lessons
+
+      if (assignmentError || !latestAssignment?.id || !lessonRow) {
+        setAssignedLesson(null)
+        setStudentMode('')
+        setSessionMode('student_directed')
+        setStudentLookupStatus('Student detected. No assigned lesson found.')
+        return
+      }
+
+      setAssignedLesson(lessonRow)
+      setStudentMode(latestAssignment.mode || '')
+      setSessionMode('teacher_directed')
+      setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
+    }
+
+    detectStudentAndLesson()
+
+    return () => {
+      active = false
+    }
+  }, [])
 
   useEffect(() => {
     const updateViewport = () => {
@@ -164,6 +268,9 @@ body: JSON.stringify({
   sketchImage,
   studentId: selectedStudentId,
   sessionMode,
+  assignedLesson,
+  studentMode,
+  studentInterest,
 })
 })
       if (!res.ok) {
@@ -660,49 +767,12 @@ ${context}`
 
               <div style={styles.quickStartInline}>
                 <div style={styles.quickStartInlineLabel}>Quick starts</div>
-            <select
-  value={selectedStudentId}
-onChange={(e) => {
-  setSelectedStudentId(Number(e.target.value))
-  resetConversation()
-}}
-  style={{
-    padding: '10px 12px',
-    borderRadius: '10px',
-    border: '1px solid rgba(255,255,255,0.15)',
-    background: 'rgba(255,255,255,0.08)',
-    color: '#fff',
-    marginBottom: '10px',
-  }}
->
-  <option value={2}>Jake Student</option>
-  <option value={3}>Maya Student</option>
-</select>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '10px' }}>
-  <button
-    style={styles.quickStartPill}
-   onClick={() => {
-  setSessionMode('teacher_directed')
-  resetConversation()
-}}
-  >
-    My Assigned Lesson
-  </button>
-
-  <button
-    style={styles.quickStartPill}
-   onClick={() => {
-  setSessionMode('student_directed')
-  resetConversation()
-}}
-  >
-    Ask VIC Freely
-  </button>
-</div>
-
-<div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
-  Current mode: {sessionMode === 'teacher_directed' ? 'Assigned Lesson' : 'Free Ask VIC'}
-</div>
+                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
+                  {studentLookupStatus}
+                </div>
+                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
+                  Current mode: {sessionMode === 'teacher_directed' ? 'Assigned Lesson' : 'Free Ask VIC'}
+                </div>
                 <div style={styles.quickStartInlineButtons}>
                   <button style={styles.quickStartPill} onClick={() => startSubject('math')}>Math</button>
                   <button style={styles.quickStartPill} onClick={() => startSubject('reading')}>Reading</button>

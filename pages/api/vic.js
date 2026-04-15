@@ -51,12 +51,9 @@ export default async function handler(req, res) {
           ? Number(studentId)
           : null
 
-    // Only load an assigned lesson if:
-    // 1) session is teacher_directed
-    // 2) no assigned lesson was already passed in
-    // 3) we have a valid student id
+    // If a student id is provided and lesson context was not passed in,
+    // fetch the most recent assignment and joined lesson automatically.
     if (
-      resolvedSessionMode === 'teacher_directed' &&
       !resolvedAssignedLesson &&
       resolvedStudentId &&
       supabaseUrl &&
@@ -132,7 +129,8 @@ export default async function handler(req, res) {
 
     const contextMessages = []
 
-    if (resolvedSessionMode === 'teacher_directed' && resolvedAssignedLesson) {
+    if (resolvedAssignedLesson) {
+      resolvedSessionMode = 'teacher_directed'
       const lessonContext = `
 TEACHER-ASSIGNED SESSION CONTEXT:
 - Session mode: teacher_directed
@@ -155,6 +153,7 @@ ${resolvedStudentInterest || ''}
 IMPORTANT:
 - If student interest is already known, do not ask for it again.
 - Begin by teaching the assigned lesson directly.
+- Teach the assigned lesson instead of generic chat.
 - Adapt instruction to the support mode.
 `
 
