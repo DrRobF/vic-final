@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 
@@ -12,7 +12,7 @@ export default function TeacherPage() {
   const [classes, setClasses] = useState([])
   const [selectedClass, setSelectedClass] = useState(null)
   const [students, setStudents] = useState([])
-  const [selectedStudent, setSelectedStudent] = useState(null)
+  const [selectedStudentIds, setSelectedStudentIds] = useState(() => new Set())
 
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
@@ -23,6 +23,12 @@ export default function TeacherPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+
+  const selectedCount = selectedStudentIds.size
+
+  const allStudentsSelected = useMemo(() => {
+    return students.length > 0 && selectedCount === students.length
+  }, [selectedCount, students.length])
 
   useEffect(() => {
     let active = true
@@ -99,7 +105,7 @@ export default function TeacherPage() {
 
   async function handleSelectClass(classRow) {
     setSelectedClass(classRow)
-    setSelectedStudent(null)
+    setSelectedStudentIds(new Set())
     setStudents([])
     setLessonTitle('')
     setLessonText('')
@@ -145,13 +151,38 @@ export default function TeacherPage() {
     )
   }
 
+  function handleToggleStudent(studentId) {
+    setSelectedStudentIds((prev) => {
+      const next = new Set(prev)
+
+      if (next.has(studentId)) {
+        next.delete(studentId)
+      } else {
+        next.add(studentId)
+      }
+
+      return next
+    })
+    setNotice('')
+  }
+
+  function handleSelectAllStudents() {
+    setSelectedStudentIds(new Set(students.map((student) => student.id)))
+    setNotice('')
+  }
+
+  function handleClearSelectedStudents() {
+    setSelectedStudentIds(new Set())
+    setNotice('')
+  }
+
   async function handleSave(e) {
     e.preventDefault()
     setError('')
     setNotice('')
 
-    if (!selectedStudent) {
-      setError('Choose a student first.')
+    if (selectedCount === 0) {
+      setError('Select at least one student first.')
       return
     }
 
@@ -177,12 +208,14 @@ export default function TeacherPage() {
       return
     }
 
-    const { error: assignmentError } = await supabase.from('assignments').insert({
+    const assignmentRows = Array.from(selectedStudentIds).map((studentId) => ({
       lesson_id: createdLesson.id,
-      student_id: selectedStudent.id,
+      student_id: studentId,
       mode: supportMode,
       status: 'assigned',
-    })
+    }))
+
+    const { error: assignmentError } = await supabase.from('assignments').insert(assignmentRows)
 
     if (assignmentError) {
       setError(assignmentError.message || 'Lesson was created, but assignment failed.')
@@ -190,7 +223,8 @@ export default function TeacherPage() {
       return
     }
 
-    setNotice('Lesson assigned successfully.')
+    setNotice(`Lesson assigned successfully to ${selectedCount} students.`)
+    setSelectedStudentIds(new Set())
     setLessonTitle('')
     setLessonText('')
     setSupportMode('remediation')
@@ -242,35 +276,68 @@ export default function TeacherPage() {
 
               {!loadingStudents && students.length === 0 ? <p>No students enrolled.</p> : null}
 
-              <div style={{ display: 'grid', gap: 8 }}>
-                {students.map((student) => (
-                  <button
-                    key={student.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedStudent(student)
-                      setNotice('')
-                    }}
+              {!loadingStudents && students.length > 0 ? (
+                <>
+                  <div
                     style={{
-                      textAlign: 'left',
-                      padding: '10px 12px',
-                      borderRadius: 8,
-                      border: '1px solid #ddd',
-                      background:
-                        selectedStudent?.id === student.id ? 'rgba(0,0,0,0.06)' : 'white',
-                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 12,
+                      marginBottom: 12,
+                      flexWrap: 'wrap',
                     }}
                   >
-                    {getStudentName(student)}
-                  </button>
-                ))}
-              </div>
+                    <button
+                      type="button"
+                      onClick={handleSelectAllStudents}
+                      disabled={allStudentsSelected}
+                    >
+                      Select All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleClearSelectedStudents}
+                      disabled={selectedCount === 0}
+                    >
+                      Clear All
+                    </button>
+                    <span>{selectedCount} students selected</span>
+                  </div>
+
+                  <div style={{ display: 'grid', gap: 8 }}>
+                    {students.map((student) => (
+                      <label
+                        key={student.id}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 10,
+                          padding: '10px 12px',
+                          borderRadius: 8,
+                          border: '1px solid #ddd',
+                          background: selectedStudentIds.has(student.id)
+                            ? 'rgba(0,0,0,0.06)'
+                            : 'white',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedStudentIds.has(student.id)}
+                          onChange={() => handleToggleStudent(student.id)}
+                        />
+                        <span>{getStudentName(student)}</span>
+                      </label>
+                    ))}
+                  </div>
+                </>
+              ) : null}
             </section>
           ) : null}
 
-          {selectedStudent ? (
+          {selectedClass ? (
             <section style={{ marginBottom: 24 }}>
-              <h2>Assign lesson to {getStudentName(selectedStudent)}</h2>
+              <h2>Assign lesson to selected students</h2>
               <form onSubmit={handleSave} style={{ display: 'grid', gap: 12, maxWidth: 700 }}>
                 <label htmlFor="lessonTitle">lessonTitle</label>
                 <input
@@ -301,8 +368,8 @@ export default function TeacherPage() {
                   <option value="enrichment">enrichment</option>
                 </select>
 
-                <button type="submit" disabled={saving}>
-                  {saving ? 'Saving...' : 'Save'}
+                <button type="submit" disabled={saving || selectedCount === 0}>
+                  {saving ? 'Assigning...' : 'Assign Lesson to Selected Students'}
                 </button>
               </form>
             </section>
