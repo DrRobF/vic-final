@@ -789,7 +789,44 @@ onChange={(e) => {
               </div>
             </section>
 
-            {isCompact ? toolsSection : null}
+                        {isCompact ? toolsSection : null}
+
+            {sketchExpanded ? (
+              <div style={styles.sketchOverlay}>
+                <div style={styles.sketchOverlayTopBar}>
+                  <div style={styles.sketchOverlayTitle}>Large Sketch Pad</div>
+
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                      type="button"
+                      style={styles.sketchSendButton}
+                      onClick={discussSketch}
+                    >
+                      Send to VIC
+                    </button>
+
+                    <button
+                      type="button"
+                      style={styles.sketchOverlayCloseButton}
+                      onClick={() => setSketchExpanded(false)}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+
+                <div style={styles.sketchOverlayCanvasWrap}>
+                  <canvas
+                    ref={canvasRef}
+                    style={styles.sketchCanvas}
+                    onPointerDown={startCanvasStroke}
+                    onPointerMove={moveCanvasStroke}
+                    onPointerUp={stopCanvasStroke}
+                    onPointerLeave={stopCanvasStroke}
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>
