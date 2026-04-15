@@ -103,6 +103,11 @@ export default function LoginPage() {
         </button>
       </form>
 
+
+      <p style={{ marginTop: 16 }}>
+        Need an account? <a href="/signup">Create one</a>
+      </p>
+
       {error ? (
         <p style={{ color: 'crimson', marginTop: 16 }} role="alert">
           {error}
