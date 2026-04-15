@@ -43,6 +43,7 @@ export default async function handler(req, res) {
     let resolvedAssignedLesson = assignedLesson || null
     let resolvedStudentMode = studentMode || ''
     let resolvedStudentInterest = studentInterest || ''
+    let resolvedGradeLevel = ''
 
     const resolvedStudentId =
       typeof studentId === 'number'
@@ -118,6 +119,28 @@ export default async function handler(req, res) {
                 ? interestTags.join(', ')
                 : ''
             }
+
+            const enrollmentRes = await fetch(
+              `${supabaseUrl}/rest/v1/enrollments?student_id=eq.${resolvedStudentId}&select=class_id,classes:class_id(id,class_name,grade_level)&limit=1`,
+              {
+                method: 'GET',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            )
+
+            const enrollmentData = await enrollmentRes.json()
+            const enrollmentRow = Array.isArray(enrollmentData) ? enrollmentData[0] : null
+            const classRow = Array.isArray(enrollmentRow?.classes)
+              ? enrollmentRow.classes[0]
+              : enrollmentRow?.classes
+
+            if (enrollmentRes.ok && classRow?.grade_level) {
+              resolvedGradeLevel = String(classRow.grade_level)
+            }
           }
         } else {
           console.log('No assignment found or assignments blocked by RLS:', assignmentData)
@@ -149,6 +172,9 @@ ${resolvedStudentMode || ''}
 
 STUDENT INTEREST:
 ${resolvedStudentInterest || ''}
+
+STUDENT GRADE LEVEL:
+${resolvedGradeLevel || ''}
 
 IMPORTANT:
 - If student interest is already known, do not ask for it again.
@@ -230,6 +256,7 @@ IMPORTANT:
         assignedLessonTitle: resolvedAssignedLesson?.title || null,
         studentMode: resolvedStudentMode || null,
         studentInterest: resolvedStudentInterest || null,
+        gradeLevel: resolvedGradeLevel || null,
       },
     })
   } catch (error) {

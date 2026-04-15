@@ -17,10 +17,13 @@ export default function TeacherPage() {
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
   const [supportMode, setSupportMode] = useState('remediation')
+  const [newClassName, setNewClassName] = useState('')
+  const [newClassGradeLevel, setNewClassGradeLevel] = useState('')
 
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [creatingClass, setCreatingClass] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
 
@@ -89,7 +92,7 @@ export default function TeacherPage() {
 
     const { data, error: classesError } = await supabase
       .from('classes')
-      .select('id, class_name, teacher_id')
+      .select('id, class_name, teacher_id, grade_level')
       .eq('teacher_id', teacherId)
       .order('class_name', { ascending: true })
 
@@ -176,6 +179,49 @@ export default function TeacherPage() {
     setNotice('')
   }
 
+  async function handleCreateClass(e) {
+    e.preventDefault()
+    if (!teacher?.id) return
+
+    const trimmedClassName = newClassName.trim()
+    const trimmedGradeLevel = newClassGradeLevel.trim()
+
+    if (!trimmedClassName) {
+      setError('Class name is required.')
+      return
+    }
+
+    setCreatingClass(true)
+    setError('')
+    setNotice('')
+
+    const { data: createdClass, error: classInsertError } = await supabase
+      .from('classes')
+      .insert({
+        class_name: trimmedClassName,
+        grade_level: trimmedGradeLevel || null,
+        teacher_id: teacher.id,
+      })
+      .select('id, class_name, teacher_id, grade_level')
+      .single()
+
+    if (classInsertError || !createdClass?.id) {
+      setError(classInsertError?.message || 'Could not create class.')
+      setCreatingClass(false)
+      return
+    }
+
+    const nextClasses = [...classes, createdClass].sort((a, b) =>
+      (a.class_name || '').localeCompare(b.class_name || '')
+    )
+
+    setClasses(nextClasses)
+    setNewClassName('')
+    setNewClassGradeLevel('')
+    setNotice('Class created.')
+    setCreatingClass(false)
+  }
+
   async function handleSave(e) {
     e.preventDefault()
     setError('')
@@ -243,6 +289,31 @@ export default function TeacherPage() {
         <>
           <section style={{ marginBottom: 24 }}>
             <h2>Your classes</h2>
+            <form onSubmit={handleCreateClass} style={{ display: 'grid', gap: 8, marginBottom: 16 }}>
+              <label htmlFor="newClassName">Class name</label>
+              <input
+                id="newClassName"
+                type="text"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
+                placeholder="e.g. Algebra Period 2"
+                required
+              />
+
+              <label htmlFor="newClassGradeLevel">Grade level</label>
+              <input
+                id="newClassGradeLevel"
+                type="text"
+                value={newClassGradeLevel}
+                onChange={(e) => setNewClassGradeLevel(e.target.value)}
+                placeholder="e.g. 7"
+              />
+
+              <button type="submit" disabled={creatingClass}>
+                {creatingClass ? 'Creating class...' : 'Create class'}
+              </button>
+            </form>
+
             {loadingClasses ? <p>Loading classes...</p> : null}
 
             {!loadingClasses && classes.length === 0 ? <p>No classes found.</p> : null}
@@ -263,7 +334,10 @@ export default function TeacherPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  {classRow.class_name}
+                  <div>{classRow.class_name}</div>
+                  {classRow.grade_level ? (
+                    <div style={{ fontSize: 12, opacity: 0.75 }}>Grade: {classRow.grade_level}</div>
+                  ) : null}
                 </button>
               ))}
             </div>
