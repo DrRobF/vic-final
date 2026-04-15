@@ -17,6 +17,7 @@ export default function AskVIC() {
   const [workArea, setWorkArea] = useState('')
   const [notes, setNotes] = useState('')
   const [activeTool, setActiveTool] = useState('practice')
+  const [sketchExpanded, setSketchExpanded] = useState(false)
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
   const [viewportWidth, setViewportWidth] = useState(1400)
