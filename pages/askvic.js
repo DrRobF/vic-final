@@ -97,7 +97,7 @@ export default function AskVIC() {
       window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', syncCanvasSize)
     }
-  }, [activeTool, isCompact, isMobile, viewportWidth])
+}, [activeTool, isCompact, isMobile, viewportWidth, sketchExpanded])
 
   const canGetReport = useMemo(() => messages.length > 1 && !loading, [messages.length, loading])
 
