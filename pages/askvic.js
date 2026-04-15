@@ -34,6 +34,11 @@ export default function AskVIC() {
   const [sessionMode, setSessionMode] = useState('student_directed')
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
 
+  const activeSessionMode = assignedLesson ? 'teacher_directed' : sessionMode
+  const lessonStatusText = assignedLesson
+    ? `Assigned lesson detected: ${assignedLesson.title || 'Untitled lesson'}`
+    : studentLookupStatus
+
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
   const canvasRef = useRef(null)
@@ -267,7 +272,7 @@ body: JSON.stringify({
   messages: apiMessages,
   sketchImage,
   studentId: selectedStudentId,
-  sessionMode,
+  sessionMode: activeSessionMode,
   assignedLesson,
   studentMode,
   studentInterest,
@@ -768,10 +773,10 @@ ${context}`
               <div style={styles.quickStartInline}>
                 <div style={styles.quickStartInlineLabel}>Quick starts</div>
                 <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
-                  {studentLookupStatus}
+                  {lessonStatusText}
                 </div>
                 <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
-                  Current mode: {sessionMode === 'teacher_directed' ? 'Assigned Lesson' : 'Free Ask VIC'}
+                  Current mode: {activeSessionMode === 'teacher_directed' ? 'Assigned Lesson' : 'Free Ask VIC'}
                 </div>
                 <div style={styles.quickStartInlineButtons}>
                   <button style={styles.quickStartPill} onClick={() => startSubject('math')}>Math</button>
