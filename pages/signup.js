@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
+import VICHeader from '../components/VICHeader'
 
 const ROLE_TEACHER = 'teacher'
 const ROLE_STUDENT = 'student'
@@ -141,76 +142,136 @@ export default function SignupPage() {
   }
 
   return (
-    <main style={{ maxWidth: 480, margin: '48px auto', padding: '0 16px' }}>
-      <h1>Sign up</h1>
-      <p>Create your account and choose your role.</p>
+    <main className="signupPage">
+      <div className="signupShell">
+        <VICHeader currentPath="/signup" />
+        <section className="card">
+          <h1>Sign Up</h1>
+          <p>Create your account and choose your role.</p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 12 }}>
-        <label htmlFor="full-name">Full name</label>
-        <input
-          id="full-name"
-          type="text"
-          value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
-          autoComplete="name"
-          required
-        />
-
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          autoComplete="email"
-          required
-        />
-
-        <label htmlFor="password">Password</label>
-        <input
-          id="password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="new-password"
-          required
-          minLength={8}
-        />
-
-        <label htmlFor="role">Role</label>
-        <select id="role" value={role} onChange={(e) => setRole(e.target.value)}>
-          <option value={ROLE_STUDENT}>Student</option>
-          <option value={ROLE_TEACHER}>Teacher</option>
-        </select>
-
-        {showClassCode ? (
-          <>
-            <label htmlFor="class-code">Class code</label>
+          <form onSubmit={handleSubmit} className="form">
+            <label htmlFor="full-name">Full name</label>
             <input
-              id="class-code"
+              id="full-name"
               type="text"
-              value={classCode}
-              onChange={(e) => setClassCode(e.target.value)}
-              placeholder="Enter your class code"
-              required={showClassCode}
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              autoComplete="name"
+              required
             />
-          </>
-        ) : null}
 
-        <button type="submit" disabled={loading}>
-          {loading ? 'Creating account...' : 'Create account'}
-        </button>
-      </form>
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              required
+            />
 
-      <p style={{ marginTop: 16 }}>
-        Already have an account? <a href="/login">Sign in</a>
-      </p>
+            <label htmlFor="password">Password</label>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+              required
+              minLength={8}
+            />
 
-      {error ? (
-        <p style={{ color: 'crimson', marginTop: 16 }} role="alert">
-          {error}
-        </p>
-      ) : null}
+            <label htmlFor="role">Role</label>
+            <select id="role" value={role} onChange={(e) => setRole(e.target.value)}>
+              <option value={ROLE_STUDENT}>Student</option>
+              <option value={ROLE_TEACHER}>Teacher</option>
+            </select>
+
+            {showClassCode ? (
+              <>
+                <label htmlFor="class-code">Class code</label>
+                <input
+                  id="class-code"
+                  type="text"
+                  value={classCode}
+                  onChange={(e) => setClassCode(e.target.value)}
+                  placeholder="Enter your class code"
+                  required={showClassCode}
+                />
+              </>
+            ) : null}
+
+            <button type="submit" disabled={loading}>
+              {loading ? 'Creating account...' : 'Create account'}
+            </button>
+          </form>
+
+          <p className="mutedLine">
+            Already have an account? <a href="/login">Sign in</a>
+          </p>
+
+          {error ? (
+            <p className="errorText" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </section>
+      </div>
+      <style jsx>{`
+        .signupPage {
+          min-height: 100vh;
+          background: radial-gradient(circle at 100% 0%, rgba(108, 90, 255, 0.18), transparent 28%), #07070d;
+          color: #fff;
+          padding: 24px 16px;
+        }
+        .signupShell {
+          max-width: 920px;
+          margin: 0 auto;
+        }
+        .card {
+          max-width: 540px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          border-radius: 16px;
+          background: rgba(17, 19, 32, 0.9);
+          padding: 22px;
+        }
+        .form {
+          display: grid;
+          gap: 10px;
+        }
+        label {
+          font-size: 13px;
+          opacity: 0.9;
+        }
+        input, select, button {
+          font: inherit;
+          border-radius: 12px;
+        }
+        input, select {
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: rgba(255, 255, 255, 0.05);
+          color: #fff;
+          padding: 10px 12px;
+        }
+        button {
+          margin-top: 8px;
+          border: 0;
+          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
+          color: #fff;
+          font-weight: 700;
+          padding: 11px 14px;
+          cursor: pointer;
+        }
+        .mutedLine {
+          margin-top: 14px;
+          opacity: 0.9;
+        }
+        a { color: #9cb3ff; }
+        .errorText {
+          color: #ff9ca8;
+          margin-top: 14px;
+        }
+      `}</style>
     </main>
   )
 }

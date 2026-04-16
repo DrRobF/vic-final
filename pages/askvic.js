@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import VICHeader from '../components/VICHeader'
 
 const BRAIN_VERSION = 'v3.3'
 
@@ -745,36 +746,7 @@ ${context}`
       <div style={styles.backgroundSweep} />
 
       <div style={styles.appFrame}>
-        <header style={styles.topNav}>
-          <div style={styles.topNavLeft}>
-            <a href="/" style={styles.brandLink}>
-              <div style={styles.brandLogoWrap}>
-                <img src="/vic-logo.png" alt="VIC logo" style={styles.brandLogoImage} />
-              </div>
-
-              <div style={styles.brandTextWrap}>
-                <div style={styles.brandTitle}>VIC</div>
-                <div style={styles.brandSub}>Your AI co-teacher</div>
-              </div>
-            </a>
-
-            <nav style={styles.navLinks}>
-              <a href="/" style={styles.navLinkCurrent}>
-                Ask VIC
-              </a>
-              <a href="/reports" style={styles.navLinkPrimary}>
-                Progress
-              </a>
-              <a href="/about" style={styles.navLink}>
-                About
-              </a>
-            </nav>
-          </div>
-
-          <div style={styles.topNavRight}>
-            <div style={styles.headerBadge}>Brain {BRAIN_VERSION}</div>
-          </div>
-        </header>
+        <VICHeader currentPath="/askvic" />
 
         <div style={styles.shell}>
           {!isCompact ? (
