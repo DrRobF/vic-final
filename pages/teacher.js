@@ -7,7 +7,7 @@ const REDIRECT_DELAY_MS = 1200
 function getUserDisplayName(userRow) {
   if (!userRow) return ''
 
-  return userRow.full_name || userRow.name || userRow.display_name || ''
+  return userRow.name || userRow.email || ''
 }
 
 export default function TeacherPage() {
@@ -67,7 +67,7 @@ export default function TeacherPage() {
 
       const { data: teacherRows, error: teacherLookupError } = await supabase
         .from('users')
-        .select('id, email, name, full_name, display_name')
+        .select('id, email, name')
         .eq('email', user.email)
         .order('id', { ascending: true })
 
@@ -155,13 +155,7 @@ export default function TeacherPage() {
   function getStudentName(student) {
     const profile = student?.profile || {}
 
-    return (
-      profile.full_name ||
-      profile.name ||
-      profile.display_name ||
-      profile.email ||
-      `Student ${student?.id}`
-    )
+    return profile.name || profile.email || `Student ${student?.id}`
   }
 
   function handleToggleStudent(studentId) {
