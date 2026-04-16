@@ -12,6 +12,12 @@ const INITIAL_MESSAGES = [
   },
 ]
 
+function getUserDisplayName(userRow) {
+  if (!userRow) return ''
+
+  return userRow.full_name || userRow.name || userRow.display_name || ''
+}
+
 export default function AskVIC() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -33,6 +39,8 @@ export default function AskVIC() {
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
+  const [currentUserProfile, setCurrentUserProfile] = useState(null)
+  const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
 
   const activeSessionMode = assignedLesson ? 'teacher_directed' : sessionMode
   const lessonStatusText = assignedLesson
@@ -50,11 +58,14 @@ export default function AskVIC() {
 
     async function detectStudentAndLesson() {
       setStudentLookupStatus('Loading student...')
+      setCurrentUserStatus('Loading signed-in user...')
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
       if (!supabaseUrl || !supabaseKey) {
+        setCurrentUserProfile(null)
+        setCurrentUserStatus('Supabase is not configured.')
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setSessionMode('student_directed')
@@ -72,12 +83,31 @@ export default function AskVIC() {
       if (!active) return
 
       if (userError || !user?.email) {
+        setCurrentUserProfile(null)
+        setCurrentUserStatus('No signed-in user found.')
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentLookupStatus('No student found. You can still chat with VIC.')
         return
       }
+
+      const { data: profileRows } = await supabase
+        .from('users')
+        .select('email, name, full_name, display_name')
+        .eq('email', user.email)
+        .order('id', { ascending: true })
+        .limit(1)
+
+      if (!active) return
+
+      const matchedProfile = profileRows?.[0] || null
+      setCurrentUserProfile(matchedProfile)
+      setCurrentUserStatus(
+        matchedProfile
+          ? 'Signed in.'
+          : 'Signed in user found, but no matching profile row in public.users.'
+      )
 
       const role = user?.app_metadata?.role || user?.user_metadata?.role
       if (role && role !== 'student') {
@@ -755,6 +785,24 @@ ${context}`
           ) : null}
 
           <div style={styles.rightColumn}>
+            <section
+              style={{
+                border: '1px solid rgba(255,255,255,0.2)',
+                borderRadius: 12,
+                padding: '12px 14px',
+                marginBottom: 12,
+                background: 'rgba(255,255,255,0.06)',
+              }}
+            >
+              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>Signed in</div>
+              <div style={{ fontSize: 14, fontWeight: 600 }}>
+                {getUserDisplayName(currentUserProfile) || 'Name unavailable'}
+              </div>
+              <div style={{ fontSize: 13, opacity: 0.9 }}>
+                {currentUserProfile?.email || currentUserStatus}
+              </div>
+            </section>
+
             {isCompact ? heroSection : null}
 
             <section style={styles.chatCard}>

@@ -4,6 +4,12 @@ import { supabase } from '../lib/supabase'
 
 const REDIRECT_DELAY_MS = 1200
 
+function getUserDisplayName(userRow) {
+  if (!userRow) return ''
+
+  return userRow.full_name || userRow.name || userRow.display_name || ''
+}
+
 export default function TeacherPage() {
   const router = useRouter()
 
@@ -26,6 +32,7 @@ export default function TeacherPage() {
   const [creatingClass, setCreatingClass] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
 
   const selectedCount = selectedStudentIds.size
 
@@ -49,6 +56,7 @@ export default function TeacherPage() {
 
       if (userError || !user) {
         setTeacher(null)
+        setCurrentUserStatus('No signed-in user found.')
         setError('No teacher is logged in. Redirecting to /login...')
         setLoadingTeacher(false)
         window.setTimeout(() => {
@@ -59,7 +67,7 @@ export default function TeacherPage() {
 
       const { data: teacherRows, error: teacherLookupError } = await supabase
         .from('users')
-        .select('id, email')
+        .select('id, email, name, full_name, display_name')
         .eq('email', user.email)
         .order('id', { ascending: true })
 
@@ -69,12 +77,14 @@ export default function TeacherPage() {
 
       if (teacherLookupError || !teacherRow?.id) {
         setTeacher(null)
+        setCurrentUserStatus('Signed in user found, but no matching profile row in public.users.')
         setError(teacherLookupError?.message || 'Could not find teacher profile for this user.')
         setLoadingTeacher(false)
         return
       }
 
       setTeacher(teacherRow)
+      setCurrentUserStatus('Signed in.')
       setLoadingTeacher(false)
       await loadClasses(teacherRow.id)
     }
@@ -280,6 +290,19 @@ export default function TeacherPage() {
   return (
     <main style={{ padding: '32px 16px', maxWidth: 900, margin: '0 auto' }}>
       <h1>Teacher Portal</h1>
+      <section
+        style={{
+          margin: '12px 0 20px',
+          border: '1px solid #ddd',
+          borderRadius: 8,
+          padding: '10px 12px',
+          background: '#fafafa',
+        }}
+      >
+        <div style={{ fontSize: 12, opacity: 0.75 }}>Signed in</div>
+        <div style={{ fontWeight: 600 }}>{getUserDisplayName(teacher) || 'Name unavailable'}</div>
+        <div style={{ fontSize: 14 }}>{teacher?.email || currentUserStatus}</div>
+      </section>
 
       {loadingTeacher ? <p>Loading teacher...</p> : null}
 
