@@ -43,10 +43,17 @@ export default function AskVIC() {
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
 
-  const activeSessionMode = assignedLesson ? 'teacher_directed' : sessionMode
   const lessonStatusText = assignedLesson
-    ? `Assigned lesson detected: ${assignedLesson.title || 'Untitled lesson'}`
-    : studentLookupStatus
+    ? `Assigned lesson: ${assignedLesson.title || 'Untitled lesson'}`
+    : studentLookupStatus === 'Loading student...'
+      ? 'Checking your student profile...'
+      : studentLookupStatus === 'Student detected. No assigned lesson found.'
+        ? 'No assigned lesson right now. You can ask VIC anything.'
+        : studentLookupStatus === 'Signed in as non-student. Ask VIC is in free mode.'
+          ? 'Free Ask VIC is ready.'
+          : studentLookupStatus === 'Could not match your student profile. Using free mode.'
+            ? 'Student profile not found. Free Ask VIC is ready.'
+            : studentLookupStatus
 
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
@@ -352,11 +359,6 @@ body: JSON.stringify({
       e.preventDefault()
       sendMessage()
     }
-  }
-
-  function startSubject(subject) {
-    const subjectMessage = `I want to start a ${subject} lesson. Please guide me step by step.`
-    sendMessage(subjectMessage)
   }
 
   async function requestReport() {
@@ -757,52 +759,29 @@ ${context}`
           ) : null}
 
           <div style={styles.rightColumn}>
-            <section
-              style={{
-                border: '1px solid rgba(255,255,255,0.2)',
-                borderRadius: 12,
-                padding: '12px 14px',
-                marginBottom: 12,
-                background: 'rgba(255,255,255,0.06)',
-              }}
-            >
-              <div style={{ fontSize: 12, opacity: 0.8, marginBottom: 6 }}>Signed in</div>
-              <div style={{ fontSize: 14, fontWeight: 600 }}>
+            <section style={styles.signedInCard}>
+              <div style={styles.signedInLabel}>Signed in</div>
+              <div style={styles.signedInName}>
                 {getUserDisplayName(currentUserProfile) || 'Name unavailable'}
               </div>
-              <div style={{ fontSize: 13, opacity: 0.9 }}>
+              <div style={styles.signedInMeta}>
                 {currentUserProfile?.email || currentUserStatus}
               </div>
+              <div style={styles.signedInStatus}>{lessonStatusText}</div>
             </section>
 
             {isCompact ? heroSection : null}
 
             <section style={styles.chatCard}>
               <div style={styles.chatHeader}>
-                <div>
-                  <div style={styles.chatEyebrow}>Guided Session</div>
+                <div style={styles.chatHeaderContent}>
                   <div style={styles.chatTitle}>Conversation</div>
+                  <div style={styles.chatStatusMessage}>{lessonStatusText}</div>
                 </div>
 
                 <div style={styles.statusWrap}>
                   <span style={styles.statusDot} />
                   <span style={styles.statusText}>{loading ? 'Thinking' : 'Ready'}</span>
-                </div>
-              </div>
-
-              <div style={styles.quickStartInline}>
-                <div style={styles.quickStartInlineLabel}>Quick starts</div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
-                  {lessonStatusText}
-                </div>
-                <div style={{ fontSize: '13px', opacity: 0.8, marginBottom: '10px' }}>
-                  Current mode: {activeSessionMode === 'teacher_directed' ? 'Assigned Lesson' : 'Free Ask VIC'}
-                </div>
-                <div style={styles.quickStartInlineButtons}>
-                  <button style={styles.quickStartPill} onClick={() => startSubject('math')}>Math</button>
-                  <button style={styles.quickStartPill} onClick={() => startSubject('reading')}>Reading</button>
-                  <button style={styles.quickStartPill} onClick={() => startSubject('writing')}>Writing</button>
-                  <button style={styles.quickStartPill} onClick={() => startSubject('science')}>Science</button>
                 </div>
               </div>
 
@@ -2285,6 +2264,46 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       lineHeight: 1.45,
     },
 
+    signedInCard: {
+      border: '1px solid rgba(255,255,255,0.2)',
+      borderRadius: 16,
+      padding: '14px 16px',
+      marginBottom: 12,
+      background: 'rgba(255,255,255,0.06)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+    },
+
+    signedInLabel: {
+      fontSize: 12,
+      opacity: 0.72,
+      marginBottom: 2,
+    },
+
+    signedInName: {
+      fontSize: 15,
+      fontWeight: 700,
+      color: '#faf5ff',
+      lineHeight: 1.3,
+    },
+
+    signedInMeta: {
+      fontSize: 12,
+      opacity: 0.86,
+      color: '#ddd0ff',
+      lineHeight: 1.35,
+    },
+
+    signedInStatus: {
+      marginTop: 8,
+      paddingTop: 8,
+      borderTop: '1px solid rgba(255,255,255,0.08)',
+      fontSize: 12,
+      color: '#e8dcff',
+      lineHeight: 1.4,
+    },
+
     chatCard: {
       minHeight: isCompact ? '320px' : 0,
       background: 'linear-gradient(180deg, rgba(12, 8, 26, 0.92) 0%, rgba(9, 14, 31, 0.88) 100%)',
@@ -2311,6 +2330,13 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       flexShrink: 0,
     },
 
+    chatHeaderContent: {
+      minWidth: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+    },
+
     chatEyebrow: {
       fontSize: '11px',
       letterSpacing: '0.14em',
@@ -2325,6 +2351,14 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       fontWeight: 800,
       color: '#faf5ff',
       lineHeight: 1.1,
+    },
+
+    chatStatusMessage: {
+      fontSize: '12px',
+      lineHeight: 1.35,
+      color: '#d9cbff',
+      opacity: 0.92,
+      maxWidth: '520px',
     },
 
     statusWrap: {
