@@ -15,7 +15,7 @@ const INITIAL_MESSAGES = [
 function getUserDisplayName(userRow) {
   if (!userRow) return ''
 
-  return userRow.full_name || userRow.name || userRow.display_name || ''
+  return userRow.name || userRow.email || ''
 }
 
 export default function AskVIC() {
@@ -94,7 +94,7 @@ export default function AskVIC() {
 
       const { data: profileRows } = await supabase
         .from('users')
-        .select('email, name, full_name, display_name')
+        .select('email, name')
         .eq('email', user.email)
         .order('id', { ascending: true })
         .limit(1)
