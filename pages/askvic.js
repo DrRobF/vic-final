@@ -761,11 +761,13 @@ ${context}`
           <div style={styles.rightColumn}>
             <section style={styles.signedInCard}>
               <div style={styles.signedInLabel}>Signed in</div>
-              <div style={styles.signedInName}>
-                {getUserDisplayName(currentUserProfile) || 'Name unavailable'}
-              </div>
-              <div style={styles.signedInMeta}>
-                {currentUserProfile?.email || currentUserStatus}
+              <div style={styles.signedInIdentityBlock}>
+                <div style={styles.signedInName}>
+                  {getUserDisplayName(currentUserProfile) || 'Name unavailable'}
+                </div>
+                <div style={styles.signedInMeta}>
+                  {currentUserProfile?.email || currentUserStatus}
+                </div>
               </div>
               <div style={styles.signedInStatus}>{lessonStatusText}</div>
             </section>
@@ -2262,25 +2264,29 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     signedInCard: {
-      border: '1px solid rgba(255,255,255,0.2)',
-      borderRadius: 16,
-      padding: '14px 16px',
+      padding: '8px 2px 10px',
       marginBottom: 12,
-      background: 'rgba(255,255,255,0.06)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
+      gap: '10px',
     },
 
     signedInLabel: {
       fontSize: 12,
-      opacity: 0.72,
-      marginBottom: 2,
+      opacity: 0.68,
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
+    },
+
+    signedInIdentityBlock: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
     },
 
     signedInName: {
-      fontSize: 16,
-      fontWeight: 680,
+      fontSize: 18,
+      fontWeight: 700,
       color: '#faf5ff',
       lineHeight: 1.25,
     },
@@ -2290,13 +2296,10 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       opacity: 0.8,
       color: '#cbbbf2',
       lineHeight: 1.35,
-      marginTop: '-2px',
     },
 
     signedInStatus: {
-      marginTop: 4,
-      paddingTop: 8,
-      borderTop: '1px solid rgba(255,255,255,0.08)',
+      marginTop: 2,
       fontSize: 12,
       color: '#e8dcff',
       lineHeight: 1.4,
