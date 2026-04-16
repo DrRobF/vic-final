@@ -147,7 +147,7 @@ export default function SignupPage() {
         <VICHeader currentPath="/signup" />
         <section className="card">
           <h1>Sign Up</h1>
-          <p>Create your account and choose your role.</p>
+          <p className="subText">Create your account and choose your role.</p>
 
           <form onSubmit={handleSubmit} className="form">
             <label htmlFor="full-name">Full name</label>
@@ -201,7 +201,7 @@ export default function SignupPage() {
               </>
             ) : null}
 
-            <button type="submit" disabled={loading}>
+            <button className="primaryButton" type="submit" disabled={loading}>
               {loading ? 'Creating account...' : 'Create account'}
             </button>
           </form>
@@ -222,54 +222,91 @@ export default function SignupPage() {
           min-height: 100vh;
           background: radial-gradient(circle at 100% 0%, rgba(108, 90, 255, 0.18), transparent 28%), #07070d;
           color: #fff;
-          padding: 24px 16px;
+          padding: 28px 16px;
         }
         .signupShell {
           max-width: 920px;
           margin: 0 auto;
         }
         .card {
-          max-width: 540px;
+          max-width: 560px;
           border: 1px solid rgba(255, 255, 255, 0.14);
-          border-radius: 16px;
+          border-radius: 18px;
           background: rgba(17, 19, 32, 0.9);
-          padding: 22px;
+          padding: 28px;
+          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        }
+        h1 {
+          margin: 0;
+          font-size: 30px;
+          line-height: 1.15;
+          font-weight: 800;
+        }
+        .subText {
+          margin: 10px 0 0;
+          font-size: 15px;
+          color: rgba(234, 239, 255, 0.78);
         }
         .form {
           display: grid;
-          gap: 10px;
+          gap: 12px;
+          margin-top: 22px;
         }
         label {
           font-size: 13px;
-          opacity: 0.9;
+          color: rgba(234, 239, 255, 0.95);
+          margin-top: 4px;
         }
-        input, select, button {
+        input,
+        select,
+        button {
           font: inherit;
           border-radius: 12px;
         }
-        input, select {
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          background: rgba(255, 255, 255, 0.05);
+        input,
+        select {
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          background: rgba(255, 255, 255, 0.06);
           color: #fff;
-          padding: 10px 12px;
+          padding: 12px 14px;
         }
-        button {
-          margin-top: 8px;
-          border: 0;
+        .primaryButton {
+          margin-top: 10px;
+          border: 1px solid rgba(154, 171, 255, 0.48);
           background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
           color: #fff;
           font-weight: 700;
-          padding: 11px 14px;
+          letter-spacing: 0.01em;
+          padding: 12px 16px;
           cursor: pointer;
+          box-shadow: 0 0 20px rgba(102, 117, 255, 0.25);
+          transition: transform 0.12s ease, filter 0.12s ease;
+        }
+        .primaryButton:hover {
+          filter: brightness(1.06);
+        }
+        .primaryButton:active {
+          transform: translateY(1px);
+        }
+        .primaryButton:disabled {
+          opacity: 0.78;
+          cursor: not-allowed;
+          box-shadow: none;
         }
         .mutedLine {
-          margin-top: 14px;
-          opacity: 0.9;
+          margin: 18px 0 0;
+          color: rgba(234, 239, 255, 0.82);
         }
-        a { color: #9cb3ff; }
+        a {
+          color: #9cb3ff;
+        }
+        a:hover {
+          color: #bdd0ff;
+        }
         .errorText {
           color: #ff9ca8;
           margin-top: 14px;
+          line-height: 1.45;
         }
       `}</style>
     </main>
