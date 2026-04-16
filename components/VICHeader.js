@@ -9,6 +9,8 @@ const NAV_ITEMS = [
   { href: '/signup', label: 'Sign Up' },
 ]
 
+const PRIMARY_PATHS = new Set(['/askvic', '/teacher'])
+
 function getDisplayName(profile, authUser) {
   if (profile?.name) return profile.name
   if (profile?.email) return profile.email
@@ -85,15 +87,22 @@ export default function VICHeader({ currentPath = '' }) {
       </a>
 
       <nav className="navLinks" aria-label="Primary">
-        {NAV_ITEMS.map((item) => (
-          <a
-            key={item.href}
-            href={item.href}
-            className={currentPath === item.href ? 'navLink active' : 'navLink'}
-          >
-            {item.label}
-          </a>
-        ))}
+        {NAV_ITEMS.map((item) => {
+          const isPrimary = PRIMARY_PATHS.has(item.href)
+          const classes = [
+            'navLink',
+            isPrimary ? 'primaryLink' : 'secondaryLink',
+            currentPath === item.href ? 'active' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
+
+          return (
+            <a key={item.href} href={item.href} className={classes}>
+              {item.label}
+            </a>
+          )
+        })}
       </nav>
 
       <div className="userArea">
@@ -118,59 +127,71 @@ export default function VICHeader({ currentPath = '' }) {
           width: 100%;
           display: flex;
           align-items: center;
-          gap: 16px;
+          gap: 22px;
           justify-content: space-between;
-          padding: 12px 14px;
+          padding: 14px 20px;
           border-radius: 16px;
           border: 1px solid rgba(255, 255, 255, 0.16);
           background: rgba(11, 12, 20, 0.78);
           backdrop-filter: blur(14px);
-          margin-bottom: 18px;
+          margin-bottom: 24px;
           flex-wrap: wrap;
         }
         .brand {
           display: flex;
           align-items: center;
-          gap: 10px;
+          gap: 12px;
           text-decoration: none;
           color: #fff;
+          flex-shrink: 0;
         }
         .brand img {
-          width: 32px;
-          height: 32px;
+          width: 36px;
+          height: 36px;
           border-radius: 50%;
         }
         .brandTitle {
-          font-size: 14px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 800;
           letter-spacing: 0.02em;
         }
         .brandSub {
           font-size: 11px;
-          opacity: 0.72;
+          opacity: 0.75;
         }
         .navLinks {
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 10px;
           flex-wrap: wrap;
         }
         .navLink {
-          color: rgba(233, 237, 255, 0.85);
+          color: rgba(233, 237, 255, 0.88);
           text-decoration: none;
           font-size: 13px;
-          padding: 7px 10px;
+          padding: 8px 12px;
           border-radius: 999px;
           border: 1px solid transparent;
+          transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+        }
+        .primaryLink {
+          font-weight: 700;
+        }
+        .secondaryLink {
+          font-weight: 600;
+          opacity: 0.88;
         }
         .navLink:hover {
-          border-color: rgba(133, 153, 255, 0.5);
+          border-color: rgba(133, 153, 255, 0.55);
           color: #fff;
+          text-decoration: underline;
+          text-underline-offset: 3px;
         }
         .active {
           background: rgba(115, 109, 255, 0.22);
           border-color: rgba(133, 153, 255, 0.5);
           color: #fff;
+          opacity: 1;
         }
         .userArea {
           display: flex;
@@ -179,7 +200,7 @@ export default function VICHeader({ currentPath = '' }) {
           margin-left: auto;
         }
         .signedInName {
-          max-width: 200px;
+          max-width: 220px;
           overflow: hidden;
           text-overflow: ellipsis;
           white-space: nowrap;
@@ -193,11 +214,26 @@ export default function VICHeader({ currentPath = '' }) {
           border: 1px solid rgba(255, 255, 255, 0.24);
           background: rgba(255, 255, 255, 0.08);
           border-radius: 999px;
-          padding: 7px 12px;
+          padding: 8px 14px;
           font-size: 12px;
+          font-weight: 650;
           cursor: pointer;
+          transition: background 0.15s ease, border-color 0.15s ease;
+        }
+        .logoutButton:hover,
+        .authPrompt:hover {
+          background: rgba(255, 255, 255, 0.14);
+          border-color: rgba(255, 255, 255, 0.32);
+        }
+        .logoutButton:disabled {
+          opacity: 0.7;
+          cursor: default;
         }
         @media (max-width: 980px) {
+          .vicHeader {
+            padding: 12px 14px;
+            gap: 14px;
+          }
           .userArea {
             margin-left: 0;
           }
