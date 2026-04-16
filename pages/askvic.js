@@ -846,10 +846,6 @@ ${context}`
               />
 
               <div style={styles.inputFooter}>
-                <div style={styles.footerPrompt}>
-                  Pick a subject or ask a question. One thought at a time works best.
-                </div>
-
                 <button
                   onClick={() => sendMessage()}
                   disabled={loading || !input.trim()}
@@ -1446,23 +1442,24 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     logoImageWrap: {
       width: isMobile ? '82px' : '86px',
       height: isMobile ? '82px' : '86px',
-      background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(246,238,255,0.96) 100%)',
+      background: 'radial-gradient(circle at 32% 28%, rgba(100, 118, 255, 0.34) 0%, rgba(25, 28, 53, 0.95) 70%)',
+      border: '1px solid rgba(141, 160, 255, 0.42)',
       borderRadius: '22px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
       boxShadow:
-        'inset 0 1px 0 rgba(255,255,255,0.78), 0 12px 28px rgba(0,0,0,0.22), 0 0 20px rgba(171, 91, 255, 0.12)',
+        'inset 0 1px 0 rgba(255,255,255,0.24), 0 12px 28px rgba(0,0,0,0.32), 0 0 20px rgba(171, 91, 255, 0.18)',
     },
 
     logoImage: {
-      width: '100%',
-      height: '100%',
+      width: '84%',
+      height: '84%',
       display: 'block',
       objectFit: 'contain',
-      transform: 'scale(1.18)',
-      background: 'rgba(255,255,255,0.96)',
+      transform: 'scale(1.08)',
+      filter: 'drop-shadow(0 4px 10px rgba(9, 12, 25, 0.65))',
     },
 
     heroTextWrap: {
@@ -2272,7 +2269,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'rgba(255,255,255,0.06)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px',
+      gap: '8px',
     },
 
     signedInLabel: {
@@ -2282,21 +2279,22 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     signedInName: {
-      fontSize: 15,
-      fontWeight: 700,
+      fontSize: 16,
+      fontWeight: 680,
       color: '#faf5ff',
-      lineHeight: 1.3,
+      lineHeight: 1.25,
     },
 
     signedInMeta: {
-      fontSize: 12,
-      opacity: 0.86,
-      color: '#ddd0ff',
+      fontSize: 13,
+      opacity: 0.8,
+      color: '#cbbbf2',
       lineHeight: 1.35,
+      marginTop: '-2px',
     },
 
     signedInStatus: {
-      marginTop: 8,
+      marginTop: 4,
       paddingTop: 8,
       borderTop: '1px solid rgba(255,255,255,0.08)',
       fontSize: 12,
@@ -2516,16 +2514,9 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     inputFooter: {
       display: 'flex',
       alignItems: isMobile ? 'stretch' : 'center',
-      justifyContent: 'space-between',
+      justifyContent: 'flex-end',
       gap: '12px',
       flexDirection: isMobile ? 'column' : 'row',
-    },
-
-    footerPrompt: {
-      fontSize: '13px',
-      lineHeight: 1.4,
-      color: '#d7c7ff',
-      flex: 1,
     },
 
     sendButton: {

@@ -140,23 +140,23 @@ export default function VICHeader({ currentPath = '' }) {
         .brand {
           display: flex;
           align-items: center;
-          gap: 12px;
+          gap: 14px;
           text-decoration: none;
           color: #fff;
           flex-shrink: 0;
         }
         .brand img {
-          width: 36px;
-          height: 36px;
+          width: 42px;
+          height: 42px;
           border-radius: 50%;
         }
         .brandTitle {
-          font-size: 16px;
+          font-size: 17px;
           font-weight: 800;
           letter-spacing: 0.02em;
         }
         .brandSub {
-          font-size: 11px;
+          font-size: 12px;
           opacity: 0.75;
         }
         .navLinks {
