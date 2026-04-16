@@ -72,23 +72,27 @@ export default function SignupPage() {
       let matchedClass = null
 
       if (role === ROLE_STUDENT) {
-        const { data: classRow, error: classLookupError } = await supabase
-          .from('classes')
-          .select('id')
-          .eq('class_code', normalizedClassCode)
-          .single()
+        const validationResponse = await fetch('/api/validate-class-code', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ classCode: normalizedClassCode }),
+        })
 
-        if (classLookupError) {
-          const missingClass = classLookupError.code === 'PGRST116'
+        const validationBody = await validationResponse.json().catch(() => ({}))
+
+        if (!validationResponse.ok) {
+          const invalidClassCode = validationResponse.status === 404 || validationResponse.status === 400
           setError(
-            missingClass
+            invalidClassCode
               ? 'Invalid class code. Please check your class code and try again.'
-              : `Class lookup failed: ${classLookupError.message || 'Could not find class.'}`
+              : `Class lookup failed: ${validationBody.error || 'Could not find class.'}`
           )
           return
         }
 
-        matchedClass = classRow
+        matchedClass = { id: validationBody.id }
       }
 
       const { data: insertedUser, error: userInsertError } = await supabase
