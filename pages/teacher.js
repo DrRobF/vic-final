@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
+import VICHeader from '../components/VICHeader'
 
 const REDIRECT_DELAY_MS = 1200
 
@@ -282,15 +283,17 @@ export default function TeacherPage() {
   }
 
   return (
-    <main style={{ padding: '32px 16px', maxWidth: 900, margin: '0 auto' }}>
+    <main className="teacherPage">
+      <div className="teacherShell">
+      <VICHeader currentPath="/teacher" />
       <h1>Teacher Portal</h1>
       <section
         style={{
           margin: '12px 0 20px',
-          border: '1px solid #ddd',
+          border: '1px solid rgba(255,255,255,0.18)',
           borderRadius: 8,
           padding: '10px 12px',
-          background: '#fafafa',
+          background: 'rgba(255,255,255,0.05)',
         }}
       >
         <div style={{ fontSize: 12, opacity: 0.75 }}>Signed in</div>
@@ -345,9 +348,9 @@ export default function TeacherPage() {
                     textAlign: 'left',
                     padding: '10px 12px',
                     borderRadius: 8,
-                    border: '1px solid #ddd',
+                    border: '1px solid rgba(255,255,255,0.2)',
                     background:
-                      selectedClass?.id === classRow.id ? 'rgba(0,0,0,0.06)' : 'white',
+                      selectedClass?.id === classRow.id ? 'rgba(130,130,255,0.2)' : 'rgba(255,255,255,0.04)',
                     cursor: 'pointer',
                   }}
                 >
@@ -405,10 +408,10 @@ export default function TeacherPage() {
                           gap: 10,
                           padding: '10px 12px',
                           borderRadius: 8,
-                          border: '1px solid #ddd',
+                          border: '1px solid rgba(255,255,255,0.2)',
                           background: selectedStudentIds.has(student.id)
-                            ? 'rgba(0,0,0,0.06)'
-                            : 'white',
+                            ? 'rgba(130,130,255,0.2)'
+                            : 'rgba(255,255,255,0.04)',
                           cursor: 'pointer',
                         }}
                       >
@@ -467,14 +470,47 @@ export default function TeacherPage() {
           ) : null}
 
           {error ? (
-            <p role="alert" style={{ color: 'crimson' }}>
+            <p role="alert" style={{ color: '#ff9ca8' }}>
               {error}
             </p>
           ) : null}
 
-          {notice ? <p style={{ color: 'green' }}>{notice}</p> : null}
+          {notice ? <p style={{ color: '#92f7bb' }}>{notice}</p> : null}
         </>
       ) : null}
+      </div>
+      <style jsx>{`
+        .teacherPage {
+          min-height: 100vh;
+          background: radial-gradient(circle at 0% 0%, rgba(96, 117, 255, 0.12), transparent 25%), #07070d;
+          color: #fff;
+          padding: 24px 16px;
+        }
+        .teacherShell {
+          max-width: 940px;
+          margin: 0 auto;
+        }
+        :global(.teacherPage input),
+        :global(.teacherPage textarea),
+        :global(.teacherPage select) {
+          width: 100%;
+          padding: 10px 12px;
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.22);
+          background: rgba(255,255,255,0.06);
+          color: #fff;
+          font: inherit;
+        }
+        :global(.teacherPage button) {
+          border-radius: 10px;
+          border: 1px solid rgba(255,255,255,0.22);
+          background: rgba(255,255,255,0.08);
+          color: #fff;
+          padding: 10px 12px;
+          font: inherit;
+          cursor: pointer;
+        }
+      `}</style>
     </main>
   )
 }

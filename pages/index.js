@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
+import VICHeader from "../components/VICHeader";
 
 export default function Home() {
   const router = useRouter();
@@ -63,6 +64,7 @@ export default function Home() {
         <div className="gridFade" />
 
         <main className="shell">
+          <VICHeader currentPath="/" />
           <section className="hero">
             <div className="heroLeft">
               <div className="brandBlock">
@@ -100,6 +102,9 @@ export default function Home() {
                 <button className="primaryButton" onClick={openFullVIC}>
                   Open Full VIC
                 </button>
+                <a className="secondaryLink" href="/teacher">Teacher Portal</a>
+                <a className="secondaryLink" href="/login">Log In</a>
+                <a className="secondaryLink" href="/signup">Sign Up</a>
               </div>
             </div>
 
@@ -388,6 +393,9 @@ export default function Home() {
 
         .heroActions {
           margin-top: 34px;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
         }
 
         .primaryButton,
@@ -411,6 +419,20 @@ export default function Home() {
         .askButton:hover,
         .continueButton:hover {
           transform: translateY(-1px);
+        }
+
+        .secondaryLink {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 999px;
+          padding: 12px 16px;
+          color: rgba(255,255,255,0.92);
+          border: 1px solid rgba(255,255,255,0.2);
+          background: rgba(255,255,255,0.05);
+          text-decoration: none;
+          font-size: 13px;
+          font-weight: 700;
         }
 
         .heroRight {
