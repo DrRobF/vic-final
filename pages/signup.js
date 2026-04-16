@@ -44,7 +44,6 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    let createdAuthUserId = ''
     let createdProfileId = null
 
     try {
@@ -62,7 +61,7 @@ export default function SignupPage() {
       }
 
       const authUser = signUpData?.user
-      createdAuthUserId = authUser?.id || ''
+      const createdAuthUserId = authUser?.id || ''
       const likelyDuplicate = Array.isArray(authUser?.identities) && authUser.identities.length === 0
 
       if (!createdAuthUserId || likelyDuplicate) {
@@ -70,62 +69,67 @@ export default function SignupPage() {
         return
       }
 
-      const { data: insertedUsers, error: userInsertError } = await supabase
+      let matchedClass = null
+
+      if (role === ROLE_STUDENT) {
+        const { data: classRow, error: classLookupError } = await supabase
+          .from('classes')
+          .select('id')
+          .eq('class_code', normalizedClassCode)
+          .single()
+
+        if (classLookupError) {
+          const missingClass = classLookupError.code === 'PGRST116'
+          setError(
+            missingClass
+              ? 'Invalid class code. Please check your class code and try again.'
+              : `Class lookup failed: ${classLookupError.message || 'Could not find class.'}`
+          )
+          return
+        }
+
+        matchedClass = classRow
+      }
+
+      const { data: insertedUser, error: userInsertError } = await supabase
         .from('users')
         .insert({
           email: normalizedEmail,
           name: normalizedName,
           role,
         })
-        .select('id')
+        .select()
         .single()
 
-      if (userInsertError || !insertedUsers?.id) {
-        createdProfileId = null
+      if (userInsertError || !insertedUser?.id) {
         setError(`Profile creation failed: ${userInsertError?.message || 'Could not create user profile.'}`)
         return
       }
 
-      createdProfileId = insertedUsers.id
+      createdProfileId = insertedUser.id
 
       if (role === ROLE_TEACHER) {
         router.push('/teacher')
         return
       }
 
-      const { data: classRows, error: classLookupError } = await supabase
-        .from('classes')
-        .select('id')
-        .eq('class_code', normalizedClassCode)
-        .limit(1)
-
-      const matchedClass = classRows?.[0]
-
-      if (classLookupError) {
-        await rollbackUserProfile(createdProfileId)
-        setError(`Class lookup failed: ${classLookupError.message || 'Could not find class.'}`)
-        return
-      }
-
-      if (!matchedClass?.id) {
-        await rollbackUserProfile(createdProfileId)
-        setError('Invalid class code. Please check your class code and try again.')
-        return
-      }
-
       const { error: enrollmentError } = await supabase.from('enrollments').insert({
-        student_id: insertedUsers.id,
+        student_id: insertedUser.id,
         class_id: matchedClass.id,
       })
 
       if (enrollmentError) {
         await rollbackUserProfile(createdProfileId)
+        createdProfileId = null
         setError(`Enrollment failed: ${enrollmentError.message || 'Could not enroll in class.'}`)
         return
       }
 
       router.push('/askvic')
     } catch {
+      if (createdProfileId) {
+        await rollbackUserProfile(createdProfileId)
+      }
       setError('Something went wrong during signup. Please try again.')
     } finally {
       setLoading(false)
