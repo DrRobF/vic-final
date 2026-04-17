@@ -931,13 +931,13 @@ export default function TeacherPage() {
           border-radius: 12px;
           border: 1px solid #d1d5db;
           background: #ffffff;
-          padding: 18px;
+          padding: 16px;
           display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 14px;
+          flex-direction: column;
+          align-items: stretch;
+          justify-content: flex-start;
+          gap: 0;
           min-height: 108px;
-          flex-wrap: wrap;
           box-shadow: 0 6px 14px rgba(17, 24, 39, 0.06);
           transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
         }
@@ -947,30 +947,31 @@ export default function TeacherPage() {
           box-shadow: 0 8px 16px rgba(17, 24, 39, 0.08);
         }
         .studentName {
-          font-size: 17px;
+          font-size: 16.5px;
           line-height: 1.35;
-          font-weight: 500;
+          font-weight: 600;
           color: #111827;
           overflow-wrap: anywhere;
-          flex: 1;
-          min-width: 170px;
+          margin-bottom: 12px;
         }
         .supportButtonRow {
           display: flex;
           align-items: center;
-          justify-content: flex-end;
-          flex-wrap: wrap;
+          justify-content: space-between;
+          flex-wrap: nowrap;
           gap: 8px;
+          width: 100%;
         }
         .supportButton {
           border: 1px solid #d1d5db;
           border-radius: 10px;
           background: #ffffff;
-          color: #374151;
-          padding: 9px 8px;
+          color: #111827;
+          padding: 9px 10px;
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
+          flex: 1;
           transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
         }
         .supportButton:hover {
@@ -989,19 +990,22 @@ export default function TeacherPage() {
           color: #5b21b6;
         }
         .supportButton.remediation.isActive {
-          background: #ffecef;
-          border-color: #e35068;
-          box-shadow: 0 0 0 1px rgba(227, 80, 104, 0.2);
+          background: #dc2626;
+          border-color: #dc2626;
+          color: #ffffff;
+          box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.25);
         }
         .supportButton.onLevel.isActive {
-          background: #e9fff1;
-          border-color: #2eb66a;
-          box-shadow: 0 0 0 1px rgba(46, 182, 106, 0.2);
+          background: #16a34a;
+          border-color: #16a34a;
+          color: #ffffff;
+          box-shadow: 0 0 0 1px rgba(22, 163, 74, 0.25);
         }
         .supportButton.enrichment.isActive {
-          background: #f2ebff;
-          border-color: #855af5;
-          box-shadow: 0 0 0 1px rgba(133, 90, 245, 0.2);
+          background: #7c3aed;
+          border-color: #7c3aed;
+          color: #ffffff;
+          box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.25);
         }
         .lessonShell {
           background: #ffffff;
@@ -1023,9 +1027,9 @@ export default function TeacherPage() {
         }
 
         .studentTile.selected {
-          background: #f5f3ff;
-          border-color: #8b5cf6;
-          box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2), 0 8px 16px rgba(17, 24, 39, 0.1);
+          background: #faf7ff;
+          border-color: #7c3aed;
+          box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.35), 0 10px 22px rgba(124, 58, 237, 0.12);
         }
         .classSwitcherCard .statusText,
         .classSwitcherCard .helperText,
