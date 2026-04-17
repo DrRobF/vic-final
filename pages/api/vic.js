@@ -26,11 +26,23 @@ export default async function handler(req, res) {
     studentId,
     assignedLesson,
     studentMode,
+    supportLevel,
     studentInterest,
   } = req.body || {}
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Missing messages array' })
+  }
+
+  const normalizeSupportLevel = (rawLevel) => {
+    if (typeof rawLevel !== 'string') return ''
+
+    const value = rawLevel.trim().toLowerCase()
+
+    if (value === 'on-level' || value === 'on_level') return 'core'
+    if (value === 'remediation' || value === 'core' || value === 'enrichment') return value
+
+    return ''
   }
 
   try {
@@ -43,6 +55,7 @@ export default async function handler(req, res) {
     let resolvedSessionMode = sessionMode || 'student_directed'
     let resolvedAssignedLesson = assignedLesson || null
     let resolvedStudentMode = studentMode || ''
+    let resolvedSupportLevel = normalizeSupportLevel(supportLevel || studentMode || '')
     let resolvedStudentInterest = studentInterest || ''
     let resolvedGradeLevel = ''
 
@@ -113,6 +126,8 @@ export default async function handler(req, res) {
           if (lessonRes.ok && Array.isArray(lessonData) && lessonData.length > 0) {
             resolvedAssignedLesson = lessonData[0]
             resolvedStudentMode = assignment.mode || ''
+            const normalizedAssignmentMode = normalizeSupportLevel(assignment.mode || '')
+            const fallbackSupportLevel = normalizeSupportLevel(resolvedSupportLevel || normalizedAssignmentMode)
 
             if (studentRes.ok && Array.isArray(studentData) && studentData.length > 0) {
               const interestTags = studentData[0]?.interest_tags
@@ -122,7 +137,7 @@ export default async function handler(req, res) {
             }
 
             const enrollmentRes = await fetch(
-              `${supabaseUrl}/rest/v1/enrollments?student_id=eq.${resolvedStudentId}&select=class_id,classes:class_id(id,class_name,grade_level)&limit=1`,
+              `${supabaseUrl}/rest/v1/enrollments?student_id=eq.${resolvedStudentId}&select=class_id,support_level,classes:class_id(id,class_name,grade_level)&order=class_id.asc`,
               {
                 method: 'GET',
                 headers: {
@@ -134,7 +149,8 @@ export default async function handler(req, res) {
             )
 
             const enrollmentData = await enrollmentRes.json()
-            const enrollmentRow = Array.isArray(enrollmentData) ? enrollmentData[0] : null
+            const enrollmentRows = Array.isArray(enrollmentData) ? enrollmentData : []
+            const enrollmentRow = enrollmentRows[0] || null
             const classRow = Array.isArray(enrollmentRow?.classes)
               ? enrollmentRow.classes[0]
               : enrollmentRow?.classes
@@ -142,6 +158,18 @@ export default async function handler(req, res) {
             if (enrollmentRes.ok && classRow?.grade_level) {
               resolvedGradeLevel = String(classRow.grade_level)
             }
+
+            let enrollmentSupportLevel = ''
+            if (enrollmentRows.length === 1) {
+              enrollmentSupportLevel = normalizeSupportLevel(enrollmentRows[0]?.support_level)
+            } else if (enrollmentRows.length > 1 && normalizedAssignmentMode) {
+              const matchedEnrollment = enrollmentRows.find(
+                (row) => normalizeSupportLevel(row?.support_level) === normalizedAssignmentMode
+              )
+              enrollmentSupportLevel = normalizeSupportLevel(matchedEnrollment?.support_level)
+            }
+
+            resolvedSupportLevel = enrollmentSupportLevel || fallbackSupportLevel
           }
         } else {
           console.log('No assignment found or assignments blocked by RLS:', assignmentData)
@@ -171,6 +199,14 @@ Lesson: ${resolvedAssignedLesson.lesson_text || ''}
 STUDENT SUPPORT MODE:
 ${resolvedStudentMode || ''}
 
+STUDENT SUPPORT LEVEL:
+${resolvedSupportLevel || 'core'}
+
+SUPPORT LEVEL TEACHING BEHAVIOR:
+- remediation: slower pacing, more scaffolding, step-by-step guidance, and frequent checks for understanding.
+- core: standard teaching pace and support.
+- enrichment: faster pacing, deeper thinking, and additional challenge/extension.
+
 STUDENT INTEREST:
 ${resolvedStudentInterest || ''}
 
@@ -181,7 +217,7 @@ IMPORTANT:
 - If student interest is already known, do not ask for it again.
 - Begin by teaching the assigned lesson directly.
 - Teach the assigned lesson instead of generic chat.
-- Adapt instruction to the support mode.
+- Adapt instruction to the support level behavior above.
 `
 
       contextMessages.push({
@@ -258,6 +294,7 @@ IMPORTANT:
         sessionMode: resolvedSessionMode,
         assignedLessonTitle: resolvedAssignedLesson?.title || null,
         studentMode: resolvedStudentMode || null,
+        supportLevel: resolvedSupportLevel || null,
         studentInterest: resolvedStudentInterest || null,
         gradeLevel: resolvedGradeLevel || null,
       },

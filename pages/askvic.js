@@ -13,6 +13,17 @@ const INITIAL_MESSAGES = [
   },
 ]
 
+function normalizeSupportLevel(rawLevel) {
+  if (typeof rawLevel !== 'string') return ''
+
+  const value = rawLevel.trim().toLowerCase()
+
+  if (value === 'on-level' || value === 'on_level') return 'core'
+  if (value === 'remediation' || value === 'core' || value === 'enrichment') return value
+
+  return ''
+}
+
 function getUserDisplayName(userRow) {
   if (!userRow) return ''
 
@@ -36,6 +47,7 @@ export default function AskVIC() {
   const [selectedStudentId, setSelectedStudentId] = useState(null)
   const [assignedLesson, setAssignedLesson] = useState(null)
   const [studentMode, setStudentMode] = useState('')
+  const [studentSupportLevel, setStudentSupportLevel] = useState('')
   const [studentInterest, setStudentInterest] = useState('')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
@@ -77,6 +89,7 @@ export default function AskVIC() {
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setSessionMode('student_directed')
+        setStudentSupportLevel('')
         setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
         return
       }
@@ -96,6 +109,7 @@ export default function AskVIC() {
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setSessionMode('student_directed')
+        setStudentSupportLevel('')
         setStudentLookupStatus('No student found. You can still chat with VIC.')
         return
       }
@@ -122,6 +136,7 @@ export default function AskVIC() {
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setSessionMode('student_directed')
+        setStudentSupportLevel('')
         setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
         return
       }
@@ -141,6 +156,7 @@ export default function AskVIC() {
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setSessionMode('student_directed')
+        setStudentSupportLevel('')
         setStudentLookupStatus('Could not match your student profile. Using free mode.')
         return
       }
@@ -168,13 +184,40 @@ export default function AskVIC() {
       if (assignmentError || !latestAssignment?.id || !lessonRow) {
         setAssignedLesson(null)
         setStudentMode('')
+        setStudentSupportLevel('')
         setSessionMode('student_directed')
         setStudentLookupStatus('Student detected. No assigned lesson found.')
         return
       }
 
+      let enrollmentSupportLevel = ''
+
+      const { data: enrollmentRows } = await supabase
+        .from('enrollments')
+        .select('class_id, support_level')
+        .eq('student_id', student.id)
+        .order('class_id', { ascending: true })
+
+      if (!active) return
+
+      const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
+      const normalizedAssignmentMode = normalizeSupportLevel(latestAssignment.mode || '')
+
+      if (safeEnrollmentRows.length === 1) {
+        enrollmentSupportLevel = normalizeSupportLevel(safeEnrollmentRows[0]?.support_level)
+      } else if (safeEnrollmentRows.length > 1 && normalizedAssignmentMode) {
+        const matchedEnrollment = safeEnrollmentRows.find(
+          (row) => normalizeSupportLevel(row?.support_level) === normalizedAssignmentMode
+        )
+        enrollmentSupportLevel = normalizeSupportLevel(matchedEnrollment?.support_level)
+      }
+
+      const resolvedSupportLevel =
+        enrollmentSupportLevel || normalizedAssignmentMode || normalizeSupportLevel(latestAssignment.mode || '')
+
       setAssignedLesson(lessonRow)
       setStudentMode(latestAssignment.mode || '')
+      setStudentSupportLevel(resolvedSupportLevel)
       setSessionMode('teacher_directed')
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
     }
@@ -344,6 +387,7 @@ export default function AskVIC() {
           sessionMode,
           hasAssignedLesson: Boolean(assignedLesson),
           studentMode,
+          studentSupportLevel,
           studentInterest,
         },
       })
@@ -358,6 +402,7 @@ export default function AskVIC() {
           sessionMode,
           assignedLesson,
           studentMode,
+          supportLevel: studentSupportLevel,
           studentInterest,
         }),
       })
