@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+const ALLOWED_SUPPORT_LEVELS = new Set(['remediation', 'core', 'enrichment'])
 
 function getBearerToken(req) {
   const authHeader = req.headers.authorization || ''
@@ -26,10 +27,22 @@ export default async function handler(req, res) {
   }
 
   const classIdRaw = req.body?.classId
+  const studentIdRaw = req.body?.studentId
+  const supportLevelRaw = typeof req.body?.supportLevel === 'string' ? req.body.supportLevel.trim() : ''
+
   const classId = typeof classIdRaw === 'number' ? classIdRaw : Number(classIdRaw)
+  const studentId = typeof studentIdRaw === 'number' ? studentIdRaw : Number(studentIdRaw)
 
   if (!Number.isInteger(classId) || classId <= 0) {
     return res.status(400).json({ error: 'A valid classId is required.' })
+  }
+
+  if (!Number.isInteger(studentId) || studentId <= 0) {
+    return res.status(400).json({ error: 'A valid studentId is required.' })
+  }
+
+  if (!ALLOWED_SUPPORT_LEVELS.has(supportLevelRaw)) {
+    return res.status(400).json({ error: 'supportLevel must be remediation, core, or enrichment.' })
   }
 
   const accessToken = getBearerToken(req)
@@ -92,7 +105,7 @@ export default async function handler(req, res) {
   }
 
   if (teacherRow.role !== 'teacher') {
-    return res.status(403).json({ error: 'Only teacher accounts can load class students.' })
+    return res.status(403).json({ error: 'Only teacher accounts can update support level.' })
   }
 
   const { data: ownedClass, error: classOwnershipError } = await supabaseAdmin
@@ -110,48 +123,30 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'This class does not belong to the signed-in teacher.' })
   }
 
-  const { data: enrollmentRows, error: enrollmentError } = await supabaseAdmin
+  const { data: enrollmentRow, error: enrollmentLookupError } = await supabaseAdmin
     .from('enrollments')
-    .select('student_id, support_level')
+    .select('id')
     .eq('class_id', classId)
-    .order('student_id', { ascending: true })
+    .eq('student_id', studentId)
+    .maybeSingle()
 
-  if (enrollmentError) {
-    return res.status(500).json({ error: enrollmentError.message || 'Could not load class enrollments.' })
+  if (enrollmentLookupError) {
+    return res.status(500).json({ error: enrollmentLookupError.message || 'Could not verify enrollment.' })
   }
 
-  const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
-  const studentIds = safeEnrollmentRows.map((row) => row?.student_id).filter((id) => Number.isInteger(id))
-
-  if (studentIds.length === 0) {
-    return res.status(200).json({ students: [] })
+  if (!enrollmentRow?.id) {
+    return res.status(404).json({ error: 'Student is not enrolled in this class.' })
   }
 
-  const { data: studentRows, error: studentLookupError } = await supabaseAdmin
-    .from('users')
-    .select('id, name, email')
-    .in('id', studentIds)
-    .order('id', { ascending: true })
+  const { error: updateError } = await supabaseAdmin
+    .from('enrollments')
+    .update({ support_level: supportLevelRaw })
+    .eq('class_id', classId)
+    .eq('student_id', studentId)
 
-  if (studentLookupError) {
-    return res.status(500).json({ error: studentLookupError.message || 'Could not load student records.' })
+  if (updateError) {
+    return res.status(500).json({ error: updateError.message || 'Could not update support level.' })
   }
 
-  const studentsById = new Map((Array.isArray(studentRows) ? studentRows : []).map((row) => [row.id, row]))
-  const supportByStudentId = new Map(
-    safeEnrollmentRows
-      .filter((row) => Number.isInteger(row?.student_id))
-      .map((row) => [row.student_id, row.support_level || null])
-  )
-  const students = studentIds
-    .map((studentId) => studentsById.get(studentId))
-    .filter(Boolean)
-    .map((student) => ({
-      id: student.id,
-      name: student.name || '',
-      email: student.email || '',
-      support_level: supportByStudentId.get(student.id) || null,
-    }))
-
-  return res.status(200).json({ students })
+  return res.status(200).json({ success: true })
 }
