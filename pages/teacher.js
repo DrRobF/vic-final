@@ -169,59 +169,46 @@ export default function TeacherPage() {
   }, [selectedClass?.id])
 
   async function loadStudents(classId) {
-    console.log('[DEBUG] loadStudents called with:', classId)
     if (!classId) return
 
     setLoadingStudents(true)
     setError('')
 
-    const { data, error: enrollmentError } = await supabase
-      .from('enrollments')
-      .select('student_id, users!inner(id, name, email)')
-      .eq('class_id', classId)
-      .order('student_id', { ascending: true })
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
 
-    console.log('[DEBUG] enrollments query error:', enrollmentError)
-    console.log('[DEBUG] raw enrollments query result:', data)
-
-    if (enrollmentError) {
-      console.error('[DEBUG] enrollments query error (returning early):', enrollmentError)
-      setError(enrollmentError.message || 'Could not load students for this class.')
+    if (sessionError || !session?.access_token) {
+      setError('Please sign in again to load students.')
       setStudents([])
       setSelectedStudentIds(new Set())
       setLoadingStudents(false)
       return
     }
 
-    const normalizedEnrollments = Array.isArray(data)
-      ? data.map((row) => {
-          const usersValue = row?.users
-          const normalizedUser = Array.isArray(usersValue) ? usersValue[0] : usersValue
-          return {
-            ...row,
-            users: normalizedUser || null,
-          }
-        })
-      : []
+    const response = await fetch('/api/teacher/class-students', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ classId }),
+    })
 
-    const hasUnexpectedUsersShape = Array.isArray(data)
-      ? data.some((row) => Array.isArray(row?.users))
-      : false
+    const payload = await response.json().catch(() => null)
 
-    if (hasUnexpectedUsersShape) {
-      console.log('[DEBUG] enrollment shape normalization:', {
-        raw: data,
-        normalized: normalizedEnrollments,
-      })
+    if (!response.ok) {
+      setError(payload?.error || 'Could not load students for this class.')
+      setStudents([])
+      setSelectedStudentIds(new Set())
+      setLoadingStudents(false)
+      return
     }
 
-    const mappedStudents = normalizedEnrollments
-      .map((row) => row?.users)
-      .filter((userRow) => userRow?.id)
+    const nextStudents = Array.isArray(payload?.students) ? payload.students : []
 
-    console.log('[DEBUG] mapped students:', mappedStudents)
-
-    setStudents(mappedStudents)
+    setStudents(nextStudents)
     setSelectedStudentIds(new Set())
     setLoadingStudents(false)
   }
