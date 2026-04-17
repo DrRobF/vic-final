@@ -7,12 +7,6 @@ export const config = {
 }
 
 export default async function handler(req, res) {
-  console.log("VIC API HIT")
-
-  return res.status(200).json({
-    test: "VIC API is working"
-  })
-
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
