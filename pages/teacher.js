@@ -210,9 +210,25 @@ export default function TeacherPage() {
     }
 
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
+    const nextSupportSelections = nextStudents.reduce((accumulator, student) => {
+      if (!student?.id) return accumulator
+
+      const supportLevel =
+        student.support_level === 'on-level'
+          ? 'core'
+          : ['remediation', 'core', 'enrichment'].includes(student.support_level)
+            ? student.support_level
+            : null
+
+      if (supportLevel) {
+        accumulator[student.id] = supportLevel
+      }
+
+      return accumulator
+    }, {})
 
     setStudents(nextStudents)
-    setStudentSupportSelections({})
+    setStudentSupportSelections(nextSupportSelections)
     setIsRosterCollapsed(false)
     setLoadingStudents(false)
   }
@@ -225,10 +241,52 @@ export default function TeacherPage() {
     setIsRosterCollapsed(false)
   }
 
-  function handleSelectStudentSupport(studentId, supportLevel) {
+  async function handleSelectStudentSupport(studentId, supportLevel) {
+    if (!selectedClass?.id || !studentId) return
+
+    const previousSupportLevel = studentSupportSelections[studentId]
+
     setStudentSupportSelections((previous) => ({
       ...previous,
       [studentId]: supportLevel,
+    }))
+
+    const {
+      data: { session },
+      error: sessionError,
+    } = await supabase.auth.getSession()
+
+    if (sessionError || !session?.access_token) {
+      setError('Please sign in again to save support levels.')
+      setStudentSupportSelections((previous) => ({
+        ...previous,
+        [studentId]: previousSupportLevel,
+      }))
+      return
+    }
+
+    const response = await fetch('/api/teacher/update-support-level', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        classId: selectedClass.id,
+        studentId,
+        supportLevel,
+      }),
+    })
+
+    if (response.ok) {
+      return
+    }
+
+    const payload = await response.json().catch(() => null)
+    setError(payload?.error || 'Could not save support level for this student.')
+    setStudentSupportSelections((previous) => ({
+      ...previous,
+      [studentId]: previousSupportLevel,
     }))
   }
 
@@ -336,7 +394,7 @@ export default function TeacherPage() {
     const assignmentRows = Object.entries(studentSupportSelections).map(([studentId, mode]) => ({
       lesson_id: createdLesson.id,
       student_id: Number(studentId),
-      mode,
+      mode: mode === 'core' ? 'on-level' : mode,
       status: 'assigned',
     }))
 
@@ -477,7 +535,7 @@ export default function TeacherPage() {
                   <div className="rosterSummaryBar">
                     <span className="summaryTotal">{selectedCount} assigned student{selectedCount === 1 ? '' : 's'}</span>
                     {supportCounts.remediation ? <span className="summaryChip remediation">Remediation: {supportCounts.remediation}</span> : null}
-                    {supportCounts['on-level'] ? <span className="summaryChip onLevel">On-Level: {supportCounts['on-level']}</span> : null}
+                    {supportCounts.core ? <span className="summaryChip onLevel">Core: {supportCounts.core}</span> : null}
                     {supportCounts.enrichment ? <span className="summaryChip enrichment">Enrichment: {supportCounts.enrichment}</span> : null}
                     <button type="button" className="secondaryButton rosterToggleButton" onClick={() => setIsRosterCollapsed(false)}>
                       Edit roster
@@ -505,9 +563,9 @@ export default function TeacherPage() {
                               </button>
                               <button
                                 type="button"
-                                className={selectedSupport === 'on-level' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
-                                onClick={() => handleSelectStudentSupport(student.id, 'on-level')}
-                                title="On-Level"
+                                className={selectedSupport === 'core' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
+                                onClick={() => handleSelectStudentSupport(student.id, 'core')}
+                                title="Core"
                               >
                                 Core
                               </button>
