@@ -99,6 +99,7 @@ export default function SignupPage() {
       const { data: insertedUser, error: userInsertError } = await supabase
         .from('users')
         .insert({
+          auth_user_id: createdAuthUserId,
           email: normalizedEmail,
           name: normalizedName,
           role,
