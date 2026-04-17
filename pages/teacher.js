@@ -75,14 +75,26 @@ export default function TeacherPage() {
 
       const { data: teacherRows, error: teacherLookupError } = await supabase
         .from('users')
-        .select('id, name, email, role')
-        .eq('email', user.email)
+        .select('id, auth_user_id, name, email, role')
+        .eq('auth_user_id', user.id)
         .order('id', { ascending: true })
         .limit(1)
 
       if (!mounted) return
 
-      const matchedTeacher = teacherRows?.[0]
+      const matchedTeacherByAuth = teacherRows?.[0]
+      let matchedTeacher = matchedTeacherByAuth
+
+      if (!matchedTeacherByAuth?.id && user.email) {
+        const { data: teacherRowsByEmail } = await supabase
+          .from('users')
+          .select('id, auth_user_id, name, email, role')
+          .eq('email', user.email)
+          .order('id', { ascending: true })
+          .limit(1)
+
+        matchedTeacher = teacherRowsByEmail?.[0] || null
+      }
 
       if (teacherLookupError || !matchedTeacher?.id) {
         setTeacher(null)
@@ -156,8 +168,9 @@ export default function TeacherPage() {
 
     const { data, error: enrollmentError } = await supabase
       .from('enrollments')
-      .select('student_id, users:student_id (id, name, email)')
+      .select('student_id, users!inner(id, name, email)')
       .eq('class_id', classId)
+      .order('student_id', { ascending: true })
 
     if (enrollmentError) {
       setError(enrollmentError.message || 'Could not load students for this class.')
@@ -237,15 +250,12 @@ export default function TeacherPage() {
     setError('')
     setClassFeedback(null)
 
-    const classCode = Math.random().toString(36).slice(2, 8).toUpperCase()
-
     const { data: createdClass, error: insertError } = await supabase
       .from('classes')
       .insert({
         class_name: trimmedName,
         teacher_id: teacher.id,
         grade_level: trimmedGrade || null,
-        class_code: classCode,
       })
       .select('id, class_name, grade_level, class_code')
       .single()
