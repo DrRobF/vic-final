@@ -278,7 +278,36 @@ export default function AskVIC() {
         ? customMessage.sketchImage
         : null
 
-    if (!outgoing.trim() || loading) return null
+    const trimmedOutgoing = outgoing.trim()
+    const missingState = {
+      missingInput: !trimmedOutgoing,
+      loadingInProgress: loading,
+      missingUserSession: !currentUserProfile && currentUserStatus !== 'Signed in.',
+      missingStudentMode: !studentMode,
+      missingSessionMode: !sessionMode,
+      missingSelectedStudentInTeacherMode: sessionMode === 'teacher_directed' && !selectedStudentId,
+      missingAssignedLessonInTeacherMode: sessionMode === 'teacher_directed' && !assignedLesson,
+      missingAssignedLessonSubjectInTeacherMode:
+        sessionMode === 'teacher_directed' && !assignedLesson?.subject,
+      missingAssignedLessonTextInTeacherMode:
+        sessionMode === 'teacher_directed' && !assignedLesson?.lesson_text,
+    }
+
+    console.log('[AskVIC][sendMessage] handler start', {
+      inputText: outgoing,
+      trimmedInputText: trimmedOutgoing,
+      hasCustomMessage: typeof customMessage !== 'undefined',
+      missingState,
+    })
+
+    if (!trimmedOutgoing || loading) {
+      console.log('[AskVIC][sendMessage] early return before send', {
+        reason: !trimmedOutgoing ? 'empty_input' : 'loading_state',
+        inputText: outgoing,
+        missingState,
+      })
+      return null
+    }
 
     const userTextForThread = sketchImage ? `${outgoing}
 
@@ -303,19 +332,40 @@ export default function AskVIC() {
         content: msg.text,
       }))
 
-     const res = await fetch('/api/vic', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({
-  messages: apiMessages,
-  sketchImage,
-  studentId: selectedStudentId,
-  sessionMode: activeSessionMode,
-  assignedLesson,
-  studentMode,
-  studentInterest,
-})
-})
+      const apiUrl = '/api/vic'
+      console.log('[AskVIC][sendMessage] about to fetch', {
+        url: apiUrl,
+        inputText: outgoing,
+        missingState,
+        payloadPreview: {
+          messagesCount: apiMessages.length,
+          hasSketchImage: Boolean(sketchImage),
+          studentId: selectedStudentId,
+          sessionMode,
+          hasAssignedLesson: Boolean(assignedLesson),
+          studentMode,
+          studentInterest,
+        },
+      })
+
+      const res = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: apiMessages,
+          sketchImage,
+          studentId: selectedStudentId,
+          sessionMode,
+          assignedLesson,
+          studentMode,
+          studentInterest,
+        }),
+      })
+      console.log('[AskVIC][sendMessage] fetch returned', {
+        url: apiUrl,
+        ok: res.ok,
+        status: res.status,
+      })
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`)
       }
@@ -335,6 +385,11 @@ body: JSON.stringify({
 
       return finalReply
     } catch (error) {
+      console.error('[AskVIC][sendMessage] caught error', {
+        error,
+        inputText: outgoing,
+        missingState,
+      })
       const errorReply = 'Something went wrong. Please try again.'
       setMessages([
         ...nextMessages,
