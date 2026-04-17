@@ -499,22 +499,25 @@ export default function TeacherPage() {
                                 type="button"
                                 className={selectedSupport === 'remediation' ? 'supportButton remediation isActive' : 'supportButton remediation'}
                                 onClick={() => handleSelectStudentSupport(student.id, 'remediation')}
+                                title="Remediation"
                               >
-                                Remediation
+                                Rem
                               </button>
                               <button
                                 type="button"
                                 className={selectedSupport === 'on-level' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
                                 onClick={() => handleSelectStudentSupport(student.id, 'on-level')}
+                                title="On-Level"
                               >
-                                On-Level
+                                Core
                               </button>
                               <button
                                 type="button"
                                 className={selectedSupport === 'enrichment' ? 'supportButton enrichment isActive' : 'supportButton enrichment'}
                                 onClick={() => handleSelectStudentSupport(student.id, 'enrichment')}
+                                title="Enrichment"
                               >
-                                Enrichment
+                                Enr
                               </button>
                             </div>
                           </div>
@@ -1033,10 +1036,11 @@ export default function TeacherPage() {
         .supportButtonRow {
           display: flex;
           align-items: center;
-          justify-content: space-between;
+          justify-content: stretch;
           flex-wrap: nowrap;
           gap: 8px;
           width: 100%;
+          min-width: 0;
         }
         .supportButton {
           border: 1px solid #d1d5db;
@@ -1047,7 +1051,10 @@ export default function TeacherPage() {
           font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          flex: 1;
+          flex: 1 1 0;
+          min-width: 0;
+          text-align: center;
+          white-space: nowrap;
           transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
         }
         .supportButton:hover {
