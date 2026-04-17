@@ -374,7 +374,6 @@ export default function TeacherPage() {
     <main className="teacherPage">
       <div className="teacherShell">
         <VICHeader currentPath="/teacher" />
-        <h1>Teacher Dashboard</h1>
 
         <section className="card profileCard">
           <div className="cardEyebrow">Signed in</div>
@@ -383,16 +382,192 @@ export default function TeacherPage() {
         </section>
 
         {loadingTeacher ? <p className="statusText">Loading teacher...</p> : null}
-
         {!loadingTeacher && !teacher ? <p className="statusText">{error || 'No teacher is logged in.'}</p> : null}
 
         {teacher ? (
           <>
-            <div className="topGrid">
-              <section className="card sectionCard">
-                <h2>Section A — My Classes</h2>
-                <p className="helperText">Create a class, then click a class below to manage students and assign lessons.</p>
+            <section className="card heroCard">
+              <div className="heroHeaderRow">
+                <div>
+                  <div className="cardEyebrow">Class command center</div>
+                  <h1>Teacher Dashboard</h1>
+                  <p className="helperText">Pick your class, review your roster, and assign support in one compact workflow.</p>
+                </div>
+                <div className="heroKicker">Workflow-first</div>
+              </div>
 
+              <div className="innerCard classSwitcherCard">
+                <div className="studentHeaderRow">
+                  <h3>Choose class</h3>
+                  <span className="selectionCount">{classes.length} total</span>
+                </div>
+
+                {loadingClasses ? <p className="statusText">Loading classes...</p> : null}
+                {!loadingClasses && classes.length === 0 ? <p className="statusText">No classes yet. Create your first class in setup below.</p> : null}
+
+                {!loadingClasses && classes.length > 0 ? (
+                  <div className="classList compactClassList">
+                    {classes.map((classRow) => (
+                      <button
+                        key={classRow.id}
+                        type="button"
+                        onClick={() => handleSelectClass(classRow)}
+                        className={selectedClass?.id === classRow.id ? 'rowButton selected classRowButton' : 'rowButton classRowButton'}
+                      >
+                        <div className="rowTitle">{classRow.class_name}</div>
+                        <div className="rowSubtext">{classRow.grade_level ? `Grade ${classRow.grade_level}` : 'Grade not set'}</div>
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+
+              {!selectedClass ? (
+                <p className="statusText">Select a class above to activate your command center.</p>
+              ) : (
+                <div className="commandGrid">
+                  <div className="commandPrimary">
+                    <div className="detailLabel">Selected class</div>
+                    <div className="commandClassName">{selectedClass.class_name}</div>
+                    <p className="helperText">Use this class code for enrollment and assign lessons to the roster below.</p>
+
+                    <div className="detailGrid">
+                      <div className="detailItem">
+                        <div className="detailLabel">Class code</div>
+                        <div className="detailValue">{selectedClass.class_code || 'Unavailable'}</div>
+                      </div>
+                      <div className="detailItem">
+                        <div className="detailLabel">Enrolled</div>
+                        <div className="detailValue">{loadingStudents ? 'Loading...' : students.length}</div>
+                      </div>
+                      <div className="detailItem">
+                        <div className="detailLabel">Grade level</div>
+                        <div className="detailValue">{selectedClass.grade_level || 'Not set'}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="classCodeCard">
+                    <div className="detailLabel">Class code</div>
+                    <div className="classCodeValue">{selectedClass.class_code || 'Unavailable'}</div>
+                    <p className="helperText">Share this code so students can join the class instantly.</p>
+                    <button
+                      type="button"
+                      className="secondaryButton copyButton"
+                      onClick={handleCopyClassCode}
+                      disabled={!selectedClass.class_code}
+                    >
+                      {copiedCode ? 'Copied!' : 'Copy class code'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </section>
+
+            {selectedClass ? (
+              <section className="card sectionCard">
+                <div className="studentHeaderRow">
+                  <div>
+                    <div className="cardEyebrow">Student selection</div>
+                    <h2>Roster</h2>
+                    <p className="helperText">Choose individual students or select all to assign this lesson faster.</p>
+                  </div>
+                  <span className="selectionPill">{selectedCount} selected</span>
+                </div>
+
+                {loadingStudents ? <p className="statusText">Loading students...</p> : null}
+                {!loadingStudents && students.length === 0 ? <p className="statusText">No students enrolled in this class yet.</p> : null}
+
+                {!loadingStudents && students.length > 0 ? (
+                  <>
+                    <div className="controlsRow">
+                      <button className="secondaryButton" type="button" onClick={handleSelectAllStudents} disabled={allStudentsSelected}>
+                        Select all
+                      </button>
+                      <button className="secondaryButton" type="button" onClick={handleClearSelectedStudents} disabled={selectedCount === 0}>
+                        Clear selection
+                      </button>
+                    </div>
+
+                    <div className="studentGrid">
+                      {students.map((student) => {
+                        const isSelected = selectedStudentIds.has(student.id)
+
+                        return (
+                          <label key={student.id} className={isSelected ? 'studentTile selected' : 'studentTile'}>
+                            <input type="checkbox" checked={isSelected} onChange={() => handleToggleStudent(student.id)} />
+                            <span className="studentName">{getStudentName(student)}</span>
+                          </label>
+                        )
+                      })}
+                    </div>
+                  </>
+                ) : null}
+              </section>
+            ) : null}
+
+            {selectedClass ? (
+              <section className="card sectionCard lessonShell">
+                <div>
+                  <div className="cardEyebrow">Assign lesson</div>
+                  <h2>Lesson assignment</h2>
+                  <p className="helperText">Build the task, set support level, and assign to selected students.</p>
+                </div>
+
+                <form onSubmit={handleSave} className="stackForm lessonForm">
+                  <div className="innerCard lessonSurface">
+                    <label htmlFor="lessonTitle">Lesson title</label>
+                    <input
+                      id="lessonTitle"
+                      type="text"
+                      value={lessonTitle}
+                      onChange={(e) => setLessonTitle(e.target.value)}
+                      placeholder="e.g. Practice solving one-step equations"
+                      required
+                    />
+
+                    <label htmlFor="lessonText">Instructions</label>
+                    <textarea
+                      id="lessonText"
+                      rows={7}
+                      value={lessonText}
+                      onChange={(e) => setLessonText(e.target.value)}
+                      placeholder="Add clear directions students should follow."
+                      required
+                    />
+
+                    <label htmlFor="supportMode">Support level</label>
+                    <div className="selectWrap">
+                      <select id="supportMode" value={supportMode} onChange={(e) => setSupportMode(e.target.value)}>
+                        <option value="remediation">Remediation</option>
+                        <option value="on-level">On-level</option>
+                        <option value="enrichment">Enrichment</option>
+                      </select>
+                    </div>
+                    <p className="helperText microCopy">Support level controls how strongly VIC scaffolds the assignment.</p>
+                  </div>
+
+                  <button className="primaryButton assignButton" type="submit" disabled={saving || selectedCount === 0}>
+                    {saving ? 'Assigning...' : `Assign lesson to ${selectedCount} student${selectedCount === 1 ? '' : 's'}`}
+                  </button>
+                </form>
+
+                {lessonFeedback ? (
+                  <p role={lessonFeedback.type === 'error' ? 'alert' : 'status'} className={lessonFeedback.type === 'error' ? 'errorText' : 'noticeText'}>
+                    {lessonFeedback.message}
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
+
+            <section className="card sectionCard adminSection">
+              <div>
+                <div className="cardEyebrow">Setup & management</div>
+                <h2>Create / Manage Classes</h2>
+                <p className="helperText">Use this section when adding a new class or updating your class lineup.</p>
+              </div>
+
+              <div className="adminGrid">
                 <div className="innerCard">
                   <h3>Create a class</h3>
                   <form onSubmit={handleCreateClass} className="stackForm">
@@ -415,177 +590,42 @@ export default function TeacherPage() {
                       placeholder="e.g. 7"
                     />
 
-                    <button className="primaryButton" type="submit" disabled={creatingClass}>
+                    <button className="secondaryButton" type="submit" disabled={creatingClass}>
                       {creatingClass ? 'Creating class...' : 'Create class'}
                     </button>
                   </form>
-                </div>
 
-                {classFeedback ? (
-                  <p role={classFeedback.type === 'error' ? 'alert' : 'status'} className={classFeedback.type === 'error' ? 'errorText' : 'noticeText'}>
-                    {classFeedback.message}
-                  </p>
-                ) : null}
+                  {classFeedback ? (
+                    <p role={classFeedback.type === 'error' ? 'alert' : 'status'} className={classFeedback.type === 'error' ? 'errorText' : 'noticeText'}>
+                      {classFeedback.message}
+                    </p>
+                  ) : null}
+                </div>
 
                 <div className="innerCard">
-                  <h3>Existing classes</h3>
+                  <h3>All classes</h3>
                   {loadingClasses ? <p className="statusText">Loading classes...</p> : null}
-                  {!loadingClasses && classes.length === 0 ? (
-                    <p className="statusText">No classes yet. Create your first class above.</p>
+                  {!loadingClasses && classes.length === 0 ? <p className="statusText">No classes yet.</p> : null}
+
+                  {!loadingClasses && classes.length > 0 ? (
+                    <div className="classList">
+                      {classes.map((classRow) => (
+                        <button
+                          key={`admin-${classRow.id}`}
+                          type="button"
+                          onClick={() => handleSelectClass(classRow)}
+                          className={selectedClass?.id === classRow.id ? 'rowButton selected classRowButton' : 'rowButton classRowButton'}
+                        >
+                          <div className="rowTitle">{classRow.class_name}</div>
+                          <div className="rowSubtext">{classRow.grade_level ? `Grade ${classRow.grade_level}` : 'Grade not set'}</div>
+                          {classRow.class_code ? <div className="rowSubtext">Code: {classRow.class_code}</div> : null}
+                        </button>
+                      ))}
+                    </div>
                   ) : null}
-
-                  <div className="classList">
-                    {classes.map((classRow) => (
-                      <button
-                        key={classRow.id}
-                        type="button"
-                        onClick={() => handleSelectClass(classRow)}
-                        className={selectedClass?.id === classRow.id ? 'rowButton selected classRowButton' : 'rowButton classRowButton'}
-                      >
-                        <div className="rowTitle">{classRow.class_name}</div>
-                        {classRow.grade_level ? <div className="rowSubtext">Grade {classRow.grade_level}</div> : null}
-                        {classRow.class_code ? <div className="rowSubtext">Code: {classRow.class_code}</div> : null}
-                      </button>
-                    ))}
-                  </div>
                 </div>
-              </section>
-
-              <section className="card sectionCard">
-                <h2>Section B — Selected Class Details</h2>
-                {!selectedClass ? (
-                  <p className="statusText">Select a class from “My Classes” to see class details and class code.</p>
-                ) : (
-                  <>
-                    <div className="detailGrid">
-                      <div className="detailItem">
-                        <div className="detailLabel">Class name</div>
-                        <div className="detailValue">{selectedClass.class_name}</div>
-                      </div>
-                      <div className="detailItem">
-                        <div className="detailLabel">Grade level</div>
-                        <div className="detailValue">{selectedClass.grade_level || 'Not set'}</div>
-                      </div>
-                      <div className="detailItem">
-                        <div className="detailLabel">Enrolled students</div>
-                        <div className="detailValue">{loadingStudents ? 'Loading...' : students.length}</div>
-                      </div>
-                    </div>
-
-                    <div className="classCodeCard">
-                      <div className="detailLabel">Class code</div>
-                      <div className="classCodeValue">{selectedClass.class_code || 'Unavailable'}</div>
-                      <p className="helperText">Share this class code with students so they can join.</p>
-                      <button
-                        type="button"
-                        className="secondaryButton copyButton"
-                        onClick={handleCopyClassCode}
-                        disabled={!selectedClass.class_code}
-                      >
-                        {copiedCode ? 'Copied!' : 'Copy class code'}
-                      </button>
-                    </div>
-                  </>
-                )}
-              </section>
-            </div>
-
-            {selectedClass ? (
-              <section className="card sectionCard">
-                <h2>Section C — Assign Lesson</h2>
-                <p className="helperText">Fill out the lesson details, choose support level, select students, then assign.</p>
-
-                <form onSubmit={handleSave} className="stackForm lessonForm">
-                  <div className="innerCard">
-                    <label htmlFor="lessonTitle">Lesson title</label>
-                    <input
-                      id="lessonTitle"
-                      type="text"
-                      value={lessonTitle}
-                      onChange={(e) => setLessonTitle(e.target.value)}
-                      placeholder="e.g. Practice solving one-step equations"
-                      required
-                    />
-
-                    <label htmlFor="lessonText">What should students work on?</label>
-                    <textarea
-                      id="lessonText"
-                      rows={8}
-                      value={lessonText}
-                      onChange={(e) => setLessonText(e.target.value)}
-                      placeholder="Add clear directions students should follow."
-                      required
-                    />
-
-                    <label htmlFor="supportMode">Support level</label>
-                    <select id="supportMode" value={supportMode} onChange={(e) => setSupportMode(e.target.value)}>
-                      <option value="remediation">Remediation</option>
-                      <option value="on-level">On-level</option>
-                      <option value="enrichment">Enrichment</option>
-                    </select>
-                  </div>
-
-                  <div className="innerCard">
-                    <div className="studentHeaderRow">
-                      <h3>Selected students</h3>
-                      <span className="selectionCount">{selectedCount} selected</span>
-                    </div>
-
-                    {loadingStudents ? <p className="statusText">Loading students...</p> : null}
-
-                    {!loadingStudents && students.length === 0 ? (
-                      <p className="statusText">No students enrolled in this class yet.</p>
-                    ) : null}
-
-                    {!loadingStudents && students.length > 0 ? (
-                      <>
-                        <div className="controlsRow">
-                          <button
-                            className="secondaryButton"
-                            type="button"
-                            onClick={handleSelectAllStudents}
-                            disabled={allStudentsSelected}
-                          >
-                            Select all
-                          </button>
-                          <button
-                            className="secondaryButton"
-                            type="button"
-                            onClick={handleClearSelectedStudents}
-                            disabled={selectedCount === 0}
-                          >
-                            Clear selection
-                          </button>
-                        </div>
-
-                        <div className="studentList">
-                          {students.map((student) => (
-                            <label key={student.id} className={selectedStudentIds.has(student.id) ? 'rowItem selected' : 'rowItem'}>
-                              <input
-                                type="checkbox"
-                                checked={selectedStudentIds.has(student.id)}
-                                onChange={() => handleToggleStudent(student.id)}
-                              />
-                              <span>{getStudentName(student)}</span>
-                            </label>
-                          ))}
-                        </div>
-                      </>
-                    ) : null}
-                  </div>
-
-                  <button className="primaryButton" type="submit" disabled={saving || selectedCount === 0}>
-                    {saving ? 'Assigning...' : 'Assign lesson'}
-                  </button>
-                </form>
-
-                {lessonFeedback ? (
-                  <p role={lessonFeedback.type === 'error' ? 'alert' : 'status'} className={lessonFeedback.type === 'error' ? 'errorText' : 'noticeText'}>
-                    {lessonFeedback.message}
-                  </p>
-                ) : null}
-              </section>
-            ) : null}
+              </div>
+            </section>
 
             {error ? (
               <p role="alert" className="errorText">
@@ -595,10 +635,14 @@ export default function TeacherPage() {
           </>
         ) : null}
       </div>
+
       <style jsx>{`
         .teacherPage {
           min-height: 100vh;
-          background: radial-gradient(circle at 0% 0%, rgba(96, 117, 255, 0.12), transparent 25%), #07070d;
+          background:
+            radial-gradient(circle at 5% 0%, rgba(114, 102, 255, 0.2), transparent 35%),
+            radial-gradient(circle at 90% 10%, rgba(175, 84, 255, 0.13), transparent 40%),
+            #070710;
           color: #fff;
           padding: 28px 16px 40px;
         }
@@ -606,18 +650,20 @@ export default function TeacherPage() {
           max-width: 1120px;
           margin: 0 auto;
           display: grid;
-          gap: 18px;
+          gap: 16px;
         }
         h1 {
           margin: 0;
-          font-size: 31px;
-          line-height: 1.12;
+          font-size: clamp(28px, 3.5vw, 38px);
+          line-height: 1.05;
           font-weight: 800;
+          letter-spacing: -0.02em;
         }
         h2 {
           margin: 0;
-          font-size: 22px;
-          font-weight: 750;
+          font-size: 23px;
+          font-weight: 760;
+          letter-spacing: -0.01em;
         }
         h3 {
           margin: 0;
@@ -625,36 +671,77 @@ export default function TeacherPage() {
           font-weight: 700;
         }
         .card {
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          border-radius: 18px;
-          background: rgba(17, 19, 32, 0.9);
-          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-          padding: 22px;
+          border: 1px solid rgba(168, 175, 255, 0.2);
+          border-radius: 20px;
+          background: linear-gradient(170deg, rgba(22, 24, 39, 0.94), rgba(15, 16, 29, 0.94));
+          box-shadow: 0 16px 38px rgba(3, 5, 18, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          padding: 20px;
         }
         .profileCard {
           display: grid;
           gap: 4px;
         }
+        .heroCard {
+          display: grid;
+          gap: 14px;
+          border-color: rgba(146, 124, 255, 0.46);
+          background:
+            linear-gradient(180deg, rgba(34, 24, 63, 0.72), rgba(19, 21, 36, 0.95)),
+            linear-gradient(120deg, rgba(116, 91, 255, 0.18), rgba(194, 83, 255, 0.12));
+        }
+        .heroHeaderRow {
+          display: flex;
+          justify-content: space-between;
+          gap: 12px;
+          align-items: flex-start;
+          flex-wrap: wrap;
+        }
+        .heroKicker {
+          border: 1px solid rgba(205, 197, 255, 0.45);
+          border-radius: 999px;
+          padding: 7px 12px;
+          font-size: 12px;
+          color: rgba(245, 242, 255, 0.94);
+          background: rgba(157, 125, 255, 0.22);
+        }
         .sectionCard {
           display: grid;
-          gap: 16px;
+          gap: 14px;
         }
-        .topGrid {
-          display: grid;
-          gap: 18px;
-          align-items: start;
+        .classSwitcherCard {
+          background: rgba(255, 255, 255, 0.05);
         }
-        .innerCard {
-          border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.12);
-          background: rgba(255, 255, 255, 0.03);
-          padding: 16px;
+        .commandGrid {
           display: grid;
           gap: 12px;
         }
+        .commandPrimary {
+          border-radius: 14px;
+          border: 1px solid rgba(183, 170, 255, 0.35);
+          background: rgba(103, 86, 184, 0.18);
+          padding: 14px;
+          display: grid;
+          gap: 10px;
+        }
+        .commandClassName {
+          font-size: 30px;
+          line-height: 1.05;
+          font-weight: 800;
+          letter-spacing: -0.02em;
+        }
+        .innerCard {
+          border-radius: 14px;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+          background: rgba(255, 255, 255, 0.04);
+          padding: 14px;
+          display: grid;
+          gap: 10px;
+        }
         .cardEyebrow {
           font-size: 12px;
-          color: rgba(235, 239, 255, 0.74);
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: rgba(224, 228, 255, 0.8);
         }
         .signedInName {
           font-size: 18px;
@@ -667,20 +754,23 @@ export default function TeacherPage() {
         .helperText,
         .statusText {
           margin: 0;
-          color: rgba(235, 239, 255, 0.85);
+          color: rgba(232, 236, 255, 0.82);
           font-size: 14px;
+        }
+        .microCopy {
+          font-size: 12px;
         }
         .stackForm {
           display: grid;
-          gap: 12px;
+          gap: 10px;
         }
         .lessonForm {
-          gap: 14px;
+          gap: 12px;
         }
         label,
         .detailLabel {
           font-size: 13px;
-          color: rgba(235, 239, 255, 0.96);
+          color: rgba(245, 247, 255, 0.94);
         }
         :global(.teacherPage input),
         :global(.teacherPage textarea),
@@ -693,26 +783,49 @@ export default function TeacherPage() {
         :global(.teacherPage textarea),
         :global(.teacherPage select) {
           width: 100%;
-          padding: 12px 14px;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          background: rgba(255, 255, 255, 0.08);
+          padding: 11px 13px;
+          border: 1px solid rgba(184, 194, 255, 0.28);
+          background: rgba(11, 14, 29, 0.75);
           color: #fff;
+        }
+        :global(.teacherPage input::placeholder),
+        :global(.teacherPage textarea::placeholder) {
+          color: rgba(203, 211, 255, 0.55);
+        }
+        :global(.teacherPage select) {
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          background-image: linear-gradient(45deg, transparent 50%, rgba(228, 232, 255, 0.95) 50%),
+            linear-gradient(135deg, rgba(228, 232, 255, 0.95) 50%, transparent 50%);
+          background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
+          background-size: 6px 6px, 6px 6px;
+          background-repeat: no-repeat;
+          padding-right: 34px;
+        }
+        :global(.teacherPage select option) {
+          background: #161a31;
+          color: #f4f6ff;
         }
         .primaryButton,
         .secondaryButton {
-          padding: 12px 16px;
+          padding: 11px 15px;
           font-weight: 700;
           cursor: pointer;
           transition: transform 0.12s ease, filter 0.12s ease, background 0.12s ease;
         }
         .primaryButton {
-          border: 1px solid rgba(154, 171, 255, 0.48);
+          border: 1px solid rgba(181, 176, 255, 0.62);
           color: #fff;
-          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
-          box-shadow: 0 0 20px rgba(102, 117, 255, 0.24);
+          background: linear-gradient(135deg, #7a69ff 0%, #9258ff 55%, #5d7cff 100%);
+          box-shadow: 0 0 26px rgba(138, 98, 255, 0.33);
+        }
+        .assignButton {
+          font-size: 15px;
+          padding: 13px 16px;
         }
         .secondaryButton {
-          border: 1px solid rgba(255, 255, 255, 0.22);
+          border: 1px solid rgba(255, 255, 255, 0.24);
           color: #eef2ff;
           background: rgba(255, 255, 255, 0.08);
         }
@@ -721,7 +834,7 @@ export default function TeacherPage() {
         }
         .primaryButton:hover,
         .secondaryButton:hover {
-          filter: brightness(1.05);
+          filter: brightness(1.08);
         }
         .primaryButton:active,
         .secondaryButton:active {
@@ -729,53 +842,46 @@ export default function TeacherPage() {
         }
         .primaryButton:disabled,
         .secondaryButton:disabled {
-          opacity: 0.75;
+          opacity: 0.72;
           cursor: not-allowed;
           box-shadow: none;
         }
-        .classList,
-        .studentList {
+        .classList {
           display: grid;
-          gap: 10px;
+          gap: 8px;
         }
-        .rowButton,
-        .rowItem {
+        .compactClassList {
+          grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+        }
+        .rowButton {
           text-align: left;
-          padding: 12px 14px;
-          border-radius: 12px;
+          padding: 10px 11px;
+          border-radius: 11px;
           border: 1px solid rgba(255, 255, 255, 0.18);
           background: rgba(255, 255, 255, 0.04);
           color: #fff;
+          cursor: pointer;
         }
         .classRowButton {
           display: grid;
           gap: 2px;
         }
-        .rowButton {
-          cursor: pointer;
-        }
         .rowButton:hover {
-          background: rgba(255, 255, 255, 0.08);
-        }
-        .rowItem {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          cursor: pointer;
+          background: rgba(255, 255, 255, 0.09);
         }
         .selected {
-          background: rgba(130, 130, 255, 0.24);
-          border-color: rgba(154, 171, 255, 0.68);
-          box-shadow: inset 0 0 0 1px rgba(154, 171, 255, 0.2);
+          background: rgba(140, 126, 255, 0.28);
+          border-color: rgba(192, 184, 255, 0.78);
+          box-shadow: inset 0 0 0 1px rgba(193, 176, 255, 0.22);
         }
         .rowTitle,
         .detailValue {
-          font-size: 16px;
+          font-size: 15px;
           font-weight: 700;
         }
         .rowSubtext {
           font-size: 12px;
-          color: rgba(235, 239, 255, 0.74);
+          color: rgba(225, 230, 255, 0.76);
           margin-top: 2px;
         }
         .controlsRow,
@@ -787,35 +893,90 @@ export default function TeacherPage() {
           justify-content: space-between;
         }
         .selectionCount {
-          font-size: 14px;
-          color: rgba(235, 239, 255, 0.8);
+          font-size: 13px;
+          color: rgba(235, 239, 255, 0.78);
+        }
+        .selectionPill {
+          font-size: 13px;
+          font-weight: 700;
+          border-radius: 999px;
+          border: 1px solid rgba(176, 159, 255, 0.66);
+          background: rgba(126, 95, 255, 0.25);
+          padding: 6px 12px;
         }
         .detailGrid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 10px;
+          gap: 8px;
         }
         .detailItem {
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          padding: 12px;
-          background: rgba(255, 255, 255, 0.03);
+          border: 1px solid rgba(255, 255, 255, 0.16);
+          padding: 10px;
+          background: rgba(255, 255, 255, 0.04);
           display: grid;
-          gap: 5px;
+          gap: 4px;
         }
         .classCodeCard {
           border-radius: 14px;
-          border: 1px solid rgba(159, 170, 255, 0.42);
-          background: linear-gradient(145deg, rgba(96, 117, 255, 0.26), rgba(113, 69, 209, 0.2));
-          padding: 16px;
+          border: 1px solid rgba(190, 170, 255, 0.54);
+          background: linear-gradient(145deg, rgba(113, 95, 255, 0.34), rgba(140, 70, 214, 0.26));
+          padding: 14px;
           display: grid;
           gap: 8px;
         }
         .classCodeValue {
-          font-size: 30px;
+          font-size: 31px;
           line-height: 1;
           letter-spacing: 0.08em;
           font-weight: 800;
+        }
+        .studentGrid {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+          gap: 9px;
+        }
+        .studentTile {
+          border-radius: 12px;
+          border: 1px solid rgba(255, 255, 255, 0.17);
+          background: rgba(255, 255, 255, 0.03);
+          padding: 10px 11px;
+          min-height: 52px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .studentTile:hover {
+          background: rgba(255, 255, 255, 0.08);
+        }
+        .studentTile :global(input) {
+          width: 15px;
+          height: 15px;
+          margin: 0;
+          accent-color: #9a84ff;
+          flex: 0 0 auto;
+        }
+        .studentName {
+          font-size: 13px;
+          line-height: 1.2;
+          font-weight: 650;
+        }
+        .lessonShell {
+          background: linear-gradient(180deg, rgba(23, 19, 44, 0.92), rgba(17, 18, 34, 0.95));
+          border-color: rgba(145, 129, 255, 0.36);
+        }
+        .lessonSurface {
+          background: rgba(255, 255, 255, 0.08);
+          border-color: rgba(196, 204, 255, 0.26);
+        }
+        .adminSection {
+          border-color: rgba(255, 255, 255, 0.16);
+          background: rgba(16, 18, 31, 0.9);
+        }
+        .adminGrid {
+          display: grid;
+          gap: 12px;
         }
         .errorText {
           color: #ff9ca8;
@@ -829,14 +990,20 @@ export default function TeacherPage() {
         }
 
         @media (min-width: 900px) {
-          .topGrid {
-            grid-template-columns: 1.15fr 0.85fr;
+          .commandGrid {
+            grid-template-columns: 1.25fr 0.75fr;
+          }
+          .adminGrid {
+            grid-template-columns: 0.95fr 1.05fr;
           }
         }
 
-        @media (max-width: 720px) {
+        @media (max-width: 760px) {
           .detailGrid {
             grid-template-columns: 1fr;
+          }
+          .classCodeValue {
+            font-size: 26px;
           }
         }
       `}</style>
