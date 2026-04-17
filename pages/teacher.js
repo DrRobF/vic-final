@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
@@ -19,11 +19,10 @@ export default function TeacherPage() {
   const [classes, setClasses] = useState([])
   const [selectedClass, setSelectedClass] = useState(null)
   const [students, setStudents] = useState([])
-  const [selectedStudentIds, setSelectedStudentIds] = useState(() => new Set())
+  const [studentSupportSelections, setStudentSupportSelections] = useState({})
 
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
-  const [supportMode, setSupportMode] = useState('remediation')
   const [newClassName, setNewClassName] = useState('')
   const [newClassGradeLevel, setNewClassGradeLevel] = useState('')
 
@@ -37,12 +36,8 @@ export default function TeacherPage() {
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
   const [copiedCode, setCopiedCode] = useState(false)
 
-  const selectedCount = selectedStudentIds.size
+  const selectedCount = Object.keys(studentSupportSelections).length
   console.log('[DEBUG] selectedClass:', selectedClass)
-
-  const allStudentsSelected = useMemo(() => {
-    return students.length > 0 && selectedCount === students.length
-  }, [selectedCount, students.length])
 
   useEffect(() => {
     let mounted = true
@@ -149,7 +144,7 @@ export default function TeacherPage() {
     if (classRows.length === 0) {
       setSelectedClass(null)
       setStudents([])
-      setSelectedStudentIds(new Set())
+      setStudentSupportSelections({})
       return
     }
 
@@ -182,7 +177,7 @@ export default function TeacherPage() {
     if (sessionError || !session?.access_token) {
       setError('Please sign in again to load students.')
       setStudents([])
-      setSelectedStudentIds(new Set())
+      setStudentSupportSelections({})
       setLoadingStudents(false)
       return
     }
@@ -201,7 +196,7 @@ export default function TeacherPage() {
     if (!response.ok) {
       setError(payload?.error || 'Could not load students for this class.')
       setStudents([])
-      setSelectedStudentIds(new Set())
+      setStudentSupportSelections({})
       setLoadingStudents(false)
       return
     }
@@ -209,7 +204,7 @@ export default function TeacherPage() {
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
 
     setStudents(nextStudents)
-    setSelectedStudentIds(new Set())
+    setStudentSupportSelections({})
     setLoadingStudents(false)
   }
 
@@ -217,30 +212,14 @@ export default function TeacherPage() {
     setSelectedClass(classRow)
     setCopiedCode(false)
     setStudents([])
-    setSelectedStudentIds(new Set())
+    setStudentSupportSelections({})
   }
 
-  function handleToggleStudent(studentId) {
-    setSelectedStudentIds((previous) => {
-      const next = new Set(previous)
-
-      if (next.has(studentId)) {
-        next.delete(studentId)
-      } else {
-        next.add(studentId)
-      }
-
-      return next
-    })
-  }
-
-  function handleSelectAllStudents() {
-    const allIds = new Set(students.map((student) => student.id))
-    setSelectedStudentIds(allIds)
-  }
-
-  function handleClearSelectedStudents() {
-    setSelectedStudentIds(new Set())
+  function handleSelectStudentSupport(studentId, supportLevel) {
+    setStudentSupportSelections((previous) => ({
+      ...previous,
+      [studentId]: supportLevel,
+    }))
   }
 
   function getStudentName(student) {
@@ -344,10 +323,10 @@ export default function TeacherPage() {
       return
     }
 
-    const assignmentRows = Array.from(selectedStudentIds).map((studentId) => ({
+    const assignmentRows = Object.entries(studentSupportSelections).map(([studentId, mode]) => ({
       lesson_id: createdLesson.id,
-      student_id: studentId,
-      mode: supportMode,
+      student_id: Number(studentId),
+      mode,
       status: 'assigned',
     }))
 
@@ -363,10 +342,9 @@ export default function TeacherPage() {
     }
 
     setLessonFeedback({ type: 'success', message: `Lesson assigned to ${selectedCount} students.` })
-    setSelectedStudentIds(new Set())
+    setStudentSupportSelections({})
     setLessonTitle('')
     setLessonText('')
-    setSupportMode('remediation')
     setSaving(false)
   }
 
@@ -470,7 +448,7 @@ export default function TeacherPage() {
                   <div>
                     <div className="cardEyebrow">Student selection</div>
                     <h2>Roster</h2>
-                    <p className="helperText">Choose individual students or select all to assign this lesson faster.</p>
+                    <p className="helperText">Pick one support level per student to include them in the assignment.</p>
                   </div>
                   <span className="selectionPill">{selectedCount} selected</span>
                 </div>
@@ -480,24 +458,37 @@ export default function TeacherPage() {
 
                 {!loadingStudents && students.length > 0 ? (
                   <>
-                    <div className="controlsRow">
-                      <button className="secondaryButton" type="button" onClick={handleSelectAllStudents} disabled={allStudentsSelected}>
-                        Select all
-                      </button>
-                      <button className="secondaryButton" type="button" onClick={handleClearSelectedStudents} disabled={selectedCount === 0}>
-                        Clear selection
-                      </button>
-                    </div>
-
                     <div className="studentGrid">
                       {students.map((student) => {
-                        const isSelected = selectedStudentIds.has(student.id)
+                        const selectedSupport = studentSupportSelections[student.id]
 
                         return (
-                          <label key={student.id} className={isSelected ? 'studentTile selected' : 'studentTile'}>
+                          <div key={student.id} className={selectedSupport ? 'studentTile selected' : 'studentTile'}>
                             <span className="studentName">{getStudentName(student)}</span>
-                            <input type="checkbox" checked={isSelected} onChange={() => handleToggleStudent(student.id)} />
-                          </label>
+                            <div className="supportButtonRow">
+                              <button
+                                type="button"
+                                className={selectedSupport === 'remediation' ? 'supportButton remediation isActive' : 'supportButton remediation'}
+                                onClick={() => handleSelectStudentSupport(student.id, 'remediation')}
+                              >
+                                Remediation
+                              </button>
+                              <button
+                                type="button"
+                                className={selectedSupport === 'on-level' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
+                                onClick={() => handleSelectStudentSupport(student.id, 'on-level')}
+                              >
+                                On-Level
+                              </button>
+                              <button
+                                type="button"
+                                className={selectedSupport === 'enrichment' ? 'supportButton enrichment isActive' : 'supportButton enrichment'}
+                                onClick={() => handleSelectStudentSupport(student.id, 'enrichment')}
+                              >
+                                Enrichment
+                              </button>
+                            </div>
+                          </div>
                         )
                       })}
                     </div>
@@ -511,7 +502,7 @@ export default function TeacherPage() {
                 <div>
                   <div className="cardEyebrow">Assign lesson</div>
                   <h2>Lesson assignment</h2>
-                  <p className="helperText">Build the task, set support level, and assign to selected students.</p>
+                  <p className="helperText">Build the task and assign to students using each student&apos;s selected support level.</p>
                 </div>
 
                 <form onSubmit={handleSave} className="stackForm lessonForm">
@@ -536,15 +527,7 @@ export default function TeacherPage() {
                       required
                     />
 
-                    <label htmlFor="supportMode">Support level</label>
-                    <div className="selectWrap">
-                      <select id="supportMode" value={supportMode} onChange={(e) => setSupportMode(e.target.value)}>
-                        <option value="remediation">Remediation</option>
-                        <option value="on-level">On-level</option>
-                        <option value="enrichment">Enrichment</option>
-                      </select>
-                    </div>
-                    <p className="helperText microCopy">Support level controls how strongly VIC scaffolds the assignment.</p>
+                    <p className="helperText microCopy">Support level is selected per student in the roster above.</p>
                   </div>
 
                   <button className="primaryButton assignButton" type="submit" disabled={saving || selectedCount === 0}>
@@ -947,11 +930,7 @@ export default function TeacherPage() {
           border: 1px solid rgba(181, 188, 216, 0.8);
           background: #ffffff;
           padding: 14px 16px;
-          min-height: 62px;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
+          display: grid;
           gap: 12px;
           box-shadow: 0 4px 12px rgba(17, 25, 46, 0.08);
           transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
@@ -961,19 +940,58 @@ export default function TeacherPage() {
           border-color: rgba(128, 111, 255, 0.42);
           box-shadow: 0 8px 16px rgba(42, 52, 86, 0.12);
         }
-        .studentTile :global(input) {
-          width: 18px;
-          height: 18px;
-          margin: 0;
-          accent-color: #6f57ff;
-          flex: 0 0 auto;
-        }
         .studentName {
-          font-size: 17px;
+          font-size: 20px;
           line-height: 1.3;
           font-weight: 700;
           color: #1a1a1a;
           overflow-wrap: anywhere;
+        }
+        .supportButtonRow {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 8px;
+        }
+        .supportButton {
+          border: 1px solid rgba(181, 188, 216, 0.9);
+          border-radius: 10px;
+          background: #ffffff;
+          color: #1a1a1a;
+          padding: 9px 8px;
+          font-size: 13px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
+        }
+        .supportButton:hover {
+          transform: translateY(-1px);
+        }
+        .supportButton.remediation {
+          border-color: rgba(227, 100, 116, 0.44);
+          color: #a62f43;
+        }
+        .supportButton.onLevel {
+          border-color: rgba(45, 166, 95, 0.5);
+          color: #1f7f4a;
+        }
+        .supportButton.enrichment {
+          border-color: rgba(134, 92, 255, 0.56);
+          color: #6037ca;
+        }
+        .supportButton.remediation.isActive {
+          background: #ffecef;
+          border-color: #e35068;
+          box-shadow: 0 0 0 1px rgba(227, 80, 104, 0.2);
+        }
+        .supportButton.onLevel.isActive {
+          background: #e9fff1;
+          border-color: #2eb66a;
+          box-shadow: 0 0 0 1px rgba(46, 182, 106, 0.2);
+        }
+        .supportButton.enrichment.isActive {
+          background: #f2ebff;
+          border-color: #855af5;
+          box-shadow: 0 0 0 1px rgba(133, 90, 245, 0.2);
         }
         .lessonShell {
           background: linear-gradient(180deg, rgba(23, 19, 44, 0.92), rgba(17, 18, 34, 0.95));
