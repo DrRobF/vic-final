@@ -160,17 +160,48 @@ export default function TeacherPage() {
     }
   }
 
+  function normalizeStudentFromEnrollmentRow(row) {
+    const usersValue = row?.users
+    const profileValue = row?.profile
+
+    const userRow = Array.isArray(usersValue)
+      ? usersValue[0]
+      : usersValue || (Array.isArray(profileValue) ? profileValue[0] : profileValue)
+
+    if (userRow?.id) {
+      return {
+        id: userRow.id,
+        name: userRow.name || '',
+        email: userRow.email || '',
+      }
+    }
+
+    if (row?.student_id) {
+      return {
+        id: row.student_id,
+        name: '',
+        email: '',
+      }
+    }
+
+    return null
+  }
+
   async function fetchStudents(classId) {
     if (!classId) return
 
     setLoadingStudents(true)
     setError('')
 
-    const { data, error: enrollmentError } = await supabase
+    const { data: enrollmentRows, error: enrollmentError } = await supabase
       .from('enrollments')
-      .select('student_id, users!inner(id, name, email)')
+      .select('student_id, users(id, name, email)')
       .eq('class_id', classId)
       .order('student_id', { ascending: true })
+
+    console.log('[TeacherDashboard] selectedClass for fetchStudents:', selectedClass)
+    console.log('[TeacherDashboard] enrollments query error:', enrollmentError)
+    console.log('[TeacherDashboard] raw enrollments query result:', enrollmentRows)
 
     if (enrollmentError) {
       setError(enrollmentError.message || 'Could not load students for this class.')
@@ -180,13 +211,36 @@ export default function TeacherPage() {
       return
     }
 
-    const mappedStudents =
-      data
-        ?.map((row) => {
-          const userRow = Array.isArray(row.users) ? row.users[0] : row.users
-          return userRow?.id ? userRow : null
-        })
-        .filter(Boolean) || []
+    const initialMappedStudents = (enrollmentRows || []).map(normalizeStudentFromEnrollmentRow).filter(Boolean)
+
+    let mappedStudents = initialMappedStudents
+
+    if (mappedStudents.length === 0 && (enrollmentRows || []).length > 0) {
+      const studentIds = (enrollmentRows || []).map((row) => row.student_id).filter(Boolean)
+
+      if (studentIds.length > 0) {
+        const { data: userRows, error: usersError } = await supabase
+          .from('users')
+          .select('id, name, email')
+          .in('id', studentIds)
+
+        console.log('[TeacherDashboard] fallback users query error:', usersError)
+        console.log('[TeacherDashboard] fallback users query result:', userRows)
+
+        if (usersError) {
+          console.error(
+            '[TeacherDashboard] Fallback users query failed. If this is RLS-related, add a SELECT policy on public.users for teachers to view students in their classes.'
+          )
+        } else {
+          const userMap = new Map((userRows || []).map((userRow) => [userRow.id, userRow]))
+          mappedStudents = studentIds
+            .map((studentId) => userMap.get(studentId) || { id: studentId, name: '', email: '' })
+            .filter(Boolean)
+        }
+      }
+    }
+
+    console.log('[TeacherDashboard] final mapped students array:', mappedStudents)
 
     setStudents(mappedStudents)
     setSelectedStudentIds(new Set())
@@ -194,6 +248,7 @@ export default function TeacherPage() {
   }
 
   function handleSelectClass(classRow) {
+    console.log('[TeacherDashboard] selectedClass:', classRow)
     setSelectedClass(classRow)
     setCopiedCode(false)
     setStudents([])
