@@ -20,6 +20,7 @@ export default function TeacherPage() {
   const [selectedClass, setSelectedClass] = useState(null)
   const [students, setStudents] = useState([])
   const [studentSupportSelections, setStudentSupportSelections] = useState({})
+  const [isRosterCollapsed, setIsRosterCollapsed] = useState(false)
 
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
@@ -37,6 +38,13 @@ export default function TeacherPage() {
   const [copiedCode, setCopiedCode] = useState(false)
 
   const selectedCount = Object.keys(studentSupportSelections).length
+  const supportCounts = Object.values(studentSupportSelections).reduce(
+    (counts, level) => ({
+      ...counts,
+      [level]: (counts[level] || 0) + 1,
+    }),
+    {}
+  )
   console.log('[DEBUG] selectedClass:', selectedClass)
 
   useEffect(() => {
@@ -205,6 +213,7 @@ export default function TeacherPage() {
 
     setStudents(nextStudents)
     setStudentSupportSelections({})
+    setIsRosterCollapsed(false)
     setLoadingStudents(false)
   }
 
@@ -213,6 +222,7 @@ export default function TeacherPage() {
     setCopiedCode(false)
     setStudents([])
     setStudentSupportSelections({})
+    setIsRosterCollapsed(false)
   }
 
   function handleSelectStudentSupport(studentId, supportLevel) {
@@ -450,13 +460,32 @@ export default function TeacherPage() {
                     <h2>Roster</h2>
                     <p className="helperText">Pick one support level per student to include them in the assignment.</p>
                   </div>
-                  <span className="selectionPill">{selectedCount} selected</span>
+                  <div className="studentHeaderActions">
+                    <span className="selectionPill">{selectedCount} selected</span>
+                    {selectedCount > 0 && !isRosterCollapsed ? (
+                      <button type="button" className="secondaryButton rosterToggleButton" onClick={() => setIsRosterCollapsed(true)}>
+                        Collapse roster
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
 
                 {loadingStudents ? <p className="statusText">Loading students...</p> : null}
                 {!loadingStudents && students.length === 0 ? <p className="statusText">No students enrolled in this class yet.</p> : null}
 
-                {!loadingStudents && students.length > 0 ? (
+                {!loadingStudents && students.length > 0 && isRosterCollapsed ? (
+                  <div className="rosterSummaryBar">
+                    <span className="summaryTotal">{selectedCount} assigned student{selectedCount === 1 ? '' : 's'}</span>
+                    {supportCounts.remediation ? <span className="summaryChip remediation">Remediation: {supportCounts.remediation}</span> : null}
+                    {supportCounts['on-level'] ? <span className="summaryChip onLevel">On-Level: {supportCounts['on-level']}</span> : null}
+                    {supportCounts.enrichment ? <span className="summaryChip enrichment">Enrichment: {supportCounts.enrichment}</span> : null}
+                    <button type="button" className="secondaryButton rosterToggleButton" onClick={() => setIsRosterCollapsed(false)}>
+                      Edit roster
+                    </button>
+                  </div>
+                ) : null}
+
+                {!loadingStudents && students.length > 0 && !isRosterCollapsed ? (
                   <>
                     <div className="studentGrid">
                       {students.map((student) => {
@@ -892,6 +921,53 @@ export default function TeacherPage() {
           background: #f5f3ff;
           color: #6d28d9;
           padding: 6px 12px;
+        }
+        .studentHeaderActions {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+        .rosterToggleButton {
+          padding: 8px 12px;
+          font-size: 13px;
+        }
+        .rosterSummaryBar {
+          border: 1px solid #ddd6fe;
+          background: #faf5ff;
+          border-radius: 12px;
+          padding: 12px;
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+        }
+        .summaryTotal {
+          font-size: 14px;
+          font-weight: 700;
+          color: #5b21b6;
+          margin-right: 4px;
+        }
+        .summaryChip {
+          border-radius: 999px;
+          padding: 5px 10px;
+          font-size: 12px;
+          font-weight: 700;
+          border: 1px solid #d1d5db;
+          background: #ffffff;
+        }
+        .summaryChip.remediation {
+          border-color: #fca5a5;
+          color: #991b1b;
+        }
+        .summaryChip.onLevel {
+          border-color: #86efac;
+          color: #166534;
+        }
+        .summaryChip.enrichment {
+          border-color: #c4b5fd;
+          color: #5b21b6;
         }
         .detailGrid {
           display: grid;
