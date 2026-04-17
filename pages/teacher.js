@@ -621,12 +621,10 @@ export default function TeacherPage() {
 
       <style jsx>{`
         .teacherPage {
+          font-family: Inter, system-ui, sans-serif;
           min-height: 100vh;
-          background:
-            radial-gradient(circle at 5% 0%, rgba(114, 102, 255, 0.2), transparent 35%),
-            radial-gradient(circle at 90% 10%, rgba(175, 84, 255, 0.13), transparent 40%),
-            #070710;
-          color: #1a1a1a;
+          background: #f9fafb;
+          color: #111827;
           padding: 28px 16px 40px;
         }
         .teacherShell {
@@ -637,27 +635,28 @@ export default function TeacherPage() {
         }
         h1 {
           margin: 0;
-          font-size: clamp(28px, 3.5vw, 38px);
-          line-height: 1.05;
-          font-weight: 800;
-          letter-spacing: -0.02em;
+          font-size: 28px;
+          line-height: 1.15;
+          font-weight: 700;
+          color: #111827;
         }
         h2 {
           margin: 0;
-          font-size: 27px;
-          font-weight: 760;
-          letter-spacing: -0.01em;
+          font-size: 20px;
+          font-weight: 600;
+          color: #111827;
         }
         h3 {
           margin: 0;
           font-size: 20px;
-          font-weight: 700;
+          font-weight: 600;
+          color: #111827;
         }
         .card {
-          border: 1px solid rgba(168, 175, 255, 0.14);
+          border: 1px solid #e5e7eb;
           border-radius: 20px;
-          background: linear-gradient(170deg, rgba(22, 24, 39, 0.94), rgba(15, 16, 29, 0.94));
-          box-shadow: 0 10px 26px rgba(3, 5, 18, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          background: #ffffff;
+          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
           padding: 20px;
         }
         .profileCard {
@@ -667,10 +666,6 @@ export default function TeacherPage() {
         .heroCard {
           display: grid;
           gap: 14px;
-          border-color: rgba(146, 124, 255, 0.46);
-          background:
-            linear-gradient(180deg, rgba(34, 24, 63, 0.72), rgba(19, 21, 36, 0.95)),
-            linear-gradient(120deg, rgba(116, 91, 255, 0.18), rgba(194, 83, 255, 0.12));
         }
         .heroHeaderRow {
           display: flex;
@@ -680,12 +675,12 @@ export default function TeacherPage() {
           flex-wrap: wrap;
         }
         .heroKicker {
-          border: 1px solid rgba(205, 197, 255, 0.45);
+          border: 1px solid #d1d5db;
           border-radius: 999px;
           padding: 7px 12px;
-          font-size: 12px;
-          color: rgba(245, 242, 255, 0.94);
-          background: rgba(157, 125, 255, 0.22);
+          font-size: 14px;
+          color: #4b5563;
+          background: #f3f4f6;
         }
         .sectionCard {
           display: grid;
@@ -693,9 +688,9 @@ export default function TeacherPage() {
         }
         .classSwitcherCard {
           background: #ffffff;
-          color: #1a1a1a;
-          border-color: rgba(52, 59, 93, 0.14);
-          box-shadow: 0 8px 20px rgba(19, 25, 52, 0.1);
+          color: #111827;
+          border-color: #e5e7eb;
+          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
         }
         .commandGrid {
           display: grid;
@@ -703,50 +698,53 @@ export default function TeacherPage() {
         }
         .commandPrimary {
           border-radius: 14px;
-          border: 1px solid rgba(183, 170, 255, 0.35);
-          background: rgba(103, 86, 184, 0.18);
-          padding: 14px;
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
+          padding: 16px;
           display: grid;
           gap: 10px;
+          box-shadow: 0 6px 16px rgba(17, 24, 39, 0.05);
         }
         .commandClassName {
-          font-size: 30px;
-          line-height: 1.05;
-          font-weight: 800;
-          letter-spacing: -0.02em;
+          font-size: 24px;
+          line-height: 1.15;
+          font-weight: 700;
+          color: #111827;
         }
         .innerCard {
           border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
+          border: 1px solid #e5e7eb;
           background: #ffffff;
-          color: #1a1a1a;
-          padding: 14px;
+          color: #111827;
+          padding: 16px;
           display: grid;
           gap: 10px;
-          box-shadow: 0 8px 18px rgba(19, 25, 52, 0.08);
+          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
         }
         .cardEyebrow {
-          font-size: 12px;
+          font-size: 14px;
           text-transform: uppercase;
           letter-spacing: 0.08em;
-          color: rgba(224, 228, 255, 0.8);
+          color: #9ca3af;
         }
         .signedInName {
-          font-size: 18px;
-          font-weight: 700;
+          font-size: 17px;
+          font-weight: 500;
+          color: #111827;
         }
         .signedInMeta {
-          font-size: 15px;
-          color: rgba(235, 239, 255, 0.84);
+          font-size: 14px;
+          color: #4b5563;
         }
         .helperText,
         .statusText {
           margin: 0;
-          color: rgba(232, 236, 255, 0.96);
-          font-size: 15px;
+          color: #4b5563;
+          font-size: 14px;
         }
         .microCopy {
-          font-size: 12px;
+          font-size: 14px;
+          color: #9ca3af;
         }
         .stackForm {
           display: grid;
@@ -757,9 +755,9 @@ export default function TeacherPage() {
         }
         label,
         .detailLabel {
-          font-size: 15px;
-          color: rgba(245, 247, 255, 0.96);
-          font-weight: 600;
+          font-size: 14px;
+          color: #4b5563;
+          font-weight: 500;
         }
         :global(.teacherPage input),
         :global(.teacherPage textarea),
@@ -773,13 +771,13 @@ export default function TeacherPage() {
         :global(.teacherPage select) {
           width: 100%;
           padding: 12px 14px;
-          border: 1px solid rgba(90, 102, 146, 0.28);
+          border: 1px solid #d1d5db;
           background: #ffffff;
-          color: #1a1a1a;
+          color: #111827;
         }
         :global(.teacherPage input::placeholder),
         :global(.teacherPage textarea::placeholder) {
-          color: rgba(61, 70, 105, 0.68);
+          color: #9ca3af;
         }
         :global(.teacherPage select) {
           appearance: none;
@@ -794,7 +792,7 @@ export default function TeacherPage() {
         }
         :global(.teacherPage select option) {
           background: #ffffff;
-          color: #1a1a1a;
+          color: #111827;
         }
         .primaryButton,
         .secondaryButton {
@@ -804,19 +802,19 @@ export default function TeacherPage() {
           transition: transform 0.12s ease, filter 0.12s ease, background 0.12s ease;
         }
         .primaryButton {
-          border: 1px solid rgba(181, 176, 255, 0.62);
+          border: 1px solid #6d28d9;
           color: #ffffff;
-          background: linear-gradient(135deg, #7a69ff 0%, #9258ff 55%, #5d7cff 100%);
-          box-shadow: 0 0 26px rgba(138, 98, 255, 0.33);
+          background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 50%, #8b5cf6 100%);
+          box-shadow: 0 10px 20px rgba(109, 40, 217, 0.28);
         }
         .assignButton {
           font-size: 15px;
           padding: 13px 16px;
         }
         .secondaryButton {
-          border: 1px solid rgba(214, 218, 240, 0.9);
-          color: #1a1a1a;
-          background: #ffffff;
+          border: 1px solid #d1d5db;
+          color: #374151;
+          background: #f3f4f6;
         }
         .copyButton {
           width: fit-content;
@@ -844,11 +842,11 @@ export default function TeacherPage() {
         }
         .rowButton {
           text-align: left;
-          padding: 12px;
+          padding: 14px;
           border-radius: 11px;
-          border: 1px solid rgba(114, 122, 160, 0.24);
+          border: 1px solid #d1d5db;
           background: #ffffff;
-          color: #1a1a1a;
+          color: #111827;
           cursor: pointer;
         }
         .classRowButton {
@@ -856,21 +854,22 @@ export default function TeacherPage() {
           gap: 2px;
         }
         .rowButton:hover {
-          background: #f7f8ff;
+          background: #f9fafb;
         }
         .selected {
-          background: #f0eeff;
-          border-color: rgba(128, 111, 255, 0.68);
-          box-shadow: 0 0 0 1px rgba(140, 122, 255, 0.22);
+          background: #f5f3ff;
+          border-color: #a78bfa;
+          box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2);
         }
         .rowTitle,
         .detailValue {
-          font-size: 15px;
-          font-weight: 700;
+          font-size: 16px;
+          font-weight: 500;
+          color: #111827;
         }
         .rowSubtext {
-          font-size: 13px;
-          color: #2e3352;
+          font-size: 14px;
+          color: #4b5563;
           margin-top: 2px;
         }
         .controlsRow,
@@ -883,14 +882,15 @@ export default function TeacherPage() {
         }
         .selectionCount {
           font-size: 14px;
-          color: rgba(235, 239, 255, 0.95);
+          color: #4b5563;
         }
         .selectionPill {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 700;
           border-radius: 999px;
-          border: 1px solid rgba(176, 159, 255, 0.66);
-          background: rgba(126, 95, 255, 0.25);
+          border: 1px solid #c4b5fd;
+          background: #f5f3ff;
+          color: #6d28d9;
           padding: 6px 12px;
         }
         .detailGrid {
@@ -900,25 +900,27 @@ export default function TeacherPage() {
         }
         .detailItem {
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
+          border: 1px solid #e5e7eb;
           padding: 10px;
-          background: rgba(255, 255, 255, 0.04);
+          background: #ffffff;
           display: grid;
           gap: 4px;
         }
         .classCodeCard {
           border-radius: 14px;
-          border: 1px solid rgba(190, 170, 255, 0.54);
-          background: linear-gradient(145deg, rgba(113, 95, 255, 0.34), rgba(140, 70, 214, 0.26));
-          padding: 14px;
+          border: 1px solid #e5e7eb;
+          background: #ffffff;
+          padding: 16px;
           display: grid;
           gap: 8px;
+          box-shadow: 0 6px 16px rgba(17, 24, 39, 0.05);
         }
         .classCodeValue {
-          font-size: 31px;
+          font-size: 28px;
           line-height: 1;
           letter-spacing: 0.08em;
           font-weight: 800;
+          color: #111827;
         }
         .studentGrid {
           display: grid;
@@ -927,39 +929,47 @@ export default function TeacherPage() {
         }
         .studentTile {
           border-radius: 12px;
-          border: 1px solid rgba(181, 188, 216, 0.8);
+          border: 1px solid #d1d5db;
           background: #ffffff;
-          padding: 14px 16px;
-          display: grid;
-          gap: 12px;
-          box-shadow: 0 4px 12px rgba(17, 25, 46, 0.08);
+          padding: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 14px;
+          min-height: 108px;
+          flex-wrap: wrap;
+          box-shadow: 0 6px 14px rgba(17, 24, 39, 0.06);
           transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
         }
         .studentTile:hover {
-          background: #f7f8ff;
-          border-color: rgba(128, 111, 255, 0.42);
-          box-shadow: 0 8px 16px rgba(42, 52, 86, 0.12);
+          background: #fafafa;
+          border-color: #c4b5fd;
+          box-shadow: 0 8px 16px rgba(17, 24, 39, 0.08);
         }
         .studentName {
-          font-size: 20px;
-          line-height: 1.3;
-          font-weight: 700;
-          color: #1a1a1a;
+          font-size: 17px;
+          line-height: 1.35;
+          font-weight: 500;
+          color: #111827;
           overflow-wrap: anywhere;
+          flex: 1;
+          min-width: 170px;
         }
         .supportButtonRow {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          flex-wrap: wrap;
           gap: 8px;
         }
         .supportButton {
-          border: 1px solid rgba(181, 188, 216, 0.9);
+          border: 1px solid #d1d5db;
           border-radius: 10px;
           background: #ffffff;
-          color: #1a1a1a;
+          color: #374151;
           padding: 9px 8px;
-          font-size: 13px;
-          font-weight: 700;
+          font-size: 14px;
+          font-weight: 600;
           cursor: pointer;
           transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease;
         }
@@ -967,16 +977,16 @@ export default function TeacherPage() {
           transform: translateY(-1px);
         }
         .supportButton.remediation {
-          border-color: rgba(227, 100, 116, 0.44);
-          color: #a62f43;
+          border-color: #fca5a5;
+          color: #991b1b;
         }
         .supportButton.onLevel {
-          border-color: rgba(45, 166, 95, 0.5);
-          color: #1f7f4a;
+          border-color: #86efac;
+          color: #166534;
         }
         .supportButton.enrichment {
-          border-color: rgba(134, 92, 255, 0.56);
-          color: #6037ca;
+          border-color: #c4b5fd;
+          color: #5b21b6;
         }
         .supportButton.remediation.isActive {
           background: #ffecef;
@@ -994,18 +1004,18 @@ export default function TeacherPage() {
           box-shadow: 0 0 0 1px rgba(133, 90, 245, 0.2);
         }
         .lessonShell {
-          background: linear-gradient(180deg, rgba(23, 19, 44, 0.92), rgba(17, 18, 34, 0.95));
-          border-color: rgba(145, 129, 255, 0.36);
+          background: #ffffff;
+          border-color: #e5e7eb;
         }
         .lessonSurface {
           background: #ffffff;
-          color: #1a1a1a;
-          border-color: rgba(200, 207, 232, 0.9);
-          box-shadow: 0 8px 20px rgba(19, 25, 52, 0.08);
+          color: #111827;
+          border-color: #e5e7eb;
+          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
         }
         .adminSection {
-          border-color: rgba(255, 255, 255, 0.16);
-          background: rgba(16, 18, 31, 0.9);
+          border-color: #e5e7eb;
+          background: #ffffff;
         }
         .adminGrid {
           display: grid;
@@ -1013,9 +1023,9 @@ export default function TeacherPage() {
         }
 
         .studentTile.selected {
-          background: #f0eeff;
-          border-color: rgba(117, 97, 255, 0.8);
-          box-shadow: 0 0 0 1px rgba(131, 114, 255, 0.25), 0 8px 16px rgba(42, 52, 86, 0.14);
+          background: #f5f3ff;
+          border-color: #8b5cf6;
+          box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2), 0 8px 16px rgba(17, 24, 39, 0.1);
         }
         .classSwitcherCard .statusText,
         .classSwitcherCard .helperText,
@@ -1028,20 +1038,22 @@ export default function TeacherPage() {
         .innerCard label,
         .innerCard .rowTitle,
         .innerCard .rowSubtext {
-          color: #1a1a1a;
+          color: #111827;
         }
         .classSwitcherCard .selectionCount {
-          color: #2e3352;
+          color: #4b5563;
         }
         .errorText {
-          color: #ff9ca8;
+          color: #b91c1c;
           margin: 0;
           line-height: 1.45;
+          font-size: 14px;
         }
         .noticeText {
-          color: #92f7bb;
+          color: #166534;
           margin: 0;
           line-height: 1.45;
+          font-size: 14px;
         }
 
         @media (min-width: 900px) {
