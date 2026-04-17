@@ -34,6 +34,7 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('Incoming messages:', messages)
        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey =
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
@@ -235,6 +236,8 @@ IMPORTANT:
     })
 
     const data = await response.json()
+    console.log('OpenAI raw response:', response)
+    console.log('OpenAI response data:', data)
 
     if (!response.ok) {
       console.error('OpenAI API error:', data)
@@ -259,8 +262,19 @@ IMPORTANT:
         gradeLevel: resolvedGradeLevel || null,
       },
     })
-  } catch (error) {
-    console.error('Server error:', error)
+  } catch (err) {
+    console.error('VIC API ERROR:', err)
+    console.error('VIC API ERROR message:', err?.message)
+    if (err?.stack) {
+      console.error('VIC API ERROR stack:', err.stack)
+    }
+    if (err?.response?.data) {
+      console.error('VIC API ERROR OpenAI response data:', err.response.data)
+    } else if (err?.data) {
+      console.error('VIC API ERROR data:', err.data)
+    } else if (err?.error) {
+      console.error('VIC API ERROR nested error:', err.error)
+    }
     return res.status(500).json({ error: 'Server error' })
   }
 }
