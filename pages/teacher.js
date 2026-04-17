@@ -38,6 +38,7 @@ export default function TeacherPage() {
   const [copiedCode, setCopiedCode] = useState(false)
 
   const selectedCount = selectedStudentIds.size
+  console.log('[DEBUG] selectedClass:', selectedClass)
 
   const allStudentsSelected = useMemo(() => {
     return students.length > 0 && selectedCount === students.length
@@ -160,7 +161,15 @@ export default function TeacherPage() {
     }
   }
 
-  async function fetchStudents(classId) {
+  useEffect(() => {
+    if (!selectedClass?.id) return
+
+    console.log('[DEBUG] triggering student load for class:', selectedClass.id)
+    loadStudents(selectedClass.id)
+  }, [selectedClass?.id])
+
+  async function loadStudents(classId) {
+    console.log('[DEBUG] loadStudents called with:', classId)
     if (!classId) return
 
     setLoadingStudents(true)
@@ -198,7 +207,6 @@ export default function TeacherPage() {
     setCopiedCode(false)
     setStudents([])
     setSelectedStudentIds(new Set())
-    fetchStudents(classRow.id)
   }
 
   function handleToggleStudent(studentId) {
