@@ -495,8 +495,8 @@ export default function TeacherPage() {
 
                         return (
                           <label key={student.id} className={isSelected ? 'studentTile selected' : 'studentTile'}>
-                            <input type="checkbox" checked={isSelected} onChange={() => handleToggleStudent(student.id)} />
                             <span className="studentName">{getStudentName(student)}</span>
+                            <input type="checkbox" checked={isSelected} onChange={() => handleToggleStudent(student.id)} />
                           </label>
                         )
                       })}
@@ -643,7 +643,7 @@ export default function TeacherPage() {
             radial-gradient(circle at 5% 0%, rgba(114, 102, 255, 0.2), transparent 35%),
             radial-gradient(circle at 90% 10%, rgba(175, 84, 255, 0.13), transparent 40%),
             #070710;
-          color: #fff;
+          color: #1a1a1a;
           padding: 28px 16px 40px;
         }
         .teacherShell {
@@ -661,20 +661,20 @@ export default function TeacherPage() {
         }
         h2 {
           margin: 0;
-          font-size: 23px;
+          font-size: 27px;
           font-weight: 760;
           letter-spacing: -0.01em;
         }
         h3 {
           margin: 0;
-          font-size: 17px;
+          font-size: 20px;
           font-weight: 700;
         }
         .card {
-          border: 1px solid rgba(168, 175, 255, 0.2);
+          border: 1px solid rgba(168, 175, 255, 0.14);
           border-radius: 20px;
           background: linear-gradient(170deg, rgba(22, 24, 39, 0.94), rgba(15, 16, 29, 0.94));
-          box-shadow: 0 16px 38px rgba(3, 5, 18, 0.48), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+          box-shadow: 0 10px 26px rgba(3, 5, 18, 0.34), inset 0 1px 0 rgba(255, 255, 255, 0.05);
           padding: 20px;
         }
         .profileCard {
@@ -709,7 +709,10 @@ export default function TeacherPage() {
           gap: 14px;
         }
         .classSwitcherCard {
-          background: rgba(255, 255, 255, 0.05);
+          background: #ffffff;
+          color: #1a1a1a;
+          border-color: rgba(52, 59, 93, 0.14);
+          box-shadow: 0 8px 20px rgba(19, 25, 52, 0.1);
         }
         .commandGrid {
           display: grid;
@@ -731,11 +734,13 @@ export default function TeacherPage() {
         }
         .innerCard {
           border-radius: 14px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
-          background: rgba(255, 255, 255, 0.04);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: #ffffff;
+          color: #1a1a1a;
           padding: 14px;
           display: grid;
           gap: 10px;
+          box-shadow: 0 8px 18px rgba(19, 25, 52, 0.08);
         }
         .cardEyebrow {
           font-size: 12px;
@@ -748,14 +753,14 @@ export default function TeacherPage() {
           font-weight: 700;
         }
         .signedInMeta {
-          font-size: 14px;
+          font-size: 15px;
           color: rgba(235, 239, 255, 0.84);
         }
         .helperText,
         .statusText {
           margin: 0;
-          color: rgba(232, 236, 255, 0.82);
-          font-size: 14px;
+          color: rgba(232, 236, 255, 0.96);
+          font-size: 15px;
         }
         .microCopy {
           font-size: 12px;
@@ -769,8 +774,9 @@ export default function TeacherPage() {
         }
         label,
         .detailLabel {
-          font-size: 13px;
-          color: rgba(245, 247, 255, 0.94);
+          font-size: 15px;
+          color: rgba(245, 247, 255, 0.96);
+          font-weight: 600;
         }
         :global(.teacherPage input),
         :global(.teacherPage textarea),
@@ -783,14 +789,14 @@ export default function TeacherPage() {
         :global(.teacherPage textarea),
         :global(.teacherPage select) {
           width: 100%;
-          padding: 11px 13px;
-          border: 1px solid rgba(184, 194, 255, 0.28);
-          background: rgba(11, 14, 29, 0.75);
-          color: #fff;
+          padding: 12px 14px;
+          border: 1px solid rgba(90, 102, 146, 0.28);
+          background: #ffffff;
+          color: #1a1a1a;
         }
         :global(.teacherPage input::placeholder),
         :global(.teacherPage textarea::placeholder) {
-          color: rgba(203, 211, 255, 0.55);
+          color: rgba(61, 70, 105, 0.68);
         }
         :global(.teacherPage select) {
           appearance: none;
@@ -804,8 +810,8 @@ export default function TeacherPage() {
           padding-right: 34px;
         }
         :global(.teacherPage select option) {
-          background: #161a31;
-          color: #f4f6ff;
+          background: #ffffff;
+          color: #1a1a1a;
         }
         .primaryButton,
         .secondaryButton {
@@ -816,7 +822,7 @@ export default function TeacherPage() {
         }
         .primaryButton {
           border: 1px solid rgba(181, 176, 255, 0.62);
-          color: #fff;
+          color: #ffffff;
           background: linear-gradient(135deg, #7a69ff 0%, #9258ff 55%, #5d7cff 100%);
           box-shadow: 0 0 26px rgba(138, 98, 255, 0.33);
         }
@@ -825,9 +831,9 @@ export default function TeacherPage() {
           padding: 13px 16px;
         }
         .secondaryButton {
-          border: 1px solid rgba(255, 255, 255, 0.24);
-          color: #eef2ff;
-          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(214, 218, 240, 0.9);
+          color: #1a1a1a;
+          background: #ffffff;
         }
         .copyButton {
           width: fit-content;
@@ -855,11 +861,11 @@ export default function TeacherPage() {
         }
         .rowButton {
           text-align: left;
-          padding: 10px 11px;
+          padding: 12px;
           border-radius: 11px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          background: rgba(255, 255, 255, 0.04);
-          color: #fff;
+          border: 1px solid rgba(114, 122, 160, 0.24);
+          background: #ffffff;
+          color: #1a1a1a;
           cursor: pointer;
         }
         .classRowButton {
@@ -867,12 +873,12 @@ export default function TeacherPage() {
           gap: 2px;
         }
         .rowButton:hover {
-          background: rgba(255, 255, 255, 0.09);
+          background: #f7f8ff;
         }
         .selected {
-          background: rgba(140, 126, 255, 0.28);
-          border-color: rgba(192, 184, 255, 0.78);
-          box-shadow: inset 0 0 0 1px rgba(193, 176, 255, 0.22);
+          background: #f0eeff;
+          border-color: rgba(128, 111, 255, 0.68);
+          box-shadow: 0 0 0 1px rgba(140, 122, 255, 0.22);
         }
         .rowTitle,
         .detailValue {
@@ -880,8 +886,8 @@ export default function TeacherPage() {
           font-weight: 700;
         }
         .rowSubtext {
-          font-size: 12px;
-          color: rgba(225, 230, 255, 0.76);
+          font-size: 13px;
+          color: #2e3352;
           margin-top: 2px;
         }
         .controlsRow,
@@ -893,8 +899,8 @@ export default function TeacherPage() {
           justify-content: space-between;
         }
         .selectionCount {
-          font-size: 13px;
-          color: rgba(235, 239, 255, 0.78);
+          font-size: 14px;
+          color: rgba(235, 239, 255, 0.95);
         }
         .selectionPill {
           font-size: 13px;
@@ -933,42 +939,51 @@ export default function TeacherPage() {
         }
         .studentGrid {
           display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
-          gap: 9px;
+          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+          gap: 12px;
         }
         .studentTile {
           border-radius: 12px;
-          border: 1px solid rgba(255, 255, 255, 0.17);
-          background: rgba(255, 255, 255, 0.03);
-          padding: 10px 11px;
-          min-height: 52px;
+          border: 1px solid rgba(181, 188, 216, 0.8);
+          background: #ffffff;
+          padding: 14px 16px;
+          min-height: 62px;
           cursor: pointer;
           display: flex;
           align-items: center;
-          gap: 8px;
+          justify-content: space-between;
+          gap: 12px;
+          box-shadow: 0 4px 12px rgba(17, 25, 46, 0.08);
+          transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
         }
         .studentTile:hover {
-          background: rgba(255, 255, 255, 0.08);
+          background: #f7f8ff;
+          border-color: rgba(128, 111, 255, 0.42);
+          box-shadow: 0 8px 16px rgba(42, 52, 86, 0.12);
         }
         .studentTile :global(input) {
-          width: 15px;
-          height: 15px;
+          width: 18px;
+          height: 18px;
           margin: 0;
-          accent-color: #9a84ff;
+          accent-color: #6f57ff;
           flex: 0 0 auto;
         }
         .studentName {
-          font-size: 13px;
-          line-height: 1.2;
-          font-weight: 650;
+          font-size: 17px;
+          line-height: 1.3;
+          font-weight: 700;
+          color: #1a1a1a;
+          overflow-wrap: anywhere;
         }
         .lessonShell {
           background: linear-gradient(180deg, rgba(23, 19, 44, 0.92), rgba(17, 18, 34, 0.95));
           border-color: rgba(145, 129, 255, 0.36);
         }
         .lessonSurface {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: rgba(196, 204, 255, 0.26);
+          background: #ffffff;
+          color: #1a1a1a;
+          border-color: rgba(200, 207, 232, 0.9);
+          box-shadow: 0 8px 20px rgba(19, 25, 52, 0.08);
         }
         .adminSection {
           border-color: rgba(255, 255, 255, 0.16);
@@ -977,6 +992,28 @@ export default function TeacherPage() {
         .adminGrid {
           display: grid;
           gap: 12px;
+        }
+
+        .studentTile.selected {
+          background: #f0eeff;
+          border-color: rgba(117, 97, 255, 0.8);
+          box-shadow: 0 0 0 1px rgba(131, 114, 255, 0.25), 0 8px 16px rgba(42, 52, 86, 0.14);
+        }
+        .classSwitcherCard .statusText,
+        .classSwitcherCard .helperText,
+        .lessonSurface .helperText,
+        .innerCard .statusText,
+        .innerCard .helperText,
+        .innerCard .detailLabel,
+        .innerCard .detailValue,
+        .innerCard h3,
+        .innerCard label,
+        .innerCard .rowTitle,
+        .innerCard .rowSubtext {
+          color: #1a1a1a;
+        }
+        .classSwitcherCard .selectionCount {
+          color: #2e3352;
         }
         .errorText {
           color: #ff9ca8;
