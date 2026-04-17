@@ -181,7 +181,11 @@ export default function TeacherPage() {
       .eq('class_id', classId)
       .order('student_id', { ascending: true })
 
+    console.log('[DEBUG] enrollments query error:', enrollmentError)
+    console.log('[DEBUG] raw enrollments query result:', data)
+
     if (enrollmentError) {
+      console.error('[DEBUG] enrollments query error (returning early):', enrollmentError)
       setError(enrollmentError.message || 'Could not load students for this class.')
       setStudents([])
       setSelectedStudentIds(new Set())
@@ -189,13 +193,33 @@ export default function TeacherPage() {
       return
     }
 
-    const mappedStudents =
-      data
-        ?.map((row) => {
-          const userRow = Array.isArray(row.users) ? row.users[0] : row.users
-          return userRow?.id ? userRow : null
+    const normalizedEnrollments = Array.isArray(data)
+      ? data.map((row) => {
+          const usersValue = row?.users
+          const normalizedUser = Array.isArray(usersValue) ? usersValue[0] : usersValue
+          return {
+            ...row,
+            users: normalizedUser || null,
+          }
         })
-        .filter(Boolean) || []
+      : []
+
+    const hasUnexpectedUsersShape = Array.isArray(data)
+      ? data.some((row) => Array.isArray(row?.users))
+      : false
+
+    if (hasUnexpectedUsersShape) {
+      console.log('[DEBUG] enrollment shape normalization:', {
+        raw: data,
+        normalized: normalizedEnrollments,
+      })
+    }
+
+    const mappedStudents = normalizedEnrollments
+      .map((row) => row?.users)
+      .filter((userRow) => userRow?.id)
+
+    console.log('[DEBUG] mapped students:', mappedStudents)
 
     setStudents(mappedStudents)
     setSelectedStudentIds(new Set())
