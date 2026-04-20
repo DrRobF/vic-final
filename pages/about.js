@@ -222,8 +222,8 @@ const styles = {
     position: 'relative',
     overflow: 'hidden',
     background:
-      'radial-gradient(circle at 18% 10%, rgba(171, 91, 255, 0.28), transparent 24%), radial-gradient(circle at 82% 82%, rgba(84, 248, 255, 0.10), transparent 24%), linear-gradient(135deg, #070312 0%, #17092b 50%, #10061d 100%)',
-    color: '#f5eeff',
+      'radial-gradient(circle at 18% 10%, rgba(37, 99, 235, 0.28), transparent 24%), radial-gradient(circle at 82% 82%, rgba(245, 158, 11, 0.10), transparent 24%), linear-gradient(135deg, var(--vic-bg) 0%, var(--vic-surface-muted) 50%, var(--vic-bg) 100%)',
+    color: 'var(--vic-bg)',
     padding: '18px 20px 48px 20px',
     fontFamily:
       '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
@@ -235,7 +235,7 @@ const styles = {
     left: '-80px',
     width: '280px',
     height: '280px',
-    background: 'rgba(171, 91, 255, 0.22)',
+    background: 'rgba(37, 99, 235, 0.22)',
     filter: 'blur(90px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -247,7 +247,7 @@ const styles = {
     right: '-80px',
     width: '300px',
     height: '300px',
-    background: 'rgba(214, 104, 255, 0.18)',
+    background: 'rgba(29, 78, 216, 0.18)',
     filter: 'blur(95px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -259,7 +259,7 @@ const styles = {
     left: '70%',
     width: '220px',
     height: '220px',
-    background: 'rgba(84, 248, 255, 0.08)',
+    background: 'rgba(245, 158, 11, 0.08)',
     filter: 'blur(80px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -292,7 +292,7 @@ const styles = {
     background: 'linear-gradient(180deg, rgba(16, 8, 34, 0.82) 0%, rgba(9, 14, 31, 0.74) 100%)',
     border: '1px solid rgba(191, 141, 255, 0.16)',
     boxShadow:
-      '0 14px 36px rgba(0,0,0,0.24), 0 0 24px rgba(171,91,255,0.08), inset 0 1px 0 rgba(255,255,255,0.04)',
+      '0 14px 36px rgba(0,0,0,0.24), 0 0 24px rgba(37, 99, 235,0.08), inset 0 1px 0 rgba(238, 244, 248, 0.82)',
     backdropFilter: 'blur(14px)',
   },
 
@@ -301,7 +301,7 @@ const styles = {
     alignItems: 'center',
     gap: '12px',
     textDecoration: 'none',
-    color: '#faf5ff',
+    color: 'var(--vic-primary-soft)',
     minWidth: 0,
   },
 
@@ -312,11 +312,11 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, rgba(171,91,255,0.28), rgba(84,248,255,0.12))',
+    background: 'linear-gradient(135deg, rgba(37, 99, 235,0.28), rgba(245, 158, 11,0.12))',
     border: '1px solid rgba(206,170,255,0.22)',
     fontWeight: 800,
     fontSize: '20px',
-    boxShadow: '0 0 20px rgba(171,91,255,0.16)',
+    boxShadow: '0 0 20px rgba(37, 99, 235,0.16)',
   },
 
   brandTextWrap: {
@@ -329,12 +329,12 @@ const styles = {
     fontSize: '20px',
     fontWeight: 800,
     lineHeight: 1.05,
-    color: '#faf5ff',
+    color: 'var(--vic-primary-soft)',
   },
 
   brandSub: {
     fontSize: '12px',
-    color: '#d8c7ff',
+    color: 'var(--vic-text-secondary)',
     lineHeight: 1.25,
   },
 
@@ -347,13 +347,13 @@ const styles = {
 
   navLink: {
     textDecoration: 'none',
-    color: '#f3edff',
+    color: 'var(--vic-surface-muted)',
     fontSize: '15px',
     fontWeight: 700,
     padding: '8px 12px',
     borderRadius: '12px',
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.06)',
+    background: 'rgba(238, 244, 248, 0.82)',
+    border: '1px solid rgba(238, 244, 248, 0.88)',
   },
 
   card: {
@@ -362,7 +362,7 @@ const styles = {
     borderRadius: '28px',
     padding: '38px 32px',
     boxShadow:
-      '0 24px 60px rgba(0,0,0,0.30), 0 0 30px rgba(171,91,255,0.10), inset 0 1px 0 rgba(255,255,255,0.05)',
+      '0 24px 60px rgba(0,0,0,0.30), 0 0 30px rgba(37, 99, 235,0.10), inset 0 1px 0 rgba(238, 244, 248, 0.85)',
     backdropFilter: 'blur(16px)',
   },
 
@@ -370,7 +370,7 @@ const styles = {
     fontSize: '12px',
     letterSpacing: '0.16em',
     textTransform: 'uppercase',
-    color: '#c5a7ff',
+    color: 'var(--vic-primary)',
     fontWeight: 800,
     marginBottom: '12px',
   },
@@ -380,9 +380,9 @@ const styles = {
     lineHeight: 1.0,
     letterSpacing: '-0.03em',
     margin: '0 0 22px 0',
-    color: '#fbf7ff',
+    color: 'var(--vic-surface)',
     fontWeight: 700,
-    textShadow: '0 0 20px rgba(171,91,255,0.12)',
+    textShadow: '0 0 20px rgba(37, 99, 235,0.12)',
     fontFamily:
       '"Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif',
   },
@@ -390,7 +390,7 @@ const styles = {
   lead: {
     fontSize: '20px',
     lineHeight: 1.75,
-    color: '#f2eaff',
+    color: 'var(--vic-text-secondary)',
     margin: '0 0 28px 0',
   },
 
@@ -403,14 +403,14 @@ const styles = {
     lineHeight: 1.15,
     letterSpacing: '-0.02em',
     margin: '0 0 14px 0',
-    color: '#fbf7ff',
+    color: 'var(--vic-surface)',
     fontWeight: 700,
   },
 
   text: {
     fontSize: '17px',
     lineHeight: 1.85,
-    color: '#e2d6ff',
+    color: 'var(--vic-text-secondary)',
     margin: '0 0 18px 0',
   },
 
@@ -422,7 +422,7 @@ const styles = {
   },
 
   featureCard: {
-    background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03))',
+    background: 'linear-gradient(180deg, rgba(238, 244, 248, 0.88), rgba(255,255,255,0.03))',
     border: '1px solid rgba(191, 141, 255, 0.14)',
     borderRadius: '20px',
     padding: '18px',
@@ -431,14 +431,14 @@ const styles = {
   featureTitle: {
     fontSize: '16px',
     fontWeight: 800,
-    color: '#faf5ff',
+    color: 'var(--vic-primary-soft)',
     marginBottom: '8px',
   },
 
   featureText: {
     fontSize: '14px',
     lineHeight: 1.6,
-    color: '#dccfff',
+    color: 'var(--vic-text-secondary)',
   },
 
   quoteCard: {
@@ -447,9 +447,9 @@ const styles = {
     borderRadius: '24px',
     padding: '24px 24px 24px 28px',
     background:
-      'linear-gradient(135deg, rgba(171,91,255,0.16), rgba(84,248,255,0.06))',
+      'linear-gradient(135deg, rgba(37, 99, 235,0.16), rgba(245, 158, 11,0.06))',
     border: '1px solid rgba(206, 170, 255, 0.18)',
-    boxShadow: '0 0 24px rgba(171,91,255,0.08)',
+    boxShadow: '0 0 24px rgba(37, 99, 235,0.08)',
   },
 
   quoteMark: {
@@ -458,7 +458,7 @@ const styles = {
     left: '18px',
     fontSize: '54px',
     lineHeight: 1,
-    color: '#d9b8ff',
+    color: 'var(--vic-text-secondary)',
     opacity: 0.5,
     fontFamily: 'Georgia, serif',
   },
@@ -466,7 +466,7 @@ const styles = {
   quoteText: {
     fontSize: '18px',
     lineHeight: 1.75,
-    color: '#f5eeff',
+    color: 'var(--vic-bg)',
     paddingLeft: '12px',
   },
 
@@ -481,18 +481,18 @@ const styles = {
   closingTitle: {
     fontSize: '18px',
     fontWeight: 800,
-    color: '#faf5ff',
+    color: 'var(--vic-primary-soft)',
     marginBottom: '10px',
   },
 
   closingText: {
     fontSize: '18px',
     lineHeight: 1.75,
-    color: '#e9ddff',
+    color: 'var(--vic-text-secondary)',
   },
 
   closingEmphasis: {
-    color: '#ffffff',
+    color: 'var(--vic-surface)',
     fontWeight: 800,
   },
 
@@ -503,13 +503,13 @@ const styles = {
   backLink: {
     display: 'inline-block',
     textDecoration: 'none',
-    color: '#f9f3ff',
+    color: 'var(--vic-surface)',
     fontWeight: 700,
     fontSize: '15px',
     padding: '12px 16px',
     borderRadius: '999px',
-    background: 'linear-gradient(135deg, rgba(171,91,255,0.22), rgba(84,248,255,0.10))',
+    background: 'linear-gradient(135deg, rgba(37, 99, 235,0.22), rgba(245, 158, 11,0.10))',
     border: '1px solid rgba(206, 170, 255, 0.24)',
-    boxShadow: '0 0 22px rgba(171,91,255,0.12)',
+    boxShadow: '0 0 22px rgba(37, 99, 235,0.12)',
   },
 }
