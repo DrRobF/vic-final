@@ -59,10 +59,6 @@ export default function Home() {
   return (
     <>
       <div className="page">
-        <div className="ambient ambientLeft" />
-        <div className="ambient ambientRight" />
-        <div className="gridFade" />
-
         <main className="shell">
           <VICHeader currentPath="/" />
           <section className="hero">
@@ -110,8 +106,6 @@ export default function Home() {
 
             <div className="heroRight">
               <div className="previewWrap">
-                <div className="previewGlow" />
-
                 <div className="phoneShell">
                   <div className="phoneTop">
                     <div className="phoneDot" />
@@ -185,7 +179,7 @@ export default function Home() {
           min-height: 100%;
           font-family: Inter, Arial, sans-serif;
           background: var(--vic-bg);
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         * {
@@ -194,7 +188,7 @@ export default function Home() {
 
         body {
           overflow-x: hidden;
-          background: linear-gradient(180deg, #e8eff8 0%, #edf3fb 52%, #e7edf5 100%);
+          background: var(--vic-bg);
         }
 
         button,
@@ -206,41 +200,6 @@ export default function Home() {
           position: relative;
           min-height: 100vh;
           overflow: hidden;
-        }
-
-        .ambient {
-          position: absolute;
-          border-radius: 999px;
-          filter: blur(120px);
-          pointer-events: none;
-          opacity: 0.22;
-        }
-
-        .ambientLeft {
-          width: 460px;
-          height: 460px;
-          left: -140px;
-          top: 40px;
-          background: rgba(37, 99, 235, 0.12);
-        }
-
-        .ambientRight {
-          width: 460px;
-          height: 460px;
-          right: -120px;
-          top: 80px;
-          background: rgba(37, 99, 235, 0.08);
-        }
-
-        .gridFade {
-          position: absolute;
-          inset: 0;
-          background-image:
-            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-          background-size: 72px 72px;
-          mask-image: linear-gradient(180deg, rgba(15,23,42,0.12), transparent 84%);
-          pointer-events: none;
         }
 
         .shell {
@@ -289,8 +248,8 @@ export default function Home() {
           border-radius: 50%;
           background: radial-gradient(
             circle,
-            rgba(110, 126, 255, 0.28) 0%,
-            rgba(110, 126, 255, 0.1) 45%,
+            rgba(181, 83, 47, 0.24) 0%,
+            rgba(181, 83, 47, 0.08) 45%,
             transparent 78%
           );
           filter: blur(26px);
@@ -318,7 +277,7 @@ export default function Home() {
           z-index: 2;
           width: 110px;
           height: auto;
-          filter: drop-shadow(0 0 24px rgba(126, 137, 255, 0.35));
+          filter: drop-shadow(0 0 24px rgba(150, 69, 40, 0.26));
         }
 
         .brandTextWrap {
@@ -332,14 +291,14 @@ export default function Home() {
           font-weight: 900;
           letter-spacing: 0.02em;
           line-height: 1;
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         .brandSub {
           font-size: 14px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         .eyebrow {
@@ -361,7 +320,7 @@ export default function Home() {
 
         .headline span {
           display: block;
-          color: #0b1220;
+          color: var(--vic-text-primary);
         }
 
         .subtext {
@@ -369,7 +328,7 @@ export default function Home() {
           margin: 20px 0 0;
           font-size: 19px;
           line-height: 1.55;
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         .quietProof {
@@ -382,9 +341,9 @@ export default function Home() {
         .quietProof span {
           padding: 10px 14px;
           border-radius: 999px;
-          border: 1px solid #d2def0;
-          background: #f5f8ff;
-          color: #4b5f79;
+          border: 1px solid var(--vic-border);
+          background: var(--vic-surface-muted);
+          color: var(--vic-text-secondary);
           font-size: 14px;
         }
 
@@ -408,8 +367,8 @@ export default function Home() {
           border-radius: 12px;
           padding: 14px 24px;
           color: var(--vic-surface);
-          background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
-          box-shadow: 0 14px 30px rgba(29, 78, 216, 0.34);
+          background: var(--vic-primary);
+          box-shadow: 0 14px 30px rgba(150, 69, 40, 0.34);
         }
 
         .primaryButton:hover,
@@ -424,9 +383,9 @@ export default function Home() {
           justify-content: center;
           border-radius: 10px;
           padding: 10px 14px;
-          color: #4b5f79;
-          border: 1px solid #d2def0;
-          background: #f5f8ff;
+          color: var(--vic-text-secondary);
+          border: 1px solid var(--vic-border);
+          background: var(--vic-surface-muted);
           text-decoration: none;
           font-size: 12px;
           font-weight: 700;
@@ -445,22 +404,13 @@ export default function Home() {
           max-width: 430px;
         }
 
-        .previewGlow {
-          position: absolute;
-          inset: 36px 16px 18px 16px;
-          border-radius: 38px;
-          background: radial-gradient(circle, rgba(37,99,235,0.14), transparent 74%);
-          filter: blur(44px);
-          pointer-events: none;
-        }
-
         .phoneShell {
           position: relative;
           z-index: 2;
           border-radius: 24px;
           padding: 12px;
-          background: linear-gradient(180deg, #ffffff 0%, #f0f5fd 100%);
-          border: 1px solid #c9d7eb;
+          background: linear-gradient(180deg, var(--vic-surface) 0%, var(--vic-surface-muted) 100%);
+          border: 1px solid var(--vic-border);
           box-shadow: var(--vic-shadow-raised);
         }
 
@@ -483,14 +433,14 @@ export default function Home() {
           font-size: 14px;
           font-weight: 900;
           letter-spacing: 0.04em;
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         .previewCard {
           border-radius: 16px;
           overflow: hidden;
-          background: #ffffff;
-          color: #4b5f79;
+          background: var(--vic-surface);
+          color: var(--vic-text-secondary);
           min-height: 620px;
           display: flex;
           flex-direction: column;
@@ -508,17 +458,17 @@ export default function Home() {
         .inputLabel {
           font-size: 18px;
           font-weight: 900;
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         .askForm textarea {
           width: 100%;
-          border: 1px solid #b9c9de;
+          border: 1px solid var(--vic-border);
           border-radius: 12px;
           outline: none;
           resize: none;
           background: var(--vic-surface);
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
           font-size: 15px;
           line-height: 1.55;
           min-height: 180px;
@@ -526,15 +476,15 @@ export default function Home() {
         }
 
         .askForm textarea::placeholder {
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         .askButton {
           border-radius: 10px;
           padding: 15px 16px;
           color: var(--vic-surface);
-          background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
-          box-shadow: 0 12px 26px rgba(29,78,216,0.28);
+          background: var(--vic-primary);
+          box-shadow: 0 12px 26px rgba(150,69,40,0.28);
         }
 
         .askButton:disabled {
@@ -573,18 +523,18 @@ export default function Home() {
 
         .userBubble {
           background: var(--vic-surface);
-          border: 1px solid #b9c9de;
-          color: #4b5f79;
+          border: 1px solid var(--vic-border);
+          color: var(--vic-text-secondary);
         }
 
         .userBubble .bubbleLabel {
-          color: #4b5f79;
+          color: var(--vic-text-secondary);
         }
 
         .vicBubble {
           background: linear-gradient(135deg, var(--vic-primary-soft) 0%, var(--vic-primary-soft) 100%);
-          border: 1px solid #b9c9de;
-          color: #4b5f79;
+          border: 1px solid var(--vic-border);
+          color: var(--vic-text-secondary);
         }
 
         .vicBubble .bubbleLabel {
