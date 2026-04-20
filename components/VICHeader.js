@@ -131,8 +131,8 @@ export default function VICHeader({ currentPath = '' }) {
           justify-content: space-between;
           padding: 14px 20px;
           border-radius: 16px;
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          background: rgba(11, 12, 20, 0.78);
+          border: 1px solid var(--vic-border);
+          background: var(--vic-surface);
           backdrop-filter: blur(14px);
           margin-bottom: 24px;
           flex-wrap: wrap;
@@ -142,7 +142,7 @@ export default function VICHeader({ currentPath = '' }) {
           align-items: center;
           gap: 14px;
           text-decoration: none;
-          color: #fff;
+          color: var(--vic-text-primary);
           flex-shrink: 0;
         }
         .brand img {
@@ -166,7 +166,7 @@ export default function VICHeader({ currentPath = '' }) {
           flex-wrap: wrap;
         }
         .navLink {
-          color: rgba(233, 237, 255, 0.88);
+          color: var(--vic-text-secondary);
           text-decoration: none;
           font-size: 13px;
           padding: 8px 12px;
@@ -182,15 +182,15 @@ export default function VICHeader({ currentPath = '' }) {
           opacity: 0.88;
         }
         .navLink:hover {
-          border-color: rgba(133, 153, 255, 0.55);
-          color: #fff;
+          border-color: rgba(37, 99, 235, 0.45);
+          color: var(--vic-primary);
           text-decoration: underline;
           text-underline-offset: 3px;
         }
         .active {
-          background: rgba(115, 109, 255, 0.22);
-          border-color: rgba(133, 153, 255, 0.5);
-          color: #fff;
+          background: var(--vic-primary-soft);
+          border-color: rgba(37, 99, 235, 0.4);
+          color: var(--vic-primary);
           opacity: 1;
         }
         .userArea {
@@ -205,14 +205,14 @@ export default function VICHeader({ currentPath = '' }) {
           text-overflow: ellipsis;
           white-space: nowrap;
           font-size: 12px;
-          color: #d7ddff;
+          color: var(--vic-text-secondary);
         }
         .logoutButton,
         .authPrompt {
-          color: #fff;
+          color: var(--vic-text-primary);
           text-decoration: none;
-          border: 1px solid rgba(255, 255, 255, 0.24);
-          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(203, 213, 225, 0.72);
+          background: var(--vic-surface-muted);
           border-radius: 999px;
           padding: 8px 14px;
           font-size: 12px;
@@ -222,8 +222,8 @@ export default function VICHeader({ currentPath = '' }) {
         }
         .logoutButton:hover,
         .authPrompt:hover {
-          background: rgba(255, 255, 255, 0.14);
-          border-color: rgba(255, 255, 255, 0.32);
+          background: var(--vic-primary-soft);
+          border-color: rgba(203, 213, 225, 0.9);
         }
         .logoutButton:disabled {
           opacity: 0.7;

@@ -9,7 +9,7 @@ export default function StudentPage() {
   }, [router])
 
   return (
-    <main style={{ padding: '32px 16px', color: '#fff' }}>
+    <main style={{ padding: '32px 16px', color: 'var(--vic-surface)' }}>
       Redirecting to Ask VIC...
     </main>
   )

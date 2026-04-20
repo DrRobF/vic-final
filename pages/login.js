@@ -122,8 +122,8 @@ export default function LoginPage() {
       <style jsx>{`
         .authPage {
           min-height: 100vh;
-          background: radial-gradient(circle at 0% 0%, rgba(96, 117, 255, 0.14), transparent 28%), #07070d;
-          color: #fff;
+          background: radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.12), transparent 28%), var(--vic-bg);
+          color: var(--vic-text-primary);
           padding: 28px 16px;
         }
         .authShell {
@@ -132,9 +132,9 @@ export default function LoginPage() {
         }
         .card {
           max-width: 500px;
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          border: 1px solid rgba(203, 213, 225, 0.55);
           border-radius: 18px;
-          background: rgba(17, 19, 32, 0.9);
+          background: var(--vic-surface);
           padding: 28px;
           box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.03);
         }
@@ -147,7 +147,7 @@ export default function LoginPage() {
         .subText {
           margin: 10px 0 0;
           font-size: 15px;
-          color: rgba(234, 239, 255, 0.78);
+          color: rgba(71, 85, 105, 0.92);
         }
         .form {
           display: grid;
@@ -156,7 +156,7 @@ export default function LoginPage() {
         }
         label {
           font-size: 13px;
-          color: rgba(234, 239, 255, 0.95);
+          color: var(--vic-text-primary);
           margin-top: 4px;
         }
         input,
@@ -165,21 +165,21 @@ export default function LoginPage() {
           border-radius: 12px;
         }
         input {
-          border: 1px solid rgba(255, 255, 255, 0.2);
+          border: 1px solid rgba(203, 213, 225, 0.7);
           background: rgba(255, 255, 255, 0.06);
-          color: #fff;
+          color: var(--vic-text-primary);
           padding: 12px 14px;
         }
         .primaryButton {
           margin-top: 10px;
-          border: 1px solid rgba(154, 171, 255, 0.48);
-          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
-          color: #fff;
+          border: 1px solid rgba(37, 99, 235, 0.45);
+          background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
+          color: var(--vic-surface);
           font-weight: 700;
           letter-spacing: 0.01em;
           padding: 12px 16px;
           cursor: pointer;
-          box-shadow: 0 0 20px rgba(102, 117, 255, 0.25);
+          box-shadow: 0 0 20px rgba(37, 99, 235, 0.24);
           transition: transform 0.12s ease, filter 0.12s ease;
         }
         .primaryButton:hover {
@@ -195,16 +195,16 @@ export default function LoginPage() {
         }
         .mutedLine {
           margin: 18px 0 0;
-          color: rgba(234, 239, 255, 0.82);
+          color: var(--vic-text-secondary);
         }
         a {
-          color: #9cb3ff;
+          color: var(--vic-primary);
         }
         a:hover {
-          color: #bdd0ff;
+          color: var(--vic-primary-hover);
         }
         .errorText {
-          color: #ff9ca8;
+          color: var(--vic-danger);
           margin-top: 14px;
           line-height: 1.45;
         }

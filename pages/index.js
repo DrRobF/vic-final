@@ -184,8 +184,8 @@ export default function Home() {
           width: 100%;
           min-height: 100%;
           font-family: Inter, Arial, sans-serif;
-          background: #050505;
-          color: white;
+          background: var(--vic-bg);
+          color: var(--vic-surface);
         }
 
         * {
@@ -197,7 +197,7 @@ export default function Home() {
           background:
             radial-gradient(circle at top left, rgba(74, 101, 255, 0.1), transparent 24%),
             radial-gradient(circle at bottom right, rgba(103, 72, 255, 0.08), transparent 26%),
-            linear-gradient(180deg, #040404 0%, #090910 48%, #040404 100%);
+            linear-gradient(180deg, var(--vic-bg) 0%, var(--vic-surface-muted) 48%, var(--vic-bg) 100%);
         }
 
         button,
@@ -302,7 +302,7 @@ export default function Home() {
         .logoRing {
           position: absolute;
           border-radius: 50%;
-          border: 1px solid rgba(255,255,255,0.08);
+          border: 1px solid rgba(219, 234, 254, 0.7);
         }
 
         .ringOne {
@@ -335,14 +335,14 @@ export default function Home() {
           font-weight: 800;
           letter-spacing: 0.02em;
           line-height: 1;
-          color: rgba(255,255,255,0.96);
+          color: var(--vic-text-primary);
         }
 
         .brandSub {
           font-size: 14px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: rgba(255,255,255,0.56);
+          color: var(--vic-text-secondary);
         }
 
         .eyebrow {
@@ -350,7 +350,7 @@ export default function Home() {
           font-size: 13px;
           letter-spacing: 0.17em;
           text-transform: uppercase;
-          color: #8fa2ff;
+          color: var(--vic-primary);
         }
 
         .headline {
@@ -364,7 +364,7 @@ export default function Home() {
 
         .headline span {
           display: block;
-          color: rgba(255,255,255,0.92);
+          color: var(--vic-text-primary);
         }
 
         .subtext {
@@ -372,7 +372,7 @@ export default function Home() {
           margin: 26px 0 0;
           font-size: 22px;
           line-height: 1.62;
-          color: rgba(255,255,255,0.72);
+          color: var(--vic-text-secondary);
         }
 
         .quietProof {
@@ -385,9 +385,9 @@ export default function Home() {
         .quietProof span {
           padding: 10px 14px;
           border-radius: 999px;
-          border: 1px solid rgba(255,255,255,0.08);
-          background: rgba(255,255,255,0.04);
-          color: rgba(255,255,255,0.8);
+          border: 1px solid rgba(219, 234, 254, 0.7);
+          background: rgba(238, 244, 248, 0.82);
+          color: var(--vic-text-secondary);
           font-size: 14px;
         }
 
@@ -410,8 +410,8 @@ export default function Home() {
         .primaryButton {
           border-radius: 18px;
           padding: 16px 26px;
-          color: white;
-          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
+          color: var(--vic-surface);
+          background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
           box-shadow: 0 16px 44px rgba(97,113,255,0.32);
         }
 
@@ -427,9 +427,9 @@ export default function Home() {
           justify-content: center;
           border-radius: 999px;
           padding: 12px 16px;
-          color: rgba(255,255,255,0.92);
+          color: var(--vic-text-primary);
           border: 1px solid rgba(255,255,255,0.2);
-          background: rgba(255,255,255,0.05);
+          background: rgba(238, 244, 248, 0.85);
           text-decoration: none;
           font-size: 13px;
           font-weight: 700;
@@ -462,11 +462,11 @@ export default function Home() {
           z-index: 2;
           border-radius: 38px;
           padding: 14px;
-          background: linear-gradient(180deg, #161616 0%, #0b0b0b 100%);
-          border: 1px solid rgba(255,255,255,0.08);
+          background: linear-gradient(180deg, var(--vic-surface) 0%, var(--vic-surface-muted) 100%);
+          border: 1px solid rgba(219, 234, 254, 0.7);
           box-shadow:
             0 30px 80px rgba(0,0,0,0.44),
-            inset 0 1px 0 rgba(255,255,255,0.05);
+            inset 0 1px 0 rgba(238, 244, 248, 0.85);
         }
 
         .phoneTop {
@@ -488,14 +488,14 @@ export default function Home() {
           font-size: 14px;
           font-weight: 800;
           letter-spacing: 0.04em;
-          color: rgba(255,255,255,0.9);
+          color: var(--vic-text-primary);
         }
 
         .previewCard {
           border-radius: 28px;
           overflow: hidden;
           background: #f5f7fb;
-          color: #101418;
+          color: var(--vic-text-primary);
           min-height: 620px;
           display: flex;
           flex-direction: column;
@@ -513,17 +513,17 @@ export default function Home() {
         .inputLabel {
           font-size: 22px;
           font-weight: 800;
-          color: #132033;
+          color: var(--vic-text-primary);
         }
 
         .askForm textarea {
           width: 100%;
-          border: 1px solid #dde6f3;
+          border: 1px solid var(--vic-border);
           border-radius: 16px;
           outline: none;
           resize: none;
-          background: #ffffff;
-          color: #17212b;
+          background: var(--vic-surface);
+          color: var(--vic-text-primary);
           font-size: 15px;
           line-height: 1.55;
           min-height: 180px;
@@ -531,14 +531,14 @@ export default function Home() {
         }
 
         .askForm textarea::placeholder {
-          color: #8b96a8;
+          color: var(--vic-text-secondary);
         }
 
         .askButton {
           border-radius: 14px;
           padding: 15px 16px;
-          color: white;
-          background: linear-gradient(135deg, #6675ff 0%, #7a60ff 58%, #4f7cff 100%);
+          color: var(--vic-surface);
+          background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
           box-shadow: 0 10px 24px rgba(97,113,255,0.22);
         }
 
@@ -573,34 +573,34 @@ export default function Home() {
           margin: 0;
           font-size: 15px;
           line-height: 1.6;
-          white-space: pre-wrap;
+          var(--vic-surface)-space: pre-wrap;
         }
 
         .userBubble {
-          background: #ffffff;
-          border: 1px solid #e3e9f3;
-          color: #17212b;
+          background: var(--vic-surface);
+          border: 1px solid var(--vic-border);
+          color: var(--vic-text-primary);
         }
 
         .userBubble .bubbleLabel {
-          color: #7a8798;
+          color: var(--vic-text-secondary);
         }
 
         .vicBubble {
-          background: linear-gradient(135deg, #edf1ff 0%, #e5ebff 100%);
-          border: 1px solid #d2ddff;
-          color: #1f2950;
+          background: linear-gradient(135deg, var(--vic-primary-soft) 0%, var(--vic-primary-soft) 100%);
+          border: 1px solid var(--vic-border);
+          color: var(--vic-text-primary);
         }
 
         .vicBubble .bubbleLabel {
-          color: #5670d8;
+          color: var(--vic-primary);
         }
 
         .continueButton {
           margin-top: auto;
           border-radius: 14px;
           padding: 15px 16px;
-          color: white;
+          color: var(--vic-surface);
           background: #0f0f12;
           box-shadow: 0 10px 24px rgba(0,0,0,0.16);
         }
@@ -609,7 +609,7 @@ export default function Home() {
           margin-top: 26px;
           text-align: center;
           font-size: 13px;
-          color: rgba(255,255,255,0.42);
+          color: var(--vic-disabled);
           padding-bottom: 8px;
         }
 
