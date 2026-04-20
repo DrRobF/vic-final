@@ -216,7 +216,7 @@ export default function Home() {
           border-radius: 999px;
           filter: blur(120px);
           pointer-events: none;
-          opacity: 0.35;
+          opacity: 0.22;
         }
 
         .ambientLeft {
@@ -241,7 +241,7 @@ export default function Home() {
           background-image:
             linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-          background-size: 56px 56px;
+          background-size: 72px 72px;
           mask-image: linear-gradient(180deg, rgba(15,23,42,0.12), transparent 84%);
           pointer-events: none;
         }
@@ -250,29 +250,29 @@ export default function Home() {
           position: relative;
           z-index: 1;
           width: 100%;
-          max-width: 1320px;
+          max-width: 1240px;
           margin: 0 auto;
-          padding: 36px 28px 42px;
+          padding: 32px 28px 48px;
         }
 
         .hero {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 460px;
-          gap: 56px;
+          grid-template-columns: minmax(0, 1fr) 430px;
+          gap: 44px;
           align-items: start;
           min-height: calc(100vh - 120px);
         }
 
         .heroLeft {
-          padding-top: 6px;
-          max-width: 760px;
+          padding-top: 14px;
+          max-width: 700px;
         }
 
         .brandBlock {
           display: flex;
           align-items: center;
           gap: 20px;
-          margin-bottom: 28px;
+          margin-bottom: 22px;
         }
 
         .logoStage {
@@ -346,7 +346,7 @@ export default function Home() {
         }
 
         .eyebrow {
-          margin-bottom: 18px;
+          margin-bottom: 14px;
           font-size: 13px;
           letter-spacing: 0.17em;
           text-transform: uppercase;
@@ -355,8 +355,8 @@ export default function Home() {
 
         .headline {
           margin: 0;
-          font-size: clamp(46px, 5.8vw, 76px);
-          line-height: 1.02;
+          font-size: clamp(48px, 5.2vw, 72px);
+          line-height: 0.98;
           letter-spacing: -0.045em;
           font-weight: 800;
           max-width: 760px;
@@ -369,17 +369,17 @@ export default function Home() {
 
         .subtext {
           max-width: 620px;
-          margin: 26px 0 0;
-          font-size: 20px;
-          line-height: 1.62;
-          color: var(--vic-text-secondary);
+          margin: 18px 0 0;
+          font-size: 19px;
+          line-height: 1.55;
+          color: var(--vic-text-primary);
         }
 
         .quietProof {
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
-          margin-top: 30px;
+          margin-top: 24px;
         }
 
         .quietProof span {
@@ -392,7 +392,7 @@ export default function Home() {
         }
 
         .heroActions {
-          margin-top: 34px;
+          margin-top: 28px;
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
@@ -408,11 +408,11 @@ export default function Home() {
         }
 
         .primaryButton {
-          border-radius: 18px;
-          padding: 16px 26px;
-          color: var(--vic-text-primary);
+          border-radius: 12px;
+          padding: 14px 22px;
+          color: var(--vic-surface);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
-          box-shadow: var(--vic-shadow-card);
+          box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
         }
 
         .primaryButton:hover,
@@ -425,13 +425,13 @@ export default function Home() {
           display: inline-flex;
           align-items: center;
           justify-content: center;
-          border-radius: 999px;
-          padding: 12px 16px;
+          border-radius: 10px;
+          padding: 10px 14px;
           color: var(--vic-text-primary);
           border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface-muted);
           text-decoration: none;
-          font-size: 13px;
+          font-size: 12px;
           font-weight: 700;
         }
 
@@ -439,13 +439,13 @@ export default function Home() {
           display: flex;
           justify-content: flex-end;
           align-items: flex-start;
-          padding-top: 10px;
+          padding-top: 0;
         }
 
         .previewWrap {
           position: relative;
           width: 100%;
-          max-width: 410px;
+          max-width: 430px;
         }
 
         .previewGlow {
@@ -460,8 +460,8 @@ export default function Home() {
         .phoneShell {
           position: relative;
           z-index: 2;
-          border-radius: 38px;
-          padding: 14px;
+          border-radius: 24px;
+          padding: 12px;
           background: linear-gradient(180deg, var(--vic-surface) 0%, var(--vic-surface-muted) 100%);
           border: 1px solid var(--vic-border-soft);
           box-shadow: var(--vic-shadow-raised);
@@ -490,26 +490,26 @@ export default function Home() {
         }
 
         .previewCard {
-          border-radius: 28px;
+          border-radius: 16px;
           overflow: hidden;
           background: #f8fbff;
           color: var(--vic-text-primary);
-          min-height: 620px;
+          min-height: 600px;
           display: flex;
           flex-direction: column;
         }
 
         .askForm,
         .responseView {
-          padding: 18px;
+          padding: 16px;
           display: flex;
           flex-direction: column;
           gap: 14px;
-          min-height: 620px;
+          min-height: 600px;
         }
 
         .inputLabel {
-          font-size: 20px;
+          font-size: 18px;
           font-weight: 800;
           color: var(--vic-text-primary);
         }
@@ -517,7 +517,7 @@ export default function Home() {
         .askForm textarea {
           width: 100%;
           border: 1px solid var(--vic-border);
-          border-radius: 16px;
+          border-radius: 12px;
           outline: none;
           resize: none;
           background: var(--vic-surface);
@@ -533,9 +533,9 @@ export default function Home() {
         }
 
         .askButton {
-          border-radius: 14px;
+          border-radius: 10px;
           padding: 15px 16px;
-          color: var(--vic-text-primary);
+          color: var(--vic-surface);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
           box-shadow: 0 10px 24px rgba(97,113,255,0.22);
         }
@@ -596,15 +596,15 @@ export default function Home() {
 
         .continueButton {
           margin-top: auto;
-          border-radius: 14px;
+          border-radius: 10px;
           padding: 15px 16px;
-          color: var(--vic-text-primary);
+          color: var(--vic-surface);
           background: var(--vic-primary);
           box-shadow: 0 10px 24px rgba(0,0,0,0.16);
         }
 
         .footer {
-          margin-top: 26px;
+          margin-top: 34px;
           text-align: center;
           font-size: 13px;
           color: var(--vic-text-muted);
@@ -614,7 +614,7 @@ export default function Home() {
         @media (max-width: 1100px) {
           .hero {
             grid-template-columns: 1fr;
-            gap: 32px;
+            gap: 30px;
             min-height: auto;
           }
 

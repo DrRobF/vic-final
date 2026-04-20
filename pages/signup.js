@@ -224,62 +224,64 @@ export default function SignupPage() {
           min-height: 100vh;
           background: linear-gradient(180deg, var(--vic-bg) 0%, #e9f0f9 100%);
           color: var(--vic-text-primary);
-          padding: 28px 16px;
+          padding: 34px 16px;
         }
         .signupShell {
-          max-width: 920px;
+          max-width: 1040px;
           margin: 0 auto;
         }
         .card {
-          max-width: 560px;
+          max-width: 580px;
           border: 1px solid var(--vic-border-soft);
-          border-radius: 18px;
+          border-radius: 14px;
           background: var(--vic-surface);
-          padding: 28px;
+          padding: 36px 34px;
           box-shadow: var(--vic-shadow-raised);
         }
         h1 {
           margin: 0;
-          font-size: 34px;
-          line-height: 1.15;
-          font-weight: 800;
+          font-size: 38px;
+          line-height: 1.08;
+          font-weight: 850;
         }
         .subText {
-          margin: 10px 0 0;
-          font-size: 15px;
-          color: rgba(71, 85, 105, 0.92);
+          margin: 12px 0 0;
+          font-size: 16px;
+          color: var(--vic-text-secondary);
         }
         .form {
           display: grid;
-          gap: 12px;
-          margin-top: 22px;
+          gap: 10px;
+          margin-top: 28px;
         }
         label {
           font-size: 13px;
           color: var(--vic-text-primary);
-          margin-top: 4px;
+          margin-top: 8px;
+          font-weight: 600;
         }
         input,
         select,
         button {
           font: inherit;
-          border-radius: 12px;
+          border-radius: 10px;
         }
         input,
         select {
           border: 1px solid var(--vic-border-soft);
           background: #f8fbff;
           color: var(--vic-text-primary);
-          padding: 12px 14px;
+          padding: 11px 13px;
         }
         .primaryButton {
-          margin-top: 10px;
+          margin-top: 16px;
           border: 1px solid rgba(37, 99, 235, 0.45);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
           color: var(--vic-surface);
           font-weight: 700;
           letter-spacing: 0.01em;
-          padding: 12px 16px;
+          padding: 13px 16px;
+          border-radius: 10px;
           cursor: pointer;
           box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
           transition: transform 0.12s ease, filter 0.12s ease;
@@ -296,7 +298,7 @@ export default function SignupPage() {
           box-shadow: none;
         }
         .mutedLine {
-          margin: 18px 0 0;
+          margin: 22px 0 0;
           color: var(--vic-text-secondary);
         }
         a {
