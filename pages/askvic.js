@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import VICHeader from '../components/VICHeader'
 
 const BRAIN_VERSION = 'v3.3'
+const SKETCH_BG_COLOR = '#f8fafc'
+const SKETCH_INK_COLOR = '#0f172a'
 
 const INITIAL_MESSAGES = [
   {
@@ -271,7 +273,7 @@ export default function AskVIC() {
 
       const ctx = canvas.getContext('2d')
       if (!ctx) return
-      ctx.fillStyle = 'var(--vic-surface)'
+      ctx.fillStyle = SKETCH_BG_COLOR
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
@@ -512,7 +514,7 @@ export default function AskVIC() {
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.lineWidth = isErasingRef.current ? 18 : 3
-    ctx.strokeStyle = isErasingRef.current ? 'var(--vic-surface)' : '#0f172a'
+    ctx.strokeStyle = isErasingRef.current ? SKETCH_BG_COLOR : SKETCH_INK_COLOR
     isDrawingRef.current = true
   }
 
@@ -543,7 +545,7 @@ export default function AskVIC() {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = 'var(--vic-surface)'
+    ctx.fillStyle = SKETCH_BG_COLOR
     ctx.fillRect(0, 0, canvas.width, canvas.height)
   }
 
@@ -1488,8 +1490,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     rightColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: isCompact ? 'auto minmax(520px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
-      gap: isMobile ? '10px' : '10px',
+      gridTemplateRows: isCompact ? 'auto minmax(580px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
+      gap: isMobile ? '8px' : '8px',
       overflow: 'hidden',
     },
 
@@ -1823,14 +1825,14 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       flexShrink: 0,
     },
 
-      sketchCanvasWrap: {
+    sketchCanvasWrap: {
       width: '100%',
       minHeight: isMobile ? '340px' : sketchExpanded ? '78vh' : '560px',
       height: isMobile ? '340px' : sketchExpanded ? '78vh' : '560px',
       maxHeight: isMobile ? '340px' : '900px',
       borderRadius: '18px',
       border: '1px solid var(--vic-border)',
-      background: 'var(--vic-surface)',
+      background: SKETCH_BG_COLOR,
       overflow: 'hidden',
       boxSizing: 'border-box',
       flexShrink: 0,
@@ -1954,14 +1956,14 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: 0,
       borderRadius: '18px',
       border: '1px solid var(--vic-border)',
-      background: 'var(--vic-surface)',
+      background: SKETCH_BG_COLOR,
       overflow: 'hidden',
     },
     sketchCanvas: {
       width: '100%',
       height: '100%',
       display: 'block',
-      background: 'var(--vic-surface)',
+      background: SKETCH_BG_COLOR,
       touchAction: 'none',
       boxSizing: 'border-box',
     },
@@ -2353,11 +2355,11 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     chatCard: {
-      minHeight: isCompact ? '68vh' : 0,
+      minHeight: isCompact ? '74vh' : 0,
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
-      padding: isMobile ? '12px' : '14px',
+      padding: isMobile ? '10px' : '12px',
       boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
@@ -2370,8 +2372,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: '16px',
-      marginBottom: '8px',
-      paddingBottom: '8px',
+      marginBottom: '6px',
+      paddingBottom: '6px',
       borderBottom: '1px solid var(--vic-border-soft)',
       flexShrink: 0,
       flexWrap: 'wrap',
@@ -2414,7 +2416,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       display: 'flex',
       background: 'var(--vic-surface)',
       borderRadius: '10px',
-      padding: isMobile ? '10px' : '10px',
+      padding: isMobile ? '8px' : '8px',
       border: '1px solid var(--vic-border-soft)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95)',
       overflow: 'hidden',
@@ -2488,12 +2490,12 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
-      padding: isMobile ? '10px' : '12px',
+      padding: isMobile ? '8px' : '10px',
       boxShadow:
         '0 18px 42px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
+      gap: '6px',
       flexShrink: 0,
     },
 
@@ -2521,7 +2523,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     mainTextarea: {
       width: '100%',
-      minHeight: isMobile ? '72px' : '72px',
+      minHeight: isMobile ? '64px' : '64px',
       resize: 'vertical',
       borderRadius: '10px',
       border: '1px solid var(--vic-border)',
