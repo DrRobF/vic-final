@@ -185,7 +185,7 @@ export default function Home() {
           min-height: 100%;
           font-family: Inter, Arial, sans-serif;
           background: var(--vic-bg);
-          color: var(--vic-text-primary);
+          color: #4b5f79;
         }
 
         * {
@@ -194,10 +194,7 @@ export default function Home() {
 
         body {
           overflow-x: hidden;
-          background:
-            radial-gradient(circle at top left, rgba(74, 101, 255, 0.1), transparent 24%),
-            radial-gradient(circle at bottom right, rgba(103, 72, 255, 0.08), transparent 26%),
-            linear-gradient(180deg, var(--vic-bg) 0%, var(--vic-surface-muted) 48%, var(--vic-bg) 100%);
+          background: linear-gradient(180deg, #e8eff8 0%, #edf3fb 52%, #e7edf5 100%);
         }
 
         button,
@@ -332,17 +329,17 @@ export default function Home() {
 
         .brandName {
           font-size: 40px;
-          font-weight: 800;
+          font-weight: 900;
           letter-spacing: 0.02em;
           line-height: 1;
-          color: var(--vic-text-primary);
+          color: #4b5f79;
         }
 
         .brandSub {
           font-size: 14px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
-          color: var(--vic-text-secondary);
+          color: #4b5f79;
         }
 
         .eyebrow {
@@ -355,24 +352,24 @@ export default function Home() {
 
         .headline {
           margin: 0;
-          font-size: clamp(48px, 5.2vw, 72px);
+          font-size: clamp(54px, 5.8vw, 82px);
           line-height: 0.98;
           letter-spacing: -0.045em;
-          font-weight: 800;
+          font-weight: 900;
           max-width: 760px;
         }
 
         .headline span {
           display: block;
-          color: var(--vic-text-primary);
+          color: #0b1220;
         }
 
         .subtext {
           max-width: 620px;
-          margin: 18px 0 0;
+          margin: 20px 0 0;
           font-size: 19px;
           line-height: 1.55;
-          color: var(--vic-text-primary);
+          color: #4b5f79;
         }
 
         .quietProof {
@@ -385,9 +382,9 @@ export default function Home() {
         .quietProof span {
           padding: 10px 14px;
           border-radius: 999px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface-muted);
-          color: var(--vic-text-secondary);
+          border: 1px solid #d2def0;
+          background: #f5f8ff;
+          color: #4b5f79;
           font-size: 14px;
         }
 
@@ -403,16 +400,16 @@ export default function Home() {
         .continueButton {
           border: none;
           cursor: pointer;
-          font-weight: 800;
+          font-weight: 900;
           transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
         }
 
         .primaryButton {
           border-radius: 12px;
-          padding: 14px 22px;
+          padding: 14px 24px;
           color: var(--vic-surface);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
-          box-shadow: 0 14px 28px rgba(37, 99, 235, 0.24);
+          box-shadow: 0 14px 30px rgba(29, 78, 216, 0.34);
         }
 
         .primaryButton:hover,
@@ -427,9 +424,9 @@ export default function Home() {
           justify-content: center;
           border-radius: 10px;
           padding: 10px 14px;
-          color: var(--vic-text-primary);
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface-muted);
+          color: #4b5f79;
+          border: 1px solid #d2def0;
+          background: #f5f8ff;
           text-decoration: none;
           font-size: 12px;
           font-weight: 700;
@@ -462,8 +459,8 @@ export default function Home() {
           z-index: 2;
           border-radius: 24px;
           padding: 12px;
-          background: linear-gradient(180deg, var(--vic-surface) 0%, var(--vic-surface-muted) 100%);
-          border: 1px solid var(--vic-border-soft);
+          background: linear-gradient(180deg, #ffffff 0%, #f0f5fd 100%);
+          border: 1px solid #c9d7eb;
           box-shadow: var(--vic-shadow-raised);
         }
 
@@ -484,17 +481,17 @@ export default function Home() {
 
         .phoneTitle {
           font-size: 14px;
-          font-weight: 800;
+          font-weight: 900;
           letter-spacing: 0.04em;
-          color: var(--vic-text-primary);
+          color: #4b5f79;
         }
 
         .previewCard {
           border-radius: 16px;
           overflow: hidden;
-          background: #f8fbff;
-          color: var(--vic-text-primary);
-          min-height: 600px;
+          background: #ffffff;
+          color: #4b5f79;
+          min-height: 620px;
           display: flex;
           flex-direction: column;
         }
@@ -505,23 +502,23 @@ export default function Home() {
           display: flex;
           flex-direction: column;
           gap: 14px;
-          min-height: 600px;
+          min-height: 620px;
         }
 
         .inputLabel {
           font-size: 18px;
-          font-weight: 800;
-          color: var(--vic-text-primary);
+          font-weight: 900;
+          color: #4b5f79;
         }
 
         .askForm textarea {
           width: 100%;
-          border: 1px solid var(--vic-border);
+          border: 1px solid #b9c9de;
           border-radius: 12px;
           outline: none;
           resize: none;
           background: var(--vic-surface);
-          color: var(--vic-text-primary);
+          color: #4b5f79;
           font-size: 15px;
           line-height: 1.55;
           min-height: 180px;
@@ -529,7 +526,7 @@ export default function Home() {
         }
 
         .askForm textarea::placeholder {
-          color: var(--vic-text-secondary);
+          color: #4b5f79;
         }
 
         .askButton {
@@ -537,7 +534,7 @@ export default function Home() {
           padding: 15px 16px;
           color: var(--vic-surface);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
-          box-shadow: 0 10px 24px rgba(97,113,255,0.22);
+          box-shadow: 0 12px 26px rgba(29,78,216,0.28);
         }
 
         .askButton:disabled {
@@ -564,7 +561,7 @@ export default function Home() {
           letter-spacing: 0.13em;
           text-transform: uppercase;
           margin-bottom: 6px;
-          font-weight: 800;
+          font-weight: 900;
         }
 
         .bubble p {
@@ -576,18 +573,18 @@ export default function Home() {
 
         .userBubble {
           background: var(--vic-surface);
-          border: 1px solid var(--vic-border);
-          color: var(--vic-text-primary);
+          border: 1px solid #b9c9de;
+          color: #4b5f79;
         }
 
         .userBubble .bubbleLabel {
-          color: var(--vic-text-secondary);
+          color: #4b5f79;
         }
 
         .vicBubble {
           background: linear-gradient(135deg, var(--vic-primary-soft) 0%, var(--vic-primary-soft) 100%);
-          border: 1px solid var(--vic-border);
-          color: var(--vic-text-primary);
+          border: 1px solid #b9c9de;
+          color: #4b5f79;
         }
 
         .vicBubble .bubbleLabel {

@@ -767,7 +767,7 @@ export default function TeacherPage() {
         .teacherPage {
           font-family: Inter, system-ui, sans-serif;
           min-height: 100vh;
-          background: var(--vic-bg);
+          background: #f2f6fc;
           color: var(--vic-text-primary);
           padding: 30px 16px 54px;
         }
@@ -797,7 +797,7 @@ export default function TeacherPage() {
           color: var(--vic-text-primary);
         }
         .card {
-          border: 1px solid var(--vic-border-soft);
+          border: 1px solid transparent;
           border-radius: 14px;
           background: var(--vic-surface);
           box-shadow: var(--vic-shadow-card);
@@ -814,7 +814,7 @@ export default function TeacherPage() {
         .heroCard {
           display: grid;
           gap: 18px;
-          border-color: var(--vic-border);
+          border-color: transparent;
           box-shadow: var(--vic-shadow-raised);
         }
         .heroHeaderRow {
@@ -848,8 +848,8 @@ export default function TeacherPage() {
         }
         .commandPrimary {
           border-radius: 14px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface);
+          border: 1px solid transparent;
+          background: #ffffff;
           padding: 16px;
           display: grid;
           gap: 10px;
@@ -863,8 +863,8 @@ export default function TeacherPage() {
         }
         .innerCard {
           border-radius: 12px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface);
+          border: 1px solid transparent;
+          background: #ffffff;
           color: var(--vic-text-primary);
           padding: 18px;
           display: grid;
@@ -921,8 +921,8 @@ export default function TeacherPage() {
         :global(.teacherPage select) {
           width: 100%;
           padding: 12px 14px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface);
+          border: 1px solid transparent;
+          background: #ffffff;
           color: var(--vic-text-primary);
         }
         :global(.teacherPage input::placeholder),
@@ -962,16 +962,17 @@ export default function TeacherPage() {
           padding: 13px 16px;
         }
         .secondaryButton {
-          border: 1px solid var(--vic-border-soft);
+          border: 1px solid #aebfd8;
           color: var(--vic-text-secondary);
-          background: var(--vic-surface-muted);
+          background: #f4f8ff;
         }
         .copyButton {
           width: fit-content;
         }
         .primaryButton:hover,
         .secondaryButton:hover {
-          filter: brightness(1.08);
+          filter: brightness(1.04);
+          transform: translateY(-1px);
         }
         .primaryButton:active,
         .secondaryButton:active {
@@ -994,8 +995,8 @@ export default function TeacherPage() {
           text-align: left;
           padding: 14px;
           border-radius: 11px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface);
+          border: 1px solid transparent;
+          background: #ffffff;
           color: var(--vic-text-primary);
           cursor: pointer;
         }
@@ -1004,11 +1005,11 @@ export default function TeacherPage() {
           gap: 2px;
         }
         .rowButton:hover {
-          background: var(--vic-bg);
+          background: #f2f6fc;
         }
         .selected {
-          background: var(--vic-primary-soft);
-          border-color: rgba(37, 99, 235, 0.55);
+          background: #dce8ff;
+          border-color: rgba(29, 78, 216, 0.7);
           box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
         }
         .rowTitle,
@@ -1105,8 +1106,8 @@ export default function TeacherPage() {
         }
         .classCodeCard {
           border-radius: 14px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface);
+          border: 1px solid transparent;
+          background: #ffffff;
           padding: 16px;
           display: grid;
           gap: 8px;
@@ -1136,8 +1137,8 @@ export default function TeacherPage() {
         }
         .studentTile {
           border-radius: 10px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface);
+          border: 1px solid transparent;
+          background: #ffffff;
           padding: 16px;
           display: flex;
           flex-direction: column;
@@ -1171,9 +1172,9 @@ export default function TeacherPage() {
           min-width: 0;
         }
         .supportButton {
-          border: 1px solid var(--vic-border-soft);
+          border: 1px solid var(--vic-border);
           border-radius: 10px;
-          background: var(--vic-surface);
+          background: #f8fbff;
           color: var(--vic-text-primary);
           padding: 9px 10px;
           font-size: 14px;

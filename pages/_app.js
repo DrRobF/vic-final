@@ -4,13 +4,13 @@ export default function App({ Component, pageProps }) {
       <Component {...pageProps} />
       <style jsx global>{`
         :root {
-          --vic-bg: #eef3f9;
+          --vic-bg: #e7edf5;
           --vic-surface: #ffffff;
-          --vic-surface-muted: #f3f7fd;
-          --vic-surface-subtle: #e7eef8;
-          --vic-primary: #2563eb;
-          --vic-primary-hover: #1d4ed8;
-          --vic-primary-soft: #dbeafe;
+          --vic-surface-muted: #edf3fb;
+          --vic-surface-subtle: #dfe8f5;
+          --vic-primary: #1d4ed8;
+          --vic-primary-hover: #1e40af;
+          --vic-primary-soft: #cfe0ff;
           --vic-success: #15803d;
           --vic-success-soft: #dcfce7;
           --vic-accent: #d97706;
@@ -18,14 +18,14 @@ export default function App({ Component, pageProps }) {
           --vic-danger: #dc2626;
           --vic-danger-soft: #fee2e2;
           --vic-text-primary: #0f172a;
-          --vic-text-secondary: #334155;
-          --vic-text-muted: #64748b;
-          --vic-border: #cbd5e1;
-          --vic-border-soft: #d9e2ef;
+          --vic-text-secondary: #1e293b;
+          --vic-text-muted: #475569;
+          --vic-border: #b6c4d8;
+          --vic-border-soft: #c8d4e5;
           --vic-disabled: #94a3b8;
-          --vic-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.06);
-          --vic-shadow-card: 0 14px 34px rgba(15, 23, 42, 0.08);
-          --vic-shadow-raised: 0 20px 48px rgba(15, 23, 42, 0.1);
+          --vic-shadow-soft: 0 8px 20px rgba(15, 23, 42, 0.08);
+          --vic-shadow-card: 0 14px 30px rgba(15, 23, 42, 0.12);
+          --vic-shadow-raised: 0 20px 44px rgba(15, 23, 42, 0.16);
         }
 
         html,

@@ -271,7 +271,7 @@ export default function AskVIC() {
 
       const ctx = canvas.getContext('2d')
       if (!ctx) return
-      ctx.fillStyle = 'var(--vic-surface)'
+      ctx.fillStyle = '#ffffff'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
       ctx.lineCap = 'round'
       ctx.lineJoin = 'round'
@@ -512,7 +512,7 @@ export default function AskVIC() {
     ctx.lineCap = 'round'
     ctx.lineJoin = 'round'
     ctx.lineWidth = isErasingRef.current ? 18 : 3
-    ctx.strokeStyle = isErasingRef.current ? 'var(--vic-surface)' : 'var(--vic-text-primary)'
+    ctx.strokeStyle = isErasingRef.current ? '#ffffff' : 'var(--vic-text-primary)'
     isDrawingRef.current = true
   }
 
@@ -543,7 +543,7 @@ export default function AskVIC() {
     if (!canvas) return
     const ctx = canvas.getContext('2d')
     ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = 'var(--vic-surface)'
+    ctx.fillStyle = '#ffffff'
     ctx.fillRect(0, 0, canvas.width, canvas.height)
   }
 
@@ -1248,8 +1248,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     page: {
       height: desktopFixedHeight ? '100vh' : 'auto',
       minHeight: '100vh',
-      background:
-        'linear-gradient(180deg, var(--vic-bg) 0%, #eef4fb 100%)',
+      background: 'linear-gradient(180deg, #edf3fb 0%, #e8eff8 100%)',
       color: 'var(--vic-text-primary)',
       fontFamily:
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Helvetica, Arial, sans-serif',
@@ -1346,8 +1345,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       flexWrap: 'wrap',
       padding: isMobile ? '12px 14px' : '14px 18px',
       borderRadius: '22px',
-      background: 'var(--vic-surface)',
-      border: '1px solid var(--vic-border-soft)',
+      background: '#ffffff',
+      border: '1px solid #b8c7dc',
       boxShadow:
         'var(--vic-shadow-card)',
       backdropFilter: 'blur(14px)',
@@ -1476,8 +1475,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       fontWeight: 800,
       padding: isMobile ? '9px 12px' : '10px 14px',
       borderRadius: '12px',
-      background: 'var(--vic-surface-muted)',
-      border: '1px solid var(--vic-border-soft)',
+      background: '#f4f8ff',
+      border: '1px solid #c7d6ea',
       boxShadow: 'inset 0 1px 0 rgba(219, 234, 254, 0.7)',
       whiteSpace: 'nowrap',
     },
@@ -1509,8 +1508,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     heroCard: {
-      background: 'var(--vic-surface)',
-      border: '1px solid var(--vic-border-soft)',
+      background: '#ffffff',
+      border: '1px solid #b8c7dc',
       borderRadius: isMobile ? '16px' : '18px',
       padding: isMobile ? '18px' : '22px',
       boxShadow:
@@ -1719,8 +1718,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     toolsCard: {
       minHeight: 0,
-      background: 'var(--vic-surface-muted)',
-      border: '1px solid var(--vic-border-soft)',
+      background: '#f4f8ff',
+      border: '1px solid #c7d6ea',
       borderRadius: isMobile ? '14px' : '16px',
       padding: isMobile ? '14px' : '16px',
       boxShadow:
@@ -1755,7 +1754,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       position: 'sticky',
       top: 0,
       zIndex: 6,
-      background: 'linear-gradient(180deg, rgba(247, 250, 255, 0.98) 0%, rgba(247, 250, 255, 0.92) 100%)',
+      background: 'linear-gradient(180deg, rgba(244, 248, 255, 0.98) 0%, rgba(244, 248, 255, 0.95) 100%)',
       paddingTop: '2px',
       paddingBottom: '2px',
     },
@@ -1768,8 +1767,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     toolTab: {
       background: 'transparent',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      color: 'var(--vic-text-primary)',
+      border: '1px solid #b7c7de',
+      color: 'var(--vic-text-secondary)',
       padding: '12px 8px',
       borderRadius: '9px',
       fontSize: isMobile ? '14px' : '13px',
@@ -1779,15 +1778,15 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     toolTabActive: {
-      background: 'var(--vic-surface)',
-      border: '1px solid rgba(37, 99, 235, 0.42)',
-      color: 'var(--vic-text-primary)',
+      background: 'var(--vic-primary)',
+      border: '1px solid var(--vic-primary)',
+      color: '#ffffff',
       padding: '12px 8px',
       borderRadius: '9px',
       fontSize: isMobile ? '14px' : '13px',
       lineHeight: 1,
       fontWeight: 800,
-      boxShadow: '0 8px 20px rgba(37, 99, 235, 0.14)',
+      boxShadow: '0 10px 24px rgba(29, 78, 216, 0.3)',
       cursor: 'pointer',
     },
 
@@ -1815,7 +1814,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     supportButton: {
       background: 'linear-gradient(135deg, rgba(238, 244, 248, 0.88), rgba(37, 99, 235,0.05))',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
+      border: '1px solid rgba(179, 197, 223, 0.45)',
       color: 'var(--vic-text-primary)',
       padding: '11px 12px',
       borderRadius: '14px',
@@ -1827,13 +1826,13 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     supportButtonActive: {
       background:
         'linear-gradient(135deg, rgba(37, 99, 235,0.24) 0%, rgba(245, 158, 11,0.10) 100%)',
-      border: '1px solid rgba(206, 170, 255, 0.24)',
+      border: '1px solid rgba(29, 78, 216, 0.28)',
       color: 'var(--vic-text-primary)',
       padding: '11px 12px',
       borderRadius: '14px',
       fontSize: '13px',
       fontWeight: 800,
-      boxShadow: '0 8px 20px rgba(37, 99, 235, 0.14)',
+      boxShadow: '0 10px 24px rgba(29, 78, 216, 0.3)',
       cursor: 'pointer',
     },
 
@@ -1850,18 +1849,29 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       height: isMobile ? '340px' : sketchExpanded ? '78vh' : '560px',
       maxHeight: isMobile ? '340px' : '900px',
       borderRadius: '18px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'var(--vic-surface)',
+      border: '1px solid #b8c7dc',
+      background: '#ffffff',
       overflow: 'hidden',
       boxSizing: 'border-box',
       flexShrink: 0,
       position: 'relative',
       zIndex: 1,
     },
+    supportButtonWhite: {
+      background: '#f5f8ff',
+      border: '1px solid #b3c5df',
+      color: 'var(--vic-text-secondary)',
+      padding: '12px 14px',
+      borderRadius: '10px',
+      fontSize: '13px',
+      fontWeight: 800,
+      cursor: 'pointer',
+    },
+
     supportButtonWhiteStrong: {
-      background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(244,247,255,1) 100%)',
-      border: '2px solid rgba(37, 99, 235, 0.45)',
-      color: 'var(--vic-primary)',
+      background: 'linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 100%)',
+      border: '1px solid var(--vic-primary)',
+      color: '#ffffff',
       padding: '12px 14px',
       borderRadius: '10px',
       fontSize: '13px',
@@ -1871,8 +1881,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     sketchToolButton: {
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'var(--vic-surface)',
+      border: '1px solid #b8c7dc',
+      background: '#ffffff',
       color: 'var(--vic-text-primary)',
       padding: '9px 12px',
       borderRadius: '12px',
@@ -1888,7 +1898,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       width: '38px',
       height: '38px',
       border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'rgba(255,255,255,0.96)',
+      background: '#ffffff',
       color: 'var(--vic-text-primary)',
       borderRadius: '10px',
       fontSize: '20px',
@@ -1910,8 +1920,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       maxWidth: '920px',
       minWidth: isMobile ? '0' : '620px',
       zIndex: 9999,
-      background: 'var(--vic-surface)',
-      border: '1px solid var(--vic-border-soft)',
+      background: '#ffffff',
+      border: '1px solid #b8c7dc',
       borderRadius: '22px',
       boxShadow: '0 24px 60px rgba(0,0,0,0.40)',
       backdropFilter: 'blur(16px)',
@@ -1937,7 +1947,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     sketchOverlayCloseButton: {
       border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'rgba(255,255,255,0.96)',
+      background: '#ffffff',
       color: 'var(--vic-text-primary)',
       padding: '8px 12px',
       borderRadius: '10px',
@@ -1949,8 +1959,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     sketchSendButton: {
       border: '1px solid rgba(37, 99, 235, 0.35)',
-      background: 'linear-gradient(135deg, rgba(37, 99, 235,0.25), rgba(245, 158, 11,0.10))',
-      color: 'var(--vic-text-primary)',
+      background: 'linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 100%)',
+      color: '#ffffff',
       padding: '8px 12px',
       borderRadius: '10px',
       fontSize: '13px',
@@ -1963,15 +1973,15 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       flex: 1,
       minHeight: 0,
       borderRadius: '18px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'var(--vic-surface)',
+      border: '1px solid #b8c7dc',
+      background: '#ffffff',
       overflow: 'hidden',
     },
     sketchCanvas: {
       width: '100%',
       height: '100%',
       display: 'block',
-      background: 'var(--vic-surface)',
+      background: '#ffffff',
       touchAction: 'none',
       boxSizing: 'border-box',
     },
@@ -1981,7 +1991,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       padding: '14px',
       background:
         'linear-gradient(135deg, rgba(37, 99, 235,0.10), rgba(245, 158, 11,0.04))',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
+      border: '1px solid rgba(179, 197, 223, 0.45)',
       boxShadow: '0 0 18px rgba(37, 99, 235,0.06)',
       display: 'flex',
       flexDirection: 'column',
@@ -2016,8 +2026,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       borderRadius: '18px',
       padding: '14px',
       marginTop: '4px',
-      background: 'var(--vic-surface-muted)',
-      border: '1px solid var(--vic-border-soft)',
+      background: '#f4f8ff',
+      border: '1px solid #c7d6ea',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
@@ -2147,7 +2157,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     reportButton: {
-      border: '1px solid rgba(206, 170, 255, 0.24)',
+      border: '1px solid rgba(29, 78, 216, 0.28)',
       background: 'linear-gradient(135deg, rgba(255,255,255,0.14), rgba(37, 99, 235,0.12))',
       color: 'var(--vic-text-primary)',
       padding: '10px 14px',
@@ -2163,7 +2173,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     reportButtonDisabled: {
       border: '1px solid rgba(219, 234, 254, 0.7)',
       background: 'linear-gradient(135deg, rgba(238, 244, 248, 0.88), rgba(37, 99, 235,0.05))',
-      color: '#9d8dc4',
+      color: 'var(--vic-disabled)',
       padding: '10px 14px',
       borderRadius: '14px',
       fontSize: '14px',
@@ -2180,7 +2190,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     toolToggle: {
       background: 'linear-gradient(135deg, rgba(238, 244, 248, 0.88), rgba(37, 99, 235,0.05))',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
+      border: '1px solid rgba(179, 197, 223, 0.45)',
       color: 'var(--vic-text-primary)',
       padding: '12px 14px',
       borderRadius: '15px',
@@ -2192,13 +2202,13 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     toolToggleActive: {
       background:
         'linear-gradient(135deg, rgba(37, 99, 235,0.24) 0%, rgba(245, 158, 11,0.10) 100%)',
-      border: '1px solid rgba(206, 170, 255, 0.24)',
+      border: '1px solid rgba(29, 78, 216, 0.28)',
       color: 'var(--vic-text-primary)',
       padding: '12px 14px',
       borderRadius: '15px',
       fontSize: '14px',
       fontWeight: 800,
-      boxShadow: '0 8px 20px rgba(37, 99, 235, 0.14)',
+      boxShadow: '0 10px 24px rgba(29, 78, 216, 0.3)',
       cursor: 'pointer',
     },
 
@@ -2222,7 +2232,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     practiceHintDarkText: {
       fontSize: '12px',
-      color: '#5b6072',
+      color: 'var(--vic-text-secondary)',
       lineHeight: 1.4,
     },
 
@@ -2250,8 +2260,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: isMobile ? '160px' : '220px',
       resize: 'vertical',
       borderRadius: '16px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'var(--vic-surface)',
+      border: '1px solid #b8c7dc',
+      background: '#ffffff',
       color: 'var(--vic-text-primary)',
       padding: '14px',
       boxSizing: 'border-box',
@@ -2262,15 +2272,15 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     toolPanel: {
       borderRadius: '18px',
-      border: '1px solid rgba(206, 170, 255, 0.12)',
+      border: '1px solid rgba(179, 197, 223, 0.35)',
       background: 'rgba(238, 244, 248, 0.82)',
       padding: '14px',
     },
 
     toolPanelWhite: {
       borderRadius: '18px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'var(--vic-surface)',
+      border: '1px solid #b8c7dc',
+      background: '#ffffff',
       padding: '14px',
       boxShadow: '0 12px 26px rgba(0,0,0,0.12)',
     },
@@ -2296,7 +2306,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     smallButton: {
-      border: '1px solid rgba(206, 170, 255, 0.20)',
+      border: '1px solid rgba(179, 197, 223, 0.5)',
       background: 'linear-gradient(135deg, rgba(37, 99, 235,0.18), rgba(245, 158, 11,0.08))',
       color: 'var(--vic-text-primary)',
       padding: '10px 14px',
@@ -2314,9 +2324,9 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     smallButtonDark: {
-      border: '1px solid rgba(37, 99, 235, 0.28)',
-      background: 'linear-gradient(135deg, rgba(37, 99, 235,0.12), rgba(245, 158, 11,0.06))',
-      color: 'var(--vic-text-primary)',
+      border: '1px solid var(--vic-primary)',
+      background: 'linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 100%)',
+      color: '#ffffff',
       padding: '10px 14px',
       borderRadius: '12px',
       fontSize: '14px',
@@ -2337,8 +2347,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: isMobile ? '160px' : '220px',
       resize: 'vertical',
       borderRadius: '16px',
-      border: '1px solid rgba(216, 220, 235, 0.95)',
-      background: 'var(--vic-surface)',
+      border: '1px solid #b8c7dc',
+      background: '#ffffff',
       color: 'var(--vic-text-primary)',
       padding: '14px',
       boxSizing: 'border-box',
@@ -2352,7 +2362,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: '120px',
       resize: 'vertical',
       borderRadius: '14px',
-      border: '1px solid rgba(206, 170, 255, 0.14)',
+      border: '1px solid rgba(179, 197, 223, 0.45)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       padding: '12px 14px',
@@ -2406,8 +2416,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     chatCard: {
       minHeight: isCompact ? '320px' : 0,
-      background: 'var(--vic-surface)',
-      border: '1px solid var(--vic-border-soft)',
+      background: '#ffffff',
+      border: '1px solid #b8c7dc',
       borderRadius: isMobile ? '16px' : '18px',
       padding: isMobile ? '18px' : '22px',
       boxShadow:
@@ -2426,7 +2436,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       gap: '12px',
       marginBottom: '12px',
       paddingBottom: '12px',
-      borderBottom: '1px solid rgba(238, 244, 248, 0.88)',
+      borderBottom: '1px solid #d1dced',
       flexShrink: 0,
     },
 
@@ -2467,8 +2477,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       gap: '8px',
       padding: '8px 12px',
       borderRadius: '999px',
-      background: 'rgba(238, 244, 248, 0.85)',
-      border: '1px solid rgba(238, 244, 248, 0.88)',
+      background: '#f2f7ff',
+      border: '1px solid #c7d6ea',
       flexShrink: 0,
     },
 
@@ -2476,8 +2486,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       width: '8px',
       height: '8px',
       borderRadius: '50%',
-      background: '#67e8f9',
-      boxShadow: '0 0 12px rgba(103,232,249,0.8)',
+      background: '#22c55e',
+      boxShadow: '0 0 8px rgba(34,197,94,0.45)',
     },
 
     statusText: {
@@ -2490,10 +2500,10 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       flex: 1,
       minHeight: 0,
       display: 'flex',
-      background: 'var(--vic-surface-muted)',
+      background: '#f5f8ff',
       borderRadius: '12px',
       padding: isMobile ? '16px' : '18px',
-      border: '1px solid rgba(213, 218, 232, 0.8)',
+      border: '1px solid #c8d7ec',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
       overflow: 'hidden',
     },
@@ -2512,8 +2522,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignSelf: 'flex-start',
       maxWidth: isMobile ? '94%' : '82%',
       borderRadius: '14px 14px 14px 6px',
-      background: 'linear-gradient(180deg, #eff6ff 0%, #e6f0ff 100%)',
-      border: '1px solid rgba(219, 234, 254, 0.7)',
+      background: '#ecf4ff',
+      border: '1px solid #c6daf4',
       padding: '16px 16px',
       boxShadow: '0 8px 16px rgba(17,24,39,0.08)',
     },
@@ -2522,8 +2532,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignSelf: 'flex-end',
       maxWidth: isMobile ? '94%' : '78%',
       borderRadius: '14px 14px 6px 14px',
-      background: '#e8ecf8',
-      border: '1px solid #d8def0',
+      background: '#ffffff',
+      border: '1px solid #c8d5e8',
       padding: '16px 16px',
       boxShadow: '0 6px 14px rgba(17,24,39,0.06)',
     },
@@ -2564,7 +2574,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     inputCard: {
       background: 'var(--vic-surface)',
-      border: '1px solid var(--vic-border)',
+      border: '1px solid #bccbe0',
       borderRadius: isMobile ? '16px' : '18px',
       padding: isMobile ? '14px' : '16px',
       boxShadow:
@@ -2602,8 +2612,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: isMobile ? '84px' : '80px',
       resize: 'vertical',
       borderRadius: '10px',
-      border: '1px solid var(--vic-border-soft)',
-      background: 'var(--vic-surface)',
+      border: '1px solid #b6c6dd',
+      background: '#ffffff',
       color: 'var(--vic-text-primary)',
       padding: '14px 15px',
       boxSizing: 'border-box',
@@ -2622,7 +2632,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     sendButton: {
-      border: '1px solid rgba(206, 170, 255, 0.18)',
+      border: '1px solid var(--vic-primary)',
       background: 'linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 100%)',
       color: 'var(--vic-surface)',
       padding: isMobile ? '12px 16px' : '12px 18px',
@@ -2630,7 +2640,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       fontSize: '15px',
       fontWeight: 800,
       minWidth: isMobile ? '100%' : '120px',
-      boxShadow: '0 0 20px rgba(37, 99, 235,0.12)',
+      boxShadow: '0 12px 24px rgba(29,78,216,0.28)',
     },
 
     visualIdleCard: {
