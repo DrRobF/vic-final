@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useRouter } from "next/router";
 import VICHeader from "../components/VICHeader";
+import VICLogo from "../components/VICLogo";
 
 export default function Home() {
   const router = useRouter();
@@ -65,10 +66,7 @@ export default function Home() {
             <div className="heroLeft">
               <div className="brandBlock">
                 <div className="logoStage">
-                  <div className="logoHalo" />
-                  <div className="logoRing ringOne" />
-                  <div className="logoRing ringTwo" />
-                  <img src="/vic-logo.png" alt="VIC Logo" className="heroLogo" />
+                  <VICLogo size={148} variant="hero" alt="VIC Logo" />
                 </div>
 
                 <div className="brandTextWrap">
@@ -232,52 +230,12 @@ export default function Home() {
         }
 
         .logoStage {
-          position: relative;
-          width: 170px;
-          height: 170px;
+          width: 148px;
+          height: 148px;
           display: flex;
           align-items: center;
           justify-content: center;
           flex-shrink: 0;
-        }
-
-        .logoHalo {
-          position: absolute;
-          width: 150px;
-          height: 150px;
-          border-radius: 50%;
-          background: radial-gradient(
-            circle,
-            rgba(181, 83, 47, 0.24) 0%,
-            rgba(181, 83, 47, 0.08) 45%,
-            transparent 78%
-          );
-          filter: blur(26px);
-        }
-
-        .logoRing {
-          position: absolute;
-          border-radius: 50%;
-          border: 1px solid var(--vic-border-soft);
-        }
-
-        .ringOne {
-          width: 112px;
-          height: 112px;
-        }
-
-        .ringTwo {
-          width: 148px;
-          height: 148px;
-          opacity: 0.5;
-        }
-
-        .heroLogo {
-          position: relative;
-          z-index: 2;
-          width: 110px;
-          height: auto;
-          filter: drop-shadow(0 0 24px rgba(150, 69, 40, 0.26));
         }
 
         .brandTextWrap {
@@ -582,30 +540,6 @@ export default function Home() {
           .brandBlock {
             gap: 14px;
             margin-bottom: 22px;
-          }
-
-          .logoStage {
-            width: 120px;
-            height: 120px;
-          }
-
-          .logoHalo {
-            width: 105px;
-            height: 105px;
-          }
-
-          .ringOne {
-            width: 82px;
-            height: 82px;
-          }
-
-          .ringTwo {
-            width: 108px;
-            height: 108px;
-          }
-
-          .heroLogo {
-            width: 78px;
           }
 
           .brandName {

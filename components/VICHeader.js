@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import VICLogo from './VICLogo'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
@@ -80,7 +81,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
     <header className="vicHeader">
       <a className="brand" href="/">
         <div className="brandMark">
-          <img src="/vic-logo.png" alt="VIC logo" />
+          <VICLogo size={84} variant="header" />
         </div>
         <div>
           <div className="brandTitle">VIC</div>
@@ -147,24 +148,9 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         }
         .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
         .brandMark {
-          width: 72px;
-          height: 72px;
-          border-radius: 16px;
-          background: #efe7dc;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 6px 16px rgba(43,36,31,0.14);
-          border: 1px solid var(--vic-border);
-        }
-        .brand img {
-          width: 60px;
-          height: 60px;
-          border-radius: 12px;
-          background: #fffdfc;
-          border: none;
-          padding: 8px;
-          display: block;
         }
         .brandTitle { font-size: 24px; font-weight: 900; letter-spacing: 0.01em; }
         .brandSub { font-size: 13px; color: var(--vic-text-secondary); font-weight: 700; }
@@ -206,8 +192,6 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
           .vicHeader { padding: 10px 12px; gap: 10px; }
-          .brandMark { width: 64px; height: 64px; border-radius: 14px; }
-          .brand img { width: 52px; height: 52px; border-radius: 10px; padding: 7px; }
           .brandTitle { font-size: 21px; }
           .userArea { margin-left: 0; }
         }

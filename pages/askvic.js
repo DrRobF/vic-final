@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import VICHeader from '../components/VICHeader'
+import VICLogo from '../components/VICLogo'
 
 const BRAIN_VERSION = 'v3.3'
 const SKETCH_BG_COLOR = '#f8fafc'
@@ -619,13 +620,7 @@ ${context}`
       <div style={styles.heroSparkle} />
 
       <div style={styles.heroTop}>
-        <div style={styles.logoImageWrap}>
-          <img
-            src="/vic-logo.png"
-            alt="VIC Virtual Co-Teacher logo"
-            style={styles.logoImage}
-          />
-        </div>
+        <VICLogo size={isMobile ? 92 : 96} variant="hero" alt="VIC Virtual Co-Teacher logo" />
 
         <div style={styles.heroTextWrap}>
           <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
@@ -1005,7 +1000,7 @@ function VisualCardRenderer({ visual, styles }) {
       <div style={styles.visualIdleCard}>
         <div style={styles.visualIdleGlow} />
         <div style={styles.visualIdleInner}>
-          <img src="/vic-logo.png" alt="VIC logo" style={styles.visualIdleLogo} />
+          <VICLogo size={62} variant="card" alt="VIC logo" />
           <div style={styles.visualIdleTextWrap}>
             <div style={styles.visualIdleTitle}>Visual support will appear here</div>
             <div style={styles.visualIdleText}>
@@ -1521,30 +1516,9 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     heroTop: {
       display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '86px 1fr',
+      gridTemplateColumns: isMobile ? '1fr' : '96px 1fr',
       gap: isMobile ? '12px' : '14px',
       alignItems: isMobile ? 'start' : 'center',
-    },
-
-    logoImageWrap: {
-      width: isMobile ? '82px' : '86px',
-      height: isMobile ? '82px' : '86px',
-      background: 'var(--vic-surface)',
-      border: '1px solid var(--vic-border-soft)',
-      borderRadius: '22px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      overflow: 'hidden',
-      boxShadow: '0 10px 26px rgba(15, 23, 42, 0.12)',
-    },
-
-    logoImage: {
-      width: '88%',
-      height: '88%',
-      display: 'block',
-      objectFit: 'contain',
-      transform: 'scale(1.16)',
     },
 
     heroTextWrap: {
@@ -2579,17 +2553,6 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignItems: 'center',
       gap: '12px',
       padding: '14px',
-    },
-
-    visualIdleLogo: {
-      width: '52px',
-      height: '52px',
-      borderRadius: '14px',
-      background: 'var(--vic-surface)',
-      objectFit: 'contain',
-      padding: '4px',
-      boxSizing: 'border-box',
-      flexShrink: 0,
     },
 
     visualIdleTextWrap: {
