@@ -1313,13 +1313,13 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       maxWidth: '1460px',
       height: desktopFixedHeight ? '100vh' : 'auto',
       margin: '0 auto',
-      padding: isMobile ? '14px' : '24px',
+      padding: isMobile ? '12px' : '16px',
       boxSizing: 'border-box',
       position: 'relative',
       zIndex: 1,
       display: 'flex',
       flexDirection: 'column',
-      gap: isMobile ? '14px' : '18px',
+      gap: isMobile ? '10px' : '12px',
     },
 
     topNav: {
@@ -1472,8 +1472,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: 0,
       overflow: 'visible',
       display: 'grid',
-      gridTemplateColumns: isCompact ? '1fr' : '320px minmax(0, 1fr)',
-      gap: isMobile ? '16px' : '28px',
+      gridTemplateColumns: isCompact ? '1fr' : '300px minmax(0, 1fr)',
+      gap: isMobile ? '12px' : '16px',
       overflow: desktopFixedHeight ? 'hidden' : 'visible',
     },
 
@@ -1481,15 +1481,15 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: 0,
       display: 'grid',
       gridTemplateRows: 'auto minmax(0, 1fr)',
-      gap: '24px',
+      gap: '12px',
       overflow: 'hidden',
     },
 
     rightColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: isCompact ? 'auto minmax(420px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
-      gap: isMobile ? '14px' : '16px',
+      gridTemplateRows: isCompact ? 'auto minmax(520px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
+      gap: isMobile ? '10px' : '10px',
       overflow: 'hidden',
     },
 
@@ -1497,7 +1497,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
-      padding: isMobile ? '18px' : '22px',
+      padding: isMobile ? '14px' : '16px',
       boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
@@ -1703,7 +1703,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '14px' : '16px',
-      padding: isMobile ? '14px' : '16px',
+      padding: isMobile ? '12px' : '12px',
       boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
@@ -2353,11 +2353,11 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     chatCard: {
-      minHeight: isCompact ? '62vh' : 0,
+      minHeight: isCompact ? '68vh' : 0,
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
-      padding: isMobile ? '18px' : '22px',
+      padding: isMobile ? '12px' : '14px',
       boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
@@ -2370,8 +2370,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignItems: 'flex-start',
       justifyContent: 'space-between',
       gap: '16px',
-      marginBottom: '14px',
-      paddingBottom: '14px',
+      marginBottom: '8px',
+      paddingBottom: '8px',
       borderBottom: '1px solid var(--vic-border-soft)',
       flexShrink: 0,
       flexWrap: 'wrap',
@@ -2394,7 +2394,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     chatTitle: {
-      fontSize: isMobile ? '26px' : '30px',
+      fontSize: isMobile ? '23px' : '26px',
       fontWeight: 900,
       color: 'var(--vic-text-primary)',
       lineHeight: 1.1,
@@ -2413,8 +2413,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: 0,
       display: 'flex',
       background: 'var(--vic-surface)',
-      borderRadius: '12px',
-      padding: isMobile ? '16px' : '18px',
+      borderRadius: '10px',
+      padding: isMobile ? '10px' : '10px',
       border: '1px solid var(--vic-border-soft)',
       boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.95)',
       overflow: 'hidden',
@@ -2427,7 +2427,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       paddingRight: isMobile ? '2px' : '4px',
       display: 'flex',
       flexDirection: 'column',
-      gap: '18px',
+      gap: '12px',
     },
 
     assistantBubble: {
@@ -2436,7 +2436,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       borderRadius: '14px 14px 14px 6px',
       background: 'var(--vic-surface-muted)',
       border: '1px solid #D8B7A7',
-      padding: '16px 16px',
+      padding: '12px 12px',
       boxShadow: '0 10px 22px rgba(15, 23, 42, 0.12)',
     },
 
@@ -2446,7 +2446,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       borderRadius: '14px 14px 6px 14px',
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
-      padding: '16px 16px',
+      padding: '12px 12px',
       boxShadow: '0 10px 22px rgba(15, 23, 42, 0.1)',
     },
 
@@ -2456,7 +2456,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       color: 'var(--vic-primary)',
-      marginBottom: '8px',
+      marginBottom: '6px',
     },
 
     bubbleLabelUser: {
@@ -2465,7 +2465,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       color: 'var(--vic-text-secondary)',
-      marginBottom: '8px',
+      marginBottom: '6px',
     },
 
     bubbleText: {
@@ -2488,12 +2488,12 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
-      padding: isMobile ? '14px' : '16px',
+      padding: isMobile ? '10px' : '12px',
       boxShadow:
         '0 18px 42px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '10px',
+      gap: '8px',
       flexShrink: 0,
     },
 
@@ -2506,7 +2506,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     inputTitle: {
-      fontSize: isMobile ? '20px' : '22px',
+      fontSize: isMobile ? '18px' : '20px',
       fontWeight: 800,
       color: 'var(--vic-text-primary)',
       lineHeight: 1.1,
@@ -2521,13 +2521,13 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     mainTextarea: {
       width: '100%',
-      minHeight: isMobile ? '84px' : '80px',
+      minHeight: isMobile ? '72px' : '72px',
       resize: 'vertical',
       borderRadius: '10px',
       border: '1px solid var(--vic-border)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
-      padding: '14px 15px',
+      padding: '10px 12px',
       boxSizing: 'border-box',
       outline: 'none',
       fontSize: '15px',
@@ -2539,7 +2539,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       display: 'flex',
       alignItems: isMobile ? 'stretch' : 'center',
       justifyContent: 'flex-end',
-      gap: '12px',
+      gap: '8px',
       flexDirection: isMobile ? 'column' : 'row',
     },
 
@@ -2547,7 +2547,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       border: '1px solid var(--vic-primary)',
       background: 'var(--vic-primary)',
       color: 'var(--vic-surface)',
-      padding: isMobile ? '13px 18px' : '13px 22px',
+      padding: isMobile ? '10px 16px' : '10px 18px',
       borderRadius: '10px',
       fontSize: '16px',
       fontWeight: 900,

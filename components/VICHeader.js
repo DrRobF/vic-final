@@ -137,27 +137,35 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
           align-items: center;
           gap: 24px;
           justify-content: space-between;
-          padding: 18px 24px;
+          padding: 12px 16px;
           border-radius: 18px;
           background: var(--vic-surface);
           border: 1px solid var(--vic-border-soft);
           box-shadow: var(--vic-shadow-card);
-          margin-bottom: 24px;
+          margin-bottom: 10px;
           flex-wrap: wrap;
         }
         .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
         .brandMark {
-          width: 82px;
-          height: 82px;
-          border-radius: 20px;
-          background: linear-gradient(160deg, #3f291f 0%, #6f3f29 60%, #8f5237 100%);
+          width: 72px;
+          height: 72px;
+          border-radius: 16px;
+          background: #efe7dc;
           display: flex;
           align-items: center;
           justify-content: center;
-          box-shadow: 0 16px 30px rgba(43,36,31,0.28);
-          border: 1px solid rgba(255, 255, 255, 0.14);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 6px 16px rgba(43,36,31,0.14);
+          border: 1px solid var(--vic-border);
         }
-        .brand img { width: 72px; height: 72px; border-radius: 16px; background: rgba(255,255,255,0.95); border: 1px solid rgba(232,216,200,0.9); padding: 5px; }
+        .brand img {
+          width: 60px;
+          height: 60px;
+          border-radius: 12px;
+          background: #fffdfc;
+          border: none;
+          padding: 8px;
+          display: block;
+        }
         .brandTitle { font-size: 24px; font-weight: 900; letter-spacing: 0.01em; }
         .brandSub { font-size: 13px; color: var(--vic-text-secondary); font-weight: 700; }
         .navLinks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
@@ -197,9 +205,9 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         .logoutButton:hover, .authPrompt:hover { background: var(--vic-surface-muted); border-color: rgba(181, 83, 47, 0.34); }
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
-          .vicHeader { padding: 14px; gap: 12px; }
-          .brandMark { width: 74px; height: 74px; border-radius: 18px; }
-          .brand img { width: 64px; height: 64px; border-radius: 14px; }
+          .vicHeader { padding: 10px 12px; gap: 10px; }
+          .brandMark { width: 64px; height: 64px; border-radius: 14px; }
+          .brand img { width: 52px; height: 52px; border-radius: 10px; padding: 7px; }
           .brandTitle { font-size: 21px; }
           .userArea { margin-left: 0; }
         }
