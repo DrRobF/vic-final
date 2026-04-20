@@ -122,7 +122,7 @@ export default function LoginPage() {
       <style jsx>{`
         .authPage {
           min-height: 100vh;
-          background: radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.12), transparent 28%), var(--vic-bg);
+          background: linear-gradient(180deg, var(--vic-bg) 0%, #e9f0f9 100%);
           color: var(--vic-text-primary);
           padding: 28px 16px;
         }
@@ -132,15 +132,15 @@ export default function LoginPage() {
         }
         .card {
           max-width: 500px;
-          border: 1px solid rgba(203, 213, 225, 0.55);
+          border: 1px solid var(--vic-border-soft);
           border-radius: 18px;
           background: var(--vic-surface);
           padding: 28px;
-          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.32), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+          box-shadow: var(--vic-shadow-raised);
         }
         h1 {
           margin: 0;
-          font-size: 30px;
+          font-size: 34px;
           line-height: 1.15;
           font-weight: 800;
         }
@@ -165,8 +165,8 @@ export default function LoginPage() {
           border-radius: 12px;
         }
         input {
-          border: 1px solid rgba(203, 213, 225, 0.7);
-          background: rgba(255, 255, 255, 0.06);
+          border: 1px solid var(--vic-border-soft);
+          background: #f8fbff;
           color: var(--vic-text-primary);
           padding: 12px 14px;
         }
@@ -179,7 +179,7 @@ export default function LoginPage() {
           letter-spacing: 0.01em;
           padding: 12px 16px;
           cursor: pointer;
-          box-shadow: 0 0 20px rgba(37, 99, 235, 0.24);
+          box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
           transition: transform 0.12s ease, filter 0.12s ease;
         }
         .primaryButton:hover {

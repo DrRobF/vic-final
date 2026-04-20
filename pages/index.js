@@ -185,7 +185,7 @@ export default function Home() {
           min-height: 100%;
           font-family: Inter, Arial, sans-serif;
           background: var(--vic-bg);
-          color: var(--vic-surface);
+          color: var(--vic-text-primary);
         }
 
         * {
@@ -214,9 +214,9 @@ export default function Home() {
         .ambient {
           position: absolute;
           border-radius: 999px;
-          filter: blur(110px);
+          filter: blur(120px);
           pointer-events: none;
-          opacity: 0.85;
+          opacity: 0.35;
         }
 
         .ambientLeft {
@@ -224,7 +224,7 @@ export default function Home() {
           height: 460px;
           left: -140px;
           top: 40px;
-          background: rgba(74, 101, 255, 0.16);
+          background: rgba(37, 99, 235, 0.12);
         }
 
         .ambientRight {
@@ -232,7 +232,7 @@ export default function Home() {
           height: 460px;
           right: -120px;
           top: 80px;
-          background: rgba(111, 77, 255, 0.14);
+          background: rgba(37, 99, 235, 0.08);
         }
 
         .gridFade {
@@ -241,8 +241,8 @@ export default function Home() {
           background-image:
             linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
             linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-          background-size: 46px 46px;
-          mask-image: linear-gradient(180deg, rgba(255,255,255,0.22), transparent 80%);
+          background-size: 56px 56px;
+          mask-image: linear-gradient(180deg, rgba(15,23,42,0.12), transparent 84%);
           pointer-events: none;
         }
 
@@ -257,7 +257,7 @@ export default function Home() {
 
         .hero {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 430px;
+          grid-template-columns: minmax(0, 1fr) 460px;
           gap: 56px;
           align-items: start;
           min-height: calc(100vh - 120px);
@@ -302,7 +302,7 @@ export default function Home() {
         .logoRing {
           position: absolute;
           border-radius: 50%;
-          border: 1px solid rgba(219, 234, 254, 0.7);
+          border: 1px solid var(--vic-border-soft);
         }
 
         .ringOne {
@@ -355,9 +355,9 @@ export default function Home() {
 
         .headline {
           margin: 0;
-          font-size: clamp(50px, 6.2vw, 86px);
-          line-height: 0.95;
-          letter-spacing: -0.065em;
+          font-size: clamp(46px, 5.8vw, 76px);
+          line-height: 1.02;
+          letter-spacing: -0.045em;
           font-weight: 800;
           max-width: 760px;
         }
@@ -370,7 +370,7 @@ export default function Home() {
         .subtext {
           max-width: 620px;
           margin: 26px 0 0;
-          font-size: 22px;
+          font-size: 20px;
           line-height: 1.62;
           color: var(--vic-text-secondary);
         }
@@ -385,8 +385,8 @@ export default function Home() {
         .quietProof span {
           padding: 10px 14px;
           border-radius: 999px;
-          border: 1px solid rgba(219, 234, 254, 0.7);
-          background: rgba(238, 244, 248, 0.82);
+          border: 1px solid var(--vic-border-soft);
+          background: var(--vic-surface-muted);
           color: var(--vic-text-secondary);
           font-size: 14px;
         }
@@ -410,9 +410,9 @@ export default function Home() {
         .primaryButton {
           border-radius: 18px;
           padding: 16px 26px;
-          color: var(--vic-surface);
+          color: var(--vic-text-primary);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
-          box-shadow: 0 16px 44px rgba(97,113,255,0.32);
+          box-shadow: var(--vic-shadow-card);
         }
 
         .primaryButton:hover,
@@ -428,8 +428,8 @@ export default function Home() {
           border-radius: 999px;
           padding: 12px 16px;
           color: var(--vic-text-primary);
-          border: 1px solid rgba(255,255,255,0.2);
-          background: rgba(238, 244, 248, 0.85);
+          border: 1px solid var(--vic-border-soft);
+          background: var(--vic-surface-muted);
           text-decoration: none;
           font-size: 13px;
           font-weight: 700;
@@ -452,7 +452,7 @@ export default function Home() {
           position: absolute;
           inset: 36px 16px 18px 16px;
           border-radius: 38px;
-          background: radial-gradient(circle, rgba(96,112,255,0.2), transparent 74%);
+          background: radial-gradient(circle, rgba(37,99,235,0.14), transparent 74%);
           filter: blur(44px);
           pointer-events: none;
         }
@@ -463,10 +463,8 @@ export default function Home() {
           border-radius: 38px;
           padding: 14px;
           background: linear-gradient(180deg, var(--vic-surface) 0%, var(--vic-surface-muted) 100%);
-          border: 1px solid rgba(219, 234, 254, 0.7);
-          box-shadow:
-            0 30px 80px rgba(0,0,0,0.44),
-            inset 0 1px 0 rgba(238, 244, 248, 0.85);
+          border: 1px solid var(--vic-border-soft);
+          box-shadow: var(--vic-shadow-raised);
         }
 
         .phoneTop {
@@ -494,7 +492,7 @@ export default function Home() {
         .previewCard {
           border-radius: 28px;
           overflow: hidden;
-          background: #f5f7fb;
+          background: #f8fbff;
           color: var(--vic-text-primary);
           min-height: 620px;
           display: flex;
@@ -511,7 +509,7 @@ export default function Home() {
         }
 
         .inputLabel {
-          font-size: 22px;
+          font-size: 20px;
           font-weight: 800;
           color: var(--vic-text-primary);
         }
@@ -537,7 +535,7 @@ export default function Home() {
         .askButton {
           border-radius: 14px;
           padding: 15px 16px;
-          color: var(--vic-surface);
+          color: var(--vic-text-primary);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
           box-shadow: 0 10px 24px rgba(97,113,255,0.22);
         }
@@ -573,7 +571,7 @@ export default function Home() {
           margin: 0;
           font-size: 15px;
           line-height: 1.6;
-          var(--vic-surface)-space: pre-wrap;
+          white-space: pre-wrap;
         }
 
         .userBubble {
@@ -600,8 +598,8 @@ export default function Home() {
           margin-top: auto;
           border-radius: 14px;
           padding: 15px 16px;
-          color: var(--vic-surface);
-          background: #0f0f12;
+          color: var(--vic-text-primary);
+          background: var(--vic-primary);
           box-shadow: 0 10px 24px rgba(0,0,0,0.16);
         }
 
@@ -609,7 +607,7 @@ export default function Home() {
           margin-top: 26px;
           text-align: center;
           font-size: 13px;
-          color: var(--vic-disabled);
+          color: var(--vic-text-muted);
           padding-bottom: 8px;
         }
 
