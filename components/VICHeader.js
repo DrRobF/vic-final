@@ -137,19 +137,19 @@ export default function VICHeader({ currentPath = '' }) {
           margin-bottom: 24px;
           flex-wrap: wrap;
         }
-        .brand { display: flex; align-items: center; gap: 16px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
-        .brand img { width: 68px; height: 68px; border-radius: 16px; box-shadow: 0 10px 22px rgba(15,23,42,0.16); background: #fff; }
-        .brandTitle { font-size: 24px; font-weight: 900; letter-spacing: 0.01em; line-height: 1.05; }
+        .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
+        .brand img { width: 56px; height: 56px; border-radius: 14px; box-shadow: 0 10px 24px rgba(15,23,42,0.18); background: #fff; }
+        .brandTitle { font-size: 22px; font-weight: 900; letter-spacing: 0.01em; }
         .brandSub { font-size: 13px; color: var(--vic-text-secondary); font-weight: 700; }
-        .navLinks { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 14px; padding: 11px 16px; border-radius: 10px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease; font-weight: 700; }
+        .navLinks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 14px; padding: 10px 14px; border-radius: 10px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease; font-weight: 800; }
         .primaryLink { color: var(--vic-text-primary); }
-        .navLink:hover { border-color: rgba(37, 99, 235, 0.32); color: var(--vic-primary); background: #eff6ff; }
-        .active { background: var(--vic-primary); border-color: var(--vic-primary); color: #fff; box-shadow: 0 10px 20px rgba(37,99,235,0.28); }
-        .userArea { display: flex; align-items: center; gap: 12px; margin-left: auto; min-width: 0; }
-        .signedInName { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; color: var(--vic-text-secondary); font-weight: 700; }
-        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border); background: #ffffff; border-radius: 10px; padding: 10px 16px; font-size: 13px; font-weight: 750; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
-        .logoutButton:hover, .authPrompt:hover { background: #eff6ff; border-color: rgba(37, 99, 235, 0.38); }
+        .navLink:hover { border-color: rgba(37, 99, 235, 0.4); color: var(--vic-primary); background: #eff6ff; }
+        .active { background: var(--vic-primary); border-color: var(--vic-primary); color: #fff; box-shadow: 0 10px 20px rgba(29,78,216,0.28); }
+        .userArea { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+        .signedInName { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--vic-text-secondary); font-weight: 700; }
+        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border); background: #ffffff; border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+        .logoutButton:hover, .authPrompt:hover { background: #f1f5f9; border-color: rgba(37, 99, 235, 0.38); }
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
           .vicHeader { padding: 14px; gap: 12px; }

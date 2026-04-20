@@ -18,14 +18,14 @@ export default function App({ Component, pageProps }) {
           --vic-danger: #dc2626;
           --vic-danger-soft: #fee2e2;
           --vic-text-primary: #0f172a;
-          --vic-text-secondary: #334155;
+          --vic-text-secondary: #475569;
           --vic-text-muted: #475569;
           --vic-border: #cbd5e1;
           --vic-border-soft: #e2e8f0;
           --vic-disabled: #94a3b8;
-          --vic-shadow-soft: 0 6px 16px rgba(15, 23, 42, 0.06);
-          --vic-shadow-card: 0 10px 28px rgba(15, 23, 42, 0.08);
-          --vic-shadow-raised: 0 16px 36px rgba(15, 23, 42, 0.1);
+          --vic-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.10);
+          --vic-shadow-card: 0 14px 36px rgba(15, 23, 42, 0.14);
+          --vic-shadow-raised: 0 24px 56px rgba(15, 23, 42, 0.18);
         }
 
         html,
