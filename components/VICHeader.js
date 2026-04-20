@@ -129,27 +129,27 @@ export default function VICHeader({ currentPath = '' }) {
           align-items: center;
           gap: 18px;
           justify-content: space-between;
-          padding: 14px 18px;
-          border-radius: 16px;
+          padding: 16px 20px;
+          border-radius: 14px;
           border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
           box-shadow: var(--vic-shadow-soft);
-          margin-bottom: 24px;
+          margin-bottom: 30px;
           flex-wrap: wrap;
         }
         .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
         .brand img { width: 40px; height: 40px; border-radius: 12px; background: #f8fbff; }
         .brandTitle { font-size: 17px; font-weight: 800; letter-spacing: 0.01em; }
         .brandSub { font-size: 12px; color: var(--vic-text-muted); }
-        .navLinks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 13px; padding: 8px 12px; border-radius: 999px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease; }
+        .navLinks { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 13px; padding: 8px 12px; border-radius: 10px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease; }
         .primaryLink { font-weight: 700; }
         .secondaryLink { font-weight: 600; }
         .navLink:hover { border-color: rgba(37, 99, 235, 0.28); color: var(--vic-primary); background: var(--vic-surface-muted); }
-        .active { background: var(--vic-primary-soft); border-color: rgba(37, 99, 235, 0.35); color: var(--vic-primary); }
+        .active { background: var(--vic-surface); border-color: rgba(37, 99, 235, 0.4); color: var(--vic-primary); box-shadow: inset 0 0 0 1px rgba(37, 99, 235, 0.15); }
         .userArea { display: flex; align-items: center; gap: 10px; margin-left: auto; }
         .signedInName { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--vic-text-secondary); }
-        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border-soft); background: var(--vic-surface-muted); border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 650; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border-soft); background: var(--vic-surface-muted); border-radius: 10px; padding: 8px 14px; font-size: 12px; font-weight: 650; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
         .logoutButton:hover, .authPrompt:hover { background: var(--vic-primary-soft); border-color: rgba(37, 99, 235, 0.35); }
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
