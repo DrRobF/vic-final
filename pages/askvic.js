@@ -841,7 +841,11 @@ ${context}`
   return (
     <div style={styles.page}>
       <div style={styles.appFrame}>
-        <VICHeader currentPath="/askvic" />
+        <VICHeader
+          currentPath="/askvic"
+          statusLabel={loading ? 'Thinking' : 'Ready'}
+          statusTone={loading ? 'thinking' : 'ready'}
+        />
 
         <div style={styles.shell}>
           {!isCompact ? (
@@ -852,19 +856,6 @@ ${context}`
           ) : null}
 
           <div style={styles.rightColumn}>
-            <section style={styles.signedInCard}>
-              <div style={styles.signedInLabel}>Signed in</div>
-              <div style={styles.signedInIdentityBlock}>
-                <div style={styles.signedInName}>
-                  {getUserDisplayName(currentUserProfile) || 'Name unavailable'}
-                </div>
-                <div style={styles.signedInMeta}>
-                  {currentUserProfile?.email || currentUserStatus}
-                </div>
-              </div>
-              <div style={styles.signedInStatus}>{lessonStatusText}</div>
-            </section>
-
             {isCompact ? heroSection : null}
 
             <section style={styles.chatCard}>
@@ -874,10 +865,6 @@ ${context}`
                   <div style={styles.chatStatusMessage}>{lessonStatusText}</div>
                 </div>
 
-                <div style={styles.statusWrap}>
-                  <span style={styles.statusDot} />
-                  <span style={styles.statusText}>{loading ? 'Thinking' : 'Ready'}</span>
-                </div>
               </div>
 
               <div style={styles.chatCanvas}>
@@ -1485,7 +1472,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: 0,
       overflow: 'visible',
       display: 'grid',
-      gridTemplateColumns: isCompact ? '1fr' : '360px minmax(0, 1fr)',
+      gridTemplateColumns: isCompact ? '1fr' : '320px minmax(0, 1fr)',
       gap: isMobile ? '16px' : '28px',
       overflow: desktopFixedHeight ? 'hidden' : 'visible',
     },
@@ -1501,8 +1488,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     rightColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: isCompact ? 'auto auto minmax(360px, 1fr) auto auto' : 'auto minmax(0, 1fr) auto',
-      gap: isMobile ? '16px' : '18px',
+      gridTemplateRows: isCompact ? 'auto minmax(420px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
+      gap: isMobile ? '14px' : '16px',
       overflow: 'hidden',
     },
 
@@ -2365,56 +2352,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       lineHeight: 1.45,
     },
 
-    signedInCard: {
-      padding: '16px 18px',
-      marginBottom: 0,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '10px',
-      background: 'var(--vic-surface)',
-      border: '1px solid var(--vic-border-soft)',
-      borderRadius: '14px',
-      boxShadow: 'var(--vic-shadow-soft)',
-    },
-
-    signedInLabel: {
-      fontSize: 11,
-      opacity: 1,
-      textTransform: 'uppercase',
-      letterSpacing: '0.1em',
-      color: 'var(--vic-text-secondary)',
-      fontWeight: 800,
-    },
-
-    signedInIdentityBlock: {
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '4px',
-    },
-
-    signedInName: {
-      fontSize: 20,
-      fontWeight: 800,
-      color: 'var(--vic-text-primary)',
-      lineHeight: 1.25,
-    },
-
-    signedInMeta: {
-      fontSize: 13,
-      opacity: 0.8,
-      color: 'var(--vic-text-secondary)',
-      lineHeight: 1.35,
-    },
-
-    signedInStatus: {
-      marginTop: 2,
-      fontSize: 12,
-      color: 'var(--vic-text-secondary)',
-      lineHeight: 1.4,
-    },
-
     chatCard: {
-      minHeight: isCompact ? '360px' : 0,
+      minHeight: isCompact ? '62vh' : 0,
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
@@ -2467,31 +2406,6 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       color: 'var(--vic-text-secondary)',
       opacity: 0.92,
       maxWidth: '520px',
-    },
-
-    statusWrap: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '8px',
-      padding: '8px 12px',
-      borderRadius: '999px',
-      background: 'var(--vic-surface-muted)',
-      border: '1px solid var(--vic-border-soft)',
-      flexShrink: 0,
-    },
-
-    statusDot: {
-      width: '8px',
-      height: '8px',
-      borderRadius: '50%',
-      background: '#22c55e',
-      boxShadow: '0 0 8px rgba(34,197,94,0.45)',
-    },
-
-    statusText: {
-      fontSize: '13px',
-      fontWeight: 700,
-      color: 'var(--vic-text-primary)',
     },
 
     chatCanvas: {
