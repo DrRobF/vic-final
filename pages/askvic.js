@@ -620,7 +620,7 @@ ${context}`
       <div style={styles.heroSparkle} />
 
       <div style={styles.heroTop}>
-        <VICLogo size={isMobile ? 92 : 96} variant="hero" alt="VIC Virtual Co-Teacher logo" />
+        <VICLogo size={isMobile ? 118 : 132} variant="hero" alt="VIC Virtual Co-Teacher logo" />
 
         <div style={styles.heroTextWrap}>
           <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
@@ -1000,7 +1000,7 @@ function VisualCardRenderer({ visual, styles }) {
       <div style={styles.visualIdleCard}>
         <div style={styles.visualIdleGlow} />
         <div style={styles.visualIdleInner}>
-          <VICLogo size={62} variant="card" alt="VIC logo" />
+          <VICLogo size={84} variant="card" alt="VIC logo" />
           <div style={styles.visualIdleTextWrap}>
             <div style={styles.visualIdleTitle}>Visual support will appear here</div>
             <div style={styles.visualIdleText}>

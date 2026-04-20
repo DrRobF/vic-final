@@ -81,7 +81,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
     <header className="vicHeader">
       <a className="brand" href="/">
         <div className="brandMark">
-          <VICLogo size={84} variant="header" />
+          <VICLogo size={106} variant="header" />
         </div>
         <div>
           <div className="brandTitle">VIC</div>
