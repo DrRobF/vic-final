@@ -3,7 +3,13 @@ import { createClient } from '@supabase/supabase-js'
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-const ALLOWED_SUPPORT_LEVELS = new Set(['remediation', 'core', 'enrichment'])
+const ALLOWED_SUPPORT_LEVELS = new Set(['remediation', 'on_level', 'on-level', 'core', 'enrichment'])
+
+function normalizeSupportLevel(value) {
+  if (value === 'on-level' || value === 'on_level' || value === 'core') return 'on_level'
+  if (value === 'remediation' || value === 'enrichment') return value
+  return null
+}
 
 function getBearerToken(req) {
   const authHeader = req.headers.authorization || ''
@@ -29,6 +35,7 @@ export default async function handler(req, res) {
   const classIdRaw = req.body?.classId
   const studentIdRaw = req.body?.studentId
   const supportLevelRaw = typeof req.body?.supportLevel === 'string' ? req.body.supportLevel.trim() : ''
+  const supportLevel = normalizeSupportLevel(supportLevelRaw)
 
   const classId = typeof classIdRaw === 'number' ? classIdRaw : Number(classIdRaw)
   const studentId = typeof studentIdRaw === 'number' ? studentIdRaw : Number(studentIdRaw)
@@ -41,8 +48,8 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'A valid studentId is required.' })
   }
 
-  if (!ALLOWED_SUPPORT_LEVELS.has(supportLevelRaw)) {
-    return res.status(400).json({ error: 'supportLevel must be remediation, core, or enrichment.' })
+  if (!ALLOWED_SUPPORT_LEVELS.has(supportLevelRaw) || !supportLevel) {
+    return res.status(400).json({ error: 'supportLevel must be remediation, on_level, or enrichment.' })
   }
 
   const accessToken = getBearerToken(req)
@@ -140,7 +147,7 @@ export default async function handler(req, res) {
 
   const { error: updateError } = await supabaseAdmin
     .from('enrollments')
-    .update({ support_level: supportLevelRaw })
+    .update({ support_level: supportLevel })
     .eq('class_id', classId)
     .eq('student_id', studentId)
 
