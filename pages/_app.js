@@ -4,22 +4,28 @@ export default function App({ Component, pageProps }) {
       <Component {...pageProps} />
       <style jsx global>{`
         :root {
-          --vic-bg: #F7FAFC;
-          --vic-surface: #FFFFFF;
-          --vic-surface-muted: #EEF4F8;
-          --vic-primary: #2563EB;
-          --vic-primary-hover: #1D4ED8;
-          --vic-primary-soft: #DBEAFE;
-          --vic-success: #16A34A;
-          --vic-success-soft: #DCFCE7;
-          --vic-accent: #F59E0B;
-          --vic-accent-soft: #FEF3C7;
-          --vic-danger: #DC2626;
-          --vic-danger-soft: #FEE2E2;
-          --vic-text-primary: #0F172A;
-          --vic-text-secondary: #475569;
-          --vic-border: #CBD5E1;
-          --vic-disabled: #94A3B8;
+          --vic-bg: #eef3f9;
+          --vic-surface: #ffffff;
+          --vic-surface-muted: #f3f7fd;
+          --vic-surface-subtle: #e7eef8;
+          --vic-primary: #2563eb;
+          --vic-primary-hover: #1d4ed8;
+          --vic-primary-soft: #dbeafe;
+          --vic-success: #15803d;
+          --vic-success-soft: #dcfce7;
+          --vic-accent: #d97706;
+          --vic-accent-soft: #fef3c7;
+          --vic-danger: #dc2626;
+          --vic-danger-soft: #fee2e2;
+          --vic-text-primary: #0f172a;
+          --vic-text-secondary: #334155;
+          --vic-text-muted: #64748b;
+          --vic-border: #cbd5e1;
+          --vic-border-soft: #d9e2ef;
+          --vic-disabled: #94a3b8;
+          --vic-shadow-soft: 0 10px 24px rgba(15, 23, 42, 0.06);
+          --vic-shadow-card: 0 14px 34px rgba(15, 23, 42, 0.08);
+          --vic-shadow-raised: 0 20px 48px rgba(15, 23, 42, 0.1);
         }
 
         html,
@@ -39,6 +45,13 @@ export default function App({ Component, pageProps }) {
 
         a {
           color: var(--vic-primary);
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+          font: inherit;
         }
 
         button:focus-visible,

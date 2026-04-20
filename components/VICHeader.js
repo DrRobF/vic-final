@@ -127,116 +127,34 @@ export default function VICHeader({ currentPath = '' }) {
           width: 100%;
           display: flex;
           align-items: center;
-          gap: 22px;
+          gap: 18px;
           justify-content: space-between;
-          padding: 14px 20px;
+          padding: 14px 18px;
           border-radius: 16px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
-          backdrop-filter: blur(14px);
+          box-shadow: var(--vic-shadow-soft);
           margin-bottom: 24px;
           flex-wrap: wrap;
         }
-        .brand {
-          display: flex;
-          align-items: center;
-          gap: 14px;
-          text-decoration: none;
-          color: var(--vic-text-primary);
-          flex-shrink: 0;
-        }
-        .brand img {
-          width: 42px;
-          height: 42px;
-          border-radius: 50%;
-        }
-        .brandTitle {
-          font-size: 17px;
-          font-weight: 800;
-          letter-spacing: 0.02em;
-        }
-        .brandSub {
-          font-size: 12px;
-          opacity: 0.75;
-        }
-        .navLinks {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        .navLink {
-          color: var(--vic-text-secondary);
-          text-decoration: none;
-          font-size: 13px;
-          padding: 8px 12px;
-          border-radius: 999px;
-          border: 1px solid transparent;
-          transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
-        }
-        .primaryLink {
-          font-weight: 700;
-        }
-        .secondaryLink {
-          font-weight: 600;
-          opacity: 0.88;
-        }
-        .navLink:hover {
-          border-color: rgba(37, 99, 235, 0.45);
-          color: var(--vic-primary);
-          text-decoration: underline;
-          text-underline-offset: 3px;
-        }
-        .active {
-          background: var(--vic-primary-soft);
-          border-color: rgba(37, 99, 235, 0.4);
-          color: var(--vic-primary);
-          opacity: 1;
-        }
-        .userArea {
-          display: flex;
-          align-items: center;
-          gap: 10px;
-          margin-left: auto;
-        }
-        .signedInName {
-          max-width: 220px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-          font-size: 12px;
-          color: var(--vic-text-secondary);
-        }
-        .logoutButton,
-        .authPrompt {
-          color: var(--vic-text-primary);
-          text-decoration: none;
-          border: 1px solid rgba(203, 213, 225, 0.72);
-          background: var(--vic-surface-muted);
-          border-radius: 999px;
-          padding: 8px 14px;
-          font-size: 12px;
-          font-weight: 650;
-          cursor: pointer;
-          transition: background 0.15s ease, border-color 0.15s ease;
-        }
-        .logoutButton:hover,
-        .authPrompt:hover {
-          background: var(--vic-primary-soft);
-          border-color: rgba(203, 213, 225, 0.9);
-        }
-        .logoutButton:disabled {
-          opacity: 0.7;
-          cursor: default;
-        }
+        .brand { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
+        .brand img { width: 40px; height: 40px; border-radius: 12px; background: #f8fbff; }
+        .brandTitle { font-size: 17px; font-weight: 800; letter-spacing: 0.01em; }
+        .brandSub { font-size: 12px; color: var(--vic-text-muted); }
+        .navLinks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 13px; padding: 8px 12px; border-radius: 999px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease; }
+        .primaryLink { font-weight: 700; }
+        .secondaryLink { font-weight: 600; }
+        .navLink:hover { border-color: rgba(37, 99, 235, 0.28); color: var(--vic-primary); background: var(--vic-surface-muted); }
+        .active { background: var(--vic-primary-soft); border-color: rgba(37, 99, 235, 0.35); color: var(--vic-primary); }
+        .userArea { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+        .signedInName { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--vic-text-secondary); }
+        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border-soft); background: var(--vic-surface-muted); border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 650; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+        .logoutButton:hover, .authPrompt:hover { background: var(--vic-primary-soft); border-color: rgba(37, 99, 235, 0.35); }
+        .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
-          .vicHeader {
-            padding: 12px 14px;
-            gap: 14px;
-          }
-          .userArea {
-            margin-left: 0;
-          }
+          .vicHeader { padding: 12px 14px; gap: 12px; }
+          .userArea { margin-left: 0; }
         }
       `}</style>
     </header>

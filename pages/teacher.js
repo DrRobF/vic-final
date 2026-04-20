@@ -773,10 +773,10 @@ export default function TeacherPage() {
           color: var(--vic-text-primary);
         }
         .card {
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           border-radius: 20px;
           background: var(--vic-surface);
-          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+          box-shadow: var(--vic-shadow-card);
           padding: 20px;
         }
         .profileCard {
@@ -795,7 +795,7 @@ export default function TeacherPage() {
           flex-wrap: wrap;
         }
         .heroKicker {
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           border-radius: 999px;
           padding: 7px 12px;
           font-size: 14px;
@@ -810,7 +810,7 @@ export default function TeacherPage() {
           background: var(--vic-surface);
           color: var(--vic-text-primary);
           border-color: var(--vic-border);
-          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+          box-shadow: var(--vic-shadow-card);
         }
         .commandGrid {
           display: grid;
@@ -818,12 +818,12 @@ export default function TeacherPage() {
         }
         .commandPrimary {
           border-radius: 14px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
           padding: 16px;
           display: grid;
           gap: 10px;
-          box-shadow: 0 6px 16px rgba(17, 24, 39, 0.05);
+          box-shadow: var(--vic-shadow-soft);
         }
         .commandClassName {
           font-size: 24px;
@@ -833,13 +833,13 @@ export default function TeacherPage() {
         }
         .innerCard {
           border-radius: 14px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
           color: var(--vic-text-primary);
           padding: 16px;
           display: grid;
           gap: 10px;
-          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+          box-shadow: var(--vic-shadow-card);
         }
         .cardEyebrow {
           font-size: 14px;
@@ -891,7 +891,7 @@ export default function TeacherPage() {
         :global(.teacherPage select) {
           width: 100%;
           padding: 12px 14px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
           color: var(--vic-text-primary);
         }
@@ -925,15 +925,15 @@ export default function TeacherPage() {
           border: 1px solid var(--vic-primary);
           color: var(--vic-surface);
           background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary) 50%, var(--vic-primary-hover) 100%);
-          box-shadow: 0 10px 20px rgba(109, 40, 217, 0.28);
+          box-shadow: 0 10px 22px rgba(37, 99, 235, 0.25);
         }
         .assignButton {
           font-size: 15px;
           padding: 13px 16px;
         }
         .secondaryButton {
-          border: 1px solid var(--vic-border);
-          color: #374151;
+          border: 1px solid var(--vic-border-soft);
+          color: var(--vic-text-secondary);
           background: var(--vic-surface-muted);
         }
         .copyButton {
@@ -964,7 +964,7 @@ export default function TeacherPage() {
           text-align: left;
           padding: 14px;
           border-radius: 11px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
           color: var(--vic-text-primary);
           cursor: pointer;
@@ -978,8 +978,8 @@ export default function TeacherPage() {
         }
         .selected {
           background: var(--vic-primary-soft);
-          border-color: #a78bfa;
-          box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.2);
+          border-color: rgba(37, 99, 235, 0.55);
+          box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.18);
         }
         .rowTitle,
         .detailValue {
@@ -1045,7 +1045,7 @@ export default function TeacherPage() {
           padding: 5px 10px;
           font-size: 12px;
           font-weight: 700;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
         }
         .summaryChip.remediation {
@@ -1067,7 +1067,7 @@ export default function TeacherPage() {
         }
         .detailItem {
           border-radius: 12px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           padding: 10px;
           background: var(--vic-surface);
           display: grid;
@@ -1075,12 +1075,12 @@ export default function TeacherPage() {
         }
         .classCodeCard {
           border-radius: 14px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
           padding: 16px;
           display: grid;
           gap: 8px;
-          box-shadow: 0 6px 16px rgba(17, 24, 39, 0.05);
+          box-shadow: var(--vic-shadow-soft);
         }
         .classCodeValue {
           font-size: 28px;
@@ -1106,7 +1106,7 @@ export default function TeacherPage() {
         }
         .studentTile {
           border-radius: 12px;
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
           padding: 16px;
           display: flex;
@@ -1141,7 +1141,7 @@ export default function TeacherPage() {
           min-width: 0;
         }
         .supportButton {
-          border: 1px solid var(--vic-border);
+          border: 1px solid var(--vic-border-soft);
           border-radius: 10px;
           background: var(--vic-surface);
           color: var(--vic-text-primary);
@@ -1196,7 +1196,7 @@ export default function TeacherPage() {
           background: var(--vic-surface);
           color: var(--vic-text-primary);
           border-color: var(--vic-border);
-          box-shadow: 0 8px 20px rgba(17, 24, 39, 0.06);
+          box-shadow: var(--vic-shadow-card);
         }
         .adminSection {
           border-color: var(--vic-border);
@@ -1208,9 +1208,9 @@ export default function TeacherPage() {
         }
 
         .studentTile.selected {
-          background: #faf7ff;
+          background: #f2f7ff;
           border-color: var(--vic-primary);
-          box-shadow: 0 0 0 1px rgba(124, 58, 237, 0.35), 0 10px 22px rgba(124, 58, 237, 0.12);
+          box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.24), 0 12px 24px rgba(37, 99, 235, 0.14);
         }
         .classSwitcherCard .statusText,
         .classSwitcherCard .helperText,
