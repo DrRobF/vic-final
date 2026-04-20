@@ -122,6 +122,7 @@ export default function SignupPage() {
       const { error: enrollmentError } = await supabase.from('enrollments').insert({
         student_id: insertedUser.id,
         class_id: matchedClass.id,
+        support_level: 'on_level',
       })
 
       if (enrollmentError) {

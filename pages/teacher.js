@@ -4,11 +4,18 @@ import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
 
 const REDIRECT_DELAY_MS = 1200
+const ASSIGNABLE_SUPPORT_LEVELS = ['remediation', 'core', 'enrichment']
 
 function getUserDisplayName(userRow) {
   if (!userRow) return ''
 
   return userRow.name || userRow.email || ''
+}
+
+function normalizeSupportLevel(value) {
+  if (value === 'on-level' || value === 'on_level') return 'core'
+  if (ASSIGNABLE_SUPPORT_LEVELS.includes(value)) return value
+  return null
 }
 
 export default function TeacherPage() {
@@ -210,25 +217,8 @@ export default function TeacherPage() {
     }
 
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
-    const nextSupportSelections = nextStudents.reduce((accumulator, student) => {
-      if (!student?.id) return accumulator
-
-      const supportLevel =
-        student.support_level === 'on-level'
-          ? 'core'
-          : ['remediation', 'core', 'enrichment'].includes(student.support_level)
-            ? student.support_level
-            : null
-
-      if (supportLevel) {
-        accumulator[student.id] = supportLevel
-      }
-
-      return accumulator
-    }, {})
-
     setStudents(nextStudents)
-    setStudentSupportSelections(nextSupportSelections)
+    setStudentSupportSelections({})
     setIsRosterCollapsed(false)
     setLoadingStudents(false)
   }
@@ -288,6 +278,29 @@ export default function TeacherPage() {
       ...previous,
       [studentId]: previousSupportLevel,
     }))
+  }
+
+  function handleSelectGroup(groupKey) {
+    if (!Array.isArray(students) || students.length === 0) return
+
+    if (groupKey === 'clear') {
+      setStudentSupportSelections({})
+      return
+    }
+
+    const nextSelections = students.reduce((accumulator, student) => {
+      if (!student?.id) return accumulator
+
+      const normalizedLevel = normalizeSupportLevel(student.support_level) || 'core'
+
+      if (groupKey === 'all' || groupKey === normalizedLevel) {
+        accumulator[student.id] = normalizedLevel
+      }
+
+      return accumulator
+    }, {})
+
+    setStudentSupportSelections(nextSelections)
   }
 
   function getStudentName(student) {
@@ -545,6 +558,23 @@ export default function TeacherPage() {
 
                 {!loadingStudents && students.length > 0 && !isRosterCollapsed ? (
                   <>
+                    <div className="groupSelectionRow">
+                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('remediation')}>
+                        Select Remediation
+                      </button>
+                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('core')}>
+                        Select On-Level
+                      </button>
+                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('enrichment')}>
+                        Select Enrichment
+                      </button>
+                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('all')}>
+                        Select All Students
+                      </button>
+                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('clear')}>
+                        Clear Selection
+                      </button>
+                    </div>
                     <div className="studentGrid">
                       {students.map((student) => {
                         const selectedSupport = studentSupportSelections[student.id]
@@ -1058,6 +1088,16 @@ export default function TeacherPage() {
           letter-spacing: 0.08em;
           font-weight: 800;
           color: #111827;
+        }
+        .groupSelectionRow {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+        .groupButton {
+          padding: 8px 12px;
+          font-size: 13px;
         }
         .studentGrid {
           display: grid;
