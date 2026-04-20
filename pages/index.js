@@ -66,7 +66,7 @@ export default function Home() {
             <div className="heroLeft">
               <div className="brandBlock">
                 <div className="logoStage">
-                  <VICLogo size={148} variant="hero" alt="VIC Logo" />
+                  <VICLogo size={188} variant="hero" alt="VIC Logo" />
                 </div>
 
                 <div className="brandTextWrap">
@@ -230,8 +230,8 @@ export default function Home() {
         }
 
         .logoStage {
-          width: 148px;
-          height: 148px;
+          width: 188px;
+          height: 188px;
           display: flex;
           align-items: center;
           justify-content: center;
