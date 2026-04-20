@@ -1323,10 +1323,10 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     appFrame: {
-      maxWidth: '1440px',
+      maxWidth: '1460px',
       height: desktopFixedHeight ? '100vh' : 'auto',
       margin: '0 auto',
-      padding: isMobile ? '14px' : '18px',
+      padding: isMobile ? '14px' : '24px',
       boxSizing: 'border-box',
       position: 'relative',
       zIndex: 1,
@@ -1486,7 +1486,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       overflow: 'visible',
       display: 'grid',
       gridTemplateColumns: isCompact ? '1fr' : '360px minmax(0, 1fr)',
-      gap: isMobile ? '16px' : '24px',
+      gap: isMobile ? '16px' : '28px',
       overflow: desktopFixedHeight ? 'hidden' : 'visible',
     },
 
@@ -1494,26 +1494,24 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: 0,
       display: 'grid',
       gridTemplateRows: 'auto minmax(0, 1fr)',
-      gap: '20px',
+      gap: '24px',
       overflow: 'hidden',
     },
 
     rightColumn: {
       minHeight: 0,
       display: 'grid',
-      gridTemplateRows: isCompact ? 'auto minmax(320px, 1fr) auto auto' : 'minmax(0, 1fr) auto',
-      gap: isMobile ? '14px' : '16px',
+      gridTemplateRows: isCompact ? 'auto auto minmax(360px, 1fr) auto auto' : 'auto minmax(0, 1fr) auto',
+      gap: isMobile ? '16px' : '18px',
       overflow: 'hidden',
     },
 
     heroCard: {
       background: '#ffffff',
-      border: '1px solid #b8c7dc',
+      border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
       padding: isMobile ? '18px' : '22px',
-      boxShadow:
-        'var(--vic-shadow-raised)',
-      backdropFilter: 'blur(16px)',
+      boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
@@ -1549,17 +1547,15 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
-      boxShadow:
-        '0 10px 24px rgba(15, 23, 42, 0.12)',
+      boxShadow: '0 10px 26px rgba(15, 23, 42, 0.12)',
     },
 
     logoImage: {
-      width: '84%',
-      height: '84%',
+      width: '88%',
+      height: '88%',
       display: 'block',
       objectFit: 'contain',
-      transform: 'scale(1.08)',
-      filter: 'drop-shadow(0 4px 8px rgba(37, 99, 235, 0.18))',
+      transform: 'scale(1.16)',
     },
 
     heroTextWrap: {
@@ -1586,7 +1582,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       fontSize: isMobile ? '28px' : isTablet ? '30px' : '32px',
       lineHeight: 1.08,
       letterSpacing: '-0.03em',
-      fontWeight: 800,
+      fontWeight: 900,
       color: 'var(--vic-text-primary)',
       textShadow: 'none',
       fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -1721,9 +1717,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       border: '1px solid #dbe3ef',
       borderRadius: isMobile ? '14px' : '16px',
       padding: isMobile ? '14px' : '16px',
-      boxShadow:
-        'var(--vic-shadow-raised)',
-      backdropFilter: 'blur(16px)',
+      boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
       gap: '12px',
@@ -1871,7 +1865,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-primary)',
       border: '1px solid var(--vic-primary)',
       color: '#ffffff',
-      padding: '12px 14px',
+      padding: '13px 16px',
       borderRadius: '10px',
       fontSize: '13px',
       fontWeight: 800,
@@ -2372,18 +2366,24 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     signedInCard: {
-      padding: '2px 0 4px',
-      marginBottom: 2,
+      padding: '16px 18px',
+      marginBottom: 0,
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
+      background: '#ffffff',
+      border: '1px solid var(--vic-border-soft)',
+      borderRadius: '14px',
+      boxShadow: 'var(--vic-shadow-soft)',
     },
 
     signedInLabel: {
-      fontSize: 12,
-      opacity: 0.68,
+      fontSize: 11,
+      opacity: 1,
       textTransform: 'uppercase',
-      letterSpacing: '0.04em',
+      letterSpacing: '0.1em',
+      color: 'var(--vic-text-secondary)',
+      fontWeight: 800,
     },
 
     signedInIdentityBlock: {
@@ -2393,8 +2393,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     signedInName: {
-      fontSize: 18,
-      fontWeight: 700,
+      fontSize: 20,
+      fontWeight: 800,
       color: 'var(--vic-text-primary)',
       lineHeight: 1.25,
     },
@@ -2414,29 +2414,28 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     chatCard: {
-      minHeight: isCompact ? '320px' : 0,
+      minHeight: isCompact ? '360px' : 0,
       background: '#ffffff',
-      border: '1px solid #b8c7dc',
+      border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
       padding: isMobile ? '18px' : '22px',
-      boxShadow:
-        'var(--vic-shadow-raised)',
+      boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
       overflow: 'hidden',
       minWidth: 0,
-      minHeight: 0,
     },
 
     chatHeader: {
       display: 'flex',
-      alignItems: 'center',
+      alignItems: 'flex-start',
       justifyContent: 'space-between',
-      gap: '12px',
-      marginBottom: '12px',
-      paddingBottom: '12px',
-      borderBottom: '1px solid #d1dced',
+      gap: '16px',
+      marginBottom: '14px',
+      paddingBottom: '14px',
+      borderBottom: '1px solid var(--vic-border-soft)',
       flexShrink: 0,
+      flexWrap: 'wrap',
     },
 
     chatHeaderContent: {
@@ -2456,8 +2455,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     chatTitle: {
-      fontSize: isMobile ? '24px' : '28px',
-      fontWeight: 800,
+      fontSize: isMobile ? '26px' : '30px',
+      fontWeight: 900,
       color: 'var(--vic-text-primary)',
       lineHeight: 1.1,
     },
@@ -2634,12 +2633,12 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       border: '1px solid var(--vic-primary)',
       background: 'var(--vic-primary)',
       color: 'var(--vic-surface)',
-      padding: isMobile ? '12px 16px' : '12px 18px',
+      padding: isMobile ? '13px 18px' : '13px 22px',
       borderRadius: '10px',
-      fontSize: '15px',
-      fontWeight: 800,
+      fontSize: '16px',
+      fontWeight: 900,
       minWidth: isMobile ? '100%' : '120px',
-      boxShadow: '0 12px 24px rgba(29,78,216,0.28)',
+      boxShadow: '0 10px 22px rgba(37,99,235,0.3)',
     },
 
     visualIdleCard: {

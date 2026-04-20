@@ -32,7 +32,7 @@ export default function App({ Component, pageProps }) {
         body {
           margin: 0;
           padding: 0;
-          background: var(--vic-bg);
+          background: #ffffff;
           color: var(--vic-text-primary);
           font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }

@@ -127,13 +127,14 @@ export default function VICHeader({ currentPath = '' }) {
           width: 100%;
           display: flex;
           align-items: center;
-          gap: 20px;
+          gap: 24px;
           justify-content: space-between;
-          padding: 14px 18px;
-          border-radius: 16px;
+          padding: 18px 24px;
+          border-radius: 18px;
           background: var(--vic-surface);
+          border: 1px solid var(--vic-border-soft);
           box-shadow: var(--vic-shadow-card);
-          margin-bottom: 30px;
+          margin-bottom: 24px;
           flex-wrap: wrap;
         }
         .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
@@ -151,7 +152,9 @@ export default function VICHeader({ currentPath = '' }) {
         .logoutButton:hover, .authPrompt:hover { background: #f1f5f9; border-color: rgba(37, 99, 235, 0.38); }
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
-          .vicHeader { padding: 12px 14px; gap: 12px; }
+          .vicHeader { padding: 14px; gap: 12px; }
+          .brand img { width: 58px; height: 58px; }
+          .brandTitle { font-size: 21px; }
           .userArea { margin-left: 0; }
         }
       `}</style>
