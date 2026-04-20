@@ -18,6 +18,12 @@ function normalizeSupportLevel(value) {
   return null
 }
 
+function getStoredSupportLevel(value) {
+  const normalizedLevel = normalizeSupportLevel(value)
+  if (!normalizedLevel) return null
+  return normalizedLevel === 'core' ? 'on_level' : normalizedLevel
+}
+
 export default function TeacherPage() {
   const router = useRouter()
 
@@ -218,7 +224,15 @@ export default function TeacherPage() {
 
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
     setStudents(nextStudents)
-    setStudentSupportSelections({})
+    const initialSelections = nextStudents.reduce((accumulator, student) => {
+      if (!student?.id) return accumulator
+      const normalizedLevel = normalizeSupportLevel(student.support_level)
+      if (normalizedLevel) {
+        accumulator[student.id] = normalizedLevel
+      }
+      return accumulator
+    }, {})
+    setStudentSupportSelections(initialSelections)
     setIsRosterCollapsed(false)
     setLoadingStudents(false)
   }
@@ -269,6 +283,16 @@ export default function TeacherPage() {
     })
 
     if (response.ok) {
+      setStudents((previous) =>
+        previous.map((student) =>
+          student?.id === studentId
+            ? {
+                ...student,
+                support_level: getStoredSupportLevel(supportLevel),
+              }
+            : student
+        )
+      )
       return
     }
 
