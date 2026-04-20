@@ -122,7 +122,7 @@ export default function LoginPage() {
       <style jsx>{`
         .authPage {
           min-height: 100vh;
-          background: linear-gradient(180deg, var(--vic-bg) 0%, #e9f0f9 100%);
+          background: var(--vic-bg);
           color: var(--vic-text-primary);
           padding: 34px 16px;
         }
@@ -167,21 +167,21 @@ export default function LoginPage() {
         }
         input {
           border: 1px solid var(--vic-border-soft);
-          background: #f8fbff;
+          background: var(--vic-surface-muted);
           color: var(--vic-text-primary);
           padding: 11px 13px;
         }
         .primaryButton {
           margin-top: 16px;
-          border: 1px solid rgba(37, 99, 235, 0.45);
-          background: linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 58%, var(--vic-primary) 100%);
+          border: 1px solid rgba(181, 83, 47, 0.48);
+          background: var(--vic-primary);
           color: var(--vic-surface);
           font-weight: 700;
           letter-spacing: 0.01em;
           padding: 13px 16px;
           border-radius: 10px;
           cursor: pointer;
-          box-shadow: 0 10px 20px rgba(37, 99, 235, 0.22);
+          box-shadow: 0 10px 20px rgba(181, 83, 47, 0.2);
           transition: transform 0.12s ease, filter 0.12s ease;
         }
         .primaryButton:hover {
