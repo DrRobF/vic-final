@@ -33,12 +33,14 @@ export default function TeacherPage() {
   const [classes, setClasses] = useState([])
   const [selectedClass, setSelectedClass] = useState(null)
   const [students, setStudents] = useState([])
-  const [selectedStudentId, setSelectedStudentId] = useState(null)
   const [studentSupportSelections, setStudentSupportSelections] = useState({})
+  const [parentEmailByStudentId, setParentEmailByStudentId] = useState({})
+  const [parentEmailStatusByStudentId, setParentEmailStatusByStudentId] = useState({})
   const [reportPayloadByStudentId, setReportPayloadByStudentId] = useState({})
   const [reportStatusByStudentId, setReportStatusByStudentId] = useState({})
   const [isGeneratingReportForStudentId, setIsGeneratingReportForStudentId] = useState(null)
   const [isSendingReportForStudentId, setIsSendingReportForStudentId] = useState(null)
+  const [isSavingParentEmailForStudentId, setIsSavingParentEmailForStudentId] = useState(null)
   const [isRosterCollapsed, setIsRosterCollapsed] = useState(false)
 
   const [lessonTitle, setLessonTitle] = useState('')
@@ -64,8 +66,6 @@ export default function TeacherPage() {
     }),
     {}
   )
-  const selectedStudent = students.find((student) => student?.id === selectedStudentId) || null
-  console.log('[DEBUG] selectedClass:', selectedClass)
 
   useEffect(() => {
     let mounted = true
@@ -172,8 +172,9 @@ export default function TeacherPage() {
     if (classRows.length === 0) {
       setSelectedClass(null)
       setStudents([])
-      setSelectedStudentId(null)
       setStudentSupportSelections({})
+      setParentEmailByStudentId({})
+      setParentEmailStatusByStudentId({})
       setReportPayloadByStudentId({})
       setReportStatusByStudentId({})
       return
@@ -190,7 +191,6 @@ export default function TeacherPage() {
   useEffect(() => {
     if (!selectedClass?.id) return
 
-    console.log('[DEBUG] triggering student load for class:', selectedClass.id)
     loadStudents(selectedClass.id)
   }, [selectedClass?.id])
 
@@ -208,8 +208,9 @@ export default function TeacherPage() {
     if (sessionError || !session?.access_token) {
       setError('Please sign in again to load students.')
       setStudents([])
-      setSelectedStudentId(null)
       setStudentSupportSelections({})
+      setParentEmailByStudentId({})
+      setParentEmailStatusByStudentId({})
       setReportPayloadByStudentId({})
       setReportStatusByStudentId({})
       setLoadingStudents(false)
@@ -230,8 +231,9 @@ export default function TeacherPage() {
     if (!response.ok) {
       setError(payload?.error || 'Could not load students for this class.')
       setStudents([])
-      setSelectedStudentId(null)
       setStudentSupportSelections({})
+      setParentEmailByStudentId({})
+      setParentEmailStatusByStudentId({})
       setReportPayloadByStudentId({})
       setReportStatusByStudentId({})
       setLoadingStudents(false)
@@ -240,11 +242,6 @@ export default function TeacherPage() {
 
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
     setStudents(nextStudents)
-    setSelectedStudentId((previousStudentId) =>
-      nextStudents.some((student) => student?.id === previousStudentId)
-        ? previousStudentId
-        : nextStudents[0]?.id || null
-    )
     const initialSelections = nextStudents.reduce((accumulator, student) => {
       if (!student?.id) return accumulator
       const normalizedLevel = normalizeSupportLevel(student.support_level)
@@ -254,6 +251,14 @@ export default function TeacherPage() {
       return accumulator
     }, {})
     setStudentSupportSelections(initialSelections)
+    setParentEmailByStudentId(
+      nextStudents.reduce((accumulator, student) => {
+        if (!student?.id) return accumulator
+        accumulator[student.id] = student.parent_email || ''
+        return accumulator
+      }, {})
+    )
+    setParentEmailStatusByStudentId({})
     setIsRosterCollapsed(false)
     setLoadingStudents(false)
   }
@@ -262,8 +267,9 @@ export default function TeacherPage() {
     setSelectedClass(classRow)
     setCopiedCode(false)
     setStudents([])
-    setSelectedStudentId(null)
     setStudentSupportSelections({})
+    setParentEmailByStudentId({})
+    setParentEmailStatusByStudentId({})
     setReportPayloadByStudentId({})
     setReportStatusByStudentId({})
     setIsRosterCollapsed(false)
@@ -363,6 +369,91 @@ export default function TeacherPage() {
     return {
       label: student.lesson_context_label || 'Assigned Lesson',
       title: student.lesson_context_title || 'No lesson activity yet',
+    }
+  }
+
+  function isValidEmail(value) {
+    if (!value) return false
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
+  }
+
+  function getParentEmailValue(studentId) {
+    return parentEmailByStudentId[studentId] || ''
+  }
+
+  async function handleSaveParentEmail(studentId) {
+    if (!selectedClass?.id || !studentId) return
+
+    const rawValue = getParentEmailValue(studentId)
+    const parentEmail = rawValue.trim().toLowerCase()
+
+    if (parentEmail && !isValidEmail(parentEmail)) {
+      setParentEmailStatusByStudentId((previous) => ({
+        ...previous,
+        [studentId]: 'Enter a valid parent email or leave blank.',
+      }))
+      return
+    }
+
+    setIsSavingParentEmailForStudentId(studentId)
+    setParentEmailStatusByStudentId((previous) => ({
+      ...previous,
+      [studentId]: 'Saving...',
+    }))
+
+    try {
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session?.access_token) {
+        throw new Error('Please sign in again to save parent emails.')
+      }
+
+      const response = await fetch('/api/teacher/update-parent-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          classId: selectedClass.id,
+          studentId,
+          parentEmail,
+        }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Could not save parent email.')
+      }
+
+      setStudents((previous) =>
+        previous.map((student) =>
+          student?.id === studentId
+            ? {
+                ...student,
+                parent_email: payload?.parentEmail || '',
+              }
+            : student
+        )
+      )
+      setParentEmailByStudentId((previous) => ({
+        ...previous,
+        [studentId]: payload?.parentEmail || '',
+      }))
+      setParentEmailStatusByStudentId((previous) => ({
+        ...previous,
+        [studentId]: payload?.parentEmail ? 'Saved.' : 'Cleared.',
+      }))
+    } catch (saveError) {
+      setParentEmailStatusByStudentId((previous) => ({
+        ...previous,
+        [studentId]: saveError?.message || 'Could not save parent email.',
+      }))
+    } finally {
+      setIsSavingParentEmailForStudentId(null)
     }
   }
 
@@ -485,7 +576,10 @@ export default function TeacherPage() {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify({ reportPayload }),
+        body: JSON.stringify({
+          reportPayload,
+          parentEmail: getParentEmailValue(student.id).trim().toLowerCase(),
+        }),
       })
 
       const payload = await response.json().catch(() => null)
@@ -774,107 +868,123 @@ export default function TeacherPage() {
                         Clear Selection
                       </button>
                     </div>
-                    <div className="studentGrid">
-                      {students.map((student) => {
-                        const selectedSupport = studentSupportSelections[student.id]
-                        const lessonContext = getStudentLessonContext(student)
+                    <div className="studentTableWrap">
+                      <table className="studentTable">
+                        <thead>
+                          <tr>
+                            <th>Student</th>
+                            <th>Support Level</th>
+                            <th>Assign</th>
+                            <th>Current / Recent Lesson</th>
+                            <th>Parent Email</th>
+                            <th>Report Actions</th>
+                            <th>Status</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {students.map((student) => {
+                            const selectedSupport = studentSupportSelections[student.id]
+                            const lessonContext = getStudentLessonContext(student)
 
-                        return (
-                          <div key={student.id} className={selectedSupport ? 'studentTile selected' : 'studentTile'}>
-                            <span className="studentName">{getStudentName(student)}</span>
-                            <div className="studentMetaLine">
-                              <strong>{lessonContext.label}:</strong> {lessonContext.title}
-                            </div>
-                            <div className="supportButtonRow">
-                              <button
-                                type="button"
-                                className={selectedSupport === 'remediation' ? 'supportButton remediation isActive' : 'supportButton remediation'}
-                                onClick={() => handleSelectStudentSupport(student.id, 'remediation')}
-                                title="Remediation"
-                              >
-                                Rem
-                              </button>
-                              <button
-                                type="button"
-                                className={selectedSupport === 'core' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
-                                onClick={() => handleSelectStudentSupport(student.id, 'core')}
-                                title="Core"
-                              >
-                                Core
-                              </button>
-                              <button
-                                type="button"
-                                className={selectedSupport === 'enrichment' ? 'supportButton enrichment isActive' : 'supportButton enrichment'}
-                                onClick={() => handleSelectStudentSupport(student.id, 'enrichment')}
-                                title="Enrichment"
-                              >
-                                Enr
-                              </button>
-                            </div>
-                            <button
-                              type="button"
-                              className="secondaryButton studentReportLink"
-                              onClick={() => setSelectedStudentId(student.id)}
-                            >
-                              {selectedStudentId === student.id ? 'Selected for report actions' : 'Manage reports'}
-                            </button>
-                          </div>
-                        )
-                      })}
+                            return (
+                              <tr key={student.id} className={selectedSupport ? 'studentRow isSelected' : 'studentRow'}>
+                                <td className="studentCellName">{getStudentName(student)}</td>
+                                <td>
+                                  <div className="supportButtonRow">
+                                    <button
+                                      type="button"
+                                      className={selectedSupport === 'remediation' ? 'supportButton remediation isActive' : 'supportButton remediation'}
+                                      onClick={() => handleSelectStudentSupport(student.id, 'remediation')}
+                                      title="Remediation"
+                                    >
+                                      Rem
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={selectedSupport === 'core' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
+                                      onClick={() => handleSelectStudentSupport(student.id, 'core')}
+                                      title="Core"
+                                    >
+                                      Core
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className={selectedSupport === 'enrichment' ? 'supportButton enrichment isActive' : 'supportButton enrichment'}
+                                      onClick={() => handleSelectStudentSupport(student.id, 'enrichment')}
+                                      title="Enrichment"
+                                    >
+                                      Enr
+                                    </button>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className={selectedSupport ? 'assignBadge assigned' : 'assignBadge'}>{selectedSupport ? 'Included' : 'Not selected'}</span>
+                                </td>
+                                <td>
+                                  <div className="studentMetaLine">
+                                    <strong>{lessonContext.label}:</strong> {lessonContext.title}
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="parentEmailCell">
+                                    <input
+                                      type="email"
+                                      value={getParentEmailValue(student.id)}
+                                      onChange={(e) =>
+                                        setParentEmailByStudentId((previous) => ({
+                                          ...previous,
+                                          [student.id]: e.target.value,
+                                        }))
+                                      }
+                                      placeholder="parent@email.com"
+                                    />
+                                    <button
+                                      type="button"
+                                      className="secondaryButton saveEmailButton"
+                                      onClick={() => handleSaveParentEmail(student.id)}
+                                      disabled={isSavingParentEmailForStudentId === student.id}
+                                    >
+                                      {isSavingParentEmailForStudentId === student.id ? 'Saving...' : 'Save'}
+                                    </button>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="rowActions">
+                                    <button
+                                      type="button"
+                                      className="primaryButton groupButton"
+                                      onClick={() => generateReportForStudent(student)}
+                                      disabled={isGeneratingReportForStudentId === student.id}
+                                    >
+                                      {isGeneratingReportForStudentId === student.id ? 'Generating...' : 'Generate'}
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="secondaryButton groupButton"
+                                      onClick={() => emailReportForStudent(student)}
+                                      disabled={
+                                        isSendingReportForStudentId === student.id ||
+                                        isGeneratingReportForStudentId === student.id
+                                      }
+                                    >
+                                      {isSendingReportForStudentId === student.id ? 'Sending...' : 'Email'}
+                                    </button>
+                                  </div>
+                                </td>
+                                <td>
+                                  <div className="rowStatus">
+                                    {parentEmailStatusByStudentId[student.id] ? <div>{parentEmailStatusByStudentId[student.id]}</div> : null}
+                                    <div>{reportStatusByStudentId[student.id] || '—'}</div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   </>
                 ) : null}
-              </section>
-            ) : null}
-
-            {selectedClass ? (
-              <section className="card sectionCard">
-                <div className="studentHeaderRow">
-                  <div>
-                    <div className="cardEyebrow">Student reports</div>
-                    <h2>Report controls</h2>
-                    <p className="helperText">Select a student and run report generation/email delivery from the teacher dashboard.</p>
-                  </div>
-                </div>
-
-                {!selectedStudent ? (
-                  <p className="statusText">Choose a student from the roster to generate or email a report.</p>
-                ) : (
-                  <div className="innerCard">
-                    <div className="detailLabel">Selected student</div>
-                    <div className="commandClassName reportStudentName">{getStudentName(selectedStudent)}</div>
-                    <div className="studentMetaLine">
-                      <strong>{getStudentLessonContext(selectedStudent).label}:</strong>{' '}
-                      {getStudentLessonContext(selectedStudent).title}
-                    </div>
-
-                    <div className="groupSelectionRow">
-                      <button
-                        type="button"
-                        className="primaryButton groupButton"
-                        onClick={() => generateReportForStudent(selectedStudent)}
-                        disabled={isGeneratingReportForStudentId === selectedStudent.id}
-                      >
-                        {isGeneratingReportForStudentId === selectedStudent.id ? 'Generating report...' : 'Generate Report'}
-                      </button>
-                      <button
-                        type="button"
-                        className="secondaryButton groupButton"
-                        onClick={() => emailReportForStudent(selectedStudent)}
-                        disabled={
-                          isSendingReportForStudentId === selectedStudent.id ||
-                          isGeneratingReportForStudentId === selectedStudent.id
-                        }
-                      >
-                        {isSendingReportForStudentId === selectedStudent.id ? 'Sending report...' : 'Email Report'}
-                      </button>
-                    </div>
-
-                    <p className="helperText">
-                      {reportStatusByStudentId[selectedStudent.id] || 'No report generated yet for this student.'}
-                    </p>
-                  </div>
-                )}
               </section>
             ) : null}
 
@@ -1367,50 +1477,48 @@ export default function TeacherPage() {
           padding: 8px 12px;
           font-size: 13px;
         }
-        .studentGrid {
-          display: grid;
-          grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-          gap: 12px;
-        }
-        .studentTile {
-          border-radius: 10px;
-          border: 1px solid transparent;
+        .studentTableWrap {
+          width: 100%;
+          overflow-x: auto;
+          border: 1px solid var(--vic-border);
+          border-radius: 12px;
           background: var(--vic-surface);
-          padding: 16px;
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-          justify-content: flex-start;
-          gap: 0;
-          min-height: 98px;
-          box-shadow: 0 6px 14px rgba(17, 24, 39, 0.06);
-          transition: border-color 0.12s ease, background 0.12s ease, box-shadow 0.12s ease, transform 0.12s ease;
         }
-        .studentTile:hover {
-          background: #fafafa;
-          border-color: var(--vic-primary-soft);
-          box-shadow: 0 8px 16px rgba(17, 24, 39, 0.08);
+        .studentTable {
+          width: 100%;
+          min-width: 1050px;
+          border-collapse: collapse;
         }
-        .studentName {
-          font-size: 16.5px;
-          line-height: 1.35;
-          font-weight: 600;
+        .studentTable th,
+        .studentTable td {
+          text-align: left;
+          vertical-align: top;
+          padding: 10px 12px;
+          border-bottom: 1px solid var(--vic-border-soft);
+        }
+        .studentTable th {
+          font-size: 12px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          color: var(--vic-text-secondary);
+          background: var(--vic-surface-muted);
+          font-weight: 700;
+        }
+        .studentRow.isSelected {
+          background: rgba(181, 83, 47, 0.08);
+        }
+        .studentCellName {
+          min-width: 160px;
+          font-size: 15px;
+          font-weight: 650;
           color: var(--vic-text-primary);
           overflow-wrap: anywhere;
-          margin-bottom: 8px;
         }
         .studentMetaLine {
           font-size: 12px;
           color: var(--vic-text-secondary);
-          margin-bottom: 10px;
-        }
-        .reportStudentName {
-          font-size: 24px;
-        }
-        .studentReportLink {
-          margin-top: 10px;
-          font-size: 12px;
-          padding: 7px 10px;
+          margin: 0;
+          min-width: 220px;
         }
         .supportButtonRow {
           display: flex;
@@ -1419,7 +1527,7 @@ export default function TeacherPage() {
           flex-wrap: nowrap;
           gap: 8px;
           width: 100%;
-          min-width: 0;
+          min-width: 175px;
         }
         .supportButton {
           border: 1px solid var(--vic-border);
@@ -1469,6 +1577,43 @@ export default function TeacherPage() {
           color: var(--vic-surface);
           box-shadow: 0 0 0 1px rgba(181, 83, 47, 0.25);
         }
+        .assignBadge {
+          font-size: 12px;
+          border-radius: 999px;
+          padding: 4px 8px;
+          border: 1px solid var(--vic-border);
+          color: var(--vic-text-secondary);
+          background: var(--vic-surface-muted);
+          white-space: nowrap;
+        }
+        .assignBadge.assigned {
+          border-color: var(--vic-primary-soft);
+          color: var(--vic-primary-hover);
+          background: rgba(181, 83, 47, 0.08);
+        }
+        .parentEmailCell {
+          display: grid;
+          gap: 6px;
+          min-width: 220px;
+        }
+        .saveEmailButton {
+          width: fit-content;
+          padding: 6px 10px;
+          font-size: 12px;
+        }
+        .rowActions {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+          min-width: 160px;
+        }
+        .rowStatus {
+          font-size: 12px;
+          color: var(--vic-text-secondary);
+          display: grid;
+          gap: 4px;
+          min-width: 190px;
+        }
         .lessonShell {
           background: transparent;
           border-color: transparent;
@@ -1492,11 +1637,6 @@ export default function TeacherPage() {
           gap: 12px;
         }
 
-        .studentTile.selected {
-          background: var(--vic-surface-muted);
-          border-color: var(--vic-primary);
-          box-shadow: 0 0 0 1px rgba(181, 83, 47, 0.22), 0 12px 24px rgba(181, 83, 47, 0.14);
-        }
         .classSwitcherCard .statusText,
         .classSwitcherCard .helperText,
         .lessonSurface .helperText,
@@ -1541,6 +1681,9 @@ export default function TeacherPage() {
           }
           .classCodeValue {
             font-size: 26px;
+          }
+          .studentTable {
+            min-width: 780px;
           }
         }
       `}</style>

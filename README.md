@@ -20,6 +20,12 @@ This script inserts:
 - enrollments linking students to classes
 - 2 sample lessons
 
+### 3) Add student parent email field
+Run `sql/add_parent_email_to_users.sql` in the **Supabase SQL editor**.
+
+This script:
+- Adds `users.parent_email` for storing a reusable parent/guardian email per student.
+
 ## Report email delivery (Phase 2)
 
 To enable emailing VIC Learning Reports, configure:

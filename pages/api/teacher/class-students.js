@@ -129,7 +129,7 @@ export default async function handler(req, res) {
 
   const { data: studentRows, error: studentLookupError } = await supabaseAdmin
     .from('users')
-    .select('id, name, email')
+    .select('id, name, email, parent_email')
     .in('id', studentIds)
     .order('id', { ascending: true })
 
@@ -177,6 +177,7 @@ export default async function handler(req, res) {
         id: student.id,
         name: student.name || '',
         email: student.email || '',
+        parent_email: student.parent_email || '',
         support_level: supportByStudentId.get(student.id) || null,
         latest_assignment: latestAssignment
           ? {
