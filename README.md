@@ -19,3 +19,14 @@ This script inserts:
 - 5 classes
 - enrollments linking students to classes
 - 2 sample lessons
+
+## Report email delivery (Phase 2)
+
+To enable emailing VIC Learning Reports, configure:
+
+- `RESEND_API_KEY` - API key used for transactional delivery via Resend.
+- `REPORTS_FROM_EMAIL` - verified sender identity (for example: `VIC Reports <reports@yourdomain.com>`).
+- Existing Supabase server variables are also required for recipient resolution:
+  - `NEXT_PUBLIC_SUPABASE_URL`
+  - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+  - `SUPABASE_SERVICE_ROLE_KEY`
