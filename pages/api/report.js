@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
   const safeGradeLevel = typeof gradeLevel === 'string' && gradeLevel.trim()
     ? gradeLevel.trim()
-    : 'Not specified'
+    : ''
 
   const safeDate = typeof date === 'string' && date.trim()
     ? date.trim()
@@ -42,7 +42,7 @@ export default async function handler(req, res) {
 
   const safeStudentInterest = typeof studentInterest === 'string' && studentInterest.trim()
     ? studentInterest.trim()
-    : 'Not specified'
+    : ''
 
   const transcriptText = transcript
     .slice(-20)
@@ -51,6 +51,16 @@ export default async function handler(req, res) {
       const content = typeof entry?.content === 'string' ? entry.content.trim() : ''
       return content ? `${role}: ${content}` : ''
     })
+    .filter(Boolean)
+    .join('\n')
+
+  const contextLines = [
+    `Student Name: ${safeStudentName}`,
+    safeGradeLevel ? `Grade Level: ${safeGradeLevel}` : '',
+    `Date: ${safeDate}`,
+    `Session Focus / Topic: ${safeSessionFocus}`,
+    safeStudentInterest ? `Student Interest Used: ${safeStudentInterest}` : '',
+  ]
     .filter(Boolean)
     .join('\n')
 
@@ -74,6 +84,8 @@ export default async function handler(req, res) {
             content: `Build a VIC Learning Report JSON object with EXACT keys:
 {
   "performanceSummary": "string",
+  "primaryStrength": "string",
+  "primaryAreaForGrowth": "string",
   "skillsDemonstrated": ["string"],
   "areasForGrowth": ["string"],
   "nextInstructionalSteps": ["string"],
@@ -83,16 +95,14 @@ export default async function handler(req, res) {
 
 Requirements:
 - performanceSummary: 2-4 sentences in professional teacher language.
+- primaryStrength: one concise, teacher-meaningful sentence that names the student's top strength from this session.
+- primaryAreaForGrowth: one concise, teacher-meaningful sentence naming the highest-leverage next growth target.
 - each array: 3-6 concise bullets.
 - sessionEvidence: include concrete student work/actions from transcript.
 - parentFriendlySummary: plain language, 2-3 sentences.
 - Do not include markdown fences.
 
-Student Name: ${safeStudentName}
-Grade Level: ${safeGradeLevel}
-Date: ${safeDate}
-Session Focus / Topic: ${safeSessionFocus}
-Student Interest Used: ${safeStudentInterest}
+${contextLines}
 
 Transcript:
 ${transcriptText}`,
@@ -117,6 +127,21 @@ ${transcriptText}`,
     const jsonMatch = outputText.match(/\{[\s\S]*\}/)
     const rawJson = jsonMatch ? jsonMatch[0] : outputText
     const parsedReport = JSON.parse(rawJson)
+    const safeSkills = Array.isArray(parsedReport.skillsDemonstrated)
+      ? parsedReport.skillsDemonstrated
+      : []
+    const safeGrowthAreas = Array.isArray(parsedReport.areasForGrowth)
+      ? parsedReport.areasForGrowth
+      : []
+
+    if (!parsedReport.primaryStrength) {
+      parsedReport.primaryStrength = safeSkills[0] || 'Student showed steady progress with guided support.'
+    }
+
+    if (!parsedReport.primaryAreaForGrowth) {
+      parsedReport.primaryAreaForGrowth =
+        safeGrowthAreas[0] || 'Continue building independent accuracy on the target skill.'
+    }
 
     return res.status(200).json({ report: parsedReport })
   } catch (error) {

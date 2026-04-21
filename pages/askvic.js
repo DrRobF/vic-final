@@ -29,8 +29,8 @@ const ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE = {
 }
 
 function normalizeGradeLevel(rawGradeLevel) {
-  if (!rawGradeLevel && rawGradeLevel !== 0) return 'Not specified'
-  return String(rawGradeLevel)
+  if (!rawGradeLevel && rawGradeLevel !== 0) return ''
+  return String(rawGradeLevel).trim()
 }
 
 function normalizeSupportLevel(rawLevel) {
@@ -69,7 +69,7 @@ export default function AskVIC() {
   const [studentMode, setStudentMode] = useState('')
   const [studentSupportLevel, setStudentSupportLevel] = useState('')
   const [studentInterest, setStudentInterest] = useState('')
-  const [studentGradeLevel, setStudentGradeLevel] = useState('Not specified')
+  const [studentGradeLevel, setStudentGradeLevel] = useState('')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
@@ -113,7 +113,7 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
-        setStudentGradeLevel('Not specified')
+        setStudentGradeLevel('')
         setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
         return
@@ -135,7 +135,7 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
-        setStudentGradeLevel('Not specified')
+        setStudentGradeLevel('')
         setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('No student found. You can still chat with VIC.')
         return
@@ -164,7 +164,7 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
-        setStudentGradeLevel('Not specified')
+        setStudentGradeLevel('')
         setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
         return
@@ -186,7 +186,7 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
-        setStudentGradeLevel('Not specified')
+        setStudentGradeLevel('')
         setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Could not match your student profile. Using free mode.')
         return
@@ -195,6 +195,21 @@ export default function AskVIC() {
       setSelectedStudentId(student.id)
       const interests = Array.isArray(student.interest_tags) ? student.interest_tags : []
       setStudentInterest(interests.join(', '))
+
+      const { data: enrollmentRows } = await supabase
+        .from('enrollments')
+        .select('class_id, support_level, classes:class_id(grade_level)')
+        .eq('student_id', student.id)
+        .order('class_id', { ascending: true })
+
+      if (!active) return
+
+      const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
+      const firstEnrollment = safeEnrollmentRows[0] || null
+      const firstClassRow = Array.isArray(firstEnrollment?.classes)
+        ? firstEnrollment.classes[0]
+        : firstEnrollment?.classes
+      setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
 
       const { data: assignmentRows, error: assignmentError } = await supabase
         .from('assignments')
@@ -223,21 +238,6 @@ export default function AskVIC() {
       }
 
       let enrollmentSupportLevel = ''
-
-      const { data: enrollmentRows } = await supabase
-        .from('enrollments')
-        .select('class_id, support_level, classes:class_id(grade_level)')
-        .eq('student_id', student.id)
-        .order('class_id', { ascending: true })
-
-      if (!active) return
-
-      const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
-      const firstEnrollment = safeEnrollmentRows[0] || null
-      const firstClassRow = Array.isArray(firstEnrollment?.classes)
-        ? firstEnrollment.classes[0]
-        : firstEnrollment?.classes
-      setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
       const normalizedAssignmentMode = normalizeSupportLevel(latestAssignment.mode || '')
 
       if (safeEnrollmentRows.length === 1) {
@@ -607,7 +607,7 @@ export default function AskVIC() {
           gradeLevel: studentGradeLevel,
           date: reportDate,
           sessionFocus,
-          studentInterest: studentInterest || 'Not specified',
+          studentInterest,
         }),
       })
 
@@ -623,7 +623,7 @@ export default function AskVIC() {
         gradeLevel: studentGradeLevel,
         date: reportDate,
         sessionFocus,
-        studentInterest: studentInterest || 'Not specified',
+        studentInterest,
         report,
       })
     } catch (error) {
@@ -669,28 +669,34 @@ export default function AskVIC() {
           <h1>VIC Learning Report</h1>
           <div class="meta">
             <p><strong>Student Name:</strong> ${escapeHtml(studentName)}</p>
-            <p><strong>Grade Level:</strong> ${escapeHtml(gradeLevel)}</p>
+            ${gradeLevel ? `<p><strong>Grade Level:</strong> ${escapeHtml(gradeLevel)}</p>` : ''}
             <p><strong>Date:</strong> ${escapeHtml(date)}</p>
             <p><strong>Session Focus / Topic:</strong> ${escapeHtml(sessionFocus)}</p>
-            <p><strong>Student Interest Used:</strong> ${escapeHtml(studentInterest)}</p>
+            ${studentInterest ? `<p><strong>Student Interest Used:</strong> ${escapeHtml(studentInterest)}</p>` : ''}
           </div>
 
           <h2>1. Performance Summary</h2>
           <p>${escapeHtml(report.performanceSummary || 'Not available.')}</p>
 
-          <h2>2. Skills Demonstrated</h2>
+          <h2>2. Primary Strength</h2>
+          <p>${escapeHtml(report.primaryStrength || 'Not available.')}</p>
+
+          <h2>3. Primary Area for Growth</h2>
+          <p>${escapeHtml(report.primaryAreaForGrowth || 'Not available.')}</p>
+
+          <h2>4. Skills Demonstrated</h2>
           <ul>${buildBullets(report.skillsDemonstrated)}</ul>
 
-          <h2>3. Areas for Growth</h2>
+          <h2>5. Areas for Growth</h2>
           <ul>${buildBullets(report.areasForGrowth)}</ul>
 
-          <h2>4. Next Instructional Steps</h2>
+          <h2>6. Next Instructional Steps</h2>
           <ul>${buildBullets(report.nextInstructionalSteps)}</ul>
 
-          <h2>5. Session Evidence / Sample Work</h2>
+          <h2>7. Session Evidence / Sample Work</h2>
           <ul>${buildBullets(report.sessionEvidence)}</ul>
 
-          <h2>6. Optional Parent-Friendly Summary</h2>
+          <h2>8. Optional Parent-Friendly Summary</h2>
           <p>${escapeHtml(report.parentFriendlySummary || 'Not available.')}</p>
         </body>
       </html>
