@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
+import { buildReportHtml } from '../lib/report-format'
 
 const REDIRECT_DELAY_MS = 1200
 const ASSIGNABLE_SUPPORT_LEVELS = ['remediation', 'core', 'enrichment']
@@ -32,7 +33,12 @@ export default function TeacherPage() {
   const [classes, setClasses] = useState([])
   const [selectedClass, setSelectedClass] = useState(null)
   const [students, setStudents] = useState([])
+  const [selectedStudentId, setSelectedStudentId] = useState(null)
   const [studentSupportSelections, setStudentSupportSelections] = useState({})
+  const [reportPayloadByStudentId, setReportPayloadByStudentId] = useState({})
+  const [reportStatusByStudentId, setReportStatusByStudentId] = useState({})
+  const [isGeneratingReportForStudentId, setIsGeneratingReportForStudentId] = useState(null)
+  const [isSendingReportForStudentId, setIsSendingReportForStudentId] = useState(null)
   const [isRosterCollapsed, setIsRosterCollapsed] = useState(false)
 
   const [lessonTitle, setLessonTitle] = useState('')
@@ -58,6 +64,7 @@ export default function TeacherPage() {
     }),
     {}
   )
+  const selectedStudent = students.find((student) => student?.id === selectedStudentId) || null
   console.log('[DEBUG] selectedClass:', selectedClass)
 
   useEffect(() => {
@@ -165,7 +172,10 @@ export default function TeacherPage() {
     if (classRows.length === 0) {
       setSelectedClass(null)
       setStudents([])
+      setSelectedStudentId(null)
       setStudentSupportSelections({})
+      setReportPayloadByStudentId({})
+      setReportStatusByStudentId({})
       return
     }
 
@@ -198,7 +208,10 @@ export default function TeacherPage() {
     if (sessionError || !session?.access_token) {
       setError('Please sign in again to load students.')
       setStudents([])
+      setSelectedStudentId(null)
       setStudentSupportSelections({})
+      setReportPayloadByStudentId({})
+      setReportStatusByStudentId({})
       setLoadingStudents(false)
       return
     }
@@ -217,13 +230,21 @@ export default function TeacherPage() {
     if (!response.ok) {
       setError(payload?.error || 'Could not load students for this class.')
       setStudents([])
+      setSelectedStudentId(null)
       setStudentSupportSelections({})
+      setReportPayloadByStudentId({})
+      setReportStatusByStudentId({})
       setLoadingStudents(false)
       return
     }
 
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
     setStudents(nextStudents)
+    setSelectedStudentId((previousStudentId) =>
+      nextStudents.some((student) => student?.id === previousStudentId)
+        ? previousStudentId
+        : nextStudents[0]?.id || null
+    )
     const initialSelections = nextStudents.reduce((accumulator, student) => {
       if (!student?.id) return accumulator
       const normalizedLevel = normalizeSupportLevel(student.support_level)
@@ -241,7 +262,10 @@ export default function TeacherPage() {
     setSelectedClass(classRow)
     setCopiedCode(false)
     setStudents([])
+    setSelectedStudentId(null)
     setStudentSupportSelections({})
+    setReportPayloadByStudentId({})
+    setReportStatusByStudentId({})
     setIsRosterCollapsed(false)
   }
 
@@ -331,6 +355,157 @@ export default function TeacherPage() {
     if (!student) return 'Unnamed student'
 
     return student.name || student.email || `Student ${student.id}`
+  }
+
+  function getStudentLessonContext(student) {
+    if (!student) return { label: 'Assigned Lesson', title: 'No lesson activity yet' }
+
+    return {
+      label: student.lesson_context_label || 'Assigned Lesson',
+      title: student.lesson_context_title || 'No lesson activity yet',
+    }
+  }
+
+  function buildStudentReportRequestPayload(student) {
+    const latestAssignment = student?.latest_assignment || null
+    const lessonTitle = latestAssignment?.lesson_title || student?.lesson_context_title || ''
+    const assignmentStatus = latestAssignment?.status || 'assigned'
+    const supportLevel = normalizeSupportLevel(student?.support_level) || 'core'
+    const studentName = getStudentName(student)
+
+    if (!lessonTitle || lessonTitle === 'No lesson activity yet') {
+      return null
+    }
+
+    return {
+      transcript: [
+        {
+          role: 'user',
+          content: `${studentName} is working on: ${lessonTitle}.`,
+        },
+        {
+          role: 'assistant',
+          content: `Current assignment status: ${assignmentStatus}. Support level: ${supportLevel}.`,
+        },
+      ],
+      studentName,
+      gradeLevel: selectedClass?.grade_level ? String(selectedClass.grade_level) : '',
+      date: new Date().toLocaleDateString('en-US'),
+      sessionFocus: lessonTitle,
+      studentInterest: '',
+    }
+  }
+
+  async function generateReportForStudent(student, { download = true } = {}) {
+    if (!student?.id) return null
+
+    const reportRequestPayload = buildStudentReportRequestPayload(student)
+    if (!reportRequestPayload) {
+      setReportStatusByStudentId((previous) => ({
+        ...previous,
+        [student.id]: 'No lesson context found for this student yet.',
+      }))
+      return null
+    }
+
+    setIsGeneratingReportForStudentId(student.id)
+    setReportStatusByStudentId((previous) => ({ ...previous, [student.id]: 'Generating report...' }))
+
+    try {
+      const response = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(reportRequestPayload),
+      })
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data?.report) {
+        throw new Error(data?.error || 'Could not generate report.')
+      }
+
+      const reportPayload = {
+        studentName: reportRequestPayload.studentName,
+        gradeLevel: reportRequestPayload.gradeLevel,
+        date: reportRequestPayload.date,
+        sessionFocus: reportRequestPayload.sessionFocus,
+        studentInterest: reportRequestPayload.studentInterest,
+        report: data.report,
+      }
+
+      setReportPayloadByStudentId((previous) => ({ ...previous, [student.id]: reportPayload }))
+      setReportStatusByStudentId((previous) => ({ ...previous, [student.id]: 'Report ready.' }))
+
+      if (download) {
+        const reportWindow = window.open('', '_blank', 'width=900,height=700')
+        if (!reportWindow) {
+          throw new Error('Pop-up blocked while preparing report window.')
+        }
+        reportWindow.document.open()
+        reportWindow.document.write(buildReportHtml(reportPayload))
+        reportWindow.document.close()
+        reportWindow.focus()
+        reportWindow.print()
+      }
+
+      return reportPayload
+    } catch (reportError) {
+      setReportStatusByStudentId((previous) => ({
+        ...previous,
+        [student.id]: reportError?.message || 'Could not generate report right now.',
+      }))
+      return null
+    } finally {
+      setIsGeneratingReportForStudentId(null)
+    }
+  }
+
+  async function emailReportForStudent(student) {
+    if (!student?.id) return
+    setIsSendingReportForStudentId(student.id)
+    setReportStatusByStudentId((previous) => ({ ...previous, [student.id]: 'Sending report...' }))
+
+    try {
+      const existingReportPayload = reportPayloadByStudentId[student.id]
+      const reportPayload = existingReportPayload || (await generateReportForStudent(student, { download: false }))
+      if (!reportPayload) {
+        throw new Error('Generate a report first for this student.')
+      }
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession()
+
+      if (sessionError || !session?.access_token) {
+        throw new Error('You must be signed in to send a report email.')
+      }
+
+      const response = await fetch('/api/report-delivery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ reportPayload }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      if (!response.ok || !payload?.success) {
+        throw new Error(payload?.error || 'Report email delivery failed.')
+      }
+
+      const recipients = Array.isArray(payload.recipients) ? payload.recipients.join(', ') : 'teacher recipient'
+      setReportStatusByStudentId((previous) => ({
+        ...previous,
+        [student.id]: `Report sent successfully (${recipients})`,
+      }))
+    } catch (sendError) {
+      setReportStatusByStudentId((previous) => ({
+        ...previous,
+        [student.id]: sendError?.message || 'Could not send report.',
+      }))
+    } finally {
+      setIsSendingReportForStudentId(null)
+    }
   }
 
   async function handleCreateClass(e) {
@@ -602,10 +777,14 @@ export default function TeacherPage() {
                     <div className="studentGrid">
                       {students.map((student) => {
                         const selectedSupport = studentSupportSelections[student.id]
+                        const lessonContext = getStudentLessonContext(student)
 
                         return (
                           <div key={student.id} className={selectedSupport ? 'studentTile selected' : 'studentTile'}>
                             <span className="studentName">{getStudentName(student)}</span>
+                            <div className="studentMetaLine">
+                              <strong>{lessonContext.label}:</strong> {lessonContext.title}
+                            </div>
                             <div className="supportButtonRow">
                               <button
                                 type="button"
@@ -632,12 +811,70 @@ export default function TeacherPage() {
                                 Enr
                               </button>
                             </div>
+                            <button
+                              type="button"
+                              className="secondaryButton studentReportLink"
+                              onClick={() => setSelectedStudentId(student.id)}
+                            >
+                              {selectedStudentId === student.id ? 'Selected for report actions' : 'Manage reports'}
+                            </button>
                           </div>
                         )
                       })}
                     </div>
                   </>
                 ) : null}
+              </section>
+            ) : null}
+
+            {selectedClass ? (
+              <section className="card sectionCard">
+                <div className="studentHeaderRow">
+                  <div>
+                    <div className="cardEyebrow">Student reports</div>
+                    <h2>Report controls</h2>
+                    <p className="helperText">Select a student and run report generation/email delivery from the teacher dashboard.</p>
+                  </div>
+                </div>
+
+                {!selectedStudent ? (
+                  <p className="statusText">Choose a student from the roster to generate or email a report.</p>
+                ) : (
+                  <div className="innerCard">
+                    <div className="detailLabel">Selected student</div>
+                    <div className="commandClassName reportStudentName">{getStudentName(selectedStudent)}</div>
+                    <div className="studentMetaLine">
+                      <strong>{getStudentLessonContext(selectedStudent).label}:</strong>{' '}
+                      {getStudentLessonContext(selectedStudent).title}
+                    </div>
+
+                    <div className="groupSelectionRow">
+                      <button
+                        type="button"
+                        className="primaryButton groupButton"
+                        onClick={() => generateReportForStudent(selectedStudent)}
+                        disabled={isGeneratingReportForStudentId === selectedStudent.id}
+                      >
+                        {isGeneratingReportForStudentId === selectedStudent.id ? 'Generating report...' : 'Generate Report'}
+                      </button>
+                      <button
+                        type="button"
+                        className="secondaryButton groupButton"
+                        onClick={() => emailReportForStudent(selectedStudent)}
+                        disabled={
+                          isSendingReportForStudentId === selectedStudent.id ||
+                          isGeneratingReportForStudentId === selectedStudent.id
+                        }
+                      >
+                        {isSendingReportForStudentId === selectedStudent.id ? 'Sending report...' : 'Email Report'}
+                      </button>
+                    </div>
+
+                    <p className="helperText">
+                      {reportStatusByStudentId[selectedStudent.id] || 'No report generated yet for this student.'}
+                    </p>
+                  </div>
+                )}
               </section>
             ) : null}
 
@@ -1160,7 +1397,20 @@ export default function TeacherPage() {
           font-weight: 600;
           color: var(--vic-text-primary);
           overflow-wrap: anywhere;
-          margin-bottom: 12px;
+          margin-bottom: 8px;
+        }
+        .studentMetaLine {
+          font-size: 12px;
+          color: var(--vic-text-secondary);
+          margin-bottom: 10px;
+        }
+        .reportStudentName {
+          font-size: 24px;
+        }
+        .studentReportLink {
+          margin-top: 10px;
+          font-size: 12px;
+          padding: 7px 10px;
         }
         .supportButtonRow {
           display: flex;

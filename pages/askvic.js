@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import VICHeader from '../components/VICHeader'
 import VICLogo from '../components/VICLogo'
-import { buildReportHtml } from '../lib/report-format'
 
 const BRAIN_VERSION = 'v3.3'
 const SKETCH_BG_COLOR = '#f8fafc'
@@ -62,9 +61,6 @@ export default function AskVIC() {
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
   const [viewportWidth, setViewportWidth] = useState(1400)
-  const [lastReportText, setLastReportText] = useState(
-    'No report yet. Run a short session and generate one to preview it here.'
-  )
   const [selectedStudentId, setSelectedStudentId] = useState(null)
   const [assignedLesson, setAssignedLesson] = useState(null)
   const [studentMode, setStudentMode] = useState('')
@@ -76,9 +72,6 @@ export default function AskVIC() {
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
-  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
-  const [isSendingReportEmail, setIsSendingReportEmail] = useState(false)
-  const [reportDeliveryStatus, setReportDeliveryStatus] = useState('')
   const [awaitingAssignedLessonInterest, setAwaitingAssignedLessonInterest] = useState(false)
 
   const lessonStatusText = assignedLesson
@@ -338,8 +331,6 @@ export default function AskVIC() {
     }
 }, [activeTool, isCompact, isMobile, viewportWidth, sketchExpanded])
 
-  const canGetReport = useMemo(() => messages.length > 1 && !loading, [messages.length, loading])
-
   useEffect(() => {
     const container = messageAreaRef.current
     if (!container) return
@@ -576,146 +567,6 @@ export default function AskVIC() {
       e.preventDefault()
       sendMessage()
     }
-  }
-
-  function buildReportRequestPayload() {
-    const studentName = getUserDisplayName(currentUserProfile) || 'Student'
-    const reportDate = new Date().toLocaleDateString('en-US')
-    const sessionFocus = assignedLesson?.title || assignedLesson?.subject || 'General support session'
-    const conversationTranscript = messages
-      .filter((message) => message?.role === 'assistant' || message?.role === 'user')
-      .filter((message) => typeof message?.text === 'string' && message.text.trim())
-      .slice(1)
-      .map((message) => ({
-        role: message.role,
-        content: message.text,
-      }))
-
-    return {
-      transcript: conversationTranscript,
-      studentName,
-      gradeLevel: studentGradeLevel,
-      date: reportDate,
-      sessionFocus,
-      studentInterest,
-    }
-  }
-
-  async function generateReportPayload() {
-    const payload = buildReportRequestPayload()
-    if (!payload.transcript.length) {
-      setLastReportText('No report yet. Run a short session and generate one to preview it here.')
-      return null
-    }
-
-    const response = await fetch('/api/report', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-    const data = await response.json()
-    if (!response.ok || !data?.report) {
-      throw new Error(data?.error || 'Could not generate report.')
-    }
-
-    const reportPayload = {
-      studentName: payload.studentName,
-      gradeLevel: payload.gradeLevel,
-      date: payload.date,
-      sessionFocus: payload.sessionFocus,
-      studentInterest: payload.studentInterest,
-      report: data.report,
-    }
-    setLastReportText(data.report.performanceSummary || 'Report generated.')
-    return reportPayload
-  }
-
-  async function requestReport() {
-    if (isGeneratingReport) return
-    setIsGeneratingReport(true)
-    setReportDeliveryStatus('')
-    try {
-      const reportPayload = await generateReportPayload()
-      if (!reportPayload) return
-      await downloadReportPdf(reportPayload)
-    } catch (error) {
-      console.error('[AskVIC][requestReport] failed', error)
-      setLastReportText('Could not generate report right now. Please try again.')
-    } finally {
-      setIsGeneratingReport(false)
-    }
-  }
-
-  async function emailReport() {
-    if (isSendingReportEmail || isGeneratingReport) return
-    setIsSendingReportEmail(true)
-    setReportDeliveryStatus('Sending report...')
-
-    try {
-      const reportPayload = await generateReportPayload()
-      if (!reportPayload) return
-
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-      if (!supabaseUrl || !supabaseKey) {
-        throw new Error('Supabase is not configured for authenticated delivery.')
-      }
-
-      const supabase = createClient(supabaseUrl, supabaseKey)
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
-      const accessToken = session?.access_token
-
-      if (!accessToken) {
-        throw new Error('You must be signed in to send email delivery.')
-      }
-
-      console.log('REPORT EMAIL TRIGGERED', { email: currentUserProfile?.email || '' })
-
-      const deliveryResponse = await fetch('/api/report-delivery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({
-          reportPayload,
-        }),
-      })
-
-      const deliveryPayload = await deliveryResponse.json()
-      if (!deliveryResponse.ok || !deliveryPayload?.success) {
-        throw new Error(deliveryPayload?.error || 'Report email delivery failed.')
-      }
-
-      const recipients = Array.isArray(deliveryPayload.recipients)
-        ? deliveryPayload.recipients.join(', ')
-        : 'teacher recipient'
-      setReportDeliveryStatus(`Report sent successfully (${recipients})`)
-    } catch (error) {
-      console.error('[AskVIC][emailReport] failed', error)
-      setReportDeliveryStatus(
-        `Failed to send report${error?.message ? `: ${error.message}` : ''}`
-      )
-    } finally {
-      setIsSendingReportEmail(false)
-    }
-  }
-
-  async function downloadReportPdf(reportData) {
-    const printableHtml = buildReportHtml(reportData)
-
-    const reportWindow = window.open('', '_blank', 'width=900,height=700')
-    if (!reportWindow) {
-      throw new Error('Pop-up blocked while preparing PDF report window.')
-    }
-
-    reportWindow.document.open()
-    reportWindow.document.write(printableHtml)
-    reportWindow.document.close()
-    reportWindow.focus()
-    reportWindow.print()
   }
 
   function runCalculator() {
@@ -1040,38 +891,10 @@ ${context}`
       ) : null}
 
       <div style={styles.reportFeatureCardCompact}>
-        <div style={styles.reportFeatureTopCompact}>
-          <div>
-            <div style={styles.reportFeatureLabelCompact}>Session Report</div>
-            <div style={styles.reportFeatureTitleCompact}>Download the session summary</div>
-          </div>
-
-          <button
-            style={canGetReport && !isGeneratingReport ? styles.reportButton : styles.reportButtonDisabled}
-            onClick={requestReport}
-            disabled={!canGetReport || isGeneratingReport}
-          >
-            {isGeneratingReport ? 'Generating...' : 'Get Report'}
-          </button>
-        </div>
-
-        <button
-          style={canGetReport && !isSendingReportEmail && !isGeneratingReport ? styles.reportButton : styles.reportButtonDisabled}
-          onClick={emailReport}
-          disabled={!canGetReport || isSendingReportEmail || isGeneratingReport}
-        >
-          {isSendingReportEmail ? 'Sending report...' : 'Email Report'}
-        </button>
-
+        <div style={styles.reportFeatureLabelCompact}>Session Report</div>
+        <div style={styles.reportFeatureTitleCompact}>Teacher-managed workflow</div>
         <div style={styles.reportFeatureTextCompact}>
-          Generate a clean summary when the session is finished.
-        </div>
-
-        {reportDeliveryStatus ? <div style={styles.reportDeliveryStatus}>{reportDeliveryStatus}</div> : null}
-
-        <div style={styles.reportPreviewInline}>
-          <div style={styles.reportPreviewInlineLabel}>Last Report Preview</div>
-          <div style={styles.reportPreviewInlineText}>{lastReportText}</div>
+          Reports are now generated and emailed from the Teacher Dashboard per student.
         </div>
       </div>
     </section>
