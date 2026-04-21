@@ -137,6 +137,24 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: studentLookupError.message || 'Could not load student records.' })
   }
 
+  const { data: assignmentRows, error: assignmentError } = await supabaseAdmin
+    .from('assignments')
+    .select('student_id, status, assigned_at, mode, lessons ( id, title, subject )')
+    .in('student_id', studentIds)
+    .order('assigned_at', { ascending: false })
+
+  if (assignmentError) {
+    return res.status(500).json({ error: assignmentError.message || 'Could not load student assignment context.' })
+  }
+
+  const latestAssignmentByStudentId = new Map()
+  ;(Array.isArray(assignmentRows) ? assignmentRows : []).forEach((row) => {
+    if (!Number.isInteger(row?.student_id)) return
+    if (!latestAssignmentByStudentId.has(row.student_id)) {
+      latestAssignmentByStudentId.set(row.student_id, row)
+    }
+  })
+
   const studentsById = new Map((Array.isArray(studentRows) ? studentRows : []).map((row) => [row.id, row]))
   const supportByStudentId = new Map(
     safeEnrollmentRows
@@ -146,12 +164,34 @@ export default async function handler(req, res) {
   const students = studentIds
     .map((studentId) => studentsById.get(studentId))
     .filter(Boolean)
-    .map((student) => ({
-      id: student.id,
-      name: student.name || '',
-      email: student.email || '',
-      support_level: supportByStudentId.get(student.id) || null,
-    }))
+    .map((student) => {
+      const latestAssignment = latestAssignmentByStudentId.get(student.id) || null
+      const latestLesson = Array.isArray(latestAssignment?.lessons)
+        ? latestAssignment.lessons[0]
+        : latestAssignment?.lessons || null
+      const latestLessonTitle = latestLesson?.title || latestLesson?.subject || ''
+      const assignmentStatus = typeof latestAssignment?.status === 'string' ? latestAssignment.status.trim() : ''
+      const isWorkedLesson = assignmentStatus && assignmentStatus !== 'assigned'
+
+      return {
+        id: student.id,
+        name: student.name || '',
+        email: student.email || '',
+        support_level: supportByStudentId.get(student.id) || null,
+        latest_assignment: latestAssignment
+          ? {
+              status: assignmentStatus || '',
+              assigned_at: latestAssignment.assigned_at || null,
+              mode: latestAssignment.mode || '',
+              lesson_id: latestLesson?.id || null,
+              lesson_title: latestLessonTitle || '',
+            }
+          : null,
+        lesson_context_label: isWorkedLesson ? 'Most Recent Lesson Worked On' : 'Assigned Lesson',
+        lesson_context_title: latestLessonTitle || 'No lesson activity yet',
+        lesson_context_source: isWorkedLesson ? 'latest_session_or_assignment' : 'current_assignment',
+      }
+    })
 
   return res.status(200).json({ students })
 }
