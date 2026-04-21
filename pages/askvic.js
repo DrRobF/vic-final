@@ -16,6 +16,18 @@ const INITIAL_MESSAGES = [
   },
 ]
 
+const ASSIGNED_LESSON_READY_MESSAGE = (lessonTitle) => ({
+  role: 'assistant',
+  text: `Your teacher assigned "${lessonTitle || 'a lesson'}." Send any message when you're ready to begin.`,
+  visual: { type: 'tip', title: 'Assigned lesson ready' },
+})
+
+const ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE = {
+  role: 'assistant',
+  text: 'Before we start, what is one personal interest you enjoy (for example: soccer, music, art, animals, or games)?',
+  visual: { type: 'tip', title: 'One quick question' },
+}
+
 function normalizeGradeLevel(rawGradeLevel) {
   if (!rawGradeLevel && rawGradeLevel !== 0) return 'Not specified'
   return String(rawGradeLevel)
@@ -64,6 +76,7 @@ export default function AskVIC() {
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const [awaitingAssignedLessonInterest, setAwaitingAssignedLessonInterest] = useState(false)
 
   const lessonStatusText = assignedLesson
     ? `Assigned lesson: ${assignedLesson.title || 'Untitled lesson'}`
@@ -101,6 +114,7 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('Not specified')
+        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
         return
       }
@@ -122,6 +136,7 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('Not specified')
+        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('No student found. You can still chat with VIC.')
         return
       }
@@ -150,6 +165,7 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('Not specified')
+        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
         return
       }
@@ -171,6 +187,7 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('Not specified')
+        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Could not match your student profile. Using free mode.')
         return
       }
@@ -200,6 +217,7 @@ export default function AskVIC() {
         setStudentMode('')
         setStudentSupportLevel('')
         setSessionMode('student_directed')
+        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Student detected. No assigned lesson found.')
         return
       }
@@ -238,6 +256,14 @@ export default function AskVIC() {
       setStudentMode(latestAssignment.mode || '')
       setStudentSupportLevel(resolvedSupportLevel)
       setSessionMode('teacher_directed')
+      const hasInterest = Boolean(interests.join(', ').trim())
+      if (hasInterest) {
+        setAwaitingAssignedLessonInterest(false)
+        setMessages([ASSIGNED_LESSON_READY_MESSAGE(lessonRow.title)])
+      } else {
+        setAwaitingAssignedLessonInterest(true)
+        setMessages([ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE])
+      }
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
     }
 
@@ -389,6 +415,73 @@ export default function AskVIC() {
     setInput('')
 
     try {
+      if (sessionMode === 'teacher_directed' && assignedLesson && awaitingAssignedLessonInterest) {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+        const normalizedInterest = trimmedOutgoing.replace(/\s+/g, ' ').trim()
+
+        if (supabaseUrl && supabaseKey && selectedStudentId && normalizedInterest) {
+          const supabase = createClient(supabaseUrl, supabaseKey)
+          const { error: updateInterestError } = await supabase
+            .from('users')
+            .update({ interest_tags: [normalizedInterest] })
+            .eq('id', selectedStudentId)
+
+          if (updateInterestError) {
+            console.error('[AskVIC][sendMessage] failed to save student interest', updateInterestError)
+          } else {
+            setStudentInterest(normalizedInterest)
+          }
+        }
+        if (!studentInterest) {
+          setStudentInterest(normalizedInterest)
+        }
+
+        setAwaitingAssignedLessonInterest(false)
+
+        const apiMessages = [
+          ...nextMessages.map((msg) => ({ role: msg.role, content: msg.text })),
+          {
+            role: 'user',
+            content: `The student just shared this personal interest: "${normalizedInterest}". Start the assigned lesson now. Use that interest naturally while teaching, and do not ask onboarding questions.`,
+          },
+        ]
+
+        const res = await fetch('/api/vic', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: apiMessages,
+            studentId: selectedStudentId,
+            sessionMode,
+            assignedLesson,
+            studentMode,
+            supportLevel: studentSupportLevel,
+            studentInterest: normalizedInterest,
+            gradeLevel: studentGradeLevel,
+          }),
+        })
+
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`)
+        }
+
+        const data = await res.json()
+        const finalReply = data.reply || 'No reply'
+        const visual = inferVisualFromConversation(outgoing, finalReply)
+
+        setMessages([
+          ...nextMessages,
+          {
+            role: 'assistant',
+            text: finalReply,
+            visual,
+          },
+        ])
+
+        return finalReply
+      }
+
       const apiMessages = nextMessages.map((msg) => ({
         role: msg.role,
         content: msg.text,
@@ -408,6 +501,7 @@ export default function AskVIC() {
           studentMode,
           studentSupportLevel,
           studentInterest,
+          studentGradeLevel,
         },
       })
 
@@ -423,6 +517,7 @@ export default function AskVIC() {
           studentMode,
           supportLevel: studentSupportLevel,
           studentInterest,
+          gradeLevel: studentGradeLevel,
         }),
       })
       console.log('[AskVIC][sendMessage] fetch returned', {

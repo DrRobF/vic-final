@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     studentMode,
     supportLevel,
     studentInterest,
+    gradeLevel,
   } = req.body || {}
 
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -57,7 +58,10 @@ export default async function handler(req, res) {
     let resolvedStudentMode = studentMode || ''
     let resolvedSupportLevel = normalizeSupportLevel(supportLevel || studentMode || '')
     let resolvedStudentInterest = studentInterest || ''
-    let resolvedGradeLevel = ''
+    let resolvedGradeLevel =
+      typeof gradeLevel === 'string' && gradeLevel.trim() && gradeLevel.trim() !== 'Not specified'
+        ? gradeLevel.trim()
+        : ''
 
     const resolvedStudentId =
       typeof studentId === 'number'
@@ -215,7 +219,7 @@ ${resolvedGradeLevel || ''}
 
 IMPORTANT:
 - If student interest is already known, do not ask for it again.
-- Begin by teaching the assigned lesson directly.
+- If student interest is missing, ask exactly one brief personal-interest question first, then begin the assigned lesson.
 - Teach the assigned lesson instead of generic chat.
 - Adapt instruction to the support level behavior above.
 `
