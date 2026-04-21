@@ -16,6 +16,11 @@ const INITIAL_MESSAGES = [
   },
 ]
 
+function normalizeGradeLevel(rawGradeLevel) {
+  if (!rawGradeLevel && rawGradeLevel !== 0) return 'Not specified'
+  return String(rawGradeLevel)
+}
+
 function normalizeSupportLevel(rawLevel) {
   if (typeof rawLevel !== 'string') return ''
 
@@ -52,11 +57,13 @@ export default function AskVIC() {
   const [studentMode, setStudentMode] = useState('')
   const [studentSupportLevel, setStudentSupportLevel] = useState('')
   const [studentInterest, setStudentInterest] = useState('')
+  const [studentGradeLevel, setStudentGradeLevel] = useState('Not specified')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
+  const [isGeneratingReport, setIsGeneratingReport] = useState(false)
 
   const lessonStatusText = assignedLesson
     ? `Assigned lesson: ${assignedLesson.title || 'Untitled lesson'}`
@@ -93,6 +100,7 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
+        setStudentGradeLevel('Not specified')
         setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
         return
       }
@@ -113,6 +121,7 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
+        setStudentGradeLevel('Not specified')
         setStudentLookupStatus('No student found. You can still chat with VIC.')
         return
       }
@@ -140,13 +149,14 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
+        setStudentGradeLevel('Not specified')
         setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
         return
       }
 
       const { data: studentRows, error: studentLookupError } = await supabase
         .from('users')
-        .select('id, interest_tags')
+        .select('id, name, email, interest_tags')
         .eq('email', user.email)
         .order('id', { ascending: true })
         .limit(1)
@@ -160,6 +170,7 @@ export default function AskVIC() {
         setAssignedLesson(null)
         setSessionMode('student_directed')
         setStudentSupportLevel('')
+        setStudentGradeLevel('Not specified')
         setStudentLookupStatus('Could not match your student profile. Using free mode.')
         return
       }
@@ -197,13 +208,18 @@ export default function AskVIC() {
 
       const { data: enrollmentRows } = await supabase
         .from('enrollments')
-        .select('class_id, support_level')
+        .select('class_id, support_level, classes:class_id(grade_level)')
         .eq('student_id', student.id)
         .order('class_id', { ascending: true })
 
       if (!active) return
 
       const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
+      const firstEnrollment = safeEnrollmentRows[0] || null
+      const firstClassRow = Array.isArray(firstEnrollment?.classes)
+        ? firstEnrollment.classes[0]
+        : firstEnrollment?.classes
+      setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
       const normalizedAssignmentMode = normalizeSupportLevel(latestAssignment.mode || '')
 
       if (safeEnrollmentRows.length === 1) {
@@ -465,25 +481,136 @@ export default function AskVIC() {
   }
 
   async function requestReport() {
-    const finalReply = await sendMessage('Generate a clean structured session report for download.')
-    if (finalReply) {
-      setLastReportText(finalReply.slice(0, 280) + (finalReply.length > 280 ? '...' : ''))
-      downloadReport(finalReply)
+    if (isGeneratingReport) return
+
+    setIsGeneratingReport(true)
+
+    try {
+      const studentName = getUserDisplayName(currentUserProfile) || 'Student'
+      const reportDate = new Date().toLocaleDateString('en-US')
+      const sessionFocus = assignedLesson?.title || assignedLesson?.subject || 'General support session'
+      const conversationTranscript = messages
+        .filter((message) => message?.role === 'assistant' || message?.role === 'user')
+        .filter((message) => typeof message?.text === 'string' && message.text.trim())
+        .slice(1)
+        .map((message) => ({
+          role: message.role,
+          content: message.text,
+        }))
+
+      if (!conversationTranscript.length) {
+        setLastReportText('No report yet. Run a short session and generate one to preview it here.')
+        return
+      }
+
+      const response = await fetch('/api/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          transcript: conversationTranscript,
+          studentName,
+          gradeLevel: studentGradeLevel,
+          date: reportDate,
+          sessionFocus,
+          studentInterest: studentInterest || 'Not specified',
+        }),
+      })
+
+      const payload = await response.json()
+      if (!response.ok || !payload?.report) {
+        throw new Error(payload?.error || 'Could not generate report.')
+      }
+
+      const report = payload.report
+      setLastReportText(report.performanceSummary || 'Report generated.')
+      await downloadReportPdf({
+        studentName,
+        gradeLevel: studentGradeLevel,
+        date: reportDate,
+        sessionFocus,
+        studentInterest: studentInterest || 'Not specified',
+        report,
+      })
+    } catch (error) {
+      console.error('[AskVIC][requestReport] failed', error)
+      setLastReportText('Could not generate report right now. Please try again.')
+    } finally {
+      setIsGeneratingReport(false)
     }
   }
 
-  function downloadReport(text) {
-    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' })
-    const url = URL.createObjectURL(blob)
+  async function downloadReportPdf(reportData) {
+    const { studentName, gradeLevel, date, sessionFocus, studentInterest, report } = reportData
+    const escapeHtml = (value) =>
+      String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;')
 
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'VIC-Report.txt'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
+    const buildBullets = (items = []) =>
+      (Array.isArray(items) ? items : [])
+        .map((item) => `<li>${escapeHtml(item)}</li>`)
+        .join('')
 
-    URL.revokeObjectURL(url)
+    const printableHtml = `
+      <!doctype html>
+      <html>
+        <head>
+          <meta charset="utf-8" />
+          <title>VIC Learning Report</title>
+          <style>
+            body { font-family: Arial, sans-serif; color: #0f172a; margin: 28px; line-height: 1.45; }
+            h1 { margin: 0 0 16px; font-size: 26px; }
+            h2 { margin: 22px 0 8px; font-size: 18px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+            p { margin: 4px 0; }
+            ul { margin: 8px 0 4px 20px; }
+            li { margin-bottom: 6px; }
+            .meta { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
+          </style>
+        </head>
+        <body>
+          <h1>VIC Learning Report</h1>
+          <div class="meta">
+            <p><strong>Student Name:</strong> ${escapeHtml(studentName)}</p>
+            <p><strong>Grade Level:</strong> ${escapeHtml(gradeLevel)}</p>
+            <p><strong>Date:</strong> ${escapeHtml(date)}</p>
+            <p><strong>Session Focus / Topic:</strong> ${escapeHtml(sessionFocus)}</p>
+            <p><strong>Student Interest Used:</strong> ${escapeHtml(studentInterest)}</p>
+          </div>
+
+          <h2>1. Performance Summary</h2>
+          <p>${escapeHtml(report.performanceSummary || 'Not available.')}</p>
+
+          <h2>2. Skills Demonstrated</h2>
+          <ul>${buildBullets(report.skillsDemonstrated)}</ul>
+
+          <h2>3. Areas for Growth</h2>
+          <ul>${buildBullets(report.areasForGrowth)}</ul>
+
+          <h2>4. Next Instructional Steps</h2>
+          <ul>${buildBullets(report.nextInstructionalSteps)}</ul>
+
+          <h2>5. Session Evidence / Sample Work</h2>
+          <ul>${buildBullets(report.sessionEvidence)}</ul>
+
+          <h2>6. Optional Parent-Friendly Summary</h2>
+          <p>${escapeHtml(report.parentFriendlySummary || 'Not available.')}</p>
+        </body>
+      </html>
+    `
+
+    const reportWindow = window.open('', '_blank', 'width=900,height=700')
+    if (!reportWindow) {
+      throw new Error('Pop-up blocked while preparing PDF report window.')
+    }
+
+    reportWindow.document.open()
+    reportWindow.document.write(printableHtml)
+    reportWindow.document.close()
+    reportWindow.focus()
+    reportWindow.print()
   }
 
   function runCalculator() {
@@ -815,11 +942,11 @@ ${context}`
           </div>
 
           <button
-            style={canGetReport ? styles.reportButtonCompact : styles.reportButtonDisabledCompact}
+            style={canGetReport && !isGeneratingReport ? styles.reportButtonCompact : styles.reportButtonDisabledCompact}
             onClick={requestReport}
-            disabled={!canGetReport}
+            disabled={!canGetReport || isGeneratingReport}
           >
-            Get Report
+            {isGeneratingReport ? 'Generating...' : 'Get Report'}
           </button>
         </div>
 
