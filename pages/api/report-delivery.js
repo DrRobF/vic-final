@@ -78,35 +78,35 @@ async function resolveTeacherEmail({ requesterProfile, supabaseAdmin }) {
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
-    return res.status(405).json({ error: 'Method not allowed.' })
+    return res.status(405).json({ success: false, error: 'Method not allowed.' })
   }
 
   if (!supabaseUrl || !publishableKey || !serviceRoleKey) {
-    return res.status(500).json({ error: 'Server is missing Supabase configuration.' })
+    return res.status(500).json({ success: false, error: 'Server is missing Supabase configuration.' })
   }
 
   if (!resendApiKey || !reportsFromEmail) {
-    return res.status(500).json({ error: 'Email delivery is not configured on the server.' })
+    return res.status(500).json({ success: false, error: 'Email delivery is not configured on the server.' })
   }
 
   const accessToken = getBearerToken(req)
   if (!accessToken) {
-    return res.status(401).json({ error: 'Missing access token.' })
+    return res.status(401).json({ success: false, error: 'Missing access token.' })
   }
 
   const reportPayload = req.body?.reportPayload
   if (!reportPayload || typeof reportPayload !== 'object' || !reportPayload.report) {
-    return res.status(400).json({ error: 'A valid reportPayload is required.' })
+    return res.status(400).json({ success: false, error: 'A valid reportPayload is required.' })
   }
 
   const requestedParentEmail = parseOptionalEmail(req.body?.parentEmail)
   if (requestedParentEmail && !isValidEmail(requestedParentEmail)) {
-    return res.status(400).json({ error: 'parentEmail is not valid.' })
+    return res.status(400).json({ success: false, error: 'parentEmail is not valid.' })
   }
 
   const explicitTeacherEmail = parseOptionalEmail(req.body?.teacherEmail)
   if (explicitTeacherEmail && !isValidEmail(explicitTeacherEmail)) {
-    return res.status(400).json({ error: 'teacherEmail is not valid.' })
+    return res.status(400).json({ success: false, error: 'teacherEmail is not valid.' })
   }
 
   const supabaseAuth = createClient(supabaseUrl, publishableKey, {
@@ -122,7 +122,7 @@ export default async function handler(req, res) {
   } = await supabaseAuth.auth.getUser(accessToken)
 
   if (authError || !authUser?.id) {
-    return res.status(401).json({ error: 'Invalid or expired session.' })
+    return res.status(401).json({ success: false, error: 'Invalid or expired session.' })
   }
 
   const { data: profileRows } = await supabaseAdmin
@@ -143,7 +143,10 @@ export default async function handler(req, res) {
       .limit(1)
 
     if (fallbackError) {
-      return res.status(500).json({ error: fallbackError.message || 'Could not resolve requester profile.' })
+      return res.status(500).json({
+        success: false,
+        error: fallbackError.message || 'Could not resolve requester profile.',
+      })
     }
 
     requesterProfile = Array.isArray(fallbackRows) ? fallbackRows[0] : null
@@ -154,13 +157,14 @@ export default async function handler(req, res) {
   try {
     resolvedTeacherEmail = await resolveTeacherEmail({ requesterProfile, supabaseAdmin })
   } catch (error) {
-    return res.status(500).json({ error: error.message || 'Could not resolve teacher email.' })
+    return res.status(500).json({ success: false, error: error.message || 'Could not resolve teacher email.' })
   }
 
   const teacherRecipient = resolvedTeacherEmail || explicitTeacherEmail
+  console.log('SENDING TO:', teacherRecipient)
 
   if (!teacherRecipient || !isValidEmail(teacherRecipient)) {
-    return res.status(400).json({ error: 'Could not resolve a valid teacher email recipient.' })
+    return res.status(400).json({ success: false, error: 'Could not resolve a valid teacher email recipient.' })
   }
 
   const recipients = Array.from(new Set([teacherRecipient, requestedParentEmail].filter(Boolean)))
@@ -171,36 +175,49 @@ export default async function handler(req, res) {
   const studentName = reportPayload?.studentName || 'Student'
   const date = reportPayload?.date || new Date().toISOString().slice(0, 10)
 
-  const resendResponse = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${resendApiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      from: reportsFromEmail,
-      to: recipients,
-      subject: `VIC Learning Report: ${studentName} (${date})`,
-      html,
-      text,
-    }),
-  })
+  try {
+    console.log('EMAIL ATTEMPT', { to: teacherRecipient })
+    const resendResponse = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: reportsFromEmail,
+        to: recipients,
+        subject: `VIC Learning Report: ${studentName} (${date})`,
+        html,
+        text,
+      }),
+    })
 
-  const resendData = await resendResponse.json()
+    const resendData = await resendResponse.json()
 
-  if (!resendResponse.ok) {
-    return res.status(resendResponse.status).json({
-      error: resendData?.message || 'Email provider rejected the request.',
-      provider: resendData,
+    if (!resendResponse.ok) {
+      const providerError = new Error(resendData?.message || 'Email provider rejected the request.')
+      console.error('EMAIL FAILED', providerError)
+      return res.status(resendResponse.status).json({
+        success: false,
+        error: providerError.message,
+        provider: resendData,
+      })
+    }
+
+    console.log('EMAIL SENT SUCCESS')
+    return res.status(200).json({
+      success: true,
+      recipients,
+      providerMessageId: resendData?.id || null,
+      teacherEmail: teacherRecipient,
+      parentEmail: requestedParentEmail || null,
+      deliveryFormat: 'html_text',
+    })
+  } catch (error) {
+    console.error('EMAIL FAILED', error)
+    return res.status(500).json({
+      success: false,
+      error: error?.message || 'Unexpected email delivery failure.',
     })
   }
-
-  return res.status(200).json({
-    success: true,
-    recipients,
-    providerMessageId: resendData?.id || null,
-    teacherEmail: teacherRecipient,
-    parentEmail: requestedParentEmail || null,
-    deliveryFormat: 'html_text',
-  })
 }

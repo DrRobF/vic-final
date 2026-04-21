@@ -649,7 +649,7 @@ export default function AskVIC() {
   async function emailReport() {
     if (isSendingReportEmail || isGeneratingReport) return
     setIsSendingReportEmail(true)
-    setReportDeliveryStatus('')
+    setReportDeliveryStatus('Sending report...')
 
     try {
       const reportPayload = await generateReportPayload()
@@ -671,6 +671,8 @@ export default function AskVIC() {
         throw new Error('You must be signed in to send email delivery.')
       }
 
+      console.log('REPORT EMAIL TRIGGERED', { email: currentUserProfile?.email || '' })
+
       const deliveryResponse = await fetch('/api/report-delivery', {
         method: 'POST',
         headers: {
@@ -690,10 +692,12 @@ export default function AskVIC() {
       const recipients = Array.isArray(deliveryPayload.recipients)
         ? deliveryPayload.recipients.join(', ')
         : 'teacher recipient'
-      setReportDeliveryStatus(`Report emailed successfully to: ${recipients}`)
+      setReportDeliveryStatus(`Report sent successfully (${recipients})`)
     } catch (error) {
       console.error('[AskVIC][emailReport] failed', error)
-      setReportDeliveryStatus('Could not send the report email right now. Please try again.')
+      setReportDeliveryStatus(
+        `Failed to send report${error?.message ? `: ${error.message}` : ''}`
+      )
     } finally {
       setIsSendingReportEmail(false)
     }
@@ -1056,7 +1060,7 @@ ${context}`
           onClick={emailReport}
           disabled={!canGetReport || isSendingReportEmail || isGeneratingReport}
         >
-          {isSendingReportEmail ? 'Sending Email...' : 'Email Report'}
+          {isSendingReportEmail ? 'Sending report...' : 'Email Report'}
         </button>
 
         <div style={styles.reportFeatureTextCompact}>
