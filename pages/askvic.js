@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import VICHeader from '../components/VICHeader'
 import VICLogo from '../components/VICLogo'
+import { buildReportHtml } from '../lib/report-format'
 
 const BRAIN_VERSION = 'v3.3'
 const SKETCH_BG_COLOR = '#f8fafc'
@@ -76,6 +77,8 @@ export default function AskVIC() {
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
   const [isGeneratingReport, setIsGeneratingReport] = useState(false)
+  const [isSendingReportEmail, setIsSendingReportEmail] = useState(false)
+  const [reportDeliveryStatus, setReportDeliveryStatus] = useState('')
   const [awaitingAssignedLessonInterest, setAwaitingAssignedLessonInterest] = useState(false)
 
   const lessonStatusText = assignedLesson
@@ -575,57 +578,66 @@ export default function AskVIC() {
     }
   }
 
+  function buildReportRequestPayload() {
+    const studentName = getUserDisplayName(currentUserProfile) || 'Student'
+    const reportDate = new Date().toLocaleDateString('en-US')
+    const sessionFocus = assignedLesson?.title || assignedLesson?.subject || 'General support session'
+    const conversationTranscript = messages
+      .filter((message) => message?.role === 'assistant' || message?.role === 'user')
+      .filter((message) => typeof message?.text === 'string' && message.text.trim())
+      .slice(1)
+      .map((message) => ({
+        role: message.role,
+        content: message.text,
+      }))
+
+    return {
+      transcript: conversationTranscript,
+      studentName,
+      gradeLevel: studentGradeLevel,
+      date: reportDate,
+      sessionFocus,
+      studentInterest,
+    }
+  }
+
+  async function generateReportPayload() {
+    const payload = buildReportRequestPayload()
+    if (!payload.transcript.length) {
+      setLastReportText('No report yet. Run a short session and generate one to preview it here.')
+      return null
+    }
+
+    const response = await fetch('/api/report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    const data = await response.json()
+    if (!response.ok || !data?.report) {
+      throw new Error(data?.error || 'Could not generate report.')
+    }
+
+    const reportPayload = {
+      studentName: payload.studentName,
+      gradeLevel: payload.gradeLevel,
+      date: payload.date,
+      sessionFocus: payload.sessionFocus,
+      studentInterest: payload.studentInterest,
+      report: data.report,
+    }
+    setLastReportText(data.report.performanceSummary || 'Report generated.')
+    return reportPayload
+  }
+
   async function requestReport() {
     if (isGeneratingReport) return
-
     setIsGeneratingReport(true)
-
+    setReportDeliveryStatus('')
     try {
-      const studentName = getUserDisplayName(currentUserProfile) || 'Student'
-      const reportDate = new Date().toLocaleDateString('en-US')
-      const sessionFocus = assignedLesson?.title || assignedLesson?.subject || 'General support session'
-      const conversationTranscript = messages
-        .filter((message) => message?.role === 'assistant' || message?.role === 'user')
-        .filter((message) => typeof message?.text === 'string' && message.text.trim())
-        .slice(1)
-        .map((message) => ({
-          role: message.role,
-          content: message.text,
-        }))
-
-      if (!conversationTranscript.length) {
-        setLastReportText('No report yet. Run a short session and generate one to preview it here.')
-        return
-      }
-
-      const response = await fetch('/api/report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          transcript: conversationTranscript,
-          studentName,
-          gradeLevel: studentGradeLevel,
-          date: reportDate,
-          sessionFocus,
-          studentInterest,
-        }),
-      })
-
-      const payload = await response.json()
-      if (!response.ok || !payload?.report) {
-        throw new Error(payload?.error || 'Could not generate report.')
-      }
-
-      const report = payload.report
-      setLastReportText(report.performanceSummary || 'Report generated.')
-      await downloadReportPdf({
-        studentName,
-        gradeLevel: studentGradeLevel,
-        date: reportDate,
-        sessionFocus,
-        studentInterest,
-        report,
-      })
+      const reportPayload = await generateReportPayload()
+      if (!reportPayload) return
+      await downloadReportPdf(reportPayload)
     } catch (error) {
       console.error('[AskVIC][requestReport] failed', error)
       setLastReportText('Could not generate report right now. Please try again.')
@@ -634,73 +646,61 @@ export default function AskVIC() {
     }
   }
 
+  async function emailReport() {
+    if (isSendingReportEmail || isGeneratingReport) return
+    setIsSendingReportEmail(true)
+    setReportDeliveryStatus('')
+
+    try {
+      const reportPayload = await generateReportPayload()
+      if (!reportPayload) return
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+      if (!supabaseUrl || !supabaseKey) {
+        throw new Error('Supabase is not configured for authenticated delivery.')
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseKey)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
+      if (!accessToken) {
+        throw new Error('You must be signed in to send email delivery.')
+      }
+
+      const deliveryResponse = await fetch('/api/report-delivery', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          reportPayload,
+        }),
+      })
+
+      const deliveryPayload = await deliveryResponse.json()
+      if (!deliveryResponse.ok || !deliveryPayload?.success) {
+        throw new Error(deliveryPayload?.error || 'Report email delivery failed.')
+      }
+
+      const recipients = Array.isArray(deliveryPayload.recipients)
+        ? deliveryPayload.recipients.join(', ')
+        : 'teacher recipient'
+      setReportDeliveryStatus(`Report emailed successfully to: ${recipients}`)
+    } catch (error) {
+      console.error('[AskVIC][emailReport] failed', error)
+      setReportDeliveryStatus('Could not send the report email right now. Please try again.')
+    } finally {
+      setIsSendingReportEmail(false)
+    }
+  }
+
   async function downloadReportPdf(reportData) {
-    const { studentName, gradeLevel, date, sessionFocus, studentInterest, report } = reportData
-    const escapeHtml = (value) =>
-      String(value || '')
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;')
-
-    const buildBullets = (items = []) =>
-      (Array.isArray(items) ? items : [])
-        .map((item) => `<li>${escapeHtml(item)}</li>`)
-        .join('')
-
-    const printableHtml = `
-      <!doctype html>
-      <html>
-        <head>
-          <meta charset="utf-8" />
-          <title>VIC Learning Report</title>
-          <style>
-            body { font-family: Arial, sans-serif; color: #0f172a; margin: 28px; line-height: 1.45; }
-            h1 { margin: 0 0 16px; font-size: 26px; }
-            h2 { margin: 22px 0 8px; font-size: 18px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
-            p { margin: 4px 0; }
-            ul { margin: 8px 0 4px 20px; }
-            li { margin-bottom: 6px; }
-            .meta { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; }
-          </style>
-        </head>
-        <body>
-          <h1>VIC Learning Report</h1>
-          <div class="meta">
-            <p><strong>Student Name:</strong> ${escapeHtml(studentName)}</p>
-            ${gradeLevel ? `<p><strong>Grade Level:</strong> ${escapeHtml(gradeLevel)}</p>` : ''}
-            <p><strong>Date:</strong> ${escapeHtml(date)}</p>
-            <p><strong>Session Focus / Topic:</strong> ${escapeHtml(sessionFocus)}</p>
-            ${studentInterest ? `<p><strong>Student Interest Used:</strong> ${escapeHtml(studentInterest)}</p>` : ''}
-          </div>
-
-          <h2>1. Performance Summary</h2>
-          <p>${escapeHtml(report.performanceSummary || 'Not available.')}</p>
-
-          <h2>2. Primary Strength</h2>
-          <p>${escapeHtml(report.primaryStrength || 'Not available.')}</p>
-
-          <h2>3. Primary Area for Growth</h2>
-          <p>${escapeHtml(report.primaryAreaForGrowth || 'Not available.')}</p>
-
-          <h2>4. Skills Demonstrated</h2>
-          <ul>${buildBullets(report.skillsDemonstrated)}</ul>
-
-          <h2>5. Areas for Growth</h2>
-          <ul>${buildBullets(report.areasForGrowth)}</ul>
-
-          <h2>6. Next Instructional Steps</h2>
-          <ul>${buildBullets(report.nextInstructionalSteps)}</ul>
-
-          <h2>7. Session Evidence / Sample Work</h2>
-          <ul>${buildBullets(report.sessionEvidence)}</ul>
-
-          <h2>8. Optional Parent-Friendly Summary</h2>
-          <p>${escapeHtml(report.parentFriendlySummary || 'Not available.')}</p>
-        </body>
-      </html>
-    `
+    const printableHtml = buildReportHtml(reportData)
 
     const reportWindow = window.open('', '_blank', 'width=900,height=700')
     if (!reportWindow) {
@@ -1043,7 +1043,7 @@ ${context}`
           </div>
 
           <button
-            style={canGetReport && !isGeneratingReport ? styles.reportButtonCompact : styles.reportButtonDisabledCompact}
+            style={canGetReport && !isGeneratingReport ? styles.reportButton : styles.reportButtonDisabled}
             onClick={requestReport}
             disabled={!canGetReport || isGeneratingReport}
           >
@@ -1051,9 +1051,19 @@ ${context}`
           </button>
         </div>
 
+        <button
+          style={canGetReport && !isSendingReportEmail && !isGeneratingReport ? styles.reportButton : styles.reportButtonDisabled}
+          onClick={emailReport}
+          disabled={!canGetReport || isSendingReportEmail || isGeneratingReport}
+        >
+          {isSendingReportEmail ? 'Sending Email...' : 'Email Report'}
+        </button>
+
         <div style={styles.reportFeatureTextCompact}>
           Generate a clean summary when the session is finished.
         </div>
+
+        {reportDeliveryStatus ? <div style={styles.reportDeliveryStatus}>{reportDeliveryStatus}</div> : null}
 
         <div style={styles.reportPreviewInline}>
           <div style={styles.reportPreviewInlineLabel}>Last Report Preview</div>
@@ -2248,6 +2258,16 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       fontSize: '13px',
       lineHeight: 1.5,
       color: 'var(--vic-text-secondary)',
+    },
+
+    reportDeliveryStatus: {
+      fontSize: '12px',
+      lineHeight: 1.45,
+      color: 'var(--vic-text-secondary)',
+      borderRadius: '12px',
+      background: 'var(--vic-surface-muted)',
+      border: '1px solid var(--vic-border-soft)',
+      padding: '8px 10px',
     },
 
     reportPreviewInline: {
