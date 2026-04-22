@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
@@ -58,6 +58,7 @@ export default function TeacherPage() {
   const [lessonFeedback, setLessonFeedback] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
   const [copiedCode, setCopiedCode] = useState(false)
+  const latestStudentRequestIdRef = useRef(0)
 
   const selectedCount = Object.keys(assignmentSelections).length
   const supportCounts = Object.values(assignmentSelections).reduce(
@@ -199,6 +200,8 @@ export default function TeacherPage() {
   async function loadStudents(classId) {
     if (!classId) return
 
+    const requestId = latestStudentRequestIdRef.current + 1
+    latestStudentRequestIdRef.current = requestId
     setLoadingStudents(true)
     setError('')
 
@@ -208,14 +211,8 @@ export default function TeacherPage() {
     } = await supabase.auth.getSession()
 
     if (sessionError || !session?.access_token) {
+      if (requestId !== latestStudentRequestIdRef.current) return
       setError('Please sign in again to load students.')
-      setStudents([])
-      setStudentSupportLevels({})
-      setAssignmentSelections({})
-      setParentEmailByStudentId({})
-      setParentEmailStatusByStudentId({})
-      setReportPayloadByStudentId({})
-      setReportStatusByStudentId({})
       setLoadingStudents(false)
       return
     }
@@ -232,15 +229,13 @@ export default function TeacherPage() {
     const payload = await response.json().catch(() => null)
 
     if (!response.ok) {
+      if (requestId !== latestStudentRequestIdRef.current) return
       setError(payload?.error || 'Could not load students for this class.')
-      setStudents([])
-      setStudentSupportLevels({})
-      setAssignmentSelections({})
-      setParentEmailByStudentId({})
-      setParentEmailStatusByStudentId({})
-      setReportPayloadByStudentId({})
-      setReportStatusByStudentId({})
       setLoadingStudents(false)
+      return
+    }
+
+    if (requestId !== latestStudentRequestIdRef.current || selectedClass?.id !== classId) {
       return
     }
 
@@ -267,14 +262,18 @@ export default function TeacherPage() {
   }
 
   function handleSelectClass(classRow) {
+    if (!classRow?.id) return
+
+    if (selectedClass?.id === classRow.id) {
+      setCopiedCode(false)
+      loadStudents(classRow.id)
+      return
+    }
+
     setSelectedClass(classRow)
     setCopiedCode(false)
-    setStudents([])
-    setStudentSupportLevels({})
     setAssignmentSelections({})
-    setParentEmailByStudentId({})
     setParentEmailStatusByStudentId({})
-    setReportPayloadByStudentId({})
     setReportStatusByStudentId({})
     setIsRosterCollapsed(false)
   }

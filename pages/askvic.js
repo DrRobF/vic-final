@@ -90,6 +90,50 @@ function getUserDisplayName(userRow) {
   return userRow.name || userRow.email || ''
 }
 
+async function loadLatestAssignmentSafe(supabase, studentId) {
+  const assignmentQueryPlans = [
+    {
+      select:
+        'id, mode, assigned_at, created_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)',
+      orderByCreatedAt: true,
+    },
+    {
+      select: 'id, mode, assigned_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)',
+      orderByCreatedAt: false,
+    },
+    {
+      select: 'id, mode, assigned_at, created_at, lesson_id',
+      orderByCreatedAt: true,
+    },
+    {
+      select: 'id, mode, assigned_at, lesson_id',
+      orderByCreatedAt: false,
+    },
+  ]
+
+  for (const plan of assignmentQueryPlans) {
+    let query = supabase
+      .from('assignments')
+      .select(plan.select)
+      .eq('student_id', studentId)
+      .order('assigned_at', { ascending: false, nullsFirst: false })
+
+    if (plan.orderByCreatedAt) {
+      query = query.order('created_at', { ascending: false, nullsFirst: false })
+    }
+
+    query = query.order('id', { ascending: false }).limit(20)
+
+    const { data, error } = await query
+
+    if (!error) {
+      return { rows: Array.isArray(data) ? data : [], error: null }
+    }
+  }
+
+  return { rows: [], error: new Error('Could not load assignments with available schema.') }
+}
+
 export default function AskVIC() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -262,16 +306,7 @@ export default function AskVIC() {
         : firstEnrollment?.classes
       setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
 
-      const { data: assignmentRows, error: assignmentError } = await supabase
-        .from('assignments')
-        .select(
-          'id, mode, assigned_at, created_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)'
-        )
-        .eq('student_id', student.id)
-        .order('assigned_at', { ascending: false, nullsFirst: false })
-        .order('created_at', { ascending: false, nullsFirst: false })
-        .order('id', { ascending: false })
-        .limit(1)
+      const { rows: assignmentRows, error: assignmentError } = await loadLatestAssignmentSafe(supabase, student.id)
 
       if (!active) return
 
