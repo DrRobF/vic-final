@@ -29,6 +29,8 @@ export default async function handler(req, res) {
     supportLevel,
     studentInterest,
     gradeLevel,
+    entryIntent,
+    isFirstUserTurn,
   } = req.body || {}
 
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -185,6 +187,34 @@ export default async function handler(req, res) {
 
     const contextMessages = []
 
+    const normalizedEntryIntent =
+      typeof entryIntent === 'string' ? entryIntent.trim().toLowerCase() : ''
+    const shouldGuideFirstResponse = Boolean(isFirstUserTurn)
+
+    if (shouldGuideFirstResponse) {
+      const guidedStartInstruction = `
+FIRST-RESPONSE GUIDANCE:
+- Sound like a calm co-teacher, not a generic chatbot.
+- Start with one short orientation sentence about what you'll do next.
+- Then give one immediate, practical next step.
+- Keep it concise and student-friendly.
+
+ENTRY INTENT:
+${normalizedEntryIntent || 'student_typed_freeform'}
+
+INTENT-SPECIFIC TONE:
+- homework_help: diagnose quickly, then coach the student through their current task.
+- start_lesson: frame a clear learning target and begin instruction.
+- practice_skill: offer a short practice prompt and coach live with feedback.
+- student_typed_freeform: infer the likely need and begin with structured guidance.
+`
+
+      contextMessages.push({
+        role: 'system',
+        content: guidedStartInstruction,
+      })
+    }
+
     if (resolvedAssignedLesson) {
       resolvedSessionMode = 'teacher_directed'
       const lessonContext = `
@@ -301,6 +331,8 @@ IMPORTANT:
         supportLevel: resolvedSupportLevel || null,
         studentInterest: resolvedStudentInterest || null,
         gradeLevel: resolvedGradeLevel || null,
+        entryIntent: normalizedEntryIntent || null,
+        isFirstUserTurn: shouldGuideFirstResponse,
       },
     })
   } catch (err) {

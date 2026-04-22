@@ -28,6 +28,45 @@ const ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE = {
   visual: { type: 'tip', title: 'One quick question' },
 }
 
+const GUIDED_ENTRY_OPTIONS = [
+  {
+    id: 'homework_help',
+    label: 'Get Homework Help',
+    prompt: 'I need help with homework. Please coach me step by step and check my understanding as we go.',
+  },
+  {
+    id: 'start_lesson',
+    label: 'Start a Lesson',
+    prompt: 'I want to start a lesson. Please choose a focused starting point and teach me one clear step at a time.',
+  },
+  {
+    id: 'practice_skill',
+    label: 'Practice a Skill',
+    prompt: 'I want to practice a skill. Give me one short practice problem and coach me through it like a teacher.',
+  },
+]
+
+function getEntryModeMeta({ hasAssignedLesson, hasUserMessages }) {
+  if (hasAssignedLesson && !hasUserMessages) {
+    return {
+      label: 'Teacher-Assigned Lesson',
+      helper: "Your teacher has picked today's lesson. Send an opening line to begin.",
+    }
+  }
+
+  if (hasAssignedLesson && hasUserMessages) {
+    return {
+      label: 'Teacher-Assigned Lesson In Progress',
+      helper: "VIC is following your teacher's lesson and guiding you step by step.",
+    }
+  }
+
+  return {
+    label: 'Student-Led Session',
+    helper: 'Choose a quick start below or type your own question anytime.',
+  }
+}
+
 function normalizeGradeLevel(rawGradeLevel) {
   if (!rawGradeLevel && rawGradeLevel !== 0) return ''
   return String(rawGradeLevel).trim()
@@ -73,6 +112,7 @@ export default function AskVIC() {
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
   const [awaitingAssignedLessonInterest, setAwaitingAssignedLessonInterest] = useState(false)
+  const [pendingEntryIntent, setPendingEntryIntent] = useState('')
 
   const lessonStatusText = assignedLesson
     ? `Assigned lesson: ${assignedLesson.title || 'Untitled lesson'}`
@@ -85,6 +125,12 @@ export default function AskVIC() {
           : studentLookupStatus === 'Could not match your student profile. Using free mode.'
             ? 'Student profile not found. Free Ask VIC is ready.'
             : studentLookupStatus
+
+  const hasUserMessages = messages.some((message) => message.role === 'user')
+  const entryModeMeta = getEntryModeMeta({
+    hasAssignedLesson: Boolean(assignedLesson),
+    hasUserMessages,
+  })
 
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
@@ -396,6 +442,7 @@ export default function AskVIC() {
 [Sketch attached]` : outgoing
     const userMessage = { role: 'user', text: userTextForThread }
     const nextMessages = [...messages, userMessage]
+    const isFirstUserTurn = !messages.some((message) => message.role === 'user')
 
     setMessages([
       ...nextMessages,
@@ -453,6 +500,8 @@ export default function AskVIC() {
             supportLevel: studentSupportLevel,
             studentInterest: normalizedInterest,
             gradeLevel: studentGradeLevel,
+            entryIntent: pendingEntryIntent || null,
+            isFirstUserTurn,
           }),
         })
 
@@ -472,6 +521,7 @@ export default function AskVIC() {
             visual,
           },
         ])
+        setPendingEntryIntent('')
 
         return finalReply
       }
@@ -512,6 +562,8 @@ export default function AskVIC() {
           supportLevel: studentSupportLevel,
           studentInterest,
           gradeLevel: studentGradeLevel,
+          entryIntent: pendingEntryIntent || null,
+          isFirstUserTurn,
         }),
       })
       console.log('[AskVIC][sendMessage] fetch returned', {
@@ -535,6 +587,7 @@ export default function AskVIC() {
           visual,
         },
       ])
+      setPendingEntryIntent('')
 
       return finalReply
     } catch (error) {
@@ -560,6 +613,12 @@ export default function AskVIC() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleGuidedEntry(option) {
+    if (!option) return
+    setPendingEntryIntent(option.id)
+    setInput(option.prompt)
   }
 
   function handleKeyDown(e) {
@@ -892,10 +951,11 @@ ${context}`
 
       <div style={styles.reportFeatureCardCompact}>
         <div style={styles.reportFeatureLabelCompact}>Session Report</div>
-        <div style={styles.reportFeatureTitleCompact}>Teacher-managed workflow</div>
+        <div style={styles.reportFeatureTitleCompact}>Session Report for teachers</div>
         <div style={styles.reportFeatureTextCompact}>
-          Reports are now generated and emailed from the Teacher Dashboard per student.
+          After each session, teachers can review and send a summary to families from the Teacher Dashboard.
         </div>
+        <div style={styles.reportFeatureHintCompact}>Look for Report controls in each student's session view.</div>
       </div>
     </section>
   )
@@ -925,6 +985,8 @@ ${context}`
                 <div style={styles.chatHeaderContent}>
                   <div style={styles.chatTitle}>Conversation</div>
                   <div style={styles.chatStatusMessage}>{lessonStatusText}</div>
+                  <div style={styles.modeStatusPill}>{entryModeMeta.label}</div>
+                  <div style={styles.modeStatusHelper}>{entryModeMeta.helper}</div>
                 </div>
 
               </div>
@@ -971,8 +1033,8 @@ ${context}`
             <section style={styles.inputCard}>
               <div style={styles.inputHeaderRow}>
                 <div>
-                  <div style={styles.chatEyebrow}>Write to VIC</div>
-                  <div style={styles.inputTitle}>Your message</div>
+                  <div style={styles.chatEyebrow}>Start your session</div>
+                  <div style={styles.inputTitle}>Choose a quick start or type your own</div>
                 </div>
 
                 {!isMobile ? (
@@ -980,12 +1042,37 @@ ${context}`
                 ) : null}
               </div>
 
+              <div style={styles.guidedEntryRow}>
+                {GUIDED_ENTRY_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    style={
+                      pendingEntryIntent === option.id
+                        ? styles.guidedEntryButtonActive
+                        : styles.guidedEntryButton
+                    }
+                    onClick={() => handleGuidedEntry(option)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={styles.inputHelperText}>
+                Tip: You can always ignore these and type your own message.
+              </div>
+
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyDown}
                 rows={isMobile ? 3 : 3}
-                placeholder="Type here..."
+                placeholder={
+                  assignedLesson
+                    ? 'Send your opening line to begin this lesson...'
+                    : 'Ask a question or pick a quick start above...'
+                }
                 style={styles.mainTextarea}
               />
 
@@ -2087,6 +2174,14 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       color: 'var(--vic-text-secondary)',
     },
 
+    reportFeatureHintCompact: {
+      fontSize: '12px',
+      lineHeight: 1.4,
+      color: 'var(--vic-text-secondary)',
+      borderTop: '1px solid var(--vic-border-soft)',
+      paddingTop: '8px',
+    },
+
     reportDeliveryStatus: {
       fontSize: '12px',
       lineHeight: 1.45,
@@ -2459,6 +2554,28 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       maxWidth: '520px',
     },
 
+    modeStatusPill: {
+      alignSelf: 'flex-start',
+      marginTop: '2px',
+      fontSize: '11px',
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      color: 'var(--vic-primary)',
+      fontWeight: 800,
+      borderRadius: '999px',
+      border: '1px solid rgba(181, 83, 47, 0.28)',
+      background: 'rgba(181, 83, 47, 0.08)',
+      padding: '4px 9px',
+      width: 'fit-content',
+    },
+
+    modeStatusHelper: {
+      fontSize: '12px',
+      lineHeight: 1.4,
+      color: 'var(--vic-text-secondary)',
+      maxWidth: '560px',
+    },
+
     chatCanvas: {
       flex: 1,
       minHeight: 0,
@@ -2568,6 +2685,40 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       color: 'var(--vic-text-secondary)',
       lineHeight: 1.4,
       textAlign: 'right',
+    },
+
+    guidedEntryRow: {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: '8px',
+    },
+
+    guidedEntryButton: {
+      border: '1px solid var(--vic-border)',
+      background: 'var(--vic-surface)',
+      color: 'var(--vic-text-primary)',
+      borderRadius: '999px',
+      padding: '7px 11px',
+      fontSize: '13px',
+      fontWeight: 700,
+      cursor: 'pointer',
+    },
+
+    guidedEntryButtonActive: {
+      border: '1px solid var(--vic-primary)',
+      background: 'rgba(181, 83, 47, 0.1)',
+      color: 'var(--vic-text-primary)',
+      borderRadius: '999px',
+      padding: '7px 11px',
+      fontSize: '13px',
+      fontWeight: 800,
+      cursor: 'pointer',
+    },
+
+    inputHelperText: {
+      fontSize: '12px',
+      lineHeight: 1.35,
+      color: 'var(--vic-text-secondary)',
     },
 
     mainTextarea: {
