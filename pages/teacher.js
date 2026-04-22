@@ -988,6 +988,8 @@ export default function TeacherPage() {
                                     <input
                                       type="email"
                                       value={getParentEmailValue(student.id)}
+                                      name={`parent-email-${student.id}`}
+                                      autoComplete="off"
                                       onChange={(e) =>
                                         setParentEmailByStudentId((previous) => ({
                                           ...previous,

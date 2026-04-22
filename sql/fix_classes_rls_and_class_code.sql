@@ -4,6 +4,7 @@
 -- 1) ties public.users rows to auth.users via auth_user_id
 -- 2) fixes classes RLS so teachers can only manage their own classes
 -- 3) auto-generates unique class_code values on insert/update
+-- 4) ensures users.parent_email exists for teacher roster parent contact persistence
 
 begin;
 
@@ -23,6 +24,10 @@ set auth_user_id = au.id
 from auth.users au
 where u.auth_user_id is null
   and lower(u.email) = lower(au.email);
+
+-- Ensure student parent contact field exists for teacher dashboard save/read.
+alter table if exists public.users
+add column if not exists parent_email text;
 
 -- -------------------------------------------------------------------
 -- B) Ensure class_code exists and is unique + human-friendly

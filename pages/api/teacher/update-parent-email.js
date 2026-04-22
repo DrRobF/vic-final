@@ -128,6 +128,11 @@ export default async function handler(req, res) {
   const { error: updateError } = await supabaseAdmin.from('users').update({ parent_email: parentEmail || null }).eq('id', studentId)
 
   if (updateError) {
+    if (updateError.code === '42703') {
+      return res.status(500).json({
+        error: "Parent email storage is not enabled yet. Run `sql/add_parent_email_to_users.sql` (or re-run `sql/fix_classes_rls_and_class_code.sql`) in Supabase to add users.parent_email.",
+      })
+    }
     return res.status(500).json({ error: updateError.message || 'Could not save parent email.' })
   }
 
