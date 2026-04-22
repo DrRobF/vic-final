@@ -74,9 +74,13 @@ export default async function handler(req, res) {
 
     // If a student id is provided and lesson context was not passed in,
     // fetch the most recent assignment and joined lesson automatically.
+    const lessonContextMissing =
+      !resolvedAssignedLesson ||
+      (!resolvedAssignedLesson?.lesson_text && resolvedAssignedLesson?.id)
+
     if (
       resolvedSessionMode === 'teacher_directed' &&
-      !resolvedAssignedLesson &&
+      lessonContextMissing &&
       resolvedStudentId &&
       supabaseUrl &&
       supabaseKey

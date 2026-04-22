@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import VICHeader from '../components/VICHeader'
 import VICLogo from '../components/VICLogo'
@@ -147,6 +147,7 @@ export default function AskVIC() {
   const [viewportWidth, setViewportWidth] = useState(1400)
   const [selectedStudentId, setSelectedStudentId] = useState(null)
   const [assignedLesson, setAssignedLesson] = useState(null)
+  const [hasTeacherAssignment, setHasTeacherAssignment] = useState(false)
   const [studentMode, setStudentMode] = useState('')
   const [studentSupportLevel, setStudentSupportLevel] = useState('')
   const [studentInterest, setStudentInterest] = useState('')
@@ -159,8 +160,8 @@ export default function AskVIC() {
   const [awaitingAssignedLessonInterest, setAwaitingAssignedLessonInterest] = useState(false)
   const [pendingEntryIntent, setPendingEntryIntent] = useState('')
 
-  const lessonStatusText = assignedLesson
-    ? `Assigned lesson: ${assignedLesson.title || 'Untitled lesson'}`
+  const lessonStatusText = hasTeacherAssignment
+    ? `Assigned lesson: ${assignedLesson?.title || 'Teacher-selected lesson'}`
     : studentLookupStatus === 'Loading student...'
       ? 'Checking your student profile...'
       : studentLookupStatus === 'Student detected. No assigned lesson found.'
@@ -172,7 +173,7 @@ export default function AskVIC() {
             : studentLookupStatus
 
   const hasUserMessages = messages.some((message) => message.role === 'user')
-  const hasAssignedLesson = Boolean(assignedLesson)
+  const hasAssignedLesson = hasTeacherAssignment
   const entryModeMeta = getEntryModeMeta({
     hasAssignedLesson,
     hasUserMessages,
@@ -190,11 +191,9 @@ export default function AskVIC() {
   const canvasRef = useRef(null)
   const isDrawingRef = useRef(false)
   const isErasingRef = useRef(false)
+  const assignmentIntroKeyRef = useRef('')
 
-  useEffect(() => {
-    let active = true
-
-    async function detectStudentAndLesson() {
+  const detectStudentAndLesson = useCallback(async () => {
       setStudentLookupStatus('Loading student...')
       setCurrentUserStatus('Loading signed-in user...')
 
@@ -206,6 +205,8 @@ export default function AskVIC() {
         setCurrentUserStatus('Supabase is not configured.')
         setSelectedStudentId(null)
         setAssignedLesson(null)
+        setHasTeacherAssignment(false)
+        assignmentIntroKeyRef.current = ''
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
@@ -221,13 +222,13 @@ export default function AskVIC() {
         error: userError,
       } = await supabase.auth.getUser()
 
-      if (!active) return
-
       if (userError || !user?.email) {
         setCurrentUserProfile(null)
         setCurrentUserStatus('No signed-in user found.')
         setSelectedStudentId(null)
         setAssignedLesson(null)
+        setHasTeacherAssignment(false)
+        assignmentIntroKeyRef.current = ''
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
@@ -243,8 +244,6 @@ export default function AskVIC() {
         .order('id', { ascending: true })
         .limit(1)
 
-      if (!active) return
-
       const matchedProfile = profileRows?.[0] || null
       setCurrentUserProfile(matchedProfile)
       setCurrentUserStatus(
@@ -257,6 +256,8 @@ export default function AskVIC() {
       if (role && role !== 'student') {
         setSelectedStudentId(null)
         setAssignedLesson(null)
+        setHasTeacherAssignment(false)
+        assignmentIntroKeyRef.current = ''
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
@@ -272,13 +273,13 @@ export default function AskVIC() {
         .order('id', { ascending: true })
         .limit(1)
 
-      if (!active) return
-
       const student = studentRows?.[0]
 
       if (studentLookupError || !student?.id) {
         setSelectedStudentId(null)
         setAssignedLesson(null)
+        setHasTeacherAssignment(false)
+        assignmentIntroKeyRef.current = ''
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
@@ -297,8 +298,6 @@ export default function AskVIC() {
         .eq('student_id', student.id)
         .order('class_id', { ascending: true })
 
-      if (!active) return
-
       const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
       const firstEnrollment = safeEnrollmentRows[0] || null
       const firstClassRow = Array.isArray(firstEnrollment?.classes)
@@ -307,8 +306,6 @@ export default function AskVIC() {
       setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
 
       const { rows: assignmentRows, error: assignmentError } = await loadLatestAssignmentSafe(supabase, student.id)
-
-      if (!active) return
 
       const latestAssignment = pickLatestAssignment(assignmentRows)
       let lessonRow = lessonFromAssignment(latestAssignment)
@@ -325,7 +322,34 @@ export default function AskVIC() {
       }
 
       if (assignmentError || !latestAssignment?.id || !lessonRow) {
+        if (latestAssignment?.id) {
+          setAssignedLesson({
+            id: latestAssignment.lesson_id || null,
+            subject: '',
+            title: '',
+            lesson_text: '',
+          })
+          setHasTeacherAssignment(true)
+          setStudentMode(latestAssignment.mode || '')
+          setStudentSupportLevel(normalizeSupportLevel(latestAssignment.mode || ''))
+          setSessionMode('teacher_directed')
+          setAwaitingAssignedLessonInterest(false)
+          const fallbackIntroKey = `assignment:${latestAssignment.id || 'unknown'}:ready`
+          if (assignmentIntroKeyRef.current !== fallbackIntroKey) {
+            assignmentIntroKeyRef.current = fallbackIntroKey
+            setMessages((prev) =>
+              prev.some((message) => message.role === 'user')
+                ? prev
+                : [ASSIGNED_LESSON_READY_MESSAGE('your assigned lesson')]
+            )
+          }
+          setStudentLookupStatus('Teacher lesson found and ready.')
+          return
+        }
+
         setAssignedLesson(null)
+        setHasTeacherAssignment(false)
+        assignmentIntroKeyRef.current = ''
         setStudentMode('')
         setStudentSupportLevel('')
         setSessionMode('student_directed')
@@ -350,26 +374,81 @@ export default function AskVIC() {
         enrollmentSupportLevel || normalizedAssignmentMode || normalizeSupportLevel(latestAssignment.mode || '')
 
       setAssignedLesson(lessonRow)
+      setHasTeacherAssignment(true)
       setStudentMode(latestAssignment.mode || '')
       setStudentSupportLevel(resolvedSupportLevel)
       setSessionMode('teacher_directed')
       const hasInterest = Boolean(interests.join(', ').trim())
       if (hasInterest) {
         setAwaitingAssignedLessonInterest(false)
-        setMessages([ASSIGNED_LESSON_READY_MESSAGE(lessonRow.title)])
+        const introKey = `assignment:${latestAssignment.id}:ready`
+        if (assignmentIntroKeyRef.current !== introKey) {
+          assignmentIntroKeyRef.current = introKey
+          setMessages((prev) =>
+            prev.some((message) => message.role === 'user')
+              ? prev
+              : [ASSIGNED_LESSON_READY_MESSAGE(lessonRow.title)]
+          )
+        }
       } else {
         setAwaitingAssignedLessonInterest(true)
-        setMessages([ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE])
+        const introKey = `assignment:${latestAssignment.id}:interest`
+        if (assignmentIntroKeyRef.current !== introKey) {
+          assignmentIntroKeyRef.current = introKey
+          setMessages((prev) =>
+            prev.some((message) => message.role === 'user')
+              ? prev
+              : [ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE]
+          )
+        }
       }
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
+  }, [])
+
+  useEffect(() => {
+    let active = true
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    const supabase =
+      supabaseUrl && supabaseKey
+        ? createClient(supabaseUrl, supabaseKey)
+        : null
+
+    const runDetection = async () => {
+      if (!active) return
+      await detectStudentAndLesson()
     }
 
-    detectStudentAndLesson()
+    runDetection()
+
+    const authSubscription = supabase?.auth.onAuthStateChange(() => {
+      runDetection()
+    })
+
+    const handleWindowFocus = () => {
+      runDetection()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runDetection()
+      }
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('focus', handleWindowFocus)
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+    }
 
     return () => {
       active = false
+      authSubscription?.data?.subscription?.unsubscribe()
+      if (typeof window !== 'undefined') {
+        window.removeEventListener('focus', handleWindowFocus)
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
     }
-  }, [])
+  }, [detectStudentAndLesson])
 
   useEffect(() => {
     const updateViewport = () => {
