@@ -47,6 +47,21 @@ const GUIDED_ENTRY_OPTIONS = [
   },
 ]
 
+let browserSupabaseClient = null
+
+function getBrowserSupabaseClient() {
+  if (typeof window === 'undefined') return null
+  if (browserSupabaseClient) return browserSupabaseClient
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+
+  if (!supabaseUrl || !supabaseKey) return null
+
+  browserSupabaseClient = createClient(supabaseUrl, supabaseKey)
+  return browserSupabaseClient
+}
+
 function getEntryModeMeta({ hasAssignedLesson, hasUserMessages, sessionMode }) {
   if (sessionMode === 'teacher_directed' && hasAssignedLesson && !hasUserMessages) {
     return {
@@ -283,7 +298,21 @@ export default function AskVIC() {
         return
       }
 
-      const supabase = createClient(supabaseUrl, supabaseKey)
+      const supabase = getBrowserSupabaseClient()
+      if (!supabase) {
+        setCurrentUserProfile(null)
+        setCurrentUserStatus('Supabase is not configured.')
+        setSelectedStudentId(null)
+        setAssignedLesson(null)
+        setHasTeacherAssignment(false)
+        assignmentIntroKeyRef.current = ''
+        setSessionMode('student_directed')
+        setStudentSupportLevel('')
+        setStudentGradeLevel('')
+        setAwaitingAssignedLessonInterest(false)
+        setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
+        return
+      }
 
       const {
         data: { user },
@@ -522,10 +551,6 @@ export default function AskVIC() {
     let active = true
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-    const supabase =
-      supabaseUrl && supabaseKey
-        ? createClient(supabaseUrl, supabaseKey)
-        : null
 
     const runDetection = async () => {
       if (!active) return
@@ -534,7 +559,8 @@ export default function AskVIC() {
 
     runDetection()
 
-    const authSubscription = supabase?.auth.onAuthStateChange(() => {
+    const sharedSupabase = getBrowserSupabaseClient()
+    const authSubscription = sharedSupabase?.auth.onAuthStateChange(() => {
       runDetection()
     })
 
@@ -707,10 +733,10 @@ export default function AskVIC() {
         const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
         const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
         const normalizedInterest = trimmedOutgoing.replace(/\s+/g, ' ').trim()
+        const sharedSupabase = getBrowserSupabaseClient()
 
-        if (supabaseUrl && supabaseKey && selectedStudentId && normalizedInterest) {
-          const supabase = createClient(supabaseUrl, supabaseKey)
-          const { error: updateInterestError } = await supabase
+        if (supabaseUrl && supabaseKey && sharedSupabase && selectedStudentId && normalizedInterest) {
+          const { error: updateInterestError } = await sharedSupabase
             .from('users')
             .update({ interest_tags: [normalizedInterest] })
             .eq('id', selectedStudentId)
