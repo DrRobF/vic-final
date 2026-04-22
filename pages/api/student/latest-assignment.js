@@ -5,7 +5,7 @@ function normalizeNumericId(value) {
   return Number.isInteger(parsed) ? parsed : null
 }
 
-async function loadAssignmentRowsByField(supabaseAdmin, fieldName, studentId) {
+async function loadAssignmentRowsByField(supabaseClient, fieldName, studentId) {
   const queryPlans = [
     {
       select:
@@ -23,7 +23,7 @@ async function loadAssignmentRowsByField(supabaseAdmin, fieldName, studentId) {
   ]
 
   for (const plan of queryPlans) {
-    let query = supabaseAdmin
+    let query = supabaseClient
       .from('assignments')
       .select(plan.select)
       .eq(fieldName, studentId)
@@ -55,9 +55,8 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !publishableKey || !serviceRoleKey) {
+  if (!supabaseUrl || !publishableKey) {
     return res.status(500).json({ error: 'Supabase server environment is not configured.' })
   }
 
@@ -70,8 +69,6 @@ export default async function handler(req, res) {
 
   const supabaseAuth = createClient(supabaseUrl, publishableKey, {
     global: { headers: { Authorization: `Bearer ${token}` } },
-  })
-  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
@@ -86,7 +83,7 @@ export default async function handler(req, res) {
 
   const requestedStudentId = normalizeNumericId(req.body?.studentId)
 
-  const { data: profileRowsByAuth } = await supabaseAdmin
+  const { data: profileRowsByAuth } = await supabaseAuth
     .from('users')
     .select('id, role, auth_user_id, email')
     .eq('auth_user_id', authUser.id)
@@ -104,13 +101,13 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Requested student does not match signed-in profile.' })
   }
 
-  const byStudentId = await loadAssignmentRowsByField(supabaseAdmin, 'student_id', resolvedStudentId)
+  const byStudentId = await loadAssignmentRowsByField(supabaseAuth, 'student_id', resolvedStudentId)
 
   if (byStudentId.rows.length > 0) {
     return res.status(200).json({ rows: byStudentId.rows, mode: byStudentId.mode, resolvedStudentId })
   }
 
-  const byUserId = await loadAssignmentRowsByField(supabaseAdmin, 'user_id', resolvedStudentId)
+  const byUserId = await loadAssignmentRowsByField(supabaseAuth, 'user_id', resolvedStudentId)
 
   return res.status(200).json({
     rows: byUserId.rows,
