@@ -54,6 +54,18 @@ export default async function handler(req, res) {
     return normalized === 'teacher_directed' ? 'teacher_directed' : 'student_directed'
   }
 
+  const cleanLessonField = (value) => (typeof value === 'string' ? value.trim() : '')
+
+  const getTeacherLessonAvailability = (lesson) => {
+    const title = cleanLessonField(lesson?.title)
+    const lessonText = cleanLessonField(lesson?.lesson_text)
+    return {
+      title,
+      lessonText,
+      hasCompleteLesson: Boolean(title && lessonText),
+    }
+  }
+
   try {
     console.log('Incoming messages:', messages)
        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -88,7 +100,8 @@ export default async function handler(req, res) {
     // fetch the most recent assignment and joined lesson automatically.
     const lessonContextMissing =
       !resolvedAssignedLesson ||
-      (!resolvedAssignedLesson?.lesson_text && resolvedAssignedLesson?.id)
+      !cleanLessonField(resolvedAssignedLesson?.title) ||
+      !cleanLessonField(resolvedAssignedLesson?.lesson_text)
 
     if (
       resolvedSessionMode === 'teacher_directed' &&
@@ -208,9 +221,8 @@ export default async function handler(req, res) {
 
     const contextMessages = []
 
-    const normalizedEntryIntent =
-      typeof entryIntent === 'string' ? entryIntent.trim().toLowerCase() : ''
-    const shouldGuideFirstResponse = Boolean(isFirstUserTurn)
+    const normalizedEntryIntent = typeof entryIntent === 'string' ? entryIntent.trim().toLowerCase() : ''
+    const shouldGuideFirstResponse = Boolean(isFirstUserTurn && resolvedSessionMode !== 'teacher_directed')
 
     if (shouldGuideFirstResponse) {
       const guidedStartInstruction = `
@@ -236,22 +248,22 @@ INTENT-SPECIFIC TONE:
       })
     }
 
+    const teacherLessonAvailability = getTeacherLessonAvailability(resolvedAssignedLesson)
     const teacherLessonContextApplied =
-      resolvedSessionMode === 'teacher_directed' && Boolean(resolvedAssignedLesson)
+      resolvedSessionMode === 'teacher_directed' && teacherLessonAvailability.hasCompleteLesson
 
     if (teacherLessonContextApplied) {
       const lessonContext = `
 TEACHER-ASSIGNED SESSION CONTEXT:
 - Session mode: teacher_directed
-- Do not run the normal multi-step lesson entry unless key information is missing.
-- The teacher has already chosen the lesson focus.
-- Use the assigned lesson immediately.
+- The teacher has already chosen the lesson focus and this is the source of truth.
+- Start the assigned lesson immediately.
 - Keep VIC's existing teaching style, pacing, interest integration, and one-step-at-a-time behavior.
 
 ASSIGNED LESSON:
 Subject: ${resolvedAssignedLesson.subject || ''}
-Title: ${resolvedAssignedLesson.title || ''}
-Lesson: ${resolvedAssignedLesson.lesson_text || ''}
+Title: ${teacherLessonAvailability.title}
+Lesson: ${teacherLessonAvailability.lessonText}
 
 STUDENT SUPPORT MODE:
 ${resolvedStudentMode || ''}
@@ -271,15 +283,35 @@ STUDENT GRADE LEVEL:
 ${resolvedGradeLevel || ''}
 
 IMPORTANT:
-- If student interest is already known, do not ask for it again.
-- If student interest is missing, ask exactly one brief personal-interest question first, then begin the assigned lesson.
+- Do not ask onboarding questions (including personal-interest starters) in teacher_directed mode.
 - Teach the assigned lesson instead of generic chat.
+- Do not replace the lesson topic from student messages.
+- If the student asks for a different topic, acknowledge briefly and redirect to this assigned lesson unless they switch to My Own Work.
 - Adapt instruction to the support level behavior above.
 `
 
       contextMessages.push({
         role: 'system',
         content: lessonContext,
+      })
+    }
+
+    if (resolvedSessionMode === 'teacher_directed' && !teacherLessonAvailability.hasCompleteLesson) {
+      return res.status(200).json({
+        reply: 'Your teacher assigned a lesson, but the lesson details are unavailable right now.',
+        debug: {
+          studentId: resolvedStudentId,
+          sessionMode: resolvedSessionMode,
+          teacherLessonContextApplied: false,
+          assignedLessonTitle: teacherLessonAvailability.title || null,
+          studentMode: resolvedStudentMode || null,
+          supportLevel: resolvedSupportLevel || null,
+          studentInterest: resolvedStudentInterest || null,
+          gradeLevel: resolvedGradeLevel || null,
+          entryIntent: normalizedEntryIntent || null,
+          isFirstUserTurn: shouldGuideFirstResponse,
+          teacherLessonUnavailable: true,
+        },
       })
     }
 
