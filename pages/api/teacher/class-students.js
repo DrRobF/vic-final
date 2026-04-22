@@ -16,6 +16,66 @@ function getBearerToken(req) {
   return token
 }
 
+async function loadAssignmentsSafe(supabaseAdmin, studentIds) {
+  const assignmentQueryPlans = [
+    {
+      select: 'id, student_id, lesson_id, status, mode, assigned_at, created_at, lessons ( id, title, subject )',
+      orders: [
+        ['assigned_at', { ascending: false, nullsFirst: false }],
+        ['created_at', { ascending: false, nullsFirst: false }],
+        ['id', { ascending: false }],
+      ],
+      reason: 'full_assignment_with_join',
+    },
+    {
+      select: 'id, student_id, lesson_id, status, mode, assigned_at, lessons ( id, title, subject )',
+      orders: [
+        ['assigned_at', { ascending: false, nullsFirst: false }],
+        ['id', { ascending: false }],
+      ],
+      reason: 'no_created_at_fallback',
+    },
+    {
+      select: 'id, student_id, lesson_id, status, mode, assigned_at, created_at',
+      orders: [
+        ['assigned_at', { ascending: false, nullsFirst: false }],
+        ['created_at', { ascending: false, nullsFirst: false }],
+        ['id', { ascending: false }],
+      ],
+      reason: 'no_join_fallback',
+    },
+    {
+      select: 'id, student_id, lesson_id, status, mode, assigned_at',
+      orders: [
+        ['assigned_at', { ascending: false, nullsFirst: false }],
+        ['id', { ascending: false }],
+      ],
+      reason: 'minimal_assignment_fallback',
+    },
+  ]
+
+  for (const plan of assignmentQueryPlans) {
+    let query = supabaseAdmin.from('assignments').select(plan.select).in('student_id', studentIds)
+    plan.orders.forEach(([column, options]) => {
+      query = query.order(column, options)
+    })
+
+    const { data, error } = await query
+
+    if (!error) {
+      return { rows: Array.isArray(data) ? data : [], mode: plan.reason }
+    }
+
+    console.error('[teacher/class-students] Assignment lookup fallback triggered.', {
+      reason: plan.reason,
+      code: error.code,
+      message: error.message,
+    })
+  }
+
+  return { rows: [], mode: 'failed_all_assignment_lookups' }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -148,19 +208,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: studentLookupError.message || 'Could not load student records.' })
   }
 
-  const { data: assignmentRows, error: assignmentError } = await supabaseAdmin
-    .from('assignments')
-    .select('id, student_id, lesson_id, status, mode, assigned_at, created_at, lessons ( id, title, subject )')
-    .in('student_id', studentIds)
-    .order('assigned_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false, nullsFirst: false })
-    .order('id', { ascending: false })
-
-  if (assignmentError) {
-    return res.status(500).json({ error: assignmentError.message || 'Could not load student assignment context.' })
-  }
-
-  const assignmentRowsSafe = Array.isArray(assignmentRows) ? assignmentRows : []
+  const { rows: assignmentRowsSafe } = await loadAssignmentsSafe(supabaseAdmin, studentIds)
   const latestAssignmentByStudentId = new Map()
   const assignmentRowsByStudentId = new Map()
   assignmentRowsSafe.forEach((row) => {
@@ -182,10 +230,17 @@ export default async function handler(req, res) {
   const lessonById = new Map()
 
   if (uniqueLessonIdsMissingJoin.length > 0) {
-    const { data: fallbackLessonRows } = await supabaseAdmin
+    const { data: fallbackLessonRows, error: fallbackLessonError } = await supabaseAdmin
       .from('lessons')
       .select('id, title, subject')
       .in('id', uniqueLessonIdsMissingJoin)
+
+    if (fallbackLessonError) {
+      console.error('[teacher/class-students] Lesson fallback lookup failed.', {
+        code: fallbackLessonError.code,
+        message: fallbackLessonError.message,
+      })
+    }
 
     ;(Array.isArray(fallbackLessonRows) ? fallbackLessonRows : []).forEach((lesson) => {
       if (Number.isInteger(lesson?.id)) lessonById.set(lesson.id, lesson)
