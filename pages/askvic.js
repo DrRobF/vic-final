@@ -90,6 +90,36 @@ function getUserDisplayName(userRow) {
   return userRow.name || userRow.email || ''
 }
 
+async function resolveUserProfileRow(supabase, user) {
+  const authUserId = user?.id || ''
+  const rawEmail = user?.email || ''
+  const normalizedEmail = rawEmail.trim().toLowerCase()
+
+  if (authUserId) {
+    const { data: byAuthUserRows } = await supabase
+      .from('users')
+      .select('id, auth_user_id, email, name, role, interest_tags')
+      .eq('auth_user_id', authUserId)
+      .order('id', { ascending: true })
+      .limit(1)
+
+    if (byAuthUserRows?.[0]) {
+      return byAuthUserRows[0]
+    }
+  }
+
+  if (!normalizedEmail) return null
+
+  const { data: byEmailRows } = await supabase
+    .from('users')
+    .select('id, auth_user_id, email, name, role, interest_tags')
+    .ilike('email', normalizedEmail)
+    .order('id', { ascending: true })
+    .limit(1)
+
+  return byEmailRows?.[0] || null
+}
+
 async function loadLatestAssignmentSafe(supabase, studentId) {
   const assignmentQueryPlans = [
     {
@@ -237,14 +267,7 @@ export default function AskVIC() {
         return
       }
 
-      const { data: profileRows } = await supabase
-        .from('users')
-        .select('email, name')
-        .eq('email', user.email)
-        .order('id', { ascending: true })
-        .limit(1)
-
-      const matchedProfile = profileRows?.[0] || null
+      const matchedProfile = await resolveUserProfileRow(supabase, user)
       setCurrentUserProfile(matchedProfile)
       setCurrentUserStatus(
         matchedProfile
@@ -252,8 +275,10 @@ export default function AskVIC() {
           : 'Signed in user found, but no matching profile row in public.users.'
       )
 
-      const role = user?.app_metadata?.role || user?.user_metadata?.role
-      if (role && role !== 'student') {
+      const resolvedRole =
+        matchedProfile?.role || user?.user_metadata?.role || user?.app_metadata?.role || ''
+
+      if (resolvedRole && resolvedRole !== 'student') {
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setHasTeacherAssignment(false)
@@ -266,16 +291,9 @@ export default function AskVIC() {
         return
       }
 
-      const { data: studentRows, error: studentLookupError } = await supabase
-        .from('users')
-        .select('id, name, email, interest_tags')
-        .eq('email', user.email)
-        .order('id', { ascending: true })
-        .limit(1)
+      const student = matchedProfile
 
-      const student = studentRows?.[0]
-
-      if (studentLookupError || !student?.id) {
+      if (!student?.id) {
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setHasTeacherAssignment(false)
