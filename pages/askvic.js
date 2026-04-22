@@ -84,6 +84,16 @@ function normalizeSupportLevel(rawLevel) {
   return ''
 }
 
+function normalizeUserRole(rawRole) {
+  if (typeof rawRole !== 'string') return ''
+  return rawRole.trim().toLowerCase()
+}
+
+function debugAskVicStudentResolution(label, payload = {}) {
+  if (typeof window === 'undefined') return
+  console.log(`[AskVIC][student-resolution] ${label}`, payload)
+}
+
 function getUserDisplayName(userRow) {
   if (!userRow) return ''
 
@@ -204,11 +214,37 @@ export default function AskVIC() {
 
   const hasUserMessages = messages.some((message) => message.role === 'user')
   const hasAssignedLesson = hasTeacherAssignment
+  const teacherLessonDisabled = !hasAssignedLesson
+  const teacherLessonDisabledReason = teacherLessonDisabled
+    ? hasTeacherAssignment
+      ? 'teacher_assignment_flag_false_mismatch'
+      : 'no_teacher_assignment_resolved'
+    : 'enabled'
   const entryModeMeta = getEntryModeMeta({
     hasAssignedLesson,
     hasUserMessages,
     sessionMode,
   })
+
+  useEffect(() => {
+    debugAskVicStudentResolution('final-state', {
+      selectedStudentId,
+      hasTeacherAssignment,
+      assignedLesson,
+      sessionMode,
+      teacherLessonDisabled,
+      teacherLessonDisabledReason,
+      studentLookupStatus,
+    })
+  }, [
+    assignedLesson,
+    hasTeacherAssignment,
+    selectedStudentId,
+    sessionMode,
+    studentLookupStatus,
+    teacherLessonDisabled,
+    teacherLessonDisabledReason,
+  ])
 
   function handleSessionModeToggle(nextMode) {
     if (nextMode === sessionMode) return
@@ -224,6 +260,7 @@ export default function AskVIC() {
   const assignmentIntroKeyRef = useRef('')
 
   const detectStudentAndLesson = useCallback(async () => {
+      debugAskVicStudentResolution('detect-start', {})
       setStudentLookupStatus('Loading student...')
       setCurrentUserStatus('Loading signed-in user...')
 
@@ -231,6 +268,7 @@ export default function AskVIC() {
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
       if (!supabaseUrl || !supabaseKey) {
+        debugAskVicStudentResolution('supabase-not-configured', {})
         setCurrentUserProfile(null)
         setCurrentUserStatus('Supabase is not configured.')
         setSelectedStudentId(null)
@@ -253,6 +291,11 @@ export default function AskVIC() {
       } = await supabase.auth.getUser()
 
       if (userError || !user?.email) {
+        debugAskVicStudentResolution('auth-user-missing', {
+          userError: userError?.message || null,
+          authUserId: user?.id || null,
+          authEmail: user?.email || null,
+        })
         setCurrentUserProfile(null)
         setCurrentUserStatus('No signed-in user found.')
         setSelectedStudentId(null)
@@ -268,6 +311,12 @@ export default function AskVIC() {
       }
 
       const matchedProfile = await resolveUserProfileRow(supabase, user)
+      debugAskVicStudentResolution('auth-and-profile', {
+        authUserId: user?.id || null,
+        authEmail: user?.email || null,
+        resolvedUserId: matchedProfile?.id || null,
+        resolvedUserRoleRaw: matchedProfile?.role || null,
+      })
       setCurrentUserProfile(matchedProfile)
       setCurrentUserStatus(
         matchedProfile
@@ -275,10 +324,21 @@ export default function AskVIC() {
           : 'Signed in user found, but no matching profile row in public.users.'
       )
 
-      const resolvedRole =
+      const resolvedRole = normalizeUserRole(
         matchedProfile?.role || user?.user_metadata?.role || user?.app_metadata?.role || ''
+      )
+
+      debugAskVicStudentResolution('resolved-role', {
+        matchedProfileRole: matchedProfile?.role || null,
+        userMetadataRole: user?.user_metadata?.role || null,
+        appMetadataRole: user?.app_metadata?.role || null,
+        resolvedRole,
+      })
 
       if (resolvedRole && resolvedRole !== 'student') {
+        debugAskVicStudentResolution('non-student-role-branch', {
+          resolvedRole,
+        })
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setHasTeacherAssignment(false)
@@ -294,6 +354,10 @@ export default function AskVIC() {
       const student = matchedProfile
 
       if (!student?.id) {
+        debugAskVicStudentResolution('student-profile-not-found', {
+          authUserId: user?.id || null,
+          authEmail: user?.email || null,
+        })
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setHasTeacherAssignment(false)
@@ -307,6 +371,9 @@ export default function AskVIC() {
       }
 
       setSelectedStudentId(student.id)
+      debugAskVicStudentResolution('student-selected', {
+        selectedStudentId: student.id,
+      })
       const interests = Array.isArray(student.interest_tags) ? student.interest_tags : []
       setStudentInterest(interests.join(', '))
 
@@ -324,9 +391,19 @@ export default function AskVIC() {
       setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
 
       const { rows: assignmentRows, error: assignmentError } = await loadLatestAssignmentSafe(supabase, student.id)
+      debugAskVicStudentResolution('assignment-query-result', {
+        assignmentError: assignmentError?.message || null,
+        assignmentRowCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
+        assignmentRowsPreview: Array.isArray(assignmentRows) ? assignmentRows.slice(0, 3) : [],
+      })
 
       const latestAssignment = pickLatestAssignment(assignmentRows)
       let lessonRow = lessonFromAssignment(latestAssignment)
+
+      debugAskVicStudentResolution('assignment-selected', {
+        latestAssignment,
+        lessonFromAssignment: lessonRow,
+      })
 
       if (latestAssignment?.id && !lessonRow && latestAssignment?.lesson_id) {
         const { data: fallbackLessonRows } = await supabase
@@ -337,9 +414,19 @@ export default function AskVIC() {
           .limit(1)
 
         lessonRow = fallbackLessonRows?.[0] || null
+        debugAskVicStudentResolution('assignment-lesson-fallback', {
+          lessonId: latestAssignment.lesson_id,
+          fallbackLessonFound: Boolean(lessonRow),
+          fallbackLesson: lessonRow,
+        })
       }
 
       if (assignmentError || !latestAssignment?.id || !lessonRow) {
+        debugAskVicStudentResolution('assignment-not-fully-resolved', {
+          assignmentError: assignmentError?.message || null,
+          hasLatestAssignment: Boolean(latestAssignment?.id),
+          hasLessonRow: Boolean(lessonRow),
+        })
         if (latestAssignment?.id) {
           setAssignedLesson({
             id: latestAssignment.lesson_id || null,
@@ -421,6 +508,14 @@ export default function AskVIC() {
         }
       }
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
+      debugAskVicStudentResolution('assignment-resolved-success', {
+        selectedStudentId: student.id,
+        latestAssignment,
+        lessonRow,
+        hasTeacherAssignment: true,
+        assignedLesson: lessonRow,
+        sessionMode: 'teacher_directed',
+      })
   }, [])
 
   useEffect(() => {
@@ -1146,13 +1241,18 @@ ${context}`
                     <button
                       type="button"
                       onClick={() => handleSessionModeToggle('teacher_directed')}
-                      disabled={!hasAssignedLesson}
+                      disabled={teacherLessonDisabled}
                       style={
                         sessionMode === 'teacher_directed'
                           ? styles.sessionModeButtonActive
-                          : !hasAssignedLesson
+                          : teacherLessonDisabled
                             ? styles.sessionModeButtonDisabled
                             : styles.sessionModeButton
+                      }
+                      title={
+                        teacherLessonDisabled
+                          ? `Teacher Lesson disabled: ${teacherLessonDisabledReason}`
+                          : 'Teacher Lesson available'
                       }
                     >
                       Teacher Lesson
