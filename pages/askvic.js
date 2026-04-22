@@ -145,7 +145,24 @@ async function resolveUserProfileRow(supabase, user) {
   return byEmailRows?.[0] || null
 }
 
-async function loadLatestAssignmentSafe(supabase, studentId) {
+async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
+  if (accessToken) {
+    const response = await fetch('/api/student/latest-assignment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ studentId }),
+    })
+
+    const payload = await response.json().catch(() => null)
+
+    if (response.ok) {
+      return { rows: Array.isArray(payload?.rows) ? payload.rows : [], error: null }
+    }
+  }
+
   const assignmentQueryPlans = [
     {
       select:
@@ -363,6 +380,11 @@ export default function AskVIC() {
         return
       }
 
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token || ''
+
       const matchedProfile = await resolveUserProfileRow(supabase, user)
       debugAskVicStudentResolution('auth-and-profile', {
         authUserId: user?.id || null,
@@ -447,7 +469,11 @@ export default function AskVIC() {
         : firstEnrollment?.classes
       setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
 
-      const { rows: assignmentRows, error: assignmentError } = await loadLatestAssignmentSafe(supabase, student.id)
+      const { rows: assignmentRows, error: assignmentError } = await loadLatestAssignmentSafe(
+        supabase,
+        student.id,
+        accessToken
+      )
       debugAskVicStudentResolution('assignment-query-result', {
         assignmentError: assignmentError?.message || null,
         assignmentRowCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
