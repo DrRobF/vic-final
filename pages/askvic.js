@@ -146,20 +146,34 @@ async function resolveUserProfileRow(supabase, user) {
 }
 
 async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
+  const apiDebug = {
+    status: null,
+    ok: null,
+    responseJson: null,
+    error: null,
+  }
+
   if (accessToken) {
-    const response = await fetch('/api/student/latest-assignment', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({ studentId }),
-    })
+    try {
+      const response = await fetch('/api/student/latest-assignment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ studentId }),
+      })
 
-    const payload = await response.json().catch(() => null)
+      const payload = await response.json().catch(() => null)
+      apiDebug.status = response.status
+      apiDebug.ok = response.ok
+      apiDebug.responseJson = payload
 
-    if (response.ok) {
-      return { rows: Array.isArray(payload?.rows) ? payload.rows : [], error: null }
+      if (response.ok) {
+        return { rows: Array.isArray(payload?.rows) ? payload.rows : [], error: null, apiDebug }
+      }
+    } catch (error) {
+      apiDebug.error = error?.message || 'Unknown fetch error'
     }
   }
 
@@ -199,11 +213,15 @@ async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
     const { data, error } = await query
 
     if (!error) {
-      return { rows: Array.isArray(data) ? data : [], error: null }
+      return { rows: Array.isArray(data) ? data : [], error: null, apiDebug }
     }
   }
 
-  return { rows: [], error: new Error('Could not load assignments with available schema.') }
+  return {
+    rows: [],
+    error: new Error('Could not load assignments with available schema.'),
+    apiDebug,
+  }
 }
 
 export default function AskVIC() {
@@ -241,6 +259,12 @@ export default function AskVIC() {
     lessonId: null,
     lessonTitle: null,
   })
+  const [debugLatestAssignmentApi, setDebugLatestAssignmentApi] = useState({
+    status: null,
+    ok: null,
+    responseJson: null,
+    error: null,
+  })
 
   const lessonStatusText = hasTeacherAssignment
     ? `Assigned lesson: ${assignedLesson?.title || 'Teacher-selected lesson'}`
@@ -271,6 +295,14 @@ export default function AskVIC() {
     if (value === null || value === undefined || value === '') return '—'
     if (typeof value === 'boolean') return value ? 'true' : 'false'
     return String(value)
+  }
+  const debugJsonValue = (value) => {
+    if (value === null || value === undefined) return '—'
+    try {
+      return JSON.stringify(value)
+    } catch (_error) {
+      return '[unserializable JSON]'
+    }
   }
 
   useEffect(() => {
@@ -315,6 +347,7 @@ export default function AskVIC() {
       setDebugResolvedUserId(null)
       setDebugResolvedRole(null)
       setDebugLatestAssignment({ found: false, id: null, lessonId: null, lessonTitle: null })
+      setDebugLatestAssignmentApi({ status: null, ok: null, responseJson: null, error: null })
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -469,15 +502,20 @@ export default function AskVIC() {
         : firstEnrollment?.classes
       setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
 
-      const { rows: assignmentRows, error: assignmentError } = await loadLatestAssignmentSafe(
+      const { rows: assignmentRows, error: assignmentError, apiDebug } = await loadLatestAssignmentSafe(
         supabase,
         student.id,
         accessToken
       )
+      setDebugLatestAssignmentApi(apiDebug || { status: null, ok: null, responseJson: null, error: null })
       debugAskVicStudentResolution('assignment-query-result', {
         assignmentError: assignmentError?.message || null,
         assignmentRowCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
         assignmentRowsPreview: Array.isArray(assignmentRows) ? assignmentRows.slice(0, 3) : [],
+        latestAssignmentApiStatus: apiDebug?.status ?? null,
+        latestAssignmentApiOk: typeof apiDebug?.ok === 'boolean' ? apiDebug.ok : null,
+        latestAssignmentApiResponseJson: apiDebug?.responseJson ?? null,
+        latestAssignmentApiError: apiDebug?.error ?? null,
       })
 
       const latestAssignment = pickLatestAssignment(assignmentRows)
@@ -1388,6 +1426,19 @@ ${context}`
                     </div>
                     <div style={styles.tempDebugRow}>
                       latest lesson title: {debugValue(debugLatestAssignment.lessonTitle)}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      latest-assignment API status: {debugValue(debugLatestAssignmentApi.status)}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      latest-assignment API ok: {debugValue(debugLatestAssignmentApi.ok)}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      latest-assignment API response JSON:{' '}
+                      {debugJsonValue(debugLatestAssignmentApi.responseJson)}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      latest-assignment API error: {debugValue(debugLatestAssignmentApi.error)}
                     </div>
                     <div style={styles.tempDebugRow}>
                       hasTeacherAssignment: {hasTeacherAssignment ? 'true' : 'false'}
