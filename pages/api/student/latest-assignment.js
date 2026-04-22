@@ -5,48 +5,6 @@ function normalizeNumericId(value) {
   return Number.isInteger(parsed) ? parsed : null
 }
 
-async function loadAssignmentRowsByField(supabaseClient, fieldName, studentId) {
-  const queryPlans = [
-    {
-      select:
-        'id, student_id, user_id, lesson_id, mode, status, assigned_at, created_at, lessons:lesson_id (id, subject, title, lesson_text, is_active)',
-      orderByCreatedAt: true,
-    },
-    {
-      select: 'id, student_id, user_id, lesson_id, mode, status, assigned_at, created_at',
-      orderByCreatedAt: true,
-    },
-    {
-      select: 'id, student_id, user_id, lesson_id, mode, status, assigned_at',
-      orderByCreatedAt: false,
-    },
-  ]
-
-  for (const plan of queryPlans) {
-    let query = supabaseClient
-      .from('assignments')
-      .select(plan.select)
-      .eq(fieldName, studentId)
-      .order('assigned_at', { ascending: false, nullsFirst: false })
-
-    if (plan.orderByCreatedAt) {
-      query = query.order('created_at', { ascending: false, nullsFirst: false })
-    }
-
-    const { data, error } = await query.order('id', { ascending: false }).limit(20)
-
-    if (!error) {
-      return { rows: Array.isArray(data) ? data : [], mode: `matched_by_${fieldName}`, error: null }
-    }
-
-    if (error.code !== '42703') {
-      return { rows: [], mode: `query_failed_${fieldName}`, error }
-    }
-  }
-
-  return { rows: [], mode: `column_unavailable_${fieldName}`, error: null }
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST')
@@ -101,18 +59,20 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Requested student does not match signed-in profile.' })
   }
 
-  const byStudentId = await loadAssignmentRowsByField(supabaseAuth, 'student_id', resolvedStudentId)
+  const { data: rows, error: assignmentsError } = await supabaseAuth
+    .from('assignments')
+    .select(
+      'id, student_id, lesson_id, mode, status, assigned_at, created_at, lessons:lesson_id (id, subject, title, lesson_text, is_active)'
+    )
+    .eq('student_id', resolvedStudentId)
+    .order('assigned_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: false })
+    .limit(20)
 
-  if (byStudentId.rows.length > 0) {
-    return res.status(200).json({ rows: byStudentId.rows, mode: byStudentId.mode, resolvedStudentId })
+  if (assignmentsError) {
+    return res.status(500).json({ error: assignmentsError.message || 'Failed to load latest assignment.' })
   }
 
-  const byUserId = await loadAssignmentRowsByField(supabaseAuth, 'user_id', resolvedStudentId)
-
-  return res.status(200).json({
-    rows: byUserId.rows,
-    mode: byUserId.mode,
-    resolvedStudentId,
-    fallbackFrom: byStudentId.mode,
-  })
+  return res.status(200).json({ rows: Array.isArray(rows) ? rows : [], mode: 'matched_by_student_id', resolvedStudentId })
 }
