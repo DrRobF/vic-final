@@ -983,10 +983,13 @@ ${context}`
             <section style={styles.chatCard}>
               <div style={styles.chatHeader}>
                 <div style={styles.chatHeaderContent}>
-                  <div style={styles.chatTitle}>Conversation</div>
-                  <div style={styles.chatStatusMessage}>{lessonStatusText}</div>
-                  <div style={styles.modeStatusPill}>{entryModeMeta.label}</div>
-                  <div style={styles.modeStatusHelper}>{entryModeMeta.helper}</div>
+                  <div style={styles.chatMetaRow}>
+                    <div style={styles.chatTitle}>Conversation</div>
+                    <div style={styles.modeStatusPill}>{entryModeMeta.label}</div>
+                  </div>
+                  <div style={styles.chatStatusMessage}>
+                    {lessonStatusText} {'•'} {entryModeMeta.helper}
+                  </div>
                 </div>
 
               </div>
@@ -1032,10 +1035,7 @@ ${context}`
 
             <section style={styles.inputCard}>
               <div style={styles.inputHeaderRow}>
-                <div>
-                  <div style={styles.chatEyebrow}>Start your session</div>
-                  <div style={styles.inputTitle}>Choose a quick start or type your own</div>
-                </div>
+                <div style={styles.inputTitle}>Start here: choose a quick start or type your own</div>
 
                 {!isMobile ? (
                   <div style={styles.inputHint}>Enter = send • Shift + Enter = new line</div>
@@ -1057,10 +1057,6 @@ ${context}`
                     {option.label}
                   </button>
                 ))}
-              </div>
-
-              <div style={styles.inputHelperText}>
-                Tip: You can always ignore these and type your own message.
               </div>
 
               <textarea
@@ -2503,7 +2499,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
-      padding: isMobile ? '10px' : '12px',
+      padding: isMobile ? '8px' : '10px',
       boxShadow: 'var(--vic-shadow-card)',
       display: 'flex',
       flexDirection: 'column',
@@ -2515,9 +2511,9 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       display: 'flex',
       alignItems: 'flex-start',
       justifyContent: 'space-between',
-      gap: '16px',
-      marginBottom: '6px',
-      paddingBottom: '6px',
+      gap: '10px',
+      marginBottom: '4px',
+      paddingBottom: '4px',
       borderBottom: '1px solid var(--vic-border-soft)',
       flexShrink: 0,
       flexWrap: 'wrap',
@@ -2527,7 +2523,16 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minWidth: 0,
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px',
+      gap: '3px',
+      width: '100%',
+    },
+
+    chatMetaRow: {
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: '8px',
+      flexWrap: 'wrap',
     },
 
     chatEyebrow: {
@@ -2540,24 +2545,24 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     chatTitle: {
-      fontSize: isMobile ? '23px' : '26px',
+      fontSize: isMobile ? '20px' : '22px',
       fontWeight: 900,
       color: 'var(--vic-text-primary)',
       lineHeight: 1.1,
     },
 
     chatStatusMessage: {
-      fontSize: '13px',
-      lineHeight: 1.45,
+      fontSize: '12px',
+      lineHeight: 1.35,
       color: 'var(--vic-text-secondary)',
       opacity: 0.92,
-      maxWidth: '520px',
+      maxWidth: '720px',
     },
 
     modeStatusPill: {
       alignSelf: 'flex-start',
-      marginTop: '2px',
-      fontSize: '11px',
+      marginTop: '0',
+      fontSize: '10px',
       letterSpacing: '0.08em',
       textTransform: 'uppercase',
       color: 'var(--vic-primary)',
@@ -2565,15 +2570,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       borderRadius: '999px',
       border: '1px solid rgba(181, 83, 47, 0.28)',
       background: 'rgba(181, 83, 47, 0.08)',
-      padding: '4px 9px',
+      padding: '3px 8px',
       width: 'fit-content',
-    },
-
-    modeStatusHelper: {
-      fontSize: '12px',
-      lineHeight: 1.4,
-      color: 'var(--vic-text-secondary)',
-      maxWidth: '560px',
     },
 
     chatCanvas: {
@@ -2656,12 +2654,12 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
-      padding: isMobile ? '8px' : '10px',
+      padding: isMobile ? '8px' : '9px',
       boxShadow:
         '0 18px 42px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.9)',
       display: 'flex',
       flexDirection: 'column',
-      gap: '6px',
+      gap: '5px',
       flexShrink: 0,
     },
 
@@ -2669,15 +2667,15 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       display: 'flex',
       alignItems: isMobile ? 'flex-start' : 'center',
       justifyContent: 'space-between',
-      gap: '10px',
+      gap: '8px',
       flexWrap: 'wrap',
     },
 
     inputTitle: {
-      fontSize: isMobile ? '18px' : '20px',
+      fontSize: isMobile ? '14px' : '15px',
       fontWeight: 800,
       color: 'var(--vic-text-primary)',
-      lineHeight: 1.1,
+      lineHeight: 1.2,
     },
 
     inputHint: {
@@ -2690,7 +2688,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     guidedEntryRow: {
       display: 'flex',
       flexWrap: 'wrap',
-      gap: '8px',
+      gap: '6px',
     },
 
     guidedEntryButton: {
@@ -2698,8 +2696,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
-      padding: '7px 11px',
-      fontSize: '13px',
+      padding: '6px 10px',
+      fontSize: '12px',
       fontWeight: 700,
       cursor: 'pointer',
     },
@@ -2709,27 +2707,21 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'rgba(181, 83, 47, 0.1)',
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
-      padding: '7px 11px',
-      fontSize: '13px',
+      padding: '6px 10px',
+      fontSize: '12px',
       fontWeight: 800,
       cursor: 'pointer',
     },
 
-    inputHelperText: {
-      fontSize: '12px',
-      lineHeight: 1.35,
-      color: 'var(--vic-text-secondary)',
-    },
-
     mainTextarea: {
       width: '100%',
-      minHeight: isMobile ? '64px' : '64px',
+      minHeight: isMobile ? '58px' : '58px',
       resize: 'vertical',
       borderRadius: '10px',
       border: '1px solid var(--vic-border)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
-      padding: '10px 12px',
+      padding: '9px 11px',
       boxSizing: 'border-box',
       outline: 'none',
       fontSize: '15px',
