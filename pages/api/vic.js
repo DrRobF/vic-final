@@ -48,6 +48,12 @@ export default async function handler(req, res) {
     return ''
   }
 
+  const normalizeSessionMode = (rawMode) => {
+    if (typeof rawMode !== 'string') return 'student_directed'
+    const normalized = rawMode.trim().toLowerCase()
+    return normalized === 'teacher_directed' ? 'teacher_directed' : 'student_directed'
+  }
+
   try {
     console.log('Incoming messages:', messages)
        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -55,7 +61,7 @@ export default async function handler(req, res) {
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
       process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-    let resolvedSessionMode = sessionMode || 'student_directed'
+    let resolvedSessionMode = normalizeSessionMode(sessionMode)
     let resolvedAssignedLesson = assignedLesson || null
     let resolvedStudentMode = studentMode || ''
     let resolvedSupportLevel = normalizeSupportLevel(supportLevel || studentMode || '')
@@ -71,6 +77,12 @@ export default async function handler(req, res) {
         : typeof studentId === 'string' && studentId.trim()
           ? Number(studentId)
           : null
+
+    if (resolvedSessionMode !== 'teacher_directed') {
+      resolvedAssignedLesson = null
+      resolvedStudentMode = ''
+      resolvedSupportLevel = ''
+    }
 
     // If a student id is provided and lesson context was not passed in,
     // fetch the most recent assignment and joined lesson automatically.
@@ -224,7 +236,10 @@ INTENT-SPECIFIC TONE:
       })
     }
 
-    if (resolvedSessionMode === 'teacher_directed' && resolvedAssignedLesson) {
+    const teacherLessonContextApplied =
+      resolvedSessionMode === 'teacher_directed' && Boolean(resolvedAssignedLesson)
+
+    if (teacherLessonContextApplied) {
       const lessonContext = `
 TEACHER-ASSIGNED SESSION CONTEXT:
 - Session mode: teacher_directed
@@ -334,6 +349,7 @@ IMPORTANT:
       debug: {
         studentId: resolvedStudentId,
         sessionMode: resolvedSessionMode,
+        teacherLessonContextApplied,
         assignedLessonTitle: resolvedAssignedLesson?.title || null,
         studentMode: resolvedStudentMode || null,
         supportLevel: resolvedSupportLevel || null,

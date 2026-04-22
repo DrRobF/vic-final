@@ -104,6 +104,39 @@ function normalizeUserRole(rawRole) {
   return rawRole.trim().toLowerCase()
 }
 
+function cleanLessonTitle(rawTitle) {
+  if (typeof rawTitle !== 'string') return ''
+  const title = rawTitle.trim()
+  if (!title) return ''
+
+  const normalized = title.toLowerCase()
+  if (
+    normalized === 'your assigned lesson' ||
+    normalized === 'teacher-selected lesson' ||
+    normalized === 'a lesson'
+  ) {
+    return ''
+  }
+
+  return title
+}
+
+function titleFromAssignmentRow(assignmentRow) {
+  if (!assignmentRow) return ''
+  const nestedLesson =
+    lessonFromAssignment(assignmentRow) ||
+    assignmentRow.lesson ||
+    assignmentRow.lesson_row ||
+    null
+
+  return (
+    cleanLessonTitle(nestedLesson?.title) ||
+    cleanLessonTitle(assignmentRow.lesson_title) ||
+    cleanLessonTitle(assignmentRow.title) ||
+    ''
+  )
+}
+
 function debugAskVicStudentResolution(label, payload = {}) {
   if (typeof window === 'undefined') return
   console.log(`[AskVIC][student-resolution] ${label}`, payload)
@@ -267,8 +300,10 @@ export default function AskVIC() {
   })
   const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false)
 
+  const resolvedAssignedLessonTitle = cleanLessonTitle(assignedLesson?.title)
+
   const lessonStatusText = hasTeacherAssignment
-    ? `Assigned lesson: ${assignedLesson?.title || 'Teacher-selected lesson'}`
+    ? `Assigned lesson: ${resolvedAssignedLessonTitle || 'Teacher-selected lesson'}`
     : studentLookupStatus === 'Loading student...'
       ? 'Checking your student profile...'
       : studentLookupStatus === 'Student detected. No assigned lesson found.'
@@ -562,10 +597,11 @@ export default function AskVIC() {
           hasLessonRow: Boolean(lessonRow),
         })
         if (latestAssignment?.id) {
+          const fallbackLessonTitle = titleFromAssignmentRow(latestAssignment)
           setAssignedLesson({
             id: latestAssignment.lesson_id || null,
             subject: '',
-            title: '',
+            title: fallbackLessonTitle,
             lesson_text: '',
           })
           setHasTeacherAssignment(true)
@@ -579,7 +615,7 @@ export default function AskVIC() {
             setMessages((prev) =>
               prev.some((message) => message.role === 'user')
                 ? prev
-                : [ASSIGNED_LESSON_READY_MESSAGE('your assigned lesson')]
+                : [ASSIGNED_LESSON_READY_MESSAGE(fallbackLessonTitle || 'your assigned lesson')]
             )
           }
           setStudentLookupStatus('Teacher lesson found and ready.')
@@ -626,7 +662,7 @@ export default function AskVIC() {
           setMessages((prev) =>
             prev.some((message) => message.role === 'user')
               ? prev
-              : [ASSIGNED_LESSON_READY_MESSAGE(lessonRow.title)]
+              : [ASSIGNED_LESSON_READY_MESSAGE(cleanLessonTitle(lessonRow.title) || 'your assigned lesson')]
           )
         }
       } else {
@@ -866,21 +902,26 @@ export default function AskVIC() {
           },
         ]
 
+        const requestBody = {
+          messages: apiMessages,
+          studentId: selectedStudentId,
+          sessionMode,
+          studentInterest: normalizedInterest,
+          gradeLevel: studentGradeLevel,
+          entryIntent: pendingEntryIntent || null,
+          isFirstUserTurn,
+        }
+
+        if (sessionMode === 'teacher_directed') {
+          requestBody.assignedLesson = assignedLesson
+          requestBody.studentMode = studentMode
+          requestBody.supportLevel = studentSupportLevel
+        }
+
         const res = await fetch('/api/vic', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            messages: apiMessages,
-            studentId: selectedStudentId,
-            sessionMode,
-            assignedLesson,
-            studentMode,
-            supportLevel: studentSupportLevel,
-            studentInterest: normalizedInterest,
-            gradeLevel: studentGradeLevel,
-            entryIntent: pendingEntryIntent || null,
-            isFirstUserTurn,
-          }),
+          body: JSON.stringify(requestBody),
         })
 
         if (!res.ok) {
@@ -927,22 +968,27 @@ export default function AskVIC() {
         },
       })
 
+      const requestBody = {
+        messages: apiMessages,
+        sketchImage,
+        studentId: selectedStudentId,
+        sessionMode,
+        studentInterest,
+        gradeLevel: studentGradeLevel,
+        entryIntent: pendingEntryIntent || null,
+        isFirstUserTurn,
+      }
+
+      if (sessionMode === 'teacher_directed') {
+        requestBody.assignedLesson = assignedLesson
+        requestBody.studentMode = studentMode
+        requestBody.supportLevel = studentSupportLevel
+      }
+
       const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: apiMessages,
-          sketchImage,
-          studentId: selectedStudentId,
-          sessionMode,
-          assignedLesson,
-          studentMode,
-          supportLevel: studentSupportLevel,
-          studentInterest,
-          gradeLevel: studentGradeLevel,
-          entryIntent: pendingEntryIntent || null,
-          isFirstUserTurn,
-        }),
+        body: JSON.stringify(requestBody),
       })
       console.log('[AskVIC][sendMessage] fetch returned', {
         url: apiUrl,
