@@ -33,7 +33,8 @@ export default function TeacherPage() {
   const [classes, setClasses] = useState([])
   const [selectedClass, setSelectedClass] = useState(null)
   const [students, setStudents] = useState([])
-  const [studentSupportSelections, setStudentSupportSelections] = useState({})
+  const [studentSupportLevels, setStudentSupportLevels] = useState({})
+  const [assignmentSelections, setAssignmentSelections] = useState({})
   const [parentEmailByStudentId, setParentEmailByStudentId] = useState({})
   const [parentEmailStatusByStudentId, setParentEmailStatusByStudentId] = useState({})
   const [reportPayloadByStudentId, setReportPayloadByStudentId] = useState({})
@@ -58,8 +59,8 @@ export default function TeacherPage() {
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
   const [copiedCode, setCopiedCode] = useState(false)
 
-  const selectedCount = Object.keys(studentSupportSelections).length
-  const supportCounts = Object.values(studentSupportSelections).reduce(
+  const selectedCount = Object.keys(assignmentSelections).length
+  const supportCounts = Object.values(assignmentSelections).reduce(
     (counts, level) => ({
       ...counts,
       [level]: (counts[level] || 0) + 1,
@@ -172,7 +173,8 @@ export default function TeacherPage() {
     if (classRows.length === 0) {
       setSelectedClass(null)
       setStudents([])
-      setStudentSupportSelections({})
+      setStudentSupportLevels({})
+      setAssignmentSelections({})
       setParentEmailByStudentId({})
       setParentEmailStatusByStudentId({})
       setReportPayloadByStudentId({})
@@ -208,7 +210,8 @@ export default function TeacherPage() {
     if (sessionError || !session?.access_token) {
       setError('Please sign in again to load students.')
       setStudents([])
-      setStudentSupportSelections({})
+      setStudentSupportLevels({})
+      setAssignmentSelections({})
       setParentEmailByStudentId({})
       setParentEmailStatusByStudentId({})
       setReportPayloadByStudentId({})
@@ -231,7 +234,8 @@ export default function TeacherPage() {
     if (!response.ok) {
       setError(payload?.error || 'Could not load students for this class.')
       setStudents([])
-      setStudentSupportSelections({})
+      setStudentSupportLevels({})
+      setAssignmentSelections({})
       setParentEmailByStudentId({})
       setParentEmailStatusByStudentId({})
       setReportPayloadByStudentId({})
@@ -242,15 +246,14 @@ export default function TeacherPage() {
 
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
     setStudents(nextStudents)
-    const initialSelections = nextStudents.reduce((accumulator, student) => {
+    const initialSupportLevels = nextStudents.reduce((accumulator, student) => {
       if (!student?.id) return accumulator
-      const normalizedLevel = normalizeSupportLevel(student.support_level)
-      if (normalizedLevel) {
-        accumulator[student.id] = normalizedLevel
-      }
+      const normalizedLevel = normalizeSupportLevel(student.support_level) || 'core'
+      accumulator[student.id] = normalizedLevel
       return accumulator
     }, {})
-    setStudentSupportSelections(initialSelections)
+    setStudentSupportLevels(initialSupportLevels)
+    setAssignmentSelections({})
     setParentEmailByStudentId(
       nextStudents.reduce((accumulator, student) => {
         if (!student?.id) return accumulator
@@ -267,7 +270,8 @@ export default function TeacherPage() {
     setSelectedClass(classRow)
     setCopiedCode(false)
     setStudents([])
-    setStudentSupportSelections({})
+    setStudentSupportLevels({})
+    setAssignmentSelections({})
     setParentEmailByStudentId({})
     setParentEmailStatusByStudentId({})
     setReportPayloadByStudentId({})
@@ -278,12 +282,19 @@ export default function TeacherPage() {
   async function handleSelectStudentSupport(studentId, supportLevel) {
     if (!selectedClass?.id || !studentId) return
 
-    const previousSupportLevel = studentSupportSelections[studentId]
+    const previousSupportLevel = studentSupportLevels[studentId]
 
-    setStudentSupportSelections((previous) => ({
+    setStudentSupportLevels((previous) => ({
       ...previous,
       [studentId]: supportLevel,
     }))
+    setAssignmentSelections((previous) => {
+      if (!previous[studentId]) return previous
+      return {
+        ...previous,
+        [studentId]: supportLevel,
+      }
+    })
 
     const {
       data: { session },
@@ -292,10 +303,17 @@ export default function TeacherPage() {
 
     if (sessionError || !session?.access_token) {
       setError('Please sign in again to save support levels.')
-      setStudentSupportSelections((previous) => ({
+      setStudentSupportLevels((previous) => ({
         ...previous,
         [studentId]: previousSupportLevel,
       }))
+      setAssignmentSelections((previous) => {
+        if (!previous[studentId]) return previous
+        return {
+          ...previous,
+          [studentId]: previousSupportLevel,
+        }
+      })
       return
     }
 
@@ -328,24 +346,31 @@ export default function TeacherPage() {
 
     const payload = await response.json().catch(() => null)
     setError(payload?.error || 'Could not save support level for this student.')
-    setStudentSupportSelections((previous) => ({
+    setStudentSupportLevels((previous) => ({
       ...previous,
       [studentId]: previousSupportLevel,
     }))
+    setAssignmentSelections((previous) => {
+      if (!previous[studentId]) return previous
+      return {
+        ...previous,
+        [studentId]: previousSupportLevel,
+      }
+    })
   }
 
   function handleSelectGroup(groupKey) {
     if (!Array.isArray(students) || students.length === 0) return
 
     if (groupKey === 'clear') {
-      setStudentSupportSelections({})
+      setAssignmentSelections({})
       return
     }
 
     const nextSelections = students.reduce((accumulator, student) => {
       if (!student?.id) return accumulator
 
-      const normalizedLevel = normalizeSupportLevel(student.support_level) || 'core'
+      const normalizedLevel = studentSupportLevels[student.id] || normalizeSupportLevel(student.support_level) || 'core'
 
       if (groupKey === 'all' || groupKey === normalizedLevel) {
         accumulator[student.id] = normalizedLevel
@@ -354,7 +379,24 @@ export default function TeacherPage() {
       return accumulator
     }, {})
 
-    setStudentSupportSelections(nextSelections)
+    setAssignmentSelections(nextSelections)
+  }
+
+  function handleToggleAssignment(studentId) {
+    if (!studentId) return
+
+    setAssignmentSelections((previous) => {
+      if (previous[studentId]) {
+        const nextSelections = { ...previous }
+        delete nextSelections[studentId]
+        return nextSelections
+      }
+
+      return {
+        ...previous,
+        [studentId]: studentSupportLevels[studentId] || 'core',
+      }
+    })
   }
 
   function getStudentName(student) {
@@ -697,7 +739,7 @@ export default function TeacherPage() {
       return
     }
 
-    const assignmentRows = Object.entries(studentSupportSelections).map(([studentId, mode]) => ({
+    const assignmentRows = Object.entries(assignmentSelections).map(([studentId, mode]) => ({
       lesson_id: createdLesson.id,
       student_id: Number(studentId),
       mode: mode === 'core' ? 'on-level' : mode,
@@ -716,7 +758,7 @@ export default function TeacherPage() {
     }
 
     setLessonFeedback({ type: 'success', message: `Lesson assigned to ${selectedCount} students.` })
-    setStudentSupportSelections({})
+    setAssignmentSelections({})
     setLessonTitle('')
     setLessonText('')
     setSaving(false)
@@ -822,7 +864,7 @@ export default function TeacherPage() {
                   <div>
                     <div className="cardEyebrow">Student selection</div>
                     <h2>Roster</h2>
-                    <p className="helperText">Pick one support level per student to include them in the assignment.</p>
+                    <p className="helperText">Support level and assignment inclusion are controlled separately for each student.</p>
                   </div>
                   <div className="studentHeaderActions">
                     <span className="selectionPill">{selectedCount} selected</span>
@@ -890,11 +932,12 @@ export default function TeacherPage() {
                         </thead>
                         <tbody>
                           {students.map((student) => {
-                            const selectedSupport = studentSupportSelections[student.id]
+                            const selectedSupport = studentSupportLevels[student.id] || 'core'
+                            const isAssigned = Boolean(assignmentSelections[student.id])
                             const lessonContext = getStudentLessonContext(student)
 
                             return (
-                              <tr key={student.id} className={selectedSupport ? 'studentRow isSelected' : 'studentRow'}>
+                              <tr key={student.id} className={isAssigned ? 'studentRow isSelected' : 'studentRow'}>
                                 <td className="studentCellName">{getStudentName(student)}</td>
                                 <td>
                                   <div className="supportButtonRow">
@@ -925,7 +968,18 @@ export default function TeacherPage() {
                                   </div>
                                 </td>
                                 <td>
-                                  <span className={selectedSupport ? 'assignBadge assigned' : 'assignBadge'}>{selectedSupport ? 'Included' : 'Not selected'}</span>
+                                  <div className="rowActions">
+                                    <button
+                                      type="button"
+                                      className={isAssigned ? 'secondaryButton groupButton' : 'primaryButton groupButton'}
+                                      onClick={() => handleToggleAssignment(student.id)}
+                                    >
+                                      {isAssigned ? 'Remove' : 'Include'}
+                                    </button>
+                                    <span className={isAssigned ? 'assignBadge assigned' : 'assignBadge'}>
+                                      {isAssigned ? 'Included' : 'Not selected'}
+                                    </span>
+                                  </div>
                                 </td>
                                 <td>
                                   <div className="studentMetaLine">
