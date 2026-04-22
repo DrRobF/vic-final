@@ -23,10 +23,10 @@ const ASSIGNED_LESSON_READY_MESSAGE = (lessonTitle) => ({
   visual: { type: 'tip', title: 'Assigned lesson ready' },
 })
 
-const ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE = {
+const ASSIGNED_LESSON_UNAVAILABLE_MESSAGE = {
   role: 'assistant',
-  text: 'Before we start, what is one personal interest you enjoy (for example: soccer, music, art, animals, or games)?',
-  visual: { type: 'tip', title: 'One quick question' },
+  text: 'Your teacher assigned a lesson, but the lesson details are unavailable right now.',
+  visual: { type: 'tip', title: 'Assigned lesson unavailable' },
 }
 
 const GUIDED_ENTRY_OPTIONS = [
@@ -280,7 +280,6 @@ export default function AskVIC() {
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
-  const [awaitingAssignedLessonInterest, setAwaitingAssignedLessonInterest] = useState(false)
   const [pendingEntryIntent, setPendingEntryIntent] = useState('')
   const [debugAuthUserId, setDebugAuthUserId] = useState(null)
   const [debugAuthEmail, setDebugAuthEmail] = useState(null)
@@ -301,9 +300,14 @@ export default function AskVIC() {
   const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false)
 
   const resolvedAssignedLessonTitle = cleanLessonTitle(assignedLesson?.title)
+  const hasAssignedLessonContent =
+    typeof assignedLesson?.lesson_text === 'string' && assignedLesson.lesson_text.trim().length > 0
+  const hasResolvedAssignedLesson = Boolean(resolvedAssignedLessonTitle && hasAssignedLessonContent)
 
   const lessonStatusText = hasTeacherAssignment
-    ? `Assigned lesson: ${resolvedAssignedLessonTitle || 'Teacher-selected lesson'}`
+    ? hasResolvedAssignedLesson
+      ? `Assigned lesson: ${resolvedAssignedLessonTitle}`
+      : 'Your teacher assigned a lesson, but the lesson details are unavailable right now.'
     : studentLookupStatus === 'Loading student...'
       ? 'Checking your student profile...'
       : studentLookupStatus === 'Student detected. No assigned lesson found.'
@@ -399,7 +403,6 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
-        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
         return
       }
@@ -415,7 +418,6 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
-        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
         return
       }
@@ -444,7 +446,6 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
-        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('No student found. You can still chat with VIC.')
         return
       }
@@ -494,7 +495,6 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
-        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
         return
       }
@@ -513,7 +513,6 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
-        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Could not match your student profile. Using free mode.')
         return
       }
@@ -608,17 +607,16 @@ export default function AskVIC() {
           setStudentMode(latestAssignment.mode || '')
           setStudentSupportLevel(normalizeSupportLevel(latestAssignment.mode || ''))
           setSessionMode('teacher_directed')
-          setAwaitingAssignedLessonInterest(false)
-          const fallbackIntroKey = `assignment:${latestAssignment.id || 'unknown'}:ready`
+          const fallbackIntroKey = `assignment:${latestAssignment.id || 'unknown'}:unavailable`
           if (assignmentIntroKeyRef.current !== fallbackIntroKey) {
             assignmentIntroKeyRef.current = fallbackIntroKey
             setMessages((prev) =>
               prev.some((message) => message.role === 'user')
                 ? prev
-                : [ASSIGNED_LESSON_READY_MESSAGE(fallbackLessonTitle || 'your assigned lesson')]
+                : [ASSIGNED_LESSON_UNAVAILABLE_MESSAGE]
             )
           }
-          setStudentLookupStatus('Teacher lesson found and ready.')
+          setStudentLookupStatus('Teacher lesson found, but details are unavailable.')
           return
         }
 
@@ -628,7 +626,6 @@ export default function AskVIC() {
         setStudentMode('')
         setStudentSupportLevel('')
         setSessionMode('student_directed')
-        setAwaitingAssignedLessonInterest(false)
         setStudentLookupStatus('Student detected. No assigned lesson found.')
         return
       }
@@ -653,29 +650,14 @@ export default function AskVIC() {
       setStudentMode(latestAssignment.mode || '')
       setStudentSupportLevel(resolvedSupportLevel)
       setSessionMode('teacher_directed')
-      const hasInterest = Boolean(interests.join(', ').trim())
-      if (hasInterest) {
-        setAwaitingAssignedLessonInterest(false)
-        const introKey = `assignment:${latestAssignment.id}:ready`
-        if (assignmentIntroKeyRef.current !== introKey) {
-          assignmentIntroKeyRef.current = introKey
-          setMessages((prev) =>
-            prev.some((message) => message.role === 'user')
-              ? prev
-              : [ASSIGNED_LESSON_READY_MESSAGE(cleanLessonTitle(lessonRow.title) || 'your assigned lesson')]
-          )
-        }
-      } else {
-        setAwaitingAssignedLessonInterest(true)
-        const introKey = `assignment:${latestAssignment.id}:interest`
-        if (assignmentIntroKeyRef.current !== introKey) {
-          assignmentIntroKeyRef.current = introKey
-          setMessages((prev) =>
-            prev.some((message) => message.role === 'user')
-              ? prev
-              : [ASSIGNED_LESSON_INTEREST_PROMPT_MESSAGE]
-          )
-        }
+      const introKey = `assignment:${latestAssignment.id}:ready`
+      if (assignmentIntroKeyRef.current !== introKey) {
+        assignmentIntroKeyRef.current = introKey
+        setMessages((prev) =>
+          prev.some((message) => message.role === 'user')
+            ? prev
+            : [ASSIGNED_LESSON_READY_MESSAGE(cleanLessonTitle(lessonRow.title) || 'your assigned lesson')]
+        )
       }
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
       debugAskVicStudentResolution('assignment-resolved-success', {
@@ -831,8 +813,7 @@ export default function AskVIC() {
       missingAssignedLessonInTeacherMode: sessionMode === 'teacher_directed' && !assignedLesson,
       missingAssignedLessonSubjectInTeacherMode:
         sessionMode === 'teacher_directed' && !assignedLesson?.subject,
-      missingAssignedLessonTextInTeacherMode:
-        sessionMode === 'teacher_directed' && !assignedLesson?.lesson_text,
+      missingAssignedLessonTextInTeacherMode: sessionMode === 'teacher_directed' && !hasAssignedLessonContent,
     }
 
     console.log('[AskVIC][sendMessage] handler start', {
@@ -870,81 +851,6 @@ export default function AskVIC() {
     setInput('')
 
     try {
-      if (sessionMode === 'teacher_directed' && assignedLesson && awaitingAssignedLessonInterest) {
-        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-        const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-        const normalizedInterest = trimmedOutgoing.replace(/\s+/g, ' ').trim()
-        const sharedSupabase = getBrowserSupabaseClient()
-
-        if (supabaseUrl && supabaseKey && sharedSupabase && selectedStudentId && normalizedInterest) {
-          const { error: updateInterestError } = await sharedSupabase
-            .from('users')
-            .update({ interest_tags: [normalizedInterest] })
-            .eq('id', selectedStudentId)
-
-          if (updateInterestError) {
-            console.error('[AskVIC][sendMessage] failed to save student interest', updateInterestError)
-          } else {
-            setStudentInterest(normalizedInterest)
-          }
-        }
-        if (!studentInterest) {
-          setStudentInterest(normalizedInterest)
-        }
-
-        setAwaitingAssignedLessonInterest(false)
-
-        const apiMessages = [
-          ...nextMessages.map((msg) => ({ role: msg.role, content: msg.text })),
-          {
-            role: 'user',
-            content: `The student just shared this personal interest: "${normalizedInterest}". Start the assigned lesson now. Use that interest naturally while teaching, and do not ask onboarding questions.`,
-          },
-        ]
-
-        const requestBody = {
-          messages: apiMessages,
-          studentId: selectedStudentId,
-          sessionMode,
-          studentInterest: normalizedInterest,
-          gradeLevel: studentGradeLevel,
-          entryIntent: pendingEntryIntent || null,
-          isFirstUserTurn,
-        }
-
-        if (sessionMode === 'teacher_directed') {
-          requestBody.assignedLesson = assignedLesson
-          requestBody.studentMode = studentMode
-          requestBody.supportLevel = studentSupportLevel
-        }
-
-        const res = await fetch('/api/vic', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(requestBody),
-        })
-
-        if (!res.ok) {
-          throw new Error(`API error: ${res.status}`)
-        }
-
-        const data = await res.json()
-        const finalReply = data.reply || 'No reply'
-        const visual = inferVisualFromConversation(outgoing, finalReply)
-
-        setMessages([
-          ...nextMessages,
-          {
-            role: 'assistant',
-            text: finalReply,
-            visual,
-          },
-        ])
-        setPendingEntryIntent('')
-
-        return finalReply
-      }
-
       const apiMessages = nextMessages.map((msg) => ({
         role: msg.role,
         content: msg.text,
