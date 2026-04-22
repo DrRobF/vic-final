@@ -744,6 +744,7 @@ export default function TeacherPage() {
       student_id: Number(studentId),
       mode: mode === 'core' ? 'on-level' : mode,
       status: 'assigned',
+      assigned_at: new Date().toISOString(),
     }))
 
     const { error: assignmentError } = await supabase.from('assignments').insert(assignmentRows)

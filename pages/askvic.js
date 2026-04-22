@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import VICHeader from '../components/VICHeader'
 import VICLogo from '../components/VICLogo'
+import { lessonFromAssignment, pickLatestAssignment } from '../lib/assignment-resolution'
 
 const BRAIN_VERSION = 'v3.3'
 const SKETCH_BG_COLOR = '#f8fafc'
@@ -274,10 +275,8 @@ export default function AskVIC() {
 
       if (!active) return
 
-      const latestAssignment = assignmentRows?.[0]
-      let lessonRow = Array.isArray(latestAssignment?.lessons)
-        ? latestAssignment.lessons[0]
-        : latestAssignment?.lessons
+      const latestAssignment = pickLatestAssignment(assignmentRows)
+      let lessonRow = lessonFromAssignment(latestAssignment)
 
       if (latestAssignment?.id && !lessonRow && latestAssignment?.lesson_id) {
         const { data: fallbackLessonRows } = await supabase

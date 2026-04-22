@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { lessonFromAssignment, pickLatestAssignment } from '../../../lib/assignment-resolution'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -149,21 +150,47 @@ export default async function handler(req, res) {
 
   const { data: assignmentRows, error: assignmentError } = await supabaseAdmin
     .from('assignments')
-    .select('student_id, status, assigned_at, mode, lessons ( id, title, subject )')
+    .select('id, student_id, lesson_id, status, mode, assigned_at, created_at, lessons ( id, title, subject )')
     .in('student_id', studentIds)
-    .order('assigned_at', { ascending: false })
+    .order('assigned_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: false })
 
   if (assignmentError) {
     return res.status(500).json({ error: assignmentError.message || 'Could not load student assignment context.' })
   }
 
+  const assignmentRowsSafe = Array.isArray(assignmentRows) ? assignmentRows : []
   const latestAssignmentByStudentId = new Map()
-  ;(Array.isArray(assignmentRows) ? assignmentRows : []).forEach((row) => {
+  const assignmentRowsByStudentId = new Map()
+  assignmentRowsSafe.forEach((row) => {
     if (!Number.isInteger(row?.student_id)) return
-    if (!latestAssignmentByStudentId.has(row.student_id)) {
-      latestAssignmentByStudentId.set(row.student_id, row)
-    }
+    const existingRows = assignmentRowsByStudentId.get(row.student_id) || []
+    existingRows.push(row)
+    assignmentRowsByStudentId.set(row.student_id, existingRows)
   })
+
+  assignmentRowsByStudentId.forEach((rows, studentId) => {
+    latestAssignmentByStudentId.set(studentId, pickLatestAssignment(rows))
+  })
+
+  const lessonIdsMissingJoin = Array.from(latestAssignmentByStudentId.values())
+    .filter(Boolean)
+    .filter((row) => !lessonFromAssignment(row) && Number.isInteger(row.lesson_id))
+    .map((row) => row.lesson_id)
+  const uniqueLessonIdsMissingJoin = [...new Set(lessonIdsMissingJoin)]
+  const lessonById = new Map()
+
+  if (uniqueLessonIdsMissingJoin.length > 0) {
+    const { data: fallbackLessonRows } = await supabaseAdmin
+      .from('lessons')
+      .select('id, title, subject')
+      .in('id', uniqueLessonIdsMissingJoin)
+
+    ;(Array.isArray(fallbackLessonRows) ? fallbackLessonRows : []).forEach((lesson) => {
+      if (Number.isInteger(lesson?.id)) lessonById.set(lesson.id, lesson)
+    })
+  }
 
   const studentsById = new Map((Array.isArray(studentRows) ? studentRows : []).map((row) => [row.id, row]))
   const supportByStudentId = new Map(
@@ -176,9 +203,10 @@ export default async function handler(req, res) {
     .filter(Boolean)
     .map((student) => {
       const latestAssignment = latestAssignmentByStudentId.get(student.id) || null
-      const latestLesson = Array.isArray(latestAssignment?.lessons)
-        ? latestAssignment.lessons[0]
-        : latestAssignment?.lessons || null
+      const latestLesson =
+        lessonFromAssignment(latestAssignment) ||
+        (Number.isInteger(latestAssignment?.lesson_id) ? lessonById.get(latestAssignment.lesson_id) : null) ||
+        null
       const latestLessonTitle = latestLesson?.title || latestLesson?.subject || ''
       const assignmentStatus = typeof latestAssignment?.status === 'string' ? latestAssignment.status.trim() : ''
       const isWorkedLesson = assignmentStatus && assignmentStatus !== 'assigned'

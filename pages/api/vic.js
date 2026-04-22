@@ -84,7 +84,7 @@ export default async function handler(req, res) {
       try {
         // Get latest assignment for this student
         const assignmentRes = await fetch(
-          `${supabaseUrl}/rest/v1/assignments?student_id=eq.${resolvedStudentId}&select=id,lesson_id,student_id,mode,status,assigned_at&order=assigned_at.desc&limit=1`,
+          `${supabaseUrl}/rest/v1/assignments?student_id=eq.${resolvedStudentId}&select=id,lesson_id,student_id,mode,status,assigned_at,created_at&order=assigned_at.desc.nullslast,created_at.desc.nullslast,id.desc&limit=1`,
           {
             method: 'GET',
             headers: {
@@ -100,20 +100,24 @@ export default async function handler(req, res) {
         if (assignmentRes.ok && Array.isArray(assignmentData) && assignmentData.length > 0) {
           const assignment = assignmentData[0]
 
-          // Get the linked lesson
-          const lessonRes = await fetch(
-            `${supabaseUrl}/rest/v1/lessons?id=eq.${assignment.lesson_id}&select=id,subject,title,lesson_text,is_active&limit=1`,
-            {
-              method: 'GET',
-              headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          )
+          let lessonData = []
+          let lessonRes = { ok: false }
+          if (assignment.lesson_id) {
+            // Get the linked lesson
+            lessonRes = await fetch(
+              `${supabaseUrl}/rest/v1/lessons?id=eq.${assignment.lesson_id}&select=id,subject,title,lesson_text,is_active&limit=1`,
+              {
+                method: 'GET',
+                headers: {
+                  apikey: supabaseKey,
+                  Authorization: `Bearer ${supabaseKey}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            )
 
-          const lessonData = await lessonRes.json()
+            lessonData = await lessonRes.json()
+          }
 
           // Get student interest
           const studentRes = await fetch(
