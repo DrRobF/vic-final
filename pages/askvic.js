@@ -264,18 +264,31 @@ export default function AskVIC() {
       const { data: assignmentRows, error: assignmentError } = await supabase
         .from('assignments')
         .select(
-          'id, mode, assigned_at, lessons:lesson_id (id, subject, title, lesson_text, is_active)'
+          'id, mode, assigned_at, created_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)'
         )
         .eq('student_id', student.id)
-        .order('assigned_at', { ascending: false })
+        .order('assigned_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: false })
         .limit(1)
 
       if (!active) return
 
       const latestAssignment = assignmentRows?.[0]
-      const lessonRow = Array.isArray(latestAssignment?.lessons)
+      let lessonRow = Array.isArray(latestAssignment?.lessons)
         ? latestAssignment.lessons[0]
         : latestAssignment?.lessons
+
+      if (latestAssignment?.id && !lessonRow && latestAssignment?.lesson_id) {
+        const { data: fallbackLessonRows } = await supabase
+          .from('lessons')
+          .select('id, subject, title, lesson_text, is_active')
+          .eq('id', latestAssignment.lesson_id)
+          .order('id', { ascending: true })
+          .limit(1)
+
+        lessonRow = fallbackLessonRows?.[0] || null
+      }
 
       if (assignmentError || !latestAssignment?.id || !lessonRow) {
         setAssignedLesson(null)
@@ -1908,25 +1921,35 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border)',
       color: 'var(--vic-text-primary)',
-      padding: '12px 8px',
+      padding: '11px 10px',
       borderRadius: '9px',
       fontSize: isMobile ? '14px' : '13px',
-      lineHeight: 1,
+      lineHeight: 1.2,
       fontWeight: 800,
       cursor: 'pointer',
+      minHeight: '40px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      whiteSpace: 'nowrap',
     },
 
     toolTabActive: {
       background: 'var(--vic-primary)',
       border: '1px solid var(--vic-primary)',
       color: 'var(--vic-surface)',
-      padding: '12px 8px',
+      padding: '11px 10px',
       borderRadius: '9px',
       fontSize: isMobile ? '14px' : '13px',
-      lineHeight: 1,
+      lineHeight: 1.2,
       fontWeight: 800,
       boxShadow: '0 12px 26px rgba(181, 83, 47, 0.35)',
       cursor: 'pointer',
+      minHeight: '40px',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      whiteSpace: 'nowrap',
     },
 
     workspacePanel: {
@@ -2613,8 +2636,11 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       borderRadius: '999px',
       padding: '7px 14px',
       fontSize: '12px',
+      lineHeight: 1.2,
       fontWeight: 700,
       cursor: 'pointer',
+      minHeight: '34px',
+      whiteSpace: 'nowrap',
     },
 
     sessionModeButtonActive: {
@@ -2624,8 +2650,11 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       borderRadius: '999px',
       padding: '7px 14px',
       fontSize: '12px',
+      lineHeight: 1.2,
       fontWeight: 800,
       cursor: 'pointer',
+      minHeight: '34px',
+      whiteSpace: 'nowrap',
     },
 
     sessionModeButtonDisabled: {
@@ -2635,8 +2664,11 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       borderRadius: '999px',
       padding: '7px 14px',
       fontSize: '12px',
+      lineHeight: 1.2,
       fontWeight: 700,
       cursor: 'not-allowed',
+      minHeight: '34px',
+      whiteSpace: 'nowrap',
     },
 
     modeStatusPill: {
