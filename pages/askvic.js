@@ -265,6 +265,7 @@ export default function AskVIC() {
     responseJson: null,
     error: null,
   })
+  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false)
 
   const lessonStatusText = hasTeacherAssignment
     ? `Assigned lesson: ${assignedLesson?.title || 'Teacher-selected lesson'}`
@@ -1399,63 +1400,6 @@ ${context}`
                       My Own Work
                     </button>
                   </div>
-                  <div style={styles.tempDebugPanel}>
-                    <div style={styles.tempDebugTitle}>TEMP DEBUG — Teacher Lesson Resolution</div>
-                    <div style={styles.tempDebugSection}>1) Auth/session info</div>
-                    <div style={styles.tempDebugRow}>auth user id: {debugValue(debugAuthUserId)}</div>
-                    <div style={styles.tempDebugRow}>auth email: {debugValue(debugAuthEmail)}</div>
-
-                    <div style={styles.tempDebugSection}>2) Resolved app user info</div>
-                    <div style={styles.tempDebugRow}>
-                      resolved public.users id: {debugValue(debugResolvedUserId)}
-                    </div>
-                    <div style={styles.tempDebugRow}>resolved role: {debugValue(debugResolvedRole)}</div>
-                    <div style={styles.tempDebugRow}>
-                      selectedStudentId: {debugValue(selectedStudentId)}
-                    </div>
-
-                    <div style={styles.tempDebugSection}>3) Teacher lesson resolution</div>
-                    <div style={styles.tempDebugRow}>
-                      latest assignment found: {debugLatestAssignment.found ? 'yes' : 'no'}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      latest assignment id: {debugValue(debugLatestAssignment.id)}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      latest lesson id: {debugValue(debugLatestAssignment.lessonId)}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      latest lesson title: {debugValue(debugLatestAssignment.lessonTitle)}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      latest-assignment API status: {debugValue(debugLatestAssignmentApi.status)}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      latest-assignment API ok: {debugValue(debugLatestAssignmentApi.ok)}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      latest-assignment API response JSON:{' '}
-                      {debugJsonValue(debugLatestAssignmentApi.responseJson)}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      latest-assignment API error: {debugValue(debugLatestAssignmentApi.error)}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      hasTeacherAssignment: {hasTeacherAssignment ? 'true' : 'false'}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      assignedLesson present: {assignedLesson ? 'true' : 'false'}
-                    </div>
-
-                    <div style={styles.tempDebugSection}>4) Mode state</div>
-                    <div style={styles.tempDebugRow}>current sessionMode: {debugValue(sessionMode)}</div>
-                    <div style={styles.tempDebugRow}>
-                      Teacher Lesson disabled: {teacherLessonDisabled ? 'true' : 'false'}
-                    </div>
-                    <div style={styles.tempDebugRow}>
-                      disabled reason: {debugValue(teacherLessonDisabledReason)}
-                    </div>
-                  </div>
                 </div>
 
               </div>
@@ -1602,6 +1546,73 @@ ${context}`
           </div>
         </div>
       </div>
+      <button
+        type="button"
+        style={styles.debugToggleButton}
+        onClick={() => setIsDebugPanelOpen((prev) => !prev)}
+      >
+        {isDebugPanelOpen ? 'Hide Debug' : 'Debug'}
+      </button>
+
+      {isDebugPanelOpen ? (
+        <aside style={styles.tempDebugPanelFloating}>
+          <div style={styles.tempDebugTitle}>TEMP DEBUG — Teacher Lesson Resolution</div>
+          <div style={styles.tempDebugSection}>1) Auth/session info</div>
+          <div style={styles.tempDebugRow}>auth user id: {debugValue(debugAuthUserId)}</div>
+          <div style={styles.tempDebugRow}>auth email: {debugValue(debugAuthEmail)}</div>
+
+          <div style={styles.tempDebugSection}>2) Resolved app user info</div>
+          <div style={styles.tempDebugRow}>
+            resolved public.users id: {debugValue(debugResolvedUserId)}
+          </div>
+          <div style={styles.tempDebugRow}>resolved role: {debugValue(debugResolvedRole)}</div>
+          <div style={styles.tempDebugRow}>
+            selectedStudentId: {debugValue(selectedStudentId)}
+          </div>
+
+          <div style={styles.tempDebugSection}>3) Teacher lesson resolution</div>
+          <div style={styles.tempDebugRow}>
+            latest assignment found: {debugLatestAssignment.found ? 'yes' : 'no'}
+          </div>
+          <div style={styles.tempDebugRow}>
+            latest assignment id: {debugValue(debugLatestAssignment.id)}
+          </div>
+          <div style={styles.tempDebugRow}>
+            latest lesson id: {debugValue(debugLatestAssignment.lessonId)}
+          </div>
+          <div style={styles.tempDebugRow}>
+            latest lesson title: {debugValue(debugLatestAssignment.lessonTitle)}
+          </div>
+          <div style={styles.tempDebugRow}>
+            latest-assignment API status: {debugValue(debugLatestAssignmentApi.status)}
+          </div>
+          <div style={styles.tempDebugRow}>
+            latest-assignment API ok: {debugValue(debugLatestAssignmentApi.ok)}
+          </div>
+          <div style={styles.tempDebugRow}>
+            latest-assignment API response JSON:{' '}
+            {debugJsonValue(debugLatestAssignmentApi.responseJson)}
+          </div>
+          <div style={styles.tempDebugRow}>
+            latest-assignment API error: {debugValue(debugLatestAssignmentApi.error)}
+          </div>
+          <div style={styles.tempDebugRow}>
+            hasTeacherAssignment: {hasTeacherAssignment ? 'true' : 'false'}
+          </div>
+          <div style={styles.tempDebugRow}>
+            assignedLesson present: {assignedLesson ? 'true' : 'false'}
+          </div>
+
+          <div style={styles.tempDebugSection}>4) Mode state</div>
+          <div style={styles.tempDebugRow}>current sessionMode: {debugValue(sessionMode)}</div>
+          <div style={styles.tempDebugRow}>
+            Teacher Lesson disabled: {teacherLessonDisabled ? 'true' : 'false'}
+          </div>
+          <div style={styles.tempDebugRow}>
+            disabled reason: {debugValue(teacherLessonDisabledReason)}
+          </div>
+        </aside>
+      ) : null}
     </div>
   )
 }
@@ -3088,19 +3099,39 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: '34px',
       whiteSpace: 'nowrap',
     },
-    tempDebugPanel: {
-      marginTop: '8px',
-      width: '100%',
-      maxWidth: '720px',
+    tempDebugPanelFloating: {
+      position: 'fixed',
+      right: isMobile ? '10px' : '16px',
+      bottom: isMobile ? '58px' : '64px',
+      width: isMobile ? 'calc(100vw - 20px)' : 'min(520px, calc(100vw - 32px))',
+      maxHeight: isMobile ? '38vh' : '36vh',
       borderRadius: '8px',
       border: '1px dashed rgba(181, 83, 47, 0.45)',
-      background: 'rgba(181, 83, 47, 0.06)',
+      background: 'rgba(248, 250, 252, 0.97)',
       padding: '8px 10px',
       display: 'grid',
       gap: '3px',
+      overflowY: 'auto',
+      boxShadow: 'var(--vic-shadow-card)',
+      zIndex: 35,
+    },
+    debugToggleButton: {
+      position: 'fixed',
+      right: isMobile ? '10px' : '16px',
+      bottom: isMobile ? '10px' : '16px',
+      border: '1px solid rgba(181, 83, 47, 0.34)',
+      background: 'rgba(181, 83, 47, 0.14)',
+      color: 'var(--vic-text-primary)',
+      borderRadius: '999px',
+      padding: '8px 12px',
+      fontSize: '11px',
+      lineHeight: 1.2,
+      fontWeight: 800,
+      cursor: 'pointer',
+      zIndex: 36,
     },
     tempDebugTitle: {
-      fontSize: '11px',
+      fontSize: '10px',
       fontWeight: 900,
       letterSpacing: '0.04em',
       color: 'var(--vic-text-primary)',
@@ -3116,7 +3147,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       letterSpacing: '0.04em',
     },
     tempDebugRow: {
-      fontSize: '11px',
+      fontSize: '10px',
       lineHeight: 1.25,
       color: 'var(--vic-text-primary)',
       wordBreak: 'break-word',
