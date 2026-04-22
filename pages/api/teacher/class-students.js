@@ -127,11 +127,21 @@ export default async function handler(req, res) {
     return res.status(200).json({ students: [] })
   }
 
-  const { data: studentRows, error: studentLookupError } = await supabaseAdmin
+  let studentLookup = await supabaseAdmin
     .from('users')
     .select('id, name, email, parent_email')
     .in('id', studentIds)
     .order('id', { ascending: true })
+
+  if (studentLookup.error?.code === '42703') {
+    studentLookup = await supabaseAdmin
+      .from('users')
+      .select('id, name, email')
+      .in('id', studentIds)
+      .order('id', { ascending: true })
+  }
+
+  const { data: studentRows, error: studentLookupError } = studentLookup
 
   if (studentLookupError) {
     return res.status(500).json({ error: studentLookupError.message || 'Could not load student records.' })
