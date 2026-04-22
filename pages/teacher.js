@@ -968,18 +968,15 @@ export default function TeacherPage() {
                                   </div>
                                 </td>
                                 <td>
-                                  <div className="rowActions">
-                                    <button
-                                      type="button"
-                                      className={isAssigned ? 'secondaryButton groupButton' : 'primaryButton groupButton'}
-                                      onClick={() => handleToggleAssignment(student.id)}
-                                    >
-                                      {isAssigned ? 'Remove' : 'Include'}
-                                    </button>
-                                    <span className={isAssigned ? 'assignBadge assigned' : 'assignBadge'}>
-                                      {isAssigned ? 'Included' : 'Not selected'}
-                                    </span>
-                                  </div>
+                                  <button
+                                    type="button"
+                                    className={isAssigned ? 'assignToggle isOn' : 'assignToggle isOff'}
+                                    onClick={() => handleToggleAssignment(student.id)}
+                                    aria-pressed={isAssigned}
+                                    title={isAssigned ? 'Included in assignment' : 'Not included in assignment'}
+                                  >
+                                    {isAssigned ? 'ON' : 'OFF'}
+                                  </button>
                                 </td>
                                 <td>
                                   <div className="studentMetaLine">
@@ -1505,8 +1502,8 @@ export default function TeacherPage() {
           color: var(--vic-success);
         }
         .summaryChip.enrichment {
-          border-color: var(--vic-primary-soft);
-          color: var(--vic-primary-hover);
+          border-color: rgba(122, 104, 179, 0.3);
+          color: #5c4b8f;
         }
         .detailGrid {
           display: grid;
@@ -1549,6 +1546,8 @@ export default function TeacherPage() {
         }
         .studentTableWrap {
           width: 100%;
+          max-width: 100%;
+          box-sizing: border-box;
           overflow-x: auto;
           border: 1px solid var(--vic-border);
           border-radius: 12px;
@@ -1556,8 +1555,9 @@ export default function TeacherPage() {
         }
         .studentTable {
           width: 100%;
-          min-width: 1050px;
+          min-width: 0;
           border-collapse: collapse;
+          table-layout: fixed;
         }
         .studentTable th,
         .studentTable td {
@@ -1565,6 +1565,7 @@ export default function TeacherPage() {
           vertical-align: top;
           padding: 10px 12px;
           border-bottom: 1px solid var(--vic-border-soft);
+          overflow-wrap: anywhere;
         }
         .studentTable th {
           font-size: 12px;
@@ -1578,7 +1579,6 @@ export default function TeacherPage() {
           background: rgba(181, 83, 47, 0.08);
         }
         .studentCellName {
-          min-width: 160px;
           font-size: 15px;
           font-weight: 650;
           color: var(--vic-text-primary);
@@ -1588,7 +1588,6 @@ export default function TeacherPage() {
           font-size: 12px;
           color: var(--vic-text-secondary);
           margin: 0;
-          min-width: 220px;
         }
         .supportButtonRow {
           display: flex;
@@ -1597,13 +1596,12 @@ export default function TeacherPage() {
           flex-wrap: nowrap;
           gap: 8px;
           width: 100%;
-          min-width: 175px;
         }
         .supportButton {
           border: 1px solid var(--vic-border);
           border-radius: 10px;
           background: var(--vic-surface-muted);
-          color: var(--vic-text-primary);
+          color: var(--vic-text-secondary);
           padding: 9px 10px;
           font-size: 14px;
           font-weight: 600;
@@ -1618,53 +1616,64 @@ export default function TeacherPage() {
           transform: translateY(-1px);
         }
         .supportButton.remediation {
-          border-color: var(--vic-danger-soft);
-          color: var(--vic-danger);
+          border-color: var(--vic-border);
+          color: var(--vic-text-secondary);
         }
         .supportButton.onLevel {
-          border-color: var(--vic-success-soft);
-          color: var(--vic-success);
+          border-color: var(--vic-border);
+          color: var(--vic-text-secondary);
         }
         .supportButton.enrichment {
-          border-color: var(--vic-primary-soft);
-          color: var(--vic-primary-hover);
+          border-color: var(--vic-border);
+          color: var(--vic-text-secondary);
         }
         .supportButton.remediation.isActive {
-          background: var(--vic-danger);
-          border-color: var(--vic-danger);
+          background: #b35d67;
+          border-color: #b35d67;
           color: var(--vic-surface);
-          box-shadow: 0 0 0 1px rgba(161, 77, 58, 0.25);
+          box-shadow: 0 0 0 1px rgba(179, 93, 103, 0.3);
         }
         .supportButton.onLevel.isActive {
-          background: var(--vic-success);
-          border-color: var(--vic-success);
+          background: #5f8f66;
+          border-color: #5f8f66;
           color: var(--vic-surface);
-          box-shadow: 0 0 0 1px rgba(94, 124, 90, 0.25);
+          box-shadow: 0 0 0 1px rgba(95, 143, 102, 0.3);
         }
         .supportButton.enrichment.isActive {
-          background: var(--vic-primary);
-          border-color: var(--vic-primary);
+          background: #7a68b3;
+          border-color: #7a68b3;
           color: var(--vic-surface);
-          box-shadow: 0 0 0 1px rgba(181, 83, 47, 0.25);
+          box-shadow: 0 0 0 1px rgba(122, 104, 179, 0.3);
         }
-        .assignBadge {
-          font-size: 12px;
+        .assignToggle {
+          width: 100%;
+          min-width: 0;
           border-radius: 999px;
-          padding: 4px 8px;
           border: 1px solid var(--vic-border);
-          color: var(--vic-text-secondary);
-          background: var(--vic-surface-muted);
-          white-space: nowrap;
+          padding: 8px 12px;
+          font-size: 12px;
+          font-weight: 800;
+          letter-spacing: 0.04em;
+          cursor: pointer;
+          transition: transform 0.12s ease, filter 0.12s ease, border-color 0.12s ease, background 0.12s ease;
         }
-        .assignBadge.assigned {
-          border-color: var(--vic-primary-soft);
-          color: var(--vic-primary-hover);
-          background: rgba(181, 83, 47, 0.08);
+        .assignToggle:hover {
+          filter: brightness(1.02);
+          transform: translateY(-1px);
+        }
+        .assignToggle.isOff {
+          background: var(--vic-surface-muted);
+          border-color: var(--vic-border);
+          color: var(--vic-text-secondary);
+        }
+        .assignToggle.isOn {
+          background: rgba(95, 143, 102, 0.12);
+          border-color: #5f8f66;
+          color: #3e6345;
         }
         .parentEmailCell {
           display: grid;
           gap: 6px;
-          min-width: 220px;
         }
         .saveEmailButton {
           width: fit-content;
@@ -1675,14 +1684,12 @@ export default function TeacherPage() {
           display: flex;
           gap: 8px;
           flex-wrap: wrap;
-          min-width: 160px;
         }
         .rowStatus {
           font-size: 12px;
           color: var(--vic-text-secondary);
           display: grid;
           gap: 4px;
-          min-width: 190px;
         }
         .lessonShell {
           background: transparent;
@@ -1752,8 +1759,9 @@ export default function TeacherPage() {
           .classCodeValue {
             font-size: 26px;
           }
-          .studentTable {
-            min-width: 780px;
+          .studentTable th,
+          .studentTable td {
+            padding: 9px 8px;
           }
         }
       `}</style>
