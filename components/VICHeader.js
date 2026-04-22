@@ -81,7 +81,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
     <header className="vicHeader">
       <a className="brand" href="/">
         <div className="brandMark">
-          <VICLogo size={72} variant="header" />
+          <VICLogo size={56} variant="header" />
         </div>
         <div>
           <div className="brandTitle">VIC</div>
@@ -136,39 +136,39 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
           width: 100%;
           display: flex;
           align-items: center;
-          gap: 24px;
+          gap: 12px;
           justify-content: space-between;
-          padding: 12px 16px;
-          border-radius: 18px;
+          padding: 8px 12px;
+          border-radius: 14px;
           background: var(--vic-surface);
           border: 1px solid var(--vic-border-soft);
           box-shadow: var(--vic-shadow-card);
-          margin-bottom: 10px;
-          flex-wrap: wrap;
+          margin-bottom: 6px;
+          flex-wrap: nowrap;
         }
-        .brand { display: flex; align-items: center; gap: 14px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
+        .brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
         .brandMark {
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        .brandTitle { font-size: 24px; font-weight: 900; letter-spacing: 0.01em; }
-        .brandSub { font-size: 13px; color: var(--vic-text-secondary); font-weight: 700; }
-        .navLinks { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 14px; padding: 10px 14px; border-radius: 10px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease; font-weight: 800; }
+        .brandTitle { font-size: 20px; font-weight: 900; letter-spacing: 0.01em; line-height: 1; }
+        .brandSub { font-size: 11px; color: var(--vic-text-secondary); font-weight: 700; line-height: 1.1; }
+        .navLinks { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 13px; padding: 7px 10px; border-radius: 9px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease; font-weight: 800; }
         .primaryLink { color: var(--vic-text-primary); }
         .navLink:hover { border-color: rgba(181, 83, 47, 0.42); color: var(--vic-primary); background: var(--vic-surface-muted); }
         .active { background: var(--vic-primary); border-color: var(--vic-primary); color: var(--vic-surface); box-shadow: 0 10px 20px rgba(150,69,40,0.28); }
-        .userArea { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+        .userArea { display: flex; align-items: center; gap: 7px; margin-left: auto; }
         .headerStatus {
           display: inline-flex;
           align-items: center;
           gap: 7px;
-          padding: 8px 12px;
+          padding: 6px 10px;
           border-radius: 999px;
           border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface-muted);
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 800;
           color: var(--vic-text-primary);
         }
@@ -186,13 +186,14 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
           border-radius: 50%;
           flex-shrink: 0;
         }
-        .signedInName { max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; color: var(--vic-text-secondary); font-weight: 700; }
-        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border); background: var(--vic-surface); border-radius: 10px; padding: 9px 14px; font-size: 13px; font-weight: 800; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
+        .signedInName { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vic-text-secondary); font-weight: 700; }
+        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border); background: var(--vic-surface); border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 800; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
         .logoutButton:hover, .authPrompt:hover { background: var(--vic-surface-muted); border-color: rgba(181, 83, 47, 0.34); }
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
-          .vicHeader { padding: 10px 12px; gap: 10px; }
-          .brandTitle { font-size: 21px; }
+          .vicHeader { padding: 8px 10px; gap: 8px; flex-wrap: wrap; }
+          .brandTitle { font-size: 18px; }
+          .brandSub { display: none; }
           .userArea { margin-left: 0; }
         }
       `}</style>
