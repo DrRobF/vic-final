@@ -11,7 +11,7 @@ const INITIAL_MESSAGES = [
   {
     role: 'assistant',
     text:
-      'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nOr pick a subject below to begin.',
+      'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nChoose a quick start below or type your own question.',
     visual: { type: 'idle', title: 'Visual Support' },
   },
 ]
@@ -46,24 +46,24 @@ const GUIDED_ENTRY_OPTIONS = [
   },
 ]
 
-function getEntryModeMeta({ hasAssignedLesson, hasUserMessages }) {
-  if (hasAssignedLesson && !hasUserMessages) {
+function getEntryModeMeta({ hasAssignedLesson, hasUserMessages, sessionMode }) {
+  if (sessionMode === 'teacher_directed' && hasAssignedLesson && !hasUserMessages) {
     return {
-      label: 'Teacher-Assigned Lesson',
+      label: 'Teacher Lesson',
       helper: "Your teacher has picked today's lesson. Send an opening line to begin.",
     }
   }
 
-  if (hasAssignedLesson && hasUserMessages) {
+  if (sessionMode === 'teacher_directed' && hasAssignedLesson && hasUserMessages) {
     return {
-      label: 'Teacher-Assigned Lesson In Progress',
+      label: 'Teacher Lesson In Progress',
       helper: "VIC is following your teacher's lesson and guiding you step by step.",
     }
   }
 
   return {
-    label: 'Student-Led Session',
-    helper: 'Choose a quick start below or type your own question anytime.',
+    label: 'My Own Work',
+    helper: 'Choose a quick start below or type your own question.',
   }
 }
 
@@ -127,10 +127,18 @@ export default function AskVIC() {
             : studentLookupStatus
 
   const hasUserMessages = messages.some((message) => message.role === 'user')
+  const hasAssignedLesson = Boolean(assignedLesson)
   const entryModeMeta = getEntryModeMeta({
-    hasAssignedLesson: Boolean(assignedLesson),
+    hasAssignedLesson,
     hasUserMessages,
+    sessionMode,
   })
+
+  function handleSessionModeToggle(nextMode) {
+    if (nextMode === sessionMode) return
+    if (nextMode === 'teacher_directed' && !hasAssignedLesson) return
+    setSessionMode(nextMode)
+  }
 
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
@@ -990,6 +998,33 @@ ${context}`
                   <div style={styles.chatStatusMessage}>
                     {lessonStatusText} {'•'} {entryModeMeta.helper}
                   </div>
+                  <div style={styles.sessionModeToggle}>
+                    <button
+                      type="button"
+                      onClick={() => handleSessionModeToggle('teacher_directed')}
+                      disabled={!hasAssignedLesson}
+                      style={
+                        sessionMode === 'teacher_directed'
+                          ? styles.sessionModeButtonActive
+                          : !hasAssignedLesson
+                            ? styles.sessionModeButtonDisabled
+                            : styles.sessionModeButton
+                      }
+                    >
+                      Teacher Lesson
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSessionModeToggle('student_directed')}
+                      style={
+                        sessionMode === 'student_directed'
+                          ? styles.sessionModeButtonActive
+                          : styles.sessionModeButton
+                      }
+                    >
+                      My Own Work
+                    </button>
+                  </div>
                 </div>
 
               </div>
@@ -1065,7 +1100,7 @@ ${context}`
                 onKeyDown={handleKeyDown}
                 rows={isMobile ? 3 : 3}
                 placeholder={
-                  assignedLesson
+                  sessionMode === 'teacher_directed' && assignedLesson
                     ? 'Send your opening line to begin this lesson...'
                     : 'Ask a question or pick a quick start above...'
                 }
@@ -1965,7 +2000,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border)',
       color: 'var(--vic-text-primary)',
-      padding: '12px 14px',
+      padding: '13px 18px',
       borderRadius: '10px',
       fontSize: '13px',
       fontWeight: 800,
@@ -1976,7 +2011,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-primary)',
       border: '1px solid var(--vic-primary)',
       color: 'var(--vic-surface)',
-      padding: '13px 16px',
+      padding: '14px 20px',
       borderRadius: '10px',
       fontSize: '13px',
       fontWeight: 800,
@@ -1988,7 +2023,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       border: '1px solid var(--vic-border)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
-      padding: '9px 12px',
+      padding: '10px 15px',
       borderRadius: '12px',
       fontSize: '13px',
       fontWeight: 800,
@@ -2559,6 +2594,51 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       maxWidth: '720px',
     },
 
+    sessionModeToggle: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      width: 'fit-content',
+      padding: '3px',
+      borderRadius: '999px',
+      border: '1px solid var(--vic-border-soft)',
+      background: 'var(--vic-surface-muted)',
+      marginTop: '3px',
+    },
+
+    sessionModeButton: {
+      border: '1px solid transparent',
+      background: 'transparent',
+      color: 'var(--vic-text-secondary)',
+      borderRadius: '999px',
+      padding: '7px 14px',
+      fontSize: '12px',
+      fontWeight: 700,
+      cursor: 'pointer',
+    },
+
+    sessionModeButtonActive: {
+      border: '1px solid rgba(181, 83, 47, 0.34)',
+      background: 'rgba(181, 83, 47, 0.14)',
+      color: 'var(--vic-text-primary)',
+      borderRadius: '999px',
+      padding: '7px 14px',
+      fontSize: '12px',
+      fontWeight: 800,
+      cursor: 'pointer',
+    },
+
+    sessionModeButtonDisabled: {
+      border: '1px solid transparent',
+      background: 'transparent',
+      color: 'var(--vic-disabled)',
+      borderRadius: '999px',
+      padding: '7px 14px',
+      fontSize: '12px',
+      fontWeight: 700,
+      cursor: 'not-allowed',
+    },
+
     modeStatusPill: {
       alignSelf: 'flex-start',
       marginTop: '0',
@@ -2696,7 +2776,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
-      padding: '6px 10px',
+      padding: '8px 14px',
       fontSize: '12px',
       fontWeight: 700,
       cursor: 'pointer',
@@ -2707,7 +2787,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       background: 'rgba(181, 83, 47, 0.1)',
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
-      padding: '6px 10px',
+      padding: '8px 14px',
       fontSize: '12px',
       fontWeight: 800,
       cursor: 'pointer',
@@ -2741,7 +2821,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       border: '1px solid var(--vic-primary)',
       background: 'var(--vic-primary)',
       color: 'var(--vic-surface)',
-      padding: isMobile ? '10px 16px' : '10px 18px',
+      padding: isMobile ? '11px 18px' : '12px 22px',
       borderRadius: '10px',
       fontSize: '16px',
       fontWeight: 900,
