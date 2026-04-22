@@ -826,9 +826,13 @@ export default function TeacherPage() {
                   </div>
                   <div className="studentHeaderActions">
                     <span className="selectionPill">{selectedCount} selected</span>
-                    {selectedCount > 0 && !isRosterCollapsed ? (
-                      <button type="button" className="secondaryButton rosterToggleButton" onClick={() => setIsRosterCollapsed(true)}>
-                        Collapse roster
+                    {students.length > 0 ? (
+                      <button
+                        type="button"
+                        className="secondaryButton rosterToggleButton"
+                        onClick={() => setIsRosterCollapsed((previous) => !previous)}
+                      >
+                        {isRosterCollapsed ? 'Show Roster' : 'Hide Roster'}
                       </button>
                     ) : null}
                   </div>
@@ -839,13 +843,16 @@ export default function TeacherPage() {
 
                 {!loadingStudents && students.length > 0 && isRosterCollapsed ? (
                   <div className="rosterSummaryBar">
-                    <span className="summaryTotal">{selectedCount} assigned student{selectedCount === 1 ? '' : 's'}</span>
+                    <span className="summaryTotal">{students.length} students available</span>
+                    <span className="summaryDivider" aria-hidden>
+                      •
+                    </span>
+                    <span className="summarySubtle">
+                      {selectedCount} selected student{selectedCount === 1 ? '' : 's'}
+                    </span>
                     {supportCounts.remediation ? <span className="summaryChip remediation">Remediation: {supportCounts.remediation}</span> : null}
                     {supportCounts.core ? <span className="summaryChip onLevel">Core: {supportCounts.core}</span> : null}
                     {supportCounts.enrichment ? <span className="summaryChip enrichment">Enrichment: {supportCounts.enrichment}</span> : null}
-                    <button type="button" className="secondaryButton rosterToggleButton" onClick={() => setIsRosterCollapsed(false)}>
-                      Edit roster
-                    </button>
                   </div>
                 ) : null}
 
@@ -1416,7 +1423,16 @@ export default function TeacherPage() {
           font-size: 14px;
           font-weight: 800;
           color: var(--vic-primary-hover);
-          margin-right: 4px;
+        }
+        .summaryDivider {
+          color: var(--vic-primary-hover);
+          opacity: 0.75;
+          font-size: 12px;
+        }
+        .summarySubtle {
+          font-size: 13px;
+          color: var(--vic-text-secondary);
+          margin-right: 2px;
         }
         .summaryChip {
           border-radius: 10px;
