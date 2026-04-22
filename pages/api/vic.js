@@ -75,6 +75,7 @@ export default async function handler(req, res) {
     // If a student id is provided and lesson context was not passed in,
     // fetch the most recent assignment and joined lesson automatically.
     if (
+      resolvedSessionMode === 'teacher_directed' &&
       !resolvedAssignedLesson &&
       resolvedStudentId &&
       supabaseUrl &&
@@ -215,8 +216,7 @@ INTENT-SPECIFIC TONE:
       })
     }
 
-    if (resolvedAssignedLesson) {
-      resolvedSessionMode = 'teacher_directed'
+    if (resolvedSessionMode === 'teacher_directed' && resolvedAssignedLesson) {
       const lessonContext = `
 TEACHER-ASSIGNED SESSION CONTEXT:
 - Session mode: teacher_directed
