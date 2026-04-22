@@ -214,6 +214,16 @@ export default function AskVIC() {
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
   const [awaitingAssignedLessonInterest, setAwaitingAssignedLessonInterest] = useState(false)
   const [pendingEntryIntent, setPendingEntryIntent] = useState('')
+  const [debugAuthUserId, setDebugAuthUserId] = useState(null)
+  const [debugAuthEmail, setDebugAuthEmail] = useState(null)
+  const [debugResolvedUserId, setDebugResolvedUserId] = useState(null)
+  const [debugResolvedRole, setDebugResolvedRole] = useState(null)
+  const [debugLatestAssignment, setDebugLatestAssignment] = useState({
+    found: false,
+    id: null,
+    lessonId: null,
+    lessonTitle: null,
+  })
 
   const lessonStatusText = hasTeacherAssignment
     ? `Assigned lesson: ${assignedLesson?.title || 'Teacher-selected lesson'}`
@@ -240,6 +250,11 @@ export default function AskVIC() {
     hasUserMessages,
     sessionMode,
   })
+  const debugValue = (value) => {
+    if (value === null || value === undefined || value === '') return '—'
+    if (typeof value === 'boolean') return value ? 'true' : 'false'
+    return String(value)
+  }
 
   useEffect(() => {
     debugAskVicStudentResolution('final-state', {
@@ -278,6 +293,11 @@ export default function AskVIC() {
       debugAskVicStudentResolution('detect-start', {})
       setStudentLookupStatus('Loading student...')
       setCurrentUserStatus('Loading signed-in user...')
+      setDebugAuthUserId(null)
+      setDebugAuthEmail(null)
+      setDebugResolvedUserId(null)
+      setDebugResolvedRole(null)
+      setDebugLatestAssignment({ found: false, id: null, lessonId: null, lessonTitle: null })
 
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
       const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
@@ -326,6 +346,10 @@ export default function AskVIC() {
           authEmail: user?.email || null,
         })
         setCurrentUserProfile(null)
+        setDebugAuthUserId(user?.id || null)
+        setDebugAuthEmail(user?.email || null)
+        setDebugResolvedUserId(null)
+        setDebugResolvedRole(null)
         setCurrentUserStatus('No signed-in user found.')
         setSelectedStudentId(null)
         setAssignedLesson(null)
@@ -347,6 +371,9 @@ export default function AskVIC() {
         resolvedUserRoleRaw: matchedProfile?.role || null,
       })
       setCurrentUserProfile(matchedProfile)
+      setDebugAuthUserId(user?.id || null)
+      setDebugAuthEmail(user?.email || null)
+      setDebugResolvedUserId(matchedProfile?.id || null)
       setCurrentUserStatus(
         matchedProfile
           ? 'Signed in.'
@@ -356,6 +383,7 @@ export default function AskVIC() {
       const resolvedRole = normalizeUserRole(
         matchedProfile?.role || user?.user_metadata?.role || user?.app_metadata?.role || ''
       )
+      setDebugResolvedRole(resolvedRole || null)
 
       debugAskVicStudentResolution('resolved-role', {
         matchedProfileRole: matchedProfile?.role || null,
@@ -428,6 +456,12 @@ export default function AskVIC() {
 
       const latestAssignment = pickLatestAssignment(assignmentRows)
       let lessonRow = lessonFromAssignment(latestAssignment)
+      setDebugLatestAssignment({
+        found: Boolean(latestAssignment?.id),
+        id: latestAssignment?.id || null,
+        lessonId: latestAssignment?.lesson_id || lessonRow?.id || null,
+        lessonTitle: lessonRow?.title || null,
+      })
 
       debugAskVicStudentResolution('assignment-selected', {
         latestAssignment,
@@ -443,6 +477,12 @@ export default function AskVIC() {
           .limit(1)
 
         lessonRow = fallbackLessonRows?.[0] || null
+        setDebugLatestAssignment({
+          found: Boolean(latestAssignment?.id),
+          id: latestAssignment?.id || null,
+          lessonId: latestAssignment?.lesson_id || lessonRow?.id || null,
+          lessonTitle: lessonRow?.title || null,
+        })
         debugAskVicStudentResolution('assignment-lesson-fallback', {
           lessonId: latestAssignment.lesson_id,
           fallbackLessonFound: Boolean(lessonRow),
@@ -1294,6 +1334,50 @@ ${context}`
                     >
                       My Own Work
                     </button>
+                  </div>
+                  <div style={styles.tempDebugPanel}>
+                    <div style={styles.tempDebugTitle}>TEMP DEBUG — Teacher Lesson Resolution</div>
+                    <div style={styles.tempDebugSection}>1) Auth/session info</div>
+                    <div style={styles.tempDebugRow}>auth user id: {debugValue(debugAuthUserId)}</div>
+                    <div style={styles.tempDebugRow}>auth email: {debugValue(debugAuthEmail)}</div>
+
+                    <div style={styles.tempDebugSection}>2) Resolved app user info</div>
+                    <div style={styles.tempDebugRow}>
+                      resolved public.users id: {debugValue(debugResolvedUserId)}
+                    </div>
+                    <div style={styles.tempDebugRow}>resolved role: {debugValue(debugResolvedRole)}</div>
+                    <div style={styles.tempDebugRow}>
+                      selectedStudentId: {debugValue(selectedStudentId)}
+                    </div>
+
+                    <div style={styles.tempDebugSection}>3) Teacher lesson resolution</div>
+                    <div style={styles.tempDebugRow}>
+                      latest assignment found: {debugLatestAssignment.found ? 'yes' : 'no'}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      latest assignment id: {debugValue(debugLatestAssignment.id)}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      latest lesson id: {debugValue(debugLatestAssignment.lessonId)}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      latest lesson title: {debugValue(debugLatestAssignment.lessonTitle)}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      hasTeacherAssignment: {hasTeacherAssignment ? 'true' : 'false'}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      assignedLesson present: {assignedLesson ? 'true' : 'false'}
+                    </div>
+
+                    <div style={styles.tempDebugSection}>4) Mode state</div>
+                    <div style={styles.tempDebugRow}>current sessionMode: {debugValue(sessionMode)}</div>
+                    <div style={styles.tempDebugRow}>
+                      Teacher Lesson disabled: {teacherLessonDisabled ? 'true' : 'false'}
+                    </div>
+                    <div style={styles.tempDebugRow}>
+                      disabled reason: {debugValue(teacherLessonDisabledReason)}
+                    </div>
                   </div>
                 </div>
 
@@ -2926,6 +3010,39 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       cursor: 'not-allowed',
       minHeight: '34px',
       whiteSpace: 'nowrap',
+    },
+    tempDebugPanel: {
+      marginTop: '8px',
+      width: '100%',
+      maxWidth: '720px',
+      borderRadius: '8px',
+      border: '1px dashed rgba(181, 83, 47, 0.45)',
+      background: 'rgba(181, 83, 47, 0.06)',
+      padding: '8px 10px',
+      display: 'grid',
+      gap: '3px',
+    },
+    tempDebugTitle: {
+      fontSize: '11px',
+      fontWeight: 900,
+      letterSpacing: '0.04em',
+      color: 'var(--vic-text-primary)',
+      textTransform: 'uppercase',
+      marginBottom: '2px',
+    },
+    tempDebugSection: {
+      marginTop: '4px',
+      fontSize: '10px',
+      fontWeight: 800,
+      color: 'var(--vic-text-secondary)',
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
+    },
+    tempDebugRow: {
+      fontSize: '11px',
+      lineHeight: 1.25,
+      color: 'var(--vic-text-primary)',
+      wordBreak: 'break-word',
     },
 
     modeStatusPill: {
