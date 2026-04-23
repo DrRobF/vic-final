@@ -7,6 +7,7 @@ import { lessonFromAssignment, pickLatestAssignment } from '../lib/assignment-re
 const BRAIN_VERSION = 'v3.3'
 const SKETCH_BG_COLOR = '#f8fafc'
 const SKETCH_INK_COLOR = '#0f172a'
+const SESSION_INTEREST_STORAGE_KEY = 'vic-session-interest-today'
 
 const INITIAL_MESSAGES = [
   {
@@ -274,6 +275,8 @@ export default function AskVIC() {
   const [studentMode, setStudentMode] = useState('')
   const [studentSupportLevel, setStudentSupportLevel] = useState('')
   const [studentInterest, setStudentInterest] = useState('')
+  const [sessionInterestInput, setSessionInterestInput] = useState('')
+  const [sessionInterestToday, setSessionInterestToday] = useState('')
   const [studentGradeLevel, setStudentGradeLevel] = useState('')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
@@ -346,6 +349,16 @@ export default function AskVIC() {
   }
 
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    const storedInterest = window.sessionStorage.getItem(SESSION_INTEREST_STORAGE_KEY) || ''
+    const normalizedStoredInterest = storedInterest.trim()
+    if (normalizedStoredInterest) {
+      setSessionInterestToday(normalizedStoredInterest)
+      setSessionInterestInput(normalizedStoredInterest)
+    }
+  }, [])
+
+  useEffect(() => {
     debugAskVicStudentResolution('final-state', {
       selectedStudentId,
       hasTeacherAssignment,
@@ -369,6 +382,19 @@ export default function AskVIC() {
     if (nextMode === sessionMode) return
     if (nextMode === 'teacher_directed' && !hasAssignedLesson) return
     setSessionMode(nextMode)
+  }
+
+  function applySessionInterestForToday() {
+    const normalizedInterest = sessionInterestInput.trim().slice(0, 120)
+    setSessionInterestToday(normalizedInterest)
+
+    if (typeof window !== 'undefined') {
+      if (normalizedInterest) {
+        window.sessionStorage.setItem(SESSION_INTEREST_STORAGE_KEY, normalizedInterest)
+      } else {
+        window.sessionStorage.removeItem(SESSION_INTEREST_STORAGE_KEY)
+      }
+    }
   }
 
   const messageAreaRef = useRef(null)
@@ -880,12 +906,13 @@ export default function AskVIC() {
         },
       })
 
+      const activeInterest = sessionInterestToday || studentInterest
       const requestBody = {
         messages: apiMessages,
         sketchImage,
         studentId: selectedStudentId,
         sessionMode,
-        studentInterest,
+        studentInterest: activeInterest,
         gradeLevel: studentGradeLevel,
         entryIntent: pendingEntryIntent || null,
         isFirstUserTurn,
@@ -1408,6 +1435,33 @@ ${context}`
                 {!isMobile ? (
                   <div style={styles.inputHint}>Enter = send • Shift + Enter = new line</div>
                 ) : null}
+              </div>
+
+              <div style={styles.sessionInterestWrap}>
+                <label htmlFor="session-interest-input" style={styles.sessionInterestLabel}>
+                  What should VIC use as your interest today?
+                </label>
+                <div style={styles.sessionInterestControls}>
+                  <input
+                    id="session-interest-input"
+                    type="text"
+                    value={sessionInterestInput}
+                    onChange={(e) => setSessionInterestInput(e.target.value)}
+                    placeholder="Optional (music, sports, games, food...)"
+                    style={styles.sessionInterestInput}
+                  />
+                  <button
+                    type="button"
+                    onClick={applySessionInterestForToday}
+                    style={styles.sessionInterestButton}
+                  >
+                    Use for today
+                  </button>
+                </div>
+                <div style={styles.sessionInterestStatus}>
+                  Active today:{' '}
+                  <strong>{sessionInterestToday || studentInterest || 'None (optional)'}</strong>
+                </div>
               </div>
 
               <div style={styles.guidedEntryRow}>
@@ -3241,6 +3295,61 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       display: 'flex',
       flexWrap: 'wrap',
       gap: '6px',
+    },
+
+    sessionInterestWrap: {
+      border: '1px solid var(--vic-border-soft)',
+      borderRadius: '10px',
+      padding: '8px',
+      background: 'var(--vic-surface-muted)',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '6px',
+    },
+
+    sessionInterestLabel: {
+      fontSize: '12px',
+      lineHeight: 1.3,
+      color: 'var(--vic-text-primary)',
+      fontWeight: 700,
+    },
+
+    sessionInterestControls: {
+      display: 'grid',
+      gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
+      gap: '8px',
+      alignItems: 'center',
+    },
+
+    sessionInterestInput: {
+      width: '100%',
+      borderRadius: '8px',
+      border: '1px solid var(--vic-border)',
+      background: 'var(--vic-surface)',
+      color: 'var(--vic-text-primary)',
+      padding: '8px 10px',
+      boxSizing: 'border-box',
+      outline: 'none',
+      fontSize: '14px',
+      lineHeight: 1.4,
+    },
+
+    sessionInterestButton: {
+      border: '1px solid var(--vic-border)',
+      background: 'var(--vic-surface)',
+      color: 'var(--vic-text-primary)',
+      borderRadius: '8px',
+      padding: '8px 12px',
+      fontSize: '12px',
+      fontWeight: 700,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+    },
+
+    sessionInterestStatus: {
+      fontSize: '12px',
+      lineHeight: 1.35,
+      color: 'var(--vic-text-secondary)',
     },
 
     guidedEntryButton: {
