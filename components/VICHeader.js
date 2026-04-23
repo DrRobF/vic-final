@@ -124,7 +124,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
               {loggingOut ? 'Logging out...' : 'Logout'}
             </button>
           </>
-        ) : (
+        ) : currentPath === '/login' ? null : (
           <a className="authPrompt" href="/login">
             Sign in
           </a>

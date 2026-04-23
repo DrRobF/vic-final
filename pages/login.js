@@ -139,17 +139,25 @@ export default function LoginPage() {
         .authShell {
           max-width: 1040px;
           margin: 0 auto;
-          min-height: calc(100vh - 80px);
+          min-height: calc(100vh - 96px);
           display: flex;
           flex-direction: column;
         }
         .contentWrap {
           width: min(100%, 460px);
-          margin: auto auto 0;
-          padding: clamp(28px, 8vh, 92px) 0 clamp(24px, 6vh, 56px);
+          margin: 0 auto;
+          padding: clamp(26px, 7vh, 72px) 14px 22px;
+          border-radius: 18px;
+          background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.68) 0%,
+            rgba(255, 255, 255, 0.52) 100%
+          );
+          border: 1px solid rgba(157, 167, 191, 0.16);
         }
         .introBlock {
-          margin-bottom: 14px;
+          margin-bottom: 10px;
+          text-align: center;
         }
         .card {
           width: 100%;
@@ -167,7 +175,7 @@ export default function LoginPage() {
           letter-spacing: -0.01em;
         }
         .subText {
-          margin: 10px 0 0;
+          margin: 8px 0 0;
           font-size: 16px;
           color: var(--vic-text-secondary);
           line-height: 1.45;
