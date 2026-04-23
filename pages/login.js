@@ -77,45 +77,55 @@ export default function LoginPage() {
     <main className="authPage">
       <div className="authShell">
         <VICHeader currentPath="/login" />
-        <section className="card">
-          <h1>Log In</h1>
-          <p className="subText">Sign in with your email and password.</p>
-
-          <form onSubmit={handleSubmit} className="form">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-              required
-            />
-
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-              required
-            />
-
-            <button className="primaryButton" type="submit" disabled={loading}>
-              {loading ? 'Signing in...' : 'Sign in'}
-            </button>
-          </form>
-
-          <p className="mutedLine">
-            Need an account? <a href="/signup">Create one</a>
-          </p>
-
-          {error ? (
-            <p className="errorText" role="alert">
-              {error}
+        <section className="contentWrap">
+          <div className="introBlock">
+            <h1>Log in to connect your learning experience</h1>
+            <p className="subText">
+              Access your classroom, teacher assignments, and saved progress.
             </p>
-          ) : null}
+          </div>
+
+          <div className="card">
+            <form onSubmit={handleSubmit} className="form">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
+              />
+
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
+              />
+
+              <p className="mutedLine">
+                Need an account? <a href="/signup">Create one</a>
+              </p>
+
+              <button className="primaryButton" type="submit" disabled={loading}>
+                {loading ? 'Signing in...' : 'Sign in'}
+              </button>
+            </form>
+
+            <p className="exploreLine">
+              Just exploring? You can use VIC without logging in.
+            </p>
+
+            {error ? (
+              <p className="errorText" role="alert">
+                {error}
+              </p>
+            ) : null}
+          </div>
         </section>
       </div>
 
@@ -124,35 +134,47 @@ export default function LoginPage() {
           min-height: 100vh;
           background: var(--vic-bg);
           color: var(--vic-text-primary);
-          padding: 34px 16px;
+          padding: 28px 16px 52px;
         }
         .authShell {
           max-width: 1040px;
           margin: 0 auto;
+          min-height: calc(100vh - 80px);
+          display: flex;
+          flex-direction: column;
+        }
+        .contentWrap {
+          width: min(100%, 460px);
+          margin: auto auto 0;
+          padding: clamp(28px, 8vh, 92px) 0 clamp(24px, 6vh, 56px);
+        }
+        .introBlock {
+          margin-bottom: 14px;
         }
         .card {
-          max-width: 520px;
+          width: 100%;
           border: 1px solid var(--vic-border-soft);
           border-radius: 14px;
           background: var(--vic-surface);
-          padding: 36px 34px;
+          padding: 28px 24px;
           box-shadow: var(--vic-shadow-raised);
         }
         h1 {
           margin: 0;
-          font-size: 38px;
-          line-height: 1.08;
-          font-weight: 850;
+          font-size: clamp(28px, 4vw, 36px);
+          line-height: 1.14;
+          font-weight: 800;
+          letter-spacing: -0.01em;
         }
         .subText {
-          margin: 12px 0 0;
+          margin: 10px 0 0;
           font-size: 16px;
           color: var(--vic-text-secondary);
+          line-height: 1.45;
         }
         .form {
           display: grid;
           gap: 10px;
-          margin-top: 28px;
         }
         label {
           font-size: 13px;
@@ -172,7 +194,7 @@ export default function LoginPage() {
           padding: 11px 13px;
         }
         .primaryButton {
-          margin-top: 16px;
+          margin-top: 12px;
           border: 1px solid rgba(181, 83, 47, 0.48);
           background: var(--vic-primary);
           color: var(--vic-surface);
@@ -196,11 +218,20 @@ export default function LoginPage() {
           box-shadow: none;
         }
         .mutedLine {
-          margin: 22px 0 0;
+          margin: 4px 0 2px;
           color: var(--vic-text-secondary);
+          font-size: 14px;
+        }
+        .exploreLine {
+          margin: 14px 0 0;
+          color: var(--vic-text-secondary);
+          font-size: 13px;
+          line-height: 1.4;
         }
         a {
           color: var(--vic-primary);
+          font-weight: 600;
+          text-underline-offset: 2px;
         }
         a:hover {
           color: var(--vic-primary-hover);
