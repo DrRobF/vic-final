@@ -40,6 +40,7 @@ export default async function handler(req, res) {
   }
 
   const requestedStudentId = normalizeNumericId(req.body?.studentId)
+  const requestedActiveClassId = normalizeNumericId(req.body?.activeClassId)
 
   const { data: profileRowsByAuth } = await supabaseAuth
     .from('users')
@@ -59,6 +60,17 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Requested student does not match signed-in profile.' })
   }
 
+  const { data: enrollmentRows } = await supabaseAuth
+    .from('enrollments')
+    .select('class_id, support_level')
+    .eq('student_id', resolvedStudentId)
+    .order('class_id', { ascending: true })
+
+  const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
+  const activeEnrollment = requestedActiveClassId
+    ? safeEnrollmentRows.find((row) => row?.class_id === requestedActiveClassId) || null
+    : null
+
   const { data: rows, error: assignmentsError } = await supabaseAuth
     .from('assignments')
     .select('id, student_id, lesson_id, mode, status, assigned_at')
@@ -72,7 +84,19 @@ export default async function handler(req, res) {
   }
 
   const safeRows = Array.isArray(rows) ? rows : []
-  const latestAssignment = safeRows[0] || null
+  const activeSupportLevel =
+    typeof activeEnrollment?.support_level === 'string'
+      ? activeEnrollment.support_level.trim().toLowerCase()
+      : ''
+  const classScopedRows =
+    activeSupportLevel && safeEnrollmentRows.length > 1
+      ? safeRows.filter(
+          (row) =>
+            typeof row?.mode === 'string' &&
+            row.mode.trim().toLowerCase() === activeSupportLevel
+        )
+      : safeRows
+  const latestAssignment = classScopedRows[0] || safeRows[0] || null
   let assignedLesson = null
 
   if (latestAssignment?.lesson_id) {
@@ -87,12 +111,14 @@ export default async function handler(req, res) {
     }
   }
 
+  const scopedRows = classScopedRows.length > 0 ? classScopedRows : safeRows
+
   const rowsWithAssignedLesson =
     latestAssignment && assignedLesson
-      ? safeRows.map((row, index) =>
+      ? scopedRows.map((row, index) =>
           index === 0 ? { ...row, lessons: assignedLesson, assignedLesson } : row
         )
-      : safeRows
+      : scopedRows
 
   return res.status(200).json({
     rows: rowsWithAssignedLesson,
@@ -100,5 +126,6 @@ export default async function handler(req, res) {
     assignedLesson,
     mode: 'matched_by_student_id',
     resolvedStudentId,
+    resolvedActiveClassId: activeEnrollment?.class_id || null,
   })
 }
