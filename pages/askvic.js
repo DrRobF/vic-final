@@ -277,6 +277,7 @@ export default function AskVIC() {
   const [studentInterest, setStudentInterest] = useState('')
   const [sessionInterestInput, setSessionInterestInput] = useState('')
   const [sessionInterestToday, setSessionInterestToday] = useState('')
+  const [isEditingSessionInterest, setIsEditingSessionInterest] = useState(false)
   const [studentGradeLevel, setStudentGradeLevel] = useState('')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
@@ -395,6 +396,11 @@ export default function AskVIC() {
         window.sessionStorage.removeItem(SESSION_INTEREST_STORAGE_KEY)
       }
     }
+  }
+
+  function commitSessionInterestInline() {
+    applySessionInterestForToday()
+    setIsEditingSessionInterest(false)
   }
 
   const messageAreaRef = useRef(null)
@@ -1432,35 +1438,54 @@ ${context}`
               <div style={styles.inputHeaderRow}>
                 <div style={styles.inputTitle}>Start here: choose a quick start or type your own</div>
 
-                {!isMobile ? (
-                  <div style={styles.inputHint}>Enter = send • Shift + Enter = new line</div>
-                ) : null}
-              </div>
+                <div style={styles.inputHeaderRight}>
+                  <div style={styles.sessionInterestInline}>
+                    <span style={styles.sessionInterestInlineLabel}>Interest:</span>
+                    {isEditingSessionInterest ? (
+                      <input
+                        id="session-interest-input"
+                        type="text"
+                        value={sessionInterestInput}
+                        onChange={(e) => setSessionInterestInput(e.target.value)}
+                        onBlur={commitSessionInterestInline}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') {
+                            event.preventDefault()
+                            commitSessionInterestInline()
+                          }
+                        }}
+                        placeholder="Optional"
+                        style={styles.sessionInterestInlineInput}
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSessionInterestInput(sessionInterestToday || studentInterest || '')
+                          setIsEditingSessionInterest(true)
+                        }}
+                        style={styles.sessionInterestInlineValue}
+                      >
+                        {sessionInterestToday || studentInterest || 'None'}
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSessionInterestInput(sessionInterestToday || studentInterest || '')
+                        setIsEditingSessionInterest(true)
+                      }}
+                      aria-label="Edit interest"
+                      style={styles.sessionInterestInlineEdit}
+                    >
+                      ✎
+                    </button>
+                  </div>
 
-              <div style={styles.sessionInterestWrap}>
-                <label htmlFor="session-interest-input" style={styles.sessionInterestLabel}>
-                  What should VIC use as your interest today?
-                </label>
-                <div style={styles.sessionInterestControls}>
-                  <input
-                    id="session-interest-input"
-                    type="text"
-                    value={sessionInterestInput}
-                    onChange={(e) => setSessionInterestInput(e.target.value)}
-                    placeholder="Optional (music, sports, games, food...)"
-                    style={styles.sessionInterestInput}
-                  />
-                  <button
-                    type="button"
-                    onClick={applySessionInterestForToday}
-                    style={styles.sessionInterestButton}
-                  >
-                    Use for today
-                  </button>
-                </div>
-                <div style={styles.sessionInterestStatus}>
-                  Active today:{' '}
-                  <strong>{sessionInterestToday || studentInterest || 'None (optional)'}</strong>
+                  {!isMobile ? (
+                    <div style={styles.inputHint}>Enter = send • Shift + Enter = new line</div>
+                  ) : null}
                 </div>
               </div>
 
@@ -3271,10 +3296,18 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     inputHeaderRow: {
       display: 'flex',
-      alignItems: isMobile ? 'flex-start' : 'center',
+      alignItems: 'center',
       justifyContent: 'space-between',
       gap: '8px',
-      flexWrap: 'wrap',
+      flexWrap: isMobile ? 'wrap' : 'nowrap',
+    },
+
+    inputHeaderRight: {
+      display: 'flex',
+      alignItems: 'center',
+      gap: '10px',
+      minWidth: 0,
+      flexShrink: 0,
     },
 
     inputTitle: {
@@ -3297,59 +3330,55 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       gap: '6px',
     },
 
-    sessionInterestWrap: {
-      border: '1px solid var(--vic-border-soft)',
-      borderRadius: '10px',
-      padding: '8px',
-      background: 'var(--vic-surface-muted)',
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '6px',
-    },
-
-    sessionInterestLabel: {
-      fontSize: '12px',
-      lineHeight: 1.3,
-      color: 'var(--vic-text-primary)',
-      fontWeight: 700,
-    },
-
-    sessionInterestControls: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '1fr auto',
-      gap: '8px',
+    sessionInterestInline: {
+      display: 'inline-flex',
       alignItems: 'center',
+      gap: '6px',
+      fontSize: isMobile ? '12px' : '13px',
+      lineHeight: 1.2,
+      color: 'var(--vic-text-secondary)',
+      whiteSpace: 'nowrap',
     },
 
-    sessionInterestInput: {
-      width: '100%',
-      borderRadius: '8px',
+    sessionInterestInlineLabel: {
+      fontWeight: 700,
+      color: 'var(--vic-text-secondary)',
+    },
+
+    sessionInterestInlineInput: {
+      width: isMobile ? '120px' : '140px',
+      borderRadius: '999px',
       border: '1px solid var(--vic-border)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
-      padding: '8px 10px',
+      padding: '3px 9px',
       boxSizing: 'border-box',
       outline: 'none',
-      fontSize: '14px',
-      lineHeight: 1.4,
+      fontSize: '13px',
+      lineHeight: 1.2,
     },
 
-    sessionInterestButton: {
-      border: '1px solid var(--vic-border)',
-      background: 'var(--vic-surface)',
+    sessionInterestInlineValue: {
+      border: 'none',
+      background: 'transparent',
       color: 'var(--vic-text-primary)',
-      borderRadius: '8px',
-      padding: '8px 12px',
-      fontSize: '12px',
+      borderRadius: '999px',
+      padding: '1px 0',
+      fontSize: '13px',
       fontWeight: 700,
       cursor: 'pointer',
       whiteSpace: 'nowrap',
     },
 
-    sessionInterestStatus: {
-      fontSize: '12px',
-      lineHeight: 1.35,
+    sessionInterestInlineEdit: {
+      border: 'none',
+      background: 'transparent',
       color: 'var(--vic-text-secondary)',
+      borderRadius: '999px',
+      padding: 0,
+      fontSize: '13px',
+      lineHeight: 1,
+      cursor: 'pointer',
     },
 
     guidedEntryButton: {
