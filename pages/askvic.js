@@ -149,6 +149,24 @@ function getUserDisplayName(userRow) {
   return userRow.name || userRow.email || ''
 }
 
+function mapEnrollmentClasses(enrollmentRows) {
+  if (!Array.isArray(enrollmentRows)) return []
+
+  return enrollmentRows
+    .map((row) => {
+      const nestedClass = Array.isArray(row?.classes) ? row.classes[0] : row?.classes
+      const classId = Number(row?.class_id)
+      if (!Number.isInteger(classId)) return null
+
+      return {
+        id: classId,
+        className: typeof nestedClass?.class_name === 'string' ? nestedClass.class_name : '',
+        classCode: typeof nestedClass?.class_code === 'string' ? nestedClass.class_code : '',
+      }
+    })
+    .filter(Boolean)
+}
+
 async function resolveUserProfileRow(supabase, user) {
   const authUserId = user?.id || ''
   const rawEmail = user?.email || ''
@@ -179,7 +197,7 @@ async function resolveUserProfileRow(supabase, user) {
   return byEmailRows?.[0] || null
 }
 
-async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
+async function loadLatestAssignmentSafe(supabase, studentId, accessToken, activeClassId = null) {
   const apiDebug = {
     status: null,
     ok: null,
@@ -195,7 +213,7 @@ async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify({ studentId }),
+        body: JSON.stringify({ studentId, activeClassId }),
       })
 
       const payload = await response.json().catch(() => null)
@@ -281,6 +299,8 @@ export default function AskVIC() {
   const [joinClassCode, setJoinClassCode] = useState('')
   const [joinClassStatus, setJoinClassStatus] = useState({ tone: '', text: '' })
   const [joinClassLoading, setJoinClassLoading] = useState(false)
+  const [enrolledClasses, setEnrolledClasses] = useState([])
+  const [activeClassId, setActiveClassId] = useState(null)
   const [studentGradeLevel, setStudentGradeLevel] = useState('')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
@@ -414,33 +434,35 @@ export default function AskVIC() {
   const assignmentIntroKeyRef = useRef('')
 
   const detectStudentAndLesson = useCallback(async () => {
-      debugAskVicStudentResolution('detect-start', {})
-      setStudentLookupStatus('Loading student...')
-      setCurrentUserStatus('Loading signed-in user...')
-      setDebugAuthUserId(null)
-      setDebugAuthEmail(null)
-      setDebugResolvedUserId(null)
-      setDebugResolvedRole(null)
-      setDebugLatestAssignment({ found: false, id: null, lessonId: null, lessonTitle: null })
-      setDebugLatestAssignmentApi({ status: null, ok: null, responseJson: null, error: null })
+    debugAskVicStudentResolution('detect-start', {})
+    setStudentLookupStatus('Loading student...')
+    setCurrentUserStatus('Loading signed-in user...')
+    setDebugAuthUserId(null)
+    setDebugAuthEmail(null)
+    setDebugResolvedUserId(null)
+    setDebugResolvedRole(null)
+    setDebugLatestAssignment({ found: false, id: null, lessonId: null, lessonTitle: null })
+    setDebugLatestAssignmentApi({ status: null, ok: null, responseJson: null, error: null })
 
-      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-      const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
-      if (!supabaseUrl || !supabaseKey) {
-        debugAskVicStudentResolution('supabase-not-configured', {})
-        setCurrentUserProfile(null)
-        setCurrentUserStatus('Supabase is not configured.')
-        setSelectedStudentId(null)
-        setAssignedLesson(null)
-        setHasTeacherAssignment(false)
-        assignmentIntroKeyRef.current = ''
-        setSessionMode('student_directed')
-        setStudentSupportLevel('')
-        setStudentGradeLevel('')
-        setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
-        return
-      }
+    if (!supabaseUrl || !supabaseKey) {
+      debugAskVicStudentResolution('supabase-not-configured', {})
+      setCurrentUserProfile(null)
+      setCurrentUserStatus('Supabase is not configured.')
+      setSelectedStudentId(null)
+      setAssignedLesson(null)
+      setHasTeacherAssignment(false)
+      assignmentIntroKeyRef.current = ''
+      setSessionMode('student_directed')
+      setStudentSupportLevel('')
+      setStudentGradeLevel('')
+      setEnrolledClasses([])
+      setActiveClassId(null)
+      setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
+      return
+    }
 
       const supabase = getBrowserSupabaseClient()
       if (!supabase) {
@@ -453,6 +475,8 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
+        setEnrolledClasses([])
+        setActiveClassId(null)
         setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
         return
       }
@@ -481,6 +505,8 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
+        setEnrolledClasses([])
+        setActiveClassId(null)
         setStudentLookupStatus('No student found. You can still chat with VIC.')
         return
       }
@@ -530,6 +556,8 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
+        setEnrolledClasses([])
+        setActiveClassId(null)
         setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
         return
       }
@@ -548,6 +576,8 @@ export default function AskVIC() {
         setSessionMode('student_directed')
         setStudentSupportLevel('')
         setStudentGradeLevel('')
+        setEnrolledClasses([])
+        setActiveClassId(null)
         setStudentLookupStatus('Could not match your student profile. Using free mode.')
         return
       }
@@ -561,16 +591,26 @@ export default function AskVIC() {
 
       const { data: enrollmentRows } = await supabase
         .from('enrollments')
-        .select('class_id, support_level, classes:class_id(grade_level)')
+        .select('class_id, support_level, classes:class_id(id, class_name, class_code, grade_level)')
         .eq('student_id', student.id)
         .order('class_id', { ascending: true })
 
       const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
-      const firstEnrollment = safeEnrollmentRows[0] || null
-      const firstClassRow = Array.isArray(firstEnrollment?.classes)
-        ? firstEnrollment.classes[0]
-        : firstEnrollment?.classes
-      setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
+      const classOptions = mapEnrollmentClasses(safeEnrollmentRows)
+      setEnrolledClasses(classOptions)
+      const fallbackClassId = classOptions[0]?.id ?? null
+      const hasExistingActiveClass = classOptions.some((option) => option.id === activeClassId)
+      const resolvedActiveClassId = hasExistingActiveClass ? activeClassId : fallbackClassId
+      if (activeClassId !== resolvedActiveClassId) {
+        setActiveClassId(resolvedActiveClassId)
+      }
+
+      const activeEnrollment =
+        safeEnrollmentRows.find((row) => Number(row?.class_id) === resolvedActiveClassId) || null
+      const activeClassRow = Array.isArray(activeEnrollment?.classes)
+        ? activeEnrollment.classes[0]
+        : activeEnrollment?.classes
+      setStudentGradeLevel(normalizeGradeLevel(activeClassRow?.grade_level))
 
       const {
         rows: assignmentRows,
@@ -581,7 +621,8 @@ export default function AskVIC() {
       } = await loadLatestAssignmentSafe(
         supabase,
         student.id,
-        accessToken
+        accessToken,
+        resolvedActiveClassId
       )
       setDebugLatestAssignmentApi(apiDebug || { status: null, ok: null, responseJson: null, error: null })
       debugAskVicStudentResolution('assignment-query-result', {
@@ -594,7 +635,15 @@ export default function AskVIC() {
         latestAssignmentApiError: apiDebug?.error ?? null,
       })
 
-      const latestAssignment = latestAssignmentFromApi || pickLatestAssignment(assignmentRows)
+      const activeEnrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)
+      const filteredAssignmentRowsByClass =
+        activeEnrollmentSupportLevel && safeEnrollmentRows.length > 1
+          ? assignmentRows.filter(
+              (row) => normalizeSupportLevel(row?.mode || '') === activeEnrollmentSupportLevel
+            )
+          : assignmentRows
+      const latestAssignment =
+        latestAssignmentFromApi || pickLatestAssignment(filteredAssignmentRowsByClass) || pickLatestAssignment(assignmentRows)
       let lessonRow = assignedLessonFromApi || lessonFromAssignment(latestAssignment)
       setDebugLatestAssignment({
         found: Boolean(latestAssignment?.id),
@@ -674,7 +723,9 @@ export default function AskVIC() {
       let enrollmentSupportLevel = ''
       const normalizedAssignmentMode = normalizeSupportLevel(latestAssignment.mode || '')
 
-      if (safeEnrollmentRows.length === 1) {
+      if (activeEnrollment) {
+        enrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)
+      } else if (safeEnrollmentRows.length === 1) {
         enrollmentSupportLevel = normalizeSupportLevel(safeEnrollmentRows[0]?.support_level)
       } else if (safeEnrollmentRows.length > 1 && normalizedAssignmentMode) {
         const matchedEnrollment = safeEnrollmentRows.find(
@@ -709,7 +760,7 @@ export default function AskVIC() {
         assignedLesson: lessonRow,
         sessionMode: 'teacher_directed',
       })
-  }, [])
+  }, [activeClassId])
 
   useEffect(() => {
     let active = true
@@ -920,6 +971,7 @@ export default function AskVIC() {
         messages: apiMessages,
         sketchImage,
         studentId: selectedStudentId,
+        activeClassId,
         sessionMode,
         studentInterest: activeInterest,
         gradeLevel: studentGradeLevel,
@@ -1040,12 +1092,14 @@ export default function AskVIC() {
 
       if (response.ok && payload?.success && payloadMessage.toLowerCase() === 'already enrolled') {
         setJoinClassStatus({ tone: 'info', text: 'Already enrolled in that class.' })
+        await detectStudentAndLesson()
         return
       }
 
       if (response.ok && payload?.success) {
         setJoinClassCode('')
         setJoinClassStatus({ tone: 'success', text: 'Joined class successfully.' })
+        await detectStudentAndLesson()
         return
       }
 
@@ -1470,6 +1524,23 @@ ${context}`
                   {selectedStudentId ? (
                     <div style={styles.joinClassInlineWrap}>
                       <div style={styles.joinClassInlineRow}>
+                        {enrolledClasses.length > 1 ? (
+                          <label style={styles.classSwitcherInlineLabel}>
+                            <span style={styles.classSwitcherInlineLabelText}>Class</span>
+                            <select
+                              value={activeClassId ?? ''}
+                              onChange={(event) => setActiveClassId(Number(event.target.value) || null)}
+                              style={styles.classSwitcherInlineSelect}
+                              aria-label="Class"
+                            >
+                              {enrolledClasses.map((enrolledClass) => (
+                                <option key={enrolledClass.id} value={enrolledClass.id}>
+                                  {enrolledClass.className || enrolledClass.classCode || `Class ${enrolledClass.id}`}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ) : null}
                         <input
                           type="text"
                           value={joinClassCode}
@@ -3272,6 +3343,35 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignItems: 'center',
       gap: '6px',
       flexWrap: 'wrap',
+    },
+
+    classSwitcherInlineLabel: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      color: 'var(--vic-text-secondary)',
+      fontSize: '11px',
+      lineHeight: 1.2,
+      fontWeight: 700,
+    },
+
+    classSwitcherInlineLabelText: {
+      textTransform: 'uppercase',
+      letterSpacing: '0.04em',
+    },
+
+    classSwitcherInlineSelect: {
+      width: isMobile ? '146px' : '168px',
+      borderRadius: '999px',
+      border: '1px solid var(--vic-border)',
+      background: 'var(--vic-surface)',
+      color: 'var(--vic-text-primary)',
+      padding: '7px 11px',
+      boxSizing: 'border-box',
+      outline: 'none',
+      fontSize: '12px',
+      lineHeight: 1.2,
+      minHeight: '32px',
     },
 
     joinClassInlineInput: {
