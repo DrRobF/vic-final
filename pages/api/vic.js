@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     return {
       title,
       lessonText,
-      hasCompleteLesson: Boolean(title && lessonText),
+      hasLessonText: Boolean(lessonText),
     }
   }
 
@@ -250,7 +250,7 @@ INTENT-SPECIFIC TONE:
 
     const teacherLessonAvailability = getTeacherLessonAvailability(resolvedAssignedLesson)
     const teacherLessonContextApplied =
-      resolvedSessionMode === 'teacher_directed' && teacherLessonAvailability.hasCompleteLesson
+      resolvedSessionMode === 'teacher_directed' && teacherLessonAvailability.hasLessonText
 
     if (teacherLessonContextApplied) {
       const lessonContext = `
@@ -262,8 +262,8 @@ TEACHER-ASSIGNED SESSION CONTEXT:
 
 ASSIGNED LESSON:
 Subject: ${resolvedAssignedLesson.subject || ''}
-Title: ${teacherLessonAvailability.title}
-Lesson: ${teacherLessonAvailability.lessonText}
+Title: ${teacherLessonAvailability.title || 'Untitled teacher-assigned lesson'}
+Lesson Text (primary source of truth): ${teacherLessonAvailability.lessonText}
 
 STUDENT SUPPORT MODE:
 ${resolvedStudentMode || ''}
@@ -286,6 +286,7 @@ IMPORTANT:
 - Do not ask onboarding questions (including personal-interest starters) in teacher_directed mode.
 - Teach the assigned lesson instead of generic chat.
 - Do not replace the lesson topic from student messages.
+- Use the assigned lesson text as the primary teaching source; interests only personalize examples.
 - If the student asks for a different topic, acknowledge briefly and redirect to this assigned lesson unless they switch to My Own Work.
 - Adapt instruction to the support level behavior above.
 `
@@ -296,7 +297,7 @@ IMPORTANT:
       })
     }
 
-    if (resolvedSessionMode === 'teacher_directed' && !teacherLessonAvailability.hasCompleteLesson) {
+    if (resolvedSessionMode === 'teacher_directed' && !teacherLessonAvailability.hasLessonText) {
       return res.status(200).json({
         reply: 'Your teacher assigned a lesson, but the lesson details are unavailable right now.',
         debug: {
