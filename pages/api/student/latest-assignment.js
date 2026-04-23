@@ -61,9 +61,7 @@ export default async function handler(req, res) {
 
   const { data: rows, error: assignmentsError } = await supabaseAuth
     .from('assignments')
-    .select(
-      'id, student_id, lesson_id, mode, status, assigned_at, created_at, lessons:lesson_id (id, subject, title, lesson_text, is_active)'
-    )
+    .select('id, student_id, lesson_id, mode, status, assigned_at, created_at')
     .eq('student_id', resolvedStudentId)
     .order('assigned_at', { ascending: false, nullsFirst: false })
     .order('created_at', { ascending: false, nullsFirst: false })
@@ -74,5 +72,34 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: assignmentsError.message || 'Failed to load latest assignment.' })
   }
 
-  return res.status(200).json({ rows: Array.isArray(rows) ? rows : [], mode: 'matched_by_student_id', resolvedStudentId })
+  const safeRows = Array.isArray(rows) ? rows : []
+  const latestAssignment = safeRows[0] || null
+  let assignedLesson = null
+
+  if (latestAssignment?.lesson_id) {
+    const { data: lessonRow, error: lessonError } = await supabaseAuth
+      .from('lessons')
+      .select('id, title, lesson_text, subject, is_active')
+      .eq('id', latestAssignment.lesson_id)
+      .single()
+
+    if (!lessonError && lessonRow) {
+      assignedLesson = lessonRow
+    }
+  }
+
+  const rowsWithAssignedLesson =
+    latestAssignment && assignedLesson
+      ? safeRows.map((row, index) =>
+          index === 0 ? { ...row, lessons: assignedLesson, assignedLesson } : row
+        )
+      : safeRows
+
+  return res.status(200).json({
+    rows: rowsWithAssignedLesson,
+    latestAssignment,
+    assignedLesson,
+    mode: 'matched_by_student_id',
+    resolvedStudentId,
+  })
 }

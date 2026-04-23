@@ -203,7 +203,13 @@ async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
       apiDebug.responseJson = payload
 
       if (response.ok) {
-        return { rows: Array.isArray(payload?.rows) ? payload.rows : [], error: null, apiDebug }
+        return {
+          rows: Array.isArray(payload?.rows) ? payload.rows : [],
+          latestAssignment: payload?.latestAssignment || null,
+          assignedLesson: payload?.assignedLesson || null,
+          error: null,
+          apiDebug,
+        }
       }
     } catch (error) {
       apiDebug.error = error?.message || 'Unknown fetch error'
@@ -246,12 +252,20 @@ async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
     const { data, error } = await query
 
     if (!error) {
-      return { rows: Array.isArray(data) ? data : [], error: null, apiDebug }
+      return {
+        rows: Array.isArray(data) ? data : [],
+        latestAssignment: null,
+        assignedLesson: null,
+        error: null,
+        apiDebug,
+      }
     }
   }
 
   return {
     rows: [],
+    latestAssignment: null,
+    assignedLesson: null,
     error: new Error('Could not load assignments with available schema.'),
     apiDebug,
   }
@@ -302,10 +316,10 @@ export default function AskVIC() {
   const resolvedAssignedLessonTitle = cleanLessonTitle(assignedLesson?.title)
   const hasAssignedLessonContent =
     typeof assignedLesson?.lesson_text === 'string' && assignedLesson.lesson_text.trim().length > 0
-  const hasResolvedAssignedLesson = Boolean(resolvedAssignedLessonTitle && hasAssignedLessonContent)
+  const hasResolvedAssignedLessonTitle = Boolean(resolvedAssignedLessonTitle)
 
   const lessonStatusText = hasTeacherAssignment
-    ? hasResolvedAssignedLesson
+    ? hasResolvedAssignedLessonTitle
       ? `Assigned lesson: ${resolvedAssignedLessonTitle}`
       : 'Your teacher assigned a lesson, but the lesson details are unavailable right now.'
     : studentLookupStatus === 'Loading student...'
@@ -537,7 +551,13 @@ export default function AskVIC() {
         : firstEnrollment?.classes
       setStudentGradeLevel(normalizeGradeLevel(firstClassRow?.grade_level))
 
-      const { rows: assignmentRows, error: assignmentError, apiDebug } = await loadLatestAssignmentSafe(
+      const {
+        rows: assignmentRows,
+        latestAssignment: latestAssignmentFromApi,
+        assignedLesson: assignedLessonFromApi,
+        error: assignmentError,
+        apiDebug,
+      } = await loadLatestAssignmentSafe(
         supabase,
         student.id,
         accessToken
@@ -553,8 +573,8 @@ export default function AskVIC() {
         latestAssignmentApiError: apiDebug?.error ?? null,
       })
 
-      const latestAssignment = pickLatestAssignment(assignmentRows)
-      let lessonRow = lessonFromAssignment(latestAssignment)
+      const latestAssignment = latestAssignmentFromApi || pickLatestAssignment(assignmentRows)
+      let lessonRow = assignedLessonFromApi || lessonFromAssignment(latestAssignment)
       setDebugLatestAssignment({
         found: Boolean(latestAssignment?.id),
         id: latestAssignment?.id || null,
@@ -567,7 +587,7 @@ export default function AskVIC() {
         lessonFromAssignment: lessonRow,
       })
 
-      if (latestAssignment?.id && !lessonRow && latestAssignment?.lesson_id) {
+      if (!assignedLessonFromApi && latestAssignment?.id && !lessonRow && latestAssignment?.lesson_id) {
         const { data: fallbackLessonRows } = await supabase
           .from('lessons')
           .select('id, subject, title, lesson_text, is_active')
