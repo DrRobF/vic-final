@@ -67,7 +67,7 @@ export default async function handler(req, res) {
     const { data: classRow, error: classError } = await supabaseAdmin
       .from('classes')
       .select('id')
-      .eq('code', classCode)
+      .eq('class_code', classCode)
       .maybeSingle()
 
     if (classError) {
