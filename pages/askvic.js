@@ -1454,7 +1454,7 @@ ${context}`
                             commitSessionInterestInline()
                           }
                         }}
-                        placeholder="Optional"
+                        placeholder="Set interest"
                         style={styles.sessionInterestInlineInput}
                         autoFocus
                       />
@@ -1467,7 +1467,7 @@ ${context}`
                         }}
                         style={styles.sessionInterestInlineValue}
                       >
-                        {sessionInterestToday || studentInterest || 'None'}
+                        {sessionInterestToday || studentInterest || 'None (Set)'}
                       </button>
                     )}
                     <button
@@ -1476,10 +1476,10 @@ ${context}`
                         setSessionInterestInput(sessionInterestToday || studentInterest || '')
                         setIsEditingSessionInterest(true)
                       }}
-                      aria-label="Edit interest"
+                      aria-label="Change interest"
                       style={styles.sessionInterestInlineEdit}
                     >
-                      ✎
+                      {sessionInterestToday || studentInterest ? 'Change' : 'Set'}
                     </button>
                   </div>
 
@@ -3333,11 +3333,15 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     sessionInterestInline: {
       display: 'inline-flex',
       alignItems: 'center',
-      gap: '6px',
+      gap: '8px',
       fontSize: isMobile ? '12px' : '13px',
       lineHeight: 1.2,
       color: 'var(--vic-text-secondary)',
       whiteSpace: 'nowrap',
+      padding: isMobile ? '4px 6px' : '5px 8px',
+      borderRadius: '999px',
+      background: 'var(--vic-surface-muted)',
+      border: '1px solid var(--vic-border-soft)',
     },
 
     sessionInterestInlineLabel: {
@@ -3346,38 +3350,42 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
     },
 
     sessionInterestInlineInput: {
-      width: isMobile ? '120px' : '140px',
+      width: isMobile ? '138px' : '170px',
       borderRadius: '999px',
       border: '1px solid var(--vic-border)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
-      padding: '3px 9px',
+      padding: '6px 11px',
       boxSizing: 'border-box',
       outline: 'none',
       fontSize: '13px',
-      lineHeight: 1.2,
+      lineHeight: 1.3,
     },
 
     sessionInterestInlineValue: {
-      border: 'none',
-      background: 'transparent',
+      border: '1px solid var(--vic-border)',
+      background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
-      padding: '1px 0',
+      padding: '6px 12px',
       fontSize: '13px',
-      fontWeight: 700,
+      fontWeight: 800,
       cursor: 'pointer',
       whiteSpace: 'nowrap',
+      maxWidth: isMobile ? '135px' : '190px',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
     },
 
     sessionInterestInlineEdit: {
-      border: 'none',
-      background: 'transparent',
-      color: 'var(--vic-text-secondary)',
+      border: '1px solid var(--vic-border)',
+      background: 'var(--vic-surface)',
+      color: 'var(--vic-text-primary)',
       borderRadius: '999px',
-      padding: 0,
-      fontSize: '13px',
-      lineHeight: 1,
+      padding: '6px 10px',
+      fontSize: '12px',
+      lineHeight: 1.2,
+      fontWeight: 700,
       cursor: 'pointer',
     },
 

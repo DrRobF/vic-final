@@ -78,12 +78,18 @@ export default function Home() {
               <div className="eyebrow">Built to guide real learning</div>
 
               <h1 className="headline">
-                VIC helps students
-                <span> think things through.</span>
+                VIC teaches students step by step
+                <span> like a real teacher.</span>
               </h1>
 
               <p className="subtext">
-                Ask one real question and watch VIC respond right here.
+                It’s like having an extra teacher in the classroom—and a private
+                teacher at home.
+              </p>
+
+              <p className="supportingLine">
+                VIC guides, checks understanding, and adapts to each student in real
+                time.
               </p>
 
               <div className="quietProof">
@@ -114,14 +120,18 @@ export default function Home() {
                     {!reply ? (
                       <form onSubmit={askVIC} className="askForm">
                         <label className="inputLabel" htmlFor="vic-question">
-                          Ask VIC one question
+                          Try VIC like a student would
                         </label>
+
+                        <p className="previewHelper">
+                          VIC will guide you step by step, not just give an answer.
+                        </p>
 
                         <textarea
                           id="vic-question"
                           value={question}
                           onChange={(e) => setQuestion(e.target.value)}
-                          placeholder="Type your question here..."
+                          placeholder="Ask for help, start a lesson, or try a skill…"
                           rows={6}
                           disabled={loading}
                         />
@@ -289,6 +299,14 @@ export default function Home() {
           color: var(--vic-text-secondary);
         }
 
+        .supportingLine {
+          max-width: 620px;
+          margin: 12px 0 0;
+          font-size: 17px;
+          line-height: 1.55;
+          color: var(--vic-text-secondary);
+        }
+
         .quietProof {
           display: flex;
           flex-wrap: wrap;
@@ -416,6 +434,13 @@ export default function Home() {
         .inputLabel {
           font-size: 18px;
           font-weight: 900;
+          color: var(--vic-text-secondary);
+        }
+
+        .previewHelper {
+          margin: -6px 0 0;
+          font-size: 13px;
+          line-height: 1.45;
           color: var(--vic-text-secondary);
         }
 
