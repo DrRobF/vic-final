@@ -8,8 +8,9 @@ export default async function handler(req, res) {
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const publishableKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (!supabaseUrl || !publishableKey) {
+  if (!supabaseUrl || !publishableKey || !serviceRoleKey) {
     return res.status(500).json({ error: 'Supabase server environment is not configured' })
   }
 
@@ -26,9 +27,13 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, publishableKey, {
     global: {
       headers: {
-        Authorization: req.headers.authorization,
+        Authorization: authHeader,
       },
     },
+    auth: { persistSession: false, autoRefreshToken: false },
+  })
+
+  const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
@@ -59,7 +64,7 @@ export default async function handler(req, res) {
 
     const studentId = studentRow.id
 
-    const { data: classRow, error: classError } = await supabase
+    const { data: classRow, error: classError } = await supabaseAdmin
       .from('classes')
       .select('id')
       .eq('code', classCode)
@@ -75,7 +80,7 @@ export default async function handler(req, res) {
 
     const classId = classRow.id
 
-    const { data: enrollmentRow, error: enrollmentCheckError } = await supabase
+    const { data: enrollmentRow, error: enrollmentCheckError } = await supabaseAdmin
       .from('enrollments')
       .select('id')
       .eq('student_id', studentId)
@@ -90,7 +95,7 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, message: 'Already enrolled' })
     }
 
-    const { error: insertError } = await supabase
+    const { error: insertError } = await supabaseAdmin
       .from('enrollments')
       .insert({ student_id: studentId, class_id: classId })
 
