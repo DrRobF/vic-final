@@ -71,11 +71,19 @@ export default async function handler(req, res) {
       .maybeSingle()
 
     if (classError) {
-      return res.status(500).json({ error: 'Failed to look up class' })
+      console.error('CLASS LOOKUP ERROR:', classError)
+      return res.status(500).json({
+        error: 'Failed to look up class',
+        details: classError,
+      })
     }
 
-    if (!classRow?.id) {
-      return res.status(404).json({ error: 'Invalid class code' })
+    if (!classRow) {
+      console.error('CLASS NOT FOUND FOR CODE:', classCode)
+      return res.status(404).json({
+        error: 'Class not found',
+        code: classCode,
+      })
     }
 
     const classId = classRow.id
@@ -88,6 +96,7 @@ export default async function handler(req, res) {
       .maybeSingle()
 
     if (enrollmentCheckError) {
+      console.error('ENROLLMENT CHECK ERROR:', enrollmentCheckError)
       return res.status(500).json({ error: 'Failed to verify enrollment' })
     }
 
@@ -100,11 +109,19 @@ export default async function handler(req, res) {
       .insert({ student_id: studentId, class_id: classId })
 
     if (insertError) {
-      return res.status(500).json({ error: 'Failed to join class' })
+      console.error('ENROLLMENT INSERT ERROR:', insertError)
+      return res.status(500).json({
+        error: 'Failed to join class',
+        details: insertError,
+      })
     }
 
     return res.status(200).json({ success: true })
-  } catch (error) {
-    return res.status(500).json({ error: 'Unexpected server error' })
+  } catch (err) {
+    console.error('JOIN CLASS FATAL ERROR:', err)
+    return res.status(500).json({
+      error: 'Server error',
+      details: err,
+    })
   }
 }
