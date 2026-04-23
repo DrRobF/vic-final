@@ -278,6 +278,9 @@ export default function AskVIC() {
   const [sessionInterestInput, setSessionInterestInput] = useState('')
   const [sessionInterestToday, setSessionInterestToday] = useState('')
   const [isEditingSessionInterest, setIsEditingSessionInterest] = useState(false)
+  const [joinClassCode, setJoinClassCode] = useState('')
+  const [joinClassStatus, setJoinClassStatus] = useState({ tone: '', text: '' })
+  const [joinClassLoading, setJoinClassLoading] = useState(false)
   const [studentGradeLevel, setStudentGradeLevel] = useState('')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
@@ -997,6 +1000,78 @@ export default function AskVIC() {
     }
   }
 
+  async function handleJoinClass() {
+    const trimmedClassCode = joinClassCode.trim()
+    if (!trimmedClassCode || joinClassLoading) return
+
+    const supabase = getBrowserSupabaseClient()
+    if (!supabase) {
+      setJoinClassStatus({ tone: 'error', text: 'Not authenticated. Please sign in again.' })
+      return
+    }
+
+    setJoinClassLoading(true)
+    setJoinClassStatus({ tone: '', text: '' })
+
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token || ''
+
+      if (!accessToken) {
+        setJoinClassStatus({ tone: 'error', text: 'Not authenticated. Please sign in again.' })
+        return
+      }
+
+      const response = await fetch('/api/join-class', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({ classCode: trimmedClassCode }),
+      })
+
+      const payload = await response.json().catch(() => null)
+      const payloadMessage = typeof payload?.message === 'string' ? payload.message : ''
+      const payloadError = typeof payload?.error === 'string' ? payload.error : ''
+      const normalizedPayloadText = `${payloadMessage} ${payloadError}`.toLowerCase()
+
+      if (response.ok && payload?.success && payloadMessage.toLowerCase() === 'already enrolled') {
+        setJoinClassStatus({ tone: 'info', text: 'Already enrolled in that class.' })
+        return
+      }
+
+      if (response.ok && payload?.success) {
+        setJoinClassCode('')
+        setJoinClassStatus({ tone: 'success', text: 'Joined class successfully.' })
+        return
+      }
+
+      if (response.status === 401 || normalizedPayloadText.includes('not authenticated')) {
+        setJoinClassStatus({ tone: 'error', text: 'Not authenticated. Please sign in again.' })
+        return
+      }
+
+      if (response.status === 404 && normalizedPayloadText.includes('invalid class code')) {
+        setJoinClassStatus({ tone: 'error', text: 'Invalid class code.' })
+        return
+      }
+
+      if (normalizedPayloadText.includes('invalid class code')) {
+        setJoinClassStatus({ tone: 'error', text: 'Invalid class code.' })
+        return
+      }
+
+      setJoinClassStatus({ tone: 'error', text: payloadError || 'Could not join class right now.' })
+    } catch (_error) {
+      setJoinClassStatus({ tone: 'error', text: 'Could not join class right now.' })
+    } finally {
+      setJoinClassLoading(false)
+    }
+  }
+
   function runCalculator() {
     try {
       const safe = calcInput.replace(/[^0-9+\-*/(). ]/g, '')
@@ -1391,6 +1466,52 @@ ${context}`
                       My Own Work
                     </button>
                   </div>
+
+                  {selectedStudentId ? (
+                    <div style={styles.joinClassInlineWrap}>
+                      <div style={styles.joinClassInlineRow}>
+                        <input
+                          type="text"
+                          value={joinClassCode}
+                          onChange={(event) => setJoinClassCode(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                              event.preventDefault()
+                              handleJoinClass()
+                            }
+                          }}
+                          placeholder="Class code"
+                          style={styles.joinClassInlineInput}
+                          aria-label="Class code"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleJoinClass}
+                          disabled={joinClassLoading || !joinClassCode.trim()}
+                          style={
+                            joinClassLoading || !joinClassCode.trim()
+                              ? styles.joinClassInlineButtonDisabled
+                              : styles.joinClassInlineButton
+                          }
+                        >
+                          {joinClassLoading ? 'Joining…' : 'Join class'}
+                        </button>
+                      </div>
+                      {joinClassStatus.text ? (
+                        <div
+                          style={
+                            joinClassStatus.tone === 'success'
+                              ? styles.joinClassInlineStatusSuccess
+                              : joinClassStatus.tone === 'info'
+                                ? styles.joinClassInlineStatusInfo
+                                : styles.joinClassInlineStatusError
+                          }
+                        >
+                          {joinClassStatus.text}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
 
               </div>
@@ -3136,6 +3257,80 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       minHeight: '34px',
       whiteSpace: 'nowrap',
     },
+
+    joinClassInlineWrap: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      marginTop: '4px',
+      width: 'fit-content',
+      maxWidth: '100%',
+    },
+
+    joinClassInlineRow: {
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      flexWrap: 'wrap',
+    },
+
+    joinClassInlineInput: {
+      width: isMobile ? '132px' : '150px',
+      borderRadius: '999px',
+      border: '1px solid var(--vic-border)',
+      background: 'var(--vic-surface)',
+      color: 'var(--vic-text-primary)',
+      padding: '7px 11px',
+      boxSizing: 'border-box',
+      outline: 'none',
+      fontSize: '12px',
+      lineHeight: 1.2,
+    },
+
+    joinClassInlineButton: {
+      border: '1px solid rgba(181, 83, 47, 0.34)',
+      background: 'rgba(181, 83, 47, 0.12)',
+      color: 'var(--vic-text-primary)',
+      borderRadius: '999px',
+      padding: '7px 11px',
+      fontSize: '12px',
+      lineHeight: 1.2,
+      fontWeight: 800,
+      cursor: 'pointer',
+      whiteSpace: 'nowrap',
+    },
+
+    joinClassInlineButtonDisabled: {
+      border: '1px solid var(--vic-border-soft)',
+      background: 'var(--vic-surface-muted)',
+      color: 'var(--vic-disabled)',
+      borderRadius: '999px',
+      padding: '7px 11px',
+      fontSize: '12px',
+      lineHeight: 1.2,
+      fontWeight: 800,
+      cursor: 'not-allowed',
+      whiteSpace: 'nowrap',
+    },
+
+    joinClassInlineStatusSuccess: {
+      fontSize: '11px',
+      lineHeight: 1.25,
+      color: '#166534',
+    },
+
+    joinClassInlineStatusInfo: {
+      fontSize: '11px',
+      lineHeight: 1.25,
+      color: 'var(--vic-text-secondary)',
+    },
+
+    joinClassInlineStatusError: {
+      fontSize: '11px',
+      lineHeight: 1.25,
+      color: '#b91c1c',
+    },
+
     tempDebugPanelFloating: {
       position: 'fixed',
       right: isMobile ? '10px' : '16px',
