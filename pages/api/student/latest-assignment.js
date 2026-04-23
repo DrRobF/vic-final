@@ -61,10 +61,9 @@ export default async function handler(req, res) {
 
   const { data: rows, error: assignmentsError } = await supabaseAuth
     .from('assignments')
-    .select('id, student_id, lesson_id, mode, status, assigned_at, created_at')
+    .select('id, student_id, lesson_id, mode, status, assigned_at')
     .eq('student_id', resolvedStudentId)
     .order('assigned_at', { ascending: false, nullsFirst: false })
-    .order('created_at', { ascending: false, nullsFirst: false })
     .order('id', { ascending: false })
     .limit(20)
 
