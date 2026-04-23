@@ -219,20 +219,10 @@ async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
   const assignmentQueryPlans = [
     {
       select:
-        'id, mode, assigned_at, created_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)',
-      orderByCreatedAt: true,
-    },
-    {
-      select: 'id, mode, assigned_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)',
-      orderByCreatedAt: false,
-    },
-    {
-      select: 'id, mode, assigned_at, created_at, lesson_id',
-      orderByCreatedAt: true,
+        'id, mode, assigned_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)',
     },
     {
       select: 'id, mode, assigned_at, lesson_id',
-      orderByCreatedAt: false,
     },
   ]
 
@@ -242,12 +232,8 @@ async function loadLatestAssignmentSafe(supabase, studentId, accessToken) {
       .select(plan.select)
       .eq('student_id', studentId)
       .order('assigned_at', { ascending: false, nullsFirst: false })
-
-    if (plan.orderByCreatedAt) {
-      query = query.order('created_at', { ascending: false, nullsFirst: false })
-    }
-
-    query = query.order('id', { ascending: false }).limit(20)
+      .order('id', { ascending: false })
+      .limit(20)
 
     const { data, error } = await query
 
