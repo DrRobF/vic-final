@@ -66,7 +66,7 @@ export default function Home() {
             <div className="heroLeft">
               <div className="brandBlock">
                 <div className="logoStage">
-                  <VICLogo size={148} variant="hero" alt="VIC Logo" />
+                  <VICLogo size={124} variant="hero" alt="VIC Logo" />
                 </div>
 
                 <div className="brandTextWrap">
@@ -75,36 +75,21 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="eyebrow">Built to guide real learning</div>
-
               <h1 className="headline">
                 VIC teaches students step by step
                 <span> like a real teacher.</span>
               </h1>
 
               <p className="subtext">
-                It’s like having an extra teacher in the classroom—and a private
-                teacher at home.
+                Like having an extra teacher in the classroom—and a private teacher
+                at home.
               </p>
-
-              <p className="supportingLine">
-                VIC guides, checks understanding, and adapts to each student in real
-                time.
-              </p>
-
-              <div className="quietProof">
-                <span>Guides thinking</span>
-                <span>Builds understanding</span>
-                <span>Step-by-step support</span>
-              </div>
 
               <div className="heroActions">
                 <button className="primaryButton" onClick={openFullVIC}>
                   Open Full VIC
                 </button>
                 <a className="secondaryLink" href="/teacher">Teacher Portal</a>
-                <a className="secondaryLink" href="/login">Log In</a>
-                <a className="secondaryLink" href="/signup">Sign Up</a>
               </div>
             </div>
 
@@ -132,7 +117,7 @@ export default function Home() {
                           value={question}
                           onChange={(e) => setQuestion(e.target.value)}
                           placeholder="Ask for help, start a lesson, or try a skill…"
-                          rows={6}
+                          rows={4}
                           disabled={loading}
                         />
 
@@ -216,32 +201,32 @@ export default function Home() {
           width: 100%;
           max-width: 1240px;
           margin: 0 auto;
-          padding: 32px 28px 48px;
+          padding: 24px 28px 36px;
         }
 
         .hero {
           display: grid;
-          grid-template-columns: minmax(0, 1fr) 430px;
-          gap: 44px;
+          grid-template-columns: minmax(0, 1fr) 400px;
+          gap: 34px;
           align-items: start;
-          min-height: calc(100vh - 120px);
+          min-height: calc(100vh - 132px);
         }
 
         .heroLeft {
-          padding-top: 14px;
-          max-width: 700px;
+          padding-top: 8px;
+          max-width: 680px;
         }
 
         .brandBlock {
           display: flex;
           align-items: center;
-          gap: 20px;
-          margin-bottom: 22px;
+          gap: 16px;
+          margin-bottom: 16px;
         }
 
         .logoStage {
-          width: 148px;
-          height: 148px;
+          width: 132px;
+          height: 132px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -255,7 +240,7 @@ export default function Home() {
         }
 
         .brandName {
-          font-size: 40px;
+          font-size: 36px;
           font-weight: 900;
           letter-spacing: 0.02em;
           line-height: 1;
@@ -263,27 +248,19 @@ export default function Home() {
         }
 
         .brandSub {
-          font-size: 14px;
+          font-size: 13px;
           letter-spacing: 0.18em;
           text-transform: uppercase;
           color: var(--vic-text-secondary);
         }
 
-        .eyebrow {
-          margin-bottom: 14px;
-          font-size: 13px;
-          letter-spacing: 0.17em;
-          text-transform: uppercase;
-          color: var(--vic-primary);
-        }
-
         .headline {
           margin: 0;
-          font-size: clamp(54px, 5.8vw, 82px);
-          line-height: 0.98;
+          font-size: clamp(48px, 5.3vw, 74px);
+          line-height: 1;
           letter-spacing: -0.045em;
           font-weight: 900;
-          max-width: 760px;
+          max-width: 700px;
         }
 
         .headline span {
@@ -292,39 +269,15 @@ export default function Home() {
         }
 
         .subtext {
-          max-width: 620px;
-          margin: 20px 0 0;
-          font-size: 19px;
-          line-height: 1.55;
+          max-width: 560px;
+          margin: 14px 0 0;
+          font-size: 18px;
+          line-height: 1.5;
           color: var(--vic-text-secondary);
-        }
-
-        .supportingLine {
-          max-width: 620px;
-          margin: 12px 0 0;
-          font-size: 17px;
-          line-height: 1.55;
-          color: var(--vic-text-secondary);
-        }
-
-        .quietProof {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-top: 24px;
-        }
-
-        .quietProof span {
-          padding: 10px 14px;
-          border-radius: 999px;
-          border: 1px solid var(--vic-border);
-          background: var(--vic-surface-muted);
-          color: var(--vic-text-secondary);
-          font-size: 14px;
         }
 
         .heroActions {
-          margin-top: 28px;
+          margin-top: 18px;
           display: flex;
           flex-wrap: wrap;
           gap: 10px;
@@ -363,7 +316,7 @@ export default function Home() {
           border: 1px solid var(--vic-border);
           background: var(--vic-surface-muted);
           text-decoration: none;
-          font-size: 12px;
+          font-size: 13px;
           font-weight: 700;
         }
 
@@ -377,7 +330,7 @@ export default function Home() {
         .previewWrap {
           position: relative;
           width: 100%;
-          max-width: 430px;
+          max-width: 400px;
         }
 
         .phoneShell {
@@ -394,7 +347,7 @@ export default function Home() {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 8px 10px 14px;
+          padding: 8px 10px 10px;
         }
 
         .phoneDot {
@@ -417,18 +370,18 @@ export default function Home() {
           overflow: hidden;
           background: var(--vic-surface);
           color: var(--vic-text-secondary);
-          min-height: 620px;
+          min-height: 470px;
           display: flex;
           flex-direction: column;
         }
 
         .askForm,
         .responseView {
-          padding: 16px;
+          padding: 14px;
           display: flex;
           flex-direction: column;
-          gap: 14px;
-          min-height: 620px;
+          gap: 10px;
+          min-height: 470px;
         }
 
         .inputLabel {
@@ -438,7 +391,7 @@ export default function Home() {
         }
 
         .previewHelper {
-          margin: -6px 0 0;
+          margin: 0;
           font-size: 13px;
           line-height: 1.45;
           color: var(--vic-text-secondary);
@@ -454,8 +407,8 @@ export default function Home() {
           color: var(--vic-text-secondary);
           font-size: 15px;
           line-height: 1.55;
-          min-height: 180px;
-          padding: 15px;
+          min-height: 130px;
+          padding: 13px;
         }
 
         .askForm textarea::placeholder {
@@ -464,10 +417,11 @@ export default function Home() {
 
         .askButton {
           border-radius: 10px;
-          padding: 15px 16px;
+          padding: 13px 16px;
           color: var(--vic-surface);
           background: var(--vic-primary);
           box-shadow: 0 12px 26px rgba(150,69,40,0.28);
+          margin-top: auto;
         }
 
         .askButton:disabled {
@@ -534,7 +488,7 @@ export default function Home() {
         }
 
         .footer {
-          margin-top: 34px;
+          margin-top: 24px;
           text-align: center;
           font-size: 13px;
           color: var(--vic-text-muted);
@@ -544,7 +498,7 @@ export default function Home() {
         @media (max-width: 1100px) {
           .hero {
             grid-template-columns: 1fr;
-            gap: 30px;
+            gap: 24px;
             min-height: auto;
           }
 
@@ -553,7 +507,7 @@ export default function Home() {
           }
 
           .previewWrap {
-            max-width: 430px;
+            max-width: 400px;
           }
         }
 
@@ -564,7 +518,7 @@ export default function Home() {
 
           .brandBlock {
             gap: 14px;
-            margin-bottom: 22px;
+            margin-bottom: 14px;
           }
 
           .brandName {
@@ -580,7 +534,7 @@ export default function Home() {
           }
 
           .subtext {
-            font-size: 18px;
+            font-size: 17px;
           }
 
           .previewWrap {
@@ -590,7 +544,7 @@ export default function Home() {
           .previewCard,
           .askForm,
           .responseView {
-            min-height: 580px;
+            min-height: 430px;
           }
         }
       `}</style>
