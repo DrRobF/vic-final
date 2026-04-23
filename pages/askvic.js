@@ -4,7 +4,6 @@ import VICHeader from '../components/VICHeader'
 import VICLogo from '../components/VICLogo'
 import { lessonFromAssignment, pickLatestAssignment } from '../lib/assignment-resolution'
 
-const BRAIN_VERSION = 'v3.3'
 const SKETCH_BG_COLOR = '#f8fafc'
 const SKETCH_INK_COLOR = '#0f172a'
 const SESSION_INTEREST_STORAGE_KEY = 'vic-session-interest-today'
@@ -1256,18 +1255,172 @@ ${context}`
     const styles = buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMinimized })
 
   const heroSection = (
-    <section style={styles.heroCard}>
-      <div style={styles.heroSparkle} />
+    <section style={styles.controlCenterCard}>
+      <div style={styles.controlCenterHeader}>
+        <div style={styles.sectionEyebrow}>Student controls</div>
+        <div style={styles.controlCenterTitle}>Control Center</div>
+        <div style={styles.controlCenterSubtext}>Manage mode, class, start action, and interest.</div>
+      </div>
 
-      <div style={styles.heroTop}>
-        <VICLogo size={isMobile ? 92 : 96} variant="hero" alt="VIC Virtual Co-Teacher logo" />
+      <div style={styles.controlCenterSection}>
+        <div style={styles.controlCenterSectionLabel}>Mode</div>
+        <div style={styles.sessionModeToggle}>
+          <button
+            type="button"
+            onClick={() => handleSessionModeToggle('teacher_directed')}
+            disabled={teacherLessonDisabled}
+            style={
+              sessionMode === 'teacher_directed'
+                ? styles.sessionModeButtonActive
+                : teacherLessonDisabled
+                  ? styles.sessionModeButtonDisabled
+                  : styles.sessionModeButton
+            }
+            title={
+              teacherLessonDisabled
+                ? `Teacher Lesson disabled: ${teacherLessonDisabledReason}`
+                : 'Teacher Lesson available'
+            }
+          >
+            Teacher Lesson
+          </button>
+          <button
+            type="button"
+            onClick={() => handleSessionModeToggle('student_directed')}
+            style={sessionMode === 'student_directed' ? styles.sessionModeButtonActive : styles.sessionModeButton}
+          >
+            My Own Work
+          </button>
+        </div>
+      </div>
 
-        <div style={styles.heroTextWrap}>
-          <div style={styles.versionPill}>Brain {BRAIN_VERSION}</div>
-          <h1 style={styles.heading}>More than answers. Real teaching.</h1>
-          <p style={styles.tagline}>
-            Guided help that feels calm, clear, and personal.
-          </p>
+      <div style={styles.controlCenterSection}>
+        <div style={styles.controlCenterSectionLabel}>Class</div>
+        <div style={styles.joinClassControlWrap}>
+          <label style={styles.classSwitcherControlLabel}>
+            <span style={styles.classSwitcherControlLabelText}>Class</span>
+            <select
+              value={activeClassId ?? ''}
+              onChange={(event) => setActiveClassId(Number(event.target.value) || null)}
+              style={styles.classSwitcherControlSelect}
+              aria-label="Class"
+              disabled={!selectedStudentId || enrolledClasses.length === 0}
+            >
+              {enrolledClasses.length === 0 ? (
+                <option value="">No classes yet</option>
+              ) : null}
+              {enrolledClasses.map((enrolledClass) => (
+                <option key={enrolledClass.id} value={enrolledClass.id}>
+                  {enrolledClass.className || enrolledClass.classCode || `Class ${enrolledClass.id}`}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div style={styles.joinClassControlRow}>
+            <input
+              type="text"
+              value={joinClassCode}
+              onChange={(event) => setJoinClassCode(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  handleJoinClass()
+                }
+              }}
+              placeholder="Class code"
+              style={styles.joinClassControlInput}
+              aria-label="Class code"
+            />
+            <button
+              type="button"
+              onClick={handleJoinClass}
+              disabled={joinClassLoading || !joinClassCode.trim()}
+              style={
+                joinClassLoading || !joinClassCode.trim()
+                  ? styles.joinClassControlButtonDisabled
+                  : styles.joinClassControlButton
+              }
+            >
+              {joinClassLoading ? 'Joining…' : 'Join class'}
+            </button>
+          </div>
+          {joinClassStatus.text ? (
+            <div
+              style={
+                joinClassStatus.tone === 'success'
+                  ? styles.joinClassStatusSuccess
+                  : joinClassStatus.tone === 'info'
+                    ? styles.joinClassStatusInfo
+                    : styles.joinClassStatusError
+              }
+            >
+              {joinClassStatus.text}
+            </div>
+          ) : null}
+        </div>
+      </div>
+
+      <div style={styles.controlCenterSection}>
+        <div style={styles.controlCenterSectionLabel}>Start actions</div>
+        <div style={styles.guidedEntryRow}>
+          {GUIDED_ENTRY_OPTIONS.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              style={pendingEntryIntent === option.id ? styles.guidedEntryButtonActive : styles.guidedEntryButton}
+              onClick={() => handleGuidedEntry(option)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div style={styles.controlCenterSection}>
+        <div style={styles.controlCenterSectionLabel}>Interest</div>
+        <div style={styles.sessionInterestInline}>
+          <span style={styles.sessionInterestInlineLabel}>Interest:</span>
+          {isEditingSessionInterest ? (
+            <input
+              id="session-interest-input"
+              type="text"
+              value={sessionInterestInput}
+              onChange={(e) => setSessionInterestInput(e.target.value)}
+              onBlur={commitSessionInterestInline}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  commitSessionInterestInline()
+                }
+              }}
+              placeholder="Set interest"
+              style={styles.sessionInterestInlineInput}
+              autoFocus
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                setSessionInterestInput(sessionInterestToday || studentInterest || '')
+                setIsEditingSessionInterest(true)
+              }}
+              style={styles.sessionInterestInlineValue}
+            >
+              {sessionInterestToday || studentInterest || 'None (Set)'}
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              setSessionInterestInput(sessionInterestToday || studentInterest || '')
+              setIsEditingSessionInterest(true)
+            }}
+            aria-label="Change interest"
+            style={styles.sessionInterestInlineEdit}
+          >
+            {sessionInterestToday || studentInterest ? 'Change' : 'Set'}
+          </button>
         </div>
       </div>
     </section>
@@ -1488,101 +1641,6 @@ ${context}`
                   <div style={styles.chatStatusMessage}>
                     {lessonStatusText} {'•'} {entryModeMeta.helper}
                   </div>
-                  <div style={styles.sessionModeToggle}>
-                    <button
-                      type="button"
-                      onClick={() => handleSessionModeToggle('teacher_directed')}
-                      disabled={teacherLessonDisabled}
-                      style={
-                        sessionMode === 'teacher_directed'
-                          ? styles.sessionModeButtonActive
-                          : teacherLessonDisabled
-                            ? styles.sessionModeButtonDisabled
-                            : styles.sessionModeButton
-                      }
-                      title={
-                        teacherLessonDisabled
-                          ? `Teacher Lesson disabled: ${teacherLessonDisabledReason}`
-                          : 'Teacher Lesson available'
-                      }
-                    >
-                      Teacher Lesson
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleSessionModeToggle('student_directed')}
-                      style={
-                        sessionMode === 'student_directed'
-                          ? styles.sessionModeButtonActive
-                          : styles.sessionModeButton
-                      }
-                    >
-                      My Own Work
-                    </button>
-                  </div>
-
-                  {selectedStudentId ? (
-                    <div style={styles.joinClassInlineWrap}>
-                      <div style={styles.joinClassInlineRow}>
-                        {enrolledClasses.length > 1 ? (
-                          <label style={styles.classSwitcherInlineLabel}>
-                            <span style={styles.classSwitcherInlineLabelText}>Class</span>
-                            <select
-                              value={activeClassId ?? ''}
-                              onChange={(event) => setActiveClassId(Number(event.target.value) || null)}
-                              style={styles.classSwitcherInlineSelect}
-                              aria-label="Class"
-                            >
-                              {enrolledClasses.map((enrolledClass) => (
-                                <option key={enrolledClass.id} value={enrolledClass.id}>
-                                  {enrolledClass.className || enrolledClass.classCode || `Class ${enrolledClass.id}`}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        ) : null}
-                        <input
-                          type="text"
-                          value={joinClassCode}
-                          onChange={(event) => setJoinClassCode(event.target.value)}
-                          onKeyDown={(event) => {
-                            if (event.key === 'Enter') {
-                              event.preventDefault()
-                              handleJoinClass()
-                            }
-                          }}
-                          placeholder="Class code"
-                          style={styles.joinClassInlineInput}
-                          aria-label="Class code"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleJoinClass}
-                          disabled={joinClassLoading || !joinClassCode.trim()}
-                          style={
-                            joinClassLoading || !joinClassCode.trim()
-                              ? styles.joinClassInlineButtonDisabled
-                              : styles.joinClassInlineButton
-                          }
-                        >
-                          {joinClassLoading ? 'Joining…' : 'Join class'}
-                        </button>
-                      </div>
-                      {joinClassStatus.text ? (
-                        <div
-                          style={
-                            joinClassStatus.tone === 'success'
-                              ? styles.joinClassInlineStatusSuccess
-                              : joinClassStatus.tone === 'info'
-                                ? styles.joinClassInlineStatusInfo
-                                : styles.joinClassInlineStatusError
-                          }
-                        >
-                          {joinClassStatus.text}
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : null}
                 </div>
 
               </div>
@@ -1628,74 +1686,13 @@ ${context}`
 
             <section style={styles.inputCard}>
               <div style={styles.inputHeaderRow}>
-                <div style={styles.inputTitle}>Start here: choose a quick start or type your own</div>
+                <div style={styles.inputTitle}>Write your message to VIC</div>
 
                 <div style={styles.inputHeaderRight}>
-                  <div style={styles.sessionInterestInline}>
-                    <span style={styles.sessionInterestInlineLabel}>Interest:</span>
-                    {isEditingSessionInterest ? (
-                      <input
-                        id="session-interest-input"
-                        type="text"
-                        value={sessionInterestInput}
-                        onChange={(e) => setSessionInterestInput(e.target.value)}
-                        onBlur={commitSessionInterestInline}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault()
-                            commitSessionInterestInline()
-                          }
-                        }}
-                        placeholder="Set interest"
-                        style={styles.sessionInterestInlineInput}
-                        autoFocus
-                      />
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSessionInterestInput(sessionInterestToday || studentInterest || '')
-                          setIsEditingSessionInterest(true)
-                        }}
-                        style={styles.sessionInterestInlineValue}
-                      >
-                        {sessionInterestToday || studentInterest || 'None (Set)'}
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSessionInterestInput(sessionInterestToday || studentInterest || '')
-                        setIsEditingSessionInterest(true)
-                      }}
-                      aria-label="Change interest"
-                      style={styles.sessionInterestInlineEdit}
-                    >
-                      {sessionInterestToday || studentInterest ? 'Change' : 'Set'}
-                    </button>
-                  </div>
-
                   {!isMobile ? (
                     <div style={styles.inputHint}>Enter = send • Shift + Enter = new line</div>
                   ) : null}
                 </div>
-              </div>
-
-              <div style={styles.guidedEntryRow}>
-                {GUIDED_ENTRY_OPTIONS.map((option) => (
-                  <button
-                    key={option.id}
-                    type="button"
-                    style={
-                      pendingEntryIntent === option.id
-                        ? styles.guidedEntryButtonActive
-                        : styles.guidedEntryButton
-                    }
-                    onClick={() => handleGuidedEntry(option)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
               </div>
 
               <textarea
@@ -2344,7 +2341,7 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       overflow: 'hidden',
     },
 
-    heroCard: {
+    controlCenterCard: {
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
       borderRadius: isMobile ? '16px' : '18px',
@@ -2354,63 +2351,43 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       flexDirection: 'column',
       gap: '12px',
       overflow: 'hidden',
-      position: 'relative',
       flexShrink: 0,
     },
 
-    heroSparkle: {
-      position: 'absolute',
-      top: '-26px',
-      right: '-14px',
-      width: '170px',
-      height: '170px',
-      background: 'radial-gradient(circle, rgba(181, 83, 47, 0.10) 0%, rgba(181, 83, 47, 0) 72%)',
-      pointerEvents: 'none',
-    },
-
-    heroTop: {
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '96px 1fr',
-      gap: isMobile ? '12px' : '14px',
-      alignItems: isMobile ? 'start' : 'center',
-    },
-
-    heroTextWrap: {
+    controlCenterHeader: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '8px',
-      minWidth: 0,
+      gap: '4px',
     },
 
-    versionPill: {
-      alignSelf: 'flex-start',
-      fontSize: '11px',
+    controlCenterTitle: {
+      fontSize: isMobile ? '20px' : '22px',
       fontWeight: 800,
       color: 'var(--vic-text-primary)',
-      background: '#E8D8C8',
-      border: '1px solid #D8B7A7',
-      borderRadius: '999px',
-      padding: '6px 10px',
-      boxShadow: '0 0 16px rgba(181, 83, 47,0.12)',
+      lineHeight: 1.1,
     },
 
-    heading: {
-      margin: 0,
-      fontSize: isMobile ? '28px' : isTablet ? '30px' : '32px',
-      lineHeight: 1.08,
-      letterSpacing: '-0.03em',
-      fontWeight: 900,
-      color: 'var(--vic-text-primary)',
-      textShadow: 'none',
-      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+    controlCenterSubtext: {
+      fontSize: '12px',
+      color: 'var(--vic-text-secondary)',
+      lineHeight: 1.35,
     },
 
-    tagline: {
-      margin: 0,
-      fontSize: isMobile ? '14px' : '15px',
-      lineHeight: 1.45,
-      color: 'var(--vic-text-primary)',
-      maxWidth: '420px',
+    controlCenterSection: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '7px',
+      paddingTop: '10px',
+      borderTop: '1px solid var(--vic-border-soft)',
+    },
+
+    controlCenterSectionLabel: {
+      fontSize: '11px',
+      lineHeight: 1.2,
+      fontWeight: 800,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase',
+      color: 'var(--vic-text-secondary)',
     },
 
     quickStartWrap: {
@@ -3329,25 +3306,23 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       whiteSpace: 'nowrap',
     },
 
-    joinClassInlineWrap: {
+    joinClassControlWrap: {
       display: 'flex',
       flexDirection: 'column',
-      gap: '4px',
-      marginTop: '4px',
-      width: 'fit-content',
-      maxWidth: '100%',
+      gap: '7px',
     },
 
-    joinClassInlineRow: {
-      display: 'inline-flex',
+    joinClassControlRow: {
+      display: 'flex',
       alignItems: 'center',
       gap: '6px',
       flexWrap: 'wrap',
     },
 
-    classSwitcherInlineLabel: {
-      display: 'inline-flex',
-      alignItems: 'center',
+    classSwitcherControlLabel: {
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
       gap: '6px',
       color: 'var(--vic-text-secondary)',
       fontSize: '11px',
@@ -3355,44 +3330,44 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       fontWeight: 700,
     },
 
-    classSwitcherInlineLabelText: {
+    classSwitcherControlLabelText: {
       textTransform: 'uppercase',
       letterSpacing: '0.04em',
     },
 
-    classSwitcherInlineSelect: {
-      width: isMobile ? '146px' : '168px',
-      borderRadius: '999px',
+    classSwitcherControlSelect: {
+      width: '100%',
+      borderRadius: '10px',
       border: '1px solid var(--vic-border)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
-      padding: '7px 11px',
+      padding: '8px 10px',
       boxSizing: 'border-box',
       outline: 'none',
       fontSize: '12px',
       lineHeight: 1.2,
-      minHeight: '32px',
+      minHeight: '34px',
     },
 
-    joinClassInlineInput: {
-      width: isMobile ? '132px' : '150px',
-      borderRadius: '999px',
+    joinClassControlInput: {
+      width: isMobile ? '140px' : '150px',
+      borderRadius: '10px',
       border: '1px solid var(--vic-border)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
-      padding: '7px 11px',
+      padding: '8px 10px',
       boxSizing: 'border-box',
       outline: 'none',
       fontSize: '12px',
       lineHeight: 1.2,
     },
 
-    joinClassInlineButton: {
+    joinClassControlButton: {
       border: '1px solid rgba(181, 83, 47, 0.34)',
       background: 'rgba(181, 83, 47, 0.12)',
       color: 'var(--vic-text-primary)',
-      borderRadius: '999px',
-      padding: '7px 11px',
+      borderRadius: '10px',
+      padding: '8px 11px',
       fontSize: '12px',
       lineHeight: 1.2,
       fontWeight: 800,
@@ -3400,12 +3375,12 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       whiteSpace: 'nowrap',
     },
 
-    joinClassInlineButtonDisabled: {
+    joinClassControlButtonDisabled: {
       border: '1px solid var(--vic-border-soft)',
       background: 'var(--vic-surface-muted)',
       color: 'var(--vic-disabled)',
-      borderRadius: '999px',
-      padding: '7px 11px',
+      borderRadius: '10px',
+      padding: '8px 11px',
       fontSize: '12px',
       lineHeight: 1.2,
       fontWeight: 800,
@@ -3413,19 +3388,19 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       whiteSpace: 'nowrap',
     },
 
-    joinClassInlineStatusSuccess: {
+    joinClassStatusSuccess: {
       fontSize: '11px',
       lineHeight: 1.25,
       color: '#166534',
     },
 
-    joinClassInlineStatusInfo: {
+    joinClassStatusInfo: {
       fontSize: '11px',
       lineHeight: 1.25,
       color: 'var(--vic-text-secondary)',
     },
 
-    joinClassInlineStatusError: {
+    joinClassStatusError: {
       fontSize: '11px',
       lineHeight: 1.25,
       color: '#b91c1c',
