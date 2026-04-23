@@ -1,6 +1,8 @@
 export default function VICLogo({ size = 72, variant = 'header', alt = 'VIC logo' }) {
   const isHeader = variant === 'header'
+  const isHero = variant === 'hero'
   const tileRadius = isHeader ? 16 : 18
+  const logoScale = isHero ? 1.38 : 1.25
 
   return (
     <div
@@ -24,7 +26,7 @@ export default function VICLogo({ size = 72, variant = 'header', alt = 'VIC logo
           maxWidth: 'none',
           maxHeight: 'none',
           objectFit: 'contain',
-          transform: 'scale(1.25)',
+          transform: `scale(${logoScale})`,
           transformOrigin: 'center',
           display: 'block',
         }}
