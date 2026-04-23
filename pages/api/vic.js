@@ -77,7 +77,7 @@ export default async function handler(req, res) {
     let resolvedAssignedLesson = assignedLesson || null
     let resolvedStudentMode = studentMode || ''
     let resolvedSupportLevel = normalizeSupportLevel(supportLevel || studentMode || '')
-    let resolvedStudentInterest = studentInterest || ''
+    let resolvedStudentInterest = typeof studentInterest === 'string' ? studentInterest.trim() : ''
     let resolvedGradeLevel =
       typeof gradeLevel === 'string' && gradeLevel.trim() && gradeLevel.trim() !== 'Not specified'
         ? gradeLevel.trim()
@@ -294,6 +294,29 @@ IMPORTANT:
       contextMessages.push({
         role: 'system',
         content: lessonContext,
+      })
+    }
+
+    if (resolvedStudentInterest) {
+      const interestPersonalizationContext =
+        resolvedSessionMode === 'teacher_directed'
+          ? `
+INTEREST PERSONALIZATION (TEACHER LESSON PROTECTION):
+- Student interest for examples/metaphors only: ${resolvedStudentInterest}
+- Keep the teacher-assigned lesson topic as the source of truth.
+- Never switch or replace the lesson topic because of interest.
+`
+          : `
+INTEREST PERSONALIZATION (STUDENT DIRECTED):
+- Student interest for optional personalization only: ${resolvedStudentInterest}
+- Use it to shape examples, analogies, and scenarios when helpful.
+- Keep the student's actual question and requested task as primary.
+- Do not force a lesson topic from the interest alone.
+`
+
+      contextMessages.push({
+        role: 'system',
+        content: interestPersonalizationContext,
       })
     }
 
