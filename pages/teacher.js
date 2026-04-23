@@ -48,11 +48,17 @@ export default function TeacherPage() {
   const [lessonText, setLessonText] = useState('')
   const [newClassName, setNewClassName] = useState('')
   const [newClassGradeLevel, setNewClassGradeLevel] = useState('')
+  const [isEditingSelectedClass, setIsEditingSelectedClass] = useState(false)
+  const [editClassName, setEditClassName] = useState('')
+  const [editClassGradeLevel, setEditClassGradeLevel] = useState('')
+  const [showDeleteClassConfirm, setShowDeleteClassConfirm] = useState(false)
 
   const [loadingClasses, setLoadingClasses] = useState(false)
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [saving, setSaving] = useState(false)
   const [creatingClass, setCreatingClass] = useState(false)
+  const [updatingClass, setUpdatingClass] = useState(false)
+  const [deletingClass, setDeletingClass] = useState(false)
   const [error, setError] = useState('')
   const [classFeedback, setClassFeedback] = useState(null)
   const [lessonFeedback, setLessonFeedback] = useState(null)
@@ -187,6 +193,23 @@ export default function TeacherPage() {
       const matchingClass = classRows.find((row) => row.id === classIdToSelect)
       if (matchingClass) {
         handleSelectClass(matchingClass)
+        return
+      }
+    }
+
+    if (selectedClass?.id) {
+      const refreshedSelectedClass = classRows.find((row) => row.id === selectedClass.id)
+      if (refreshedSelectedClass) {
+        setSelectedClass(refreshedSelectedClass)
+      } else {
+        setSelectedClass(null)
+        setStudents([])
+        setStudentSupportLevels({})
+        setAssignmentSelections({})
+        setParentEmailByStudentId({})
+        setParentEmailStatusByStudentId({})
+        setReportPayloadByStudentId({})
+        setReportStatusByStudentId({})
       }
     }
   }
@@ -266,6 +289,7 @@ export default function TeacherPage() {
 
     if (selectedClass?.id === classRow.id) {
       setCopiedCode(false)
+      setShowDeleteClassConfirm(false)
       loadStudents(classRow.id)
       return
     }
@@ -276,6 +300,8 @@ export default function TeacherPage() {
     setParentEmailStatusByStudentId({})
     setReportStatusByStudentId({})
     setIsRosterCollapsed(false)
+    setIsEditingSelectedClass(false)
+    setShowDeleteClassConfirm(false)
   }
 
   async function handleSelectStudentSupport(studentId, supportLevel) {
@@ -703,6 +729,98 @@ export default function TeacherPage() {
     }
   }
 
+  function handleStartEditClass() {
+    if (!selectedClass?.id) return
+    setEditClassName(selectedClass.class_name || '')
+    setEditClassGradeLevel(selectedClass.grade_level || '')
+    setIsEditingSelectedClass(true)
+    setShowDeleteClassConfirm(false)
+    setClassFeedback(null)
+    setError('')
+  }
+
+  function handleCancelEditClass() {
+    setIsEditingSelectedClass(false)
+    setEditClassName('')
+    setEditClassGradeLevel('')
+  }
+
+  async function handleSaveClassEdits(e) {
+    e.preventDefault()
+
+    if (!selectedClass?.id || !teacher?.id) return
+
+    const trimmedName = editClassName.trim()
+    const trimmedGrade = editClassGradeLevel.trim()
+
+    if (!trimmedName) {
+      setClassFeedback({ type: 'error', message: 'Class name is required.' })
+      return
+    }
+
+    setUpdatingClass(true)
+    setClassFeedback(null)
+    setError('')
+
+    const { data: updatedClass, error: updateError } = await supabase
+      .from('classes')
+      .update({
+        class_name: trimmedName,
+        grade_level: trimmedGrade || null,
+      })
+      .eq('id', selectedClass.id)
+      .eq('teacher_id', teacher.id)
+      .select('id, class_name, grade_level, class_code')
+      .single()
+
+    if (updateError || !updatedClass?.id) {
+      setClassFeedback({ type: 'error', message: updateError?.message || 'Could not update class details.' })
+      setUpdatingClass(false)
+      return
+    }
+
+    setClasses((previous) => previous.map((classRow) => (classRow.id === updatedClass.id ? updatedClass : classRow)))
+    setSelectedClass(updatedClass)
+    setClassFeedback({ type: 'success', message: 'Class details updated.' })
+    setUpdatingClass(false)
+    setIsEditingSelectedClass(false)
+  }
+
+  async function handleConfirmDeleteClass() {
+    if (!selectedClass?.id || !teacher?.id) return
+
+    const classIdToDelete = selectedClass.id
+    setDeletingClass(true)
+    setClassFeedback(null)
+    setError('')
+
+    const { error: deleteError } = await supabase
+      .from('classes')
+      .delete()
+      .eq('id', classIdToDelete)
+      .eq('teacher_id', teacher.id)
+
+    if (deleteError) {
+      setClassFeedback({ type: 'error', message: deleteError.message || 'Could not delete class.' })
+      setDeletingClass(false)
+      return
+    }
+
+    setClassFeedback({ type: 'success', message: 'Class deleted.' })
+    setDeletingClass(false)
+    setShowDeleteClassConfirm(false)
+    setIsEditingSelectedClass(false)
+    setSelectedClass(null)
+    setStudents([])
+    setStudentSupportLevels({})
+    setAssignmentSelections({})
+    setParentEmailByStudentId({})
+    setParentEmailStatusByStudentId({})
+    setReportPayloadByStudentId({})
+    setReportStatusByStudentId({})
+    await fetchClasses(teacher.id)
+  }
+
   async function handleSave(e) {
     e.preventDefault()
 
@@ -824,6 +942,79 @@ export default function TeacherPage() {
                     <div className="detailLabel">Selected class</div>
                     <div className="commandClassName">{selectedClass.class_name}</div>
                     <p className="helperText">Use this class code for enrollment and assign lessons to the roster below.</p>
+                    <div className="classManagementRow">
+                      <button
+                        type="button"
+                        className="secondaryButton classManageButton"
+                        onClick={handleStartEditClass}
+                        disabled={deletingClass || updatingClass}
+                      >
+                        Edit Class
+                      </button>
+                      <button
+                        type="button"
+                        className="dangerButton classManageButton"
+                        onClick={() => {
+                          setShowDeleteClassConfirm((previous) => !previous)
+                          setIsEditingSelectedClass(false)
+                        }}
+                        disabled={deletingClass || updatingClass}
+                      >
+                        Delete Class
+                      </button>
+                    </div>
+
+                    {isEditingSelectedClass ? (
+                      <form className="inlineClassEditor" onSubmit={handleSaveClassEdits}>
+                        <label htmlFor="editClassName">Class name</label>
+                        <input
+                          id="editClassName"
+                          type="text"
+                          value={editClassName}
+                          onChange={(e) => setEditClassName(e.target.value)}
+                          required
+                        />
+                        <label htmlFor="editClassGradeLevel">Grade level</label>
+                        <input
+                          id="editClassGradeLevel"
+                          type="text"
+                          value={editClassGradeLevel}
+                          onChange={(e) => setEditClassGradeLevel(e.target.value)}
+                          placeholder="e.g. 7"
+                        />
+                        <div className="inlineActions">
+                          <button type="submit" className="secondaryButton classManageButton" disabled={updatingClass}>
+                            {updatingClass ? 'Saving...' : 'Save changes'}
+                          </button>
+                          <button type="button" className="ghostButton classManageButton" onClick={handleCancelEditClass}>
+                            Cancel
+                          </button>
+                        </div>
+                      </form>
+                    ) : null}
+
+                    {showDeleteClassConfirm ? (
+                      <div className="deleteConfirmCard" role="alertdialog" aria-live="polite">
+                        <div className="deleteConfirmTitle">Delete this class?</div>
+                        <p className="helperText">
+                          This will remove the class and disconnect it from your dashboard. Continue only if you no longer need it.
+                        </p>
+                        <p className="helperText">This action removes this class record only.</p>
+                        <div className="inlineActions">
+                          <button type="button" className="dangerButton classManageButton" onClick={handleConfirmDeleteClass} disabled={deletingClass}>
+                            {deletingClass ? 'Deleting...' : 'Yes, delete class'}
+                          </button>
+                          <button
+                            type="button"
+                            className="ghostButton classManageButton"
+                            onClick={() => setShowDeleteClassConfirm(false)}
+                            disabled={deletingClass}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
+                    ) : null}
 
                     <div className="detailGrid">
                       <div className="detailItem">
@@ -1352,7 +1543,9 @@ export default function TeacherPage() {
           color: var(--vic-text-primary);
         }
         .primaryButton,
-        .secondaryButton {
+        .secondaryButton,
+        .dangerButton,
+        .ghostButton {
           padding: 10px 14px;
           font-weight: 800;
           cursor: pointer;
@@ -1373,23 +1566,75 @@ export default function TeacherPage() {
           color: var(--vic-text-secondary);
           background: var(--vic-surface-muted);
         }
+        .dangerButton {
+          border: 1px solid rgba(179, 93, 103, 0.55);
+          color: #7f2d37;
+          background: rgba(179, 93, 103, 0.12);
+        }
+        .ghostButton {
+          border: 1px solid transparent;
+          color: var(--vic-text-secondary);
+          background: transparent;
+        }
         .copyButton {
           width: fit-content;
         }
         .primaryButton:hover,
-        .secondaryButton:hover {
+        .secondaryButton:hover,
+        .dangerButton:hover,
+        .ghostButton:hover {
           filter: brightness(1.04);
           transform: translateY(-1px);
         }
         .primaryButton:active,
-        .secondaryButton:active {
+        .secondaryButton:active,
+        .dangerButton:active,
+        .ghostButton:active {
           transform: translateY(1px);
         }
         .primaryButton:disabled,
-        .secondaryButton:disabled {
+        .secondaryButton:disabled,
+        .dangerButton:disabled,
+        .ghostButton:disabled {
           opacity: 0.72;
           cursor: not-allowed;
           box-shadow: none;
+        }
+        .classManagementRow {
+          display: flex;
+          gap: 8px;
+          flex-wrap: wrap;
+        }
+        .classManageButton {
+          padding: 8px 12px;
+          font-size: 13px;
+        }
+        .inlineClassEditor {
+          border: 1px solid var(--vic-border-soft);
+          border-radius: 10px;
+          padding: 12px;
+          display: grid;
+          gap: 8px;
+          background: var(--vic-surface-muted);
+        }
+        .inlineActions {
+          display: flex;
+          gap: 8px;
+          align-items: center;
+          flex-wrap: wrap;
+        }
+        .deleteConfirmCard {
+          border: 1px solid rgba(179, 93, 103, 0.35);
+          border-radius: 10px;
+          background: rgba(179, 93, 103, 0.08);
+          padding: 12px;
+          display: grid;
+          gap: 8px;
+        }
+        .deleteConfirmTitle {
+          font-size: 15px;
+          font-weight: 800;
+          color: #7f2d37;
         }
         .classList {
           display: grid;
