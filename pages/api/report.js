@@ -1,11 +1,6 @@
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+import { requireApprovedProfile } from '../../lib/server-auth'
 
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
+export default async function handler(req, res) {
 
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -13,35 +8,63 @@ export default async function handler(req, res) {
 
   const {
     transcript,
-    studentName,
-    gradeLevel,
+    studentId,
+    classId,
     date,
-    sessionFocus,
-    studentInterest,
   } = req.body || {}
 
   if (!Array.isArray(transcript) || transcript.length === 0) {
     return res.status(400).json({ error: 'Missing transcript array' })
   }
 
-  const safeStudentName = typeof studentName === 'string' && studentName.trim()
-    ? studentName.trim()
-    : 'Student'
+  const auth = await requireApprovedProfile(req)
+  if (auth.error) return res.status(auth.status).json({ error: auth.error })
+  if (auth.profile.role !== 'teacher') {
+    return res.status(403).json({ error: 'Only approved teachers can generate reports.' })
+  }
 
-  const safeGradeLevel = typeof gradeLevel === 'string' && gradeLevel.trim()
-    ? gradeLevel.trim()
-    : ''
+  const safeStudentId = Number(studentId)
+  const safeClassId = Number(classId)
+  if (!Number.isInteger(safeStudentId) || !Number.isInteger(safeClassId)) {
+    return res.status(400).json({ error: 'Valid studentId and classId values are required.' })
+  }
+
+  const { data: classes, error: classError } = await auth.admin
+    .from('classes').select('id, class_name, grade_level')
+    .eq('id', safeClassId).eq('teacher_id', auth.profile.id).limit(1)
+  if (classError) return res.status(500).json({ error: 'Could not verify class ownership.' })
+  const verifiedClass = classes?.[0]
+  if (!verifiedClass) return res.status(403).json({ error: 'The selected class does not belong to this teacher.' })
+
+  const { data: enrollments, error: enrollmentError } = await auth.admin
+    .from('enrollments').select('student_id, users:student_id(id, name, email, interest_tags)')
+    .eq('class_id', safeClassId).eq('student_id', safeStudentId).limit(1)
+  if (enrollmentError) return res.status(500).json({ error: 'Could not verify student enrollment.' })
+  const enrollment = enrollments?.[0]
+  const verifiedStudent = Array.isArray(enrollment?.users) ? enrollment.users[0] : enrollment?.users
+  if (!verifiedStudent?.id) return res.status(403).json({ error: 'The student is not enrolled in the selected class.' })
+
+  const safeStudentName = verifiedStudent.name || verifiedStudent.email || 'Student'
+
+  const safeGradeLevel = verifiedClass.grade_level == null ? '' : String(verifiedClass.grade_level)
 
   const safeDate = typeof date === 'string' && date.trim()
     ? date.trim()
     : new Date().toISOString().slice(0, 10)
 
-  const safeSessionFocus = typeof sessionFocus === 'string' && sessionFocus.trim()
-    ? sessionFocus.trim()
-    : 'General support session'
+  const { data: assignments } = await auth.admin
+    .from('assignments')
+    .select('lesson_id, assigned_at, lessons:lesson_id(title)')
+    .eq('student_id', safeStudentId)
+    .order('assigned_at', { ascending: false, nullsFirst: false })
+    .limit(1)
+  const verifiedLesson = Array.isArray(assignments?.[0]?.lessons)
+    ? assignments[0].lessons[0]
+    : assignments?.[0]?.lessons
+  const safeSessionFocus = verifiedLesson?.title || 'General support session'
 
-  const safeStudentInterest = typeof studentInterest === 'string' && studentInterest.trim()
-    ? studentInterest.trim()
+  const safeStudentInterest = Array.isArray(verifiedStudent.interest_tags)
+    ? verifiedStudent.interest_tags.join(', ')
     : ''
 
   const transcriptText = transcript

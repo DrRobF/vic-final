@@ -1,3 +1,5 @@
+import { requireApprovedProfile } from '../../lib/server-auth'
+
 export const config = {
   api: {
     bodyParser: {
@@ -7,14 +9,6 @@ export const config = {
 }
 
 export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end()
-  }
-
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -24,11 +18,8 @@ export default async function handler(req, res) {
     sketchImage,
     sessionMode,
     studentId,
-    assignedLesson,
-    studentMode,
-    supportLevel,
+    activeClassId,
     studentInterest,
-    gradeLevel,
     entryIntent,
     isFirstUserTurn,
   } = req.body || {}
@@ -36,6 +27,9 @@ export default async function handler(req, res) {
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Missing messages array' })
   }
+
+  const auth = await requireApprovedProfile(req)
+  if (auth.error) return res.status(auth.status).json({ error: auth.error })
 
   const normalizeSupportLevel = (rawLevel) => {
     if (typeof rawLevel !== 'string') return ''
@@ -67,156 +61,59 @@ export default async function handler(req, res) {
   }
 
   try {
-    console.log('Incoming messages:', messages)
-       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-
     let resolvedSessionMode = normalizeSessionMode(sessionMode)
-    let resolvedAssignedLesson = assignedLesson || null
-    let resolvedStudentMode = studentMode || ''
-    let resolvedSupportLevel = normalizeSupportLevel(supportLevel || studentMode || '')
-    let resolvedStudentInterest = typeof studentInterest === 'string' ? studentInterest.trim() : ''
-    let resolvedGradeLevel =
-      typeof gradeLevel === 'string' && gradeLevel.trim() && gradeLevel.trim() !== 'Not specified'
-        ? gradeLevel.trim()
-        : ''
-
-    const resolvedStudentId =
-      typeof studentId === 'number'
-        ? studentId
-        : typeof studentId === 'string' && studentId.trim()
-          ? Number(studentId)
-          : null
-
-    if (resolvedSessionMode !== 'teacher_directed') {
-      resolvedAssignedLesson = null
-      resolvedStudentMode = ''
-      resolvedSupportLevel = ''
+    const requestedStudentId = Number(studentId)
+    if (auth.profile.role === 'student' && requestedStudentId && requestedStudentId !== auth.profile.id) {
+      return res.status(403).json({ error: 'Students may only use their own VIC profile.' })
+    }
+    if (auth.profile.role === 'teacher' && (resolvedSessionMode === 'teacher_directed' || requestedStudentId)) {
+      return res.status(403).json({ error: 'Teachers cannot impersonate student VIC sessions.' })
     }
 
-    // If a student id is provided and lesson context was not passed in,
-    // fetch the most recent assignment and joined lesson automatically.
-    const lessonContextMissing =
-      !resolvedAssignedLesson ||
-      !cleanLessonField(resolvedAssignedLesson?.title) ||
-      !cleanLessonField(resolvedAssignedLesson?.lesson_text)
+    const resolvedStudentId = auth.profile.role === 'student' ? auth.profile.id : null
+    let resolvedAssignedLesson = null
+    let resolvedStudentMode = ''
+    let resolvedSupportLevel = ''
+    let resolvedStudentInterest = resolvedSessionMode === 'student_directed' && typeof studentInterest === 'string'
+      ? studentInterest.trim().slice(0, 120)
+      : ''
+    let resolvedGradeLevel = ''
 
-    if (
-      resolvedSessionMode === 'teacher_directed' &&
-      lessonContextMissing &&
-      resolvedStudentId &&
-      supabaseUrl &&
-      supabaseKey
-    ) {
-      try {
-        // Get latest assignment for this student
-        const assignmentRes = await fetch(
-          `${supabaseUrl}/rest/v1/assignments?student_id=eq.${resolvedStudentId}&select=id,lesson_id,student_id,mode,status,assigned_at,created_at&order=assigned_at.desc.nullslast,created_at.desc.nullslast,id.desc&limit=1`,
-          {
-            method: 'GET',
-            headers: {
-              apikey: supabaseKey,
-              Authorization: `Bearer ${supabaseKey}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        )
+    if (auth.profile.role !== 'student') resolvedSessionMode = 'student_directed'
+    if (resolvedSessionMode === 'teacher_directed') {
+      const { data: enrollments, error: enrollmentError } = await auth.admin
+        .from('enrollments')
+        .select('class_id, support_level, classes:class_id(id, grade_level)')
+        .eq('student_id', resolvedStudentId)
+        .order('class_id', { ascending: true })
+      if (enrollmentError) throw enrollmentError
+      const requestedClassId = Number(activeClassId)
+      const enrollment = enrollments?.find((row) => Number(row.class_id) === requestedClassId) || enrollments?.[0]
+      const classRow = Array.isArray(enrollment?.classes) ? enrollment.classes[0] : enrollment?.classes
 
-        const assignmentData = await assignmentRes.json()
-
-        if (assignmentRes.ok && Array.isArray(assignmentData) && assignmentData.length > 0) {
-          const assignment = assignmentData[0]
-
-          let lessonData = []
-          let lessonRes = { ok: false }
-          if (assignment.lesson_id) {
-            // Get the linked lesson
-            lessonRes = await fetch(
-              `${supabaseUrl}/rest/v1/lessons?id=eq.${assignment.lesson_id}&select=id,subject,title,lesson_text,is_active&limit=1`,
-              {
-                method: 'GET',
-                headers: {
-                  apikey: supabaseKey,
-                  Authorization: `Bearer ${supabaseKey}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            )
-
-            lessonData = await lessonRes.json()
-          }
-
-          // Get student interest
-          const studentRes = await fetch(
-            `${supabaseUrl}/rest/v1/users?id=eq.${resolvedStudentId}&select=id,interest_tags&limit=1`,
-            {
-              method: 'GET',
-              headers: {
-                apikey: supabaseKey,
-                Authorization: `Bearer ${supabaseKey}`,
-                'Content-Type': 'application/json',
-              },
-            }
-          )
-
-          const studentData = await studentRes.json()
-
-          if (lessonRes.ok && Array.isArray(lessonData) && lessonData.length > 0) {
-            resolvedAssignedLesson = lessonData[0]
-            resolvedStudentMode = assignment.mode || ''
-            const normalizedAssignmentMode = normalizeSupportLevel(assignment.mode || '')
-            const fallbackSupportLevel = normalizeSupportLevel(resolvedSupportLevel || normalizedAssignmentMode)
-
-            if (studentRes.ok && Array.isArray(studentData) && studentData.length > 0) {
-              const interestTags = studentData[0]?.interest_tags
-              resolvedStudentInterest = Array.isArray(interestTags)
-                ? interestTags.join(', ')
-                : ''
-            }
-
-            const enrollmentRes = await fetch(
-              `${supabaseUrl}/rest/v1/enrollments?student_id=eq.${resolvedStudentId}&select=class_id,support_level,classes:class_id(id,class_name,grade_level)&order=class_id.asc`,
-              {
-                method: 'GET',
-                headers: {
-                  apikey: supabaseKey,
-                  Authorization: `Bearer ${supabaseKey}`,
-                  'Content-Type': 'application/json',
-                },
-              }
-            )
-
-            const enrollmentData = await enrollmentRes.json()
-            const enrollmentRows = Array.isArray(enrollmentData) ? enrollmentData : []
-            const enrollmentRow = enrollmentRows[0] || null
-            const classRow = Array.isArray(enrollmentRow?.classes)
-              ? enrollmentRow.classes[0]
-              : enrollmentRow?.classes
-
-            if (enrollmentRes.ok && classRow?.grade_level) {
-              resolvedGradeLevel = String(classRow.grade_level)
-            }
-
-            let enrollmentSupportLevel = ''
-            if (enrollmentRows.length === 1) {
-              enrollmentSupportLevel = normalizeSupportLevel(enrollmentRows[0]?.support_level)
-            } else if (enrollmentRows.length > 1 && normalizedAssignmentMode) {
-              const matchedEnrollment = enrollmentRows.find(
-                (row) => normalizeSupportLevel(row?.support_level) === normalizedAssignmentMode
-              )
-              enrollmentSupportLevel = normalizeSupportLevel(matchedEnrollment?.support_level)
-            }
-
-            resolvedSupportLevel = enrollmentSupportLevel || fallbackSupportLevel
-          }
-        } else {
-          console.log('No assignment found or assignments blocked by RLS:', assignmentData)
-        }
-      } catch (dbError) {
-        console.error('Supabase lookup error:', dbError)
+      const { data: assignments, error: assignmentError } = await auth.admin
+        .from('assignments')
+        .select('id, lesson_id, mode, assigned_at, created_at')
+        .eq('student_id', resolvedStudentId)
+        .order('assigned_at', { ascending: false, nullsFirst: false })
+        .order('created_at', { ascending: false, nullsFirst: false })
+        .order('id', { ascending: false })
+        .limit(20)
+      if (assignmentError) throw assignmentError
+      const assignment = enrollment?.support_level
+        ? assignments?.find((row) => normalizeSupportLevel(row.mode) === normalizeSupportLevel(enrollment.support_level)) || assignments?.[0]
+        : assignments?.[0]
+      if (assignment?.lesson_id) {
+        const { data: lessons, error: lessonError } = await auth.admin
+          .from('lessons').select('id, subject, title, lesson_text, is_active')
+          .eq('id', assignment.lesson_id).limit(1)
+        if (lessonError) throw lessonError
+        resolvedAssignedLesson = lessons?.[0] || null
       }
+      resolvedStudentMode = assignment?.mode || ''
+      resolvedSupportLevel = normalizeSupportLevel(enrollment?.support_level || assignment?.mode || '')
+      resolvedStudentInterest = Array.isArray(auth.profile.interest_tags) ? auth.profile.interest_tags.join(', ') : ''
+      resolvedGradeLevel = classRow?.grade_level == null ? '' : String(classRow.grade_level)
     }
 
     const contextMessages = []
@@ -385,11 +282,8 @@ INTEREST PERSONALIZATION (STUDENT DIRECTED):
     })
 
     const data = await response.json()
-    console.log('OpenAI raw response:', response)
-    console.log('OpenAI response data:', data)
-
     if (!response.ok) {
-      console.error('OpenAI API error:', data)
+      console.error('OpenAI API request failed.', { status: response.status })
       return res.status(response.status).json({
         error: data?.error?.message || 'OpenAI request failed',
       })
@@ -402,32 +296,9 @@ INTEREST PERSONALIZATION (STUDENT DIRECTED):
 
     return res.status(200).json({
       reply,
-      debug: {
-        studentId: resolvedStudentId,
-        sessionMode: resolvedSessionMode,
-        teacherLessonContextApplied,
-        assignedLessonTitle: resolvedAssignedLesson?.title || null,
-        studentMode: resolvedStudentMode || null,
-        supportLevel: resolvedSupportLevel || null,
-        studentInterest: resolvedStudentInterest || null,
-        gradeLevel: resolvedGradeLevel || null,
-        entryIntent: normalizedEntryIntent || null,
-        isFirstUserTurn: shouldGuideFirstResponse,
-      },
     })
   } catch (err) {
     console.error('VIC API ERROR:', err)
-    console.error('VIC API ERROR message:', err?.message)
-    if (err?.stack) {
-      console.error('VIC API ERROR stack:', err.stack)
-    }
-    if (err?.response?.data) {
-      console.error('VIC API ERROR OpenAI response data:', err.response.data)
-    } else if (err?.data) {
-      console.error('VIC API ERROR data:', err.data)
-    } else if (err?.error) {
-      console.error('VIC API ERROR nested error:', err.error)
-    }
     return res.status(500).json({ error: 'Server error' })
   }
 }

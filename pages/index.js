@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useRouter } from "next/router";
 import VICHeader from "../components/VICHeader";
 import VICLogo from "../components/VICLogo";
@@ -6,55 +5,8 @@ import VICLogo from "../components/VICLogo";
 export default function Home() {
   const router = useRouter();
 
-  const [question, setQuestion] = useState("");
-  const [reply, setReply] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  async function askVIC(e) {
-    e.preventDefault();
-    if (!question.trim() || loading) return;
-
-    setLoading(true);
-    setReply("");
-
-    try {
-      const res = await fetch("/api/vic", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are VIC, a helpful teacher. Answer the student's question clearly and simply in 2 to 4 sentences. Do not ask follow-up questions. Do not ask for grade level. Just help them understand.",
-            },
-            {
-              role: "user",
-              content: question,
-            },
-          ],
-        }),
-      });
-
-      const data = await res.json();
-      setReply(data.reply || "Sorry, I had trouble responding.");
-    } catch (err) {
-      setReply("Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
   function openFullVIC() {
-    const trimmed = question.trim();
-
-    if (trimmed) {
-      router.push(`/askvic?starter=${encodeURIComponent(trimmed)}`);
-    } else {
-      router.push("/askvic");
-    }
+    router.push("/login");
   }
 
   return (
@@ -102,58 +54,20 @@ export default function Home() {
                   </div>
 
                   <div className="previewCard">
-                    {!reply ? (
-                      <form onSubmit={askVIC} className="askForm">
-                        <label className="inputLabel" htmlFor="vic-question">
-                          Try VIC like a student would
-                        </label>
-
-                        <p className="previewHelper">
-                          VIC will guide you step by step, not just give an answer.
-                        </p>
-
-                        <textarea
-                          id="vic-question"
-                          value={question}
-                          onChange={(e) => setQuestion(e.target.value)}
-                          placeholder="Ask for help, start a lesson, or try a skill…"
-                          rows={4}
-                          disabled={loading}
-                        />
-
-                        <button
-                          type="submit"
-                          className="askButton"
-                          disabled={!question.trim() || loading}
-                        >
-                          {loading ? "VIC is thinking..." : "Ask VIC"}
-                        </button>
-                      </form>
-                    ) : (
-                      <div className="responseView">
-                        <div className="bubble userBubble">
-                          <div className="bubbleLabel">You</div>
-                          <p>{question}</p>
-                        </div>
-
-                        <div className="bubble vicBubble">
-                          <div className="bubbleLabel">VIC</div>
-                          <p>{reply}</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          className="continueButton"
-                          onClick={openFullVIC}
-                        >
-                          Continue in Full VIC
-                        </button>
-                      </div>
-                    )}
+                    <div className="responseView">
+                      <div className="bubble vicBubble"><div className="bubbleLabel">Approved access</div><p>Sign in with your school-managed account to start a secure VIC conversation.</p></div>
+                      <button type="button" className="continueButton" onClick={openFullVIC}>Sign in to Ask VIC</button>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
+          </section>
+
+          <section className="contactSection">
+            <h2>Test VIC or bring it to your school</h2>
+            <p>Ask VIC access is currently provided through approved school accounts. If you are interested in testing VIC, using it at your school, or collaborating, contact Dr. Rob Furman.</p>
+            <a href="mailto:drrobfurman@gmail.com?subject=Ask%20VIC%20Access%20Request">drrobfurman@gmail.com</a>
           </section>
 
           <footer className="footer">
@@ -211,6 +125,10 @@ export default function Home() {
           align-items: start;
           min-height: calc(100vh - 132px);
         }
+        .contactSection { max-width: 800px; margin: 20px auto 48px; padding: 32px; border-radius: 18px; border: 1px solid var(--vic-border-soft); background: var(--vic-surface); text-align: center; box-shadow: var(--vic-shadow-card); }
+        .contactSection h2 { margin: 0 0 12px; color: var(--vic-text-primary); font-size: clamp(26px, 4vw, 38px); }
+        .contactSection p { line-height: 1.65; font-size: 17px; }
+        .contactSection a { color: var(--vic-primary); font-size: 18px; font-weight: 800; }
 
         .heroLeft {
           padding-top: 8px;

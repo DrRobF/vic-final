@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { createClient } from '@supabase/supabase-js'
+import { useRouter } from 'next/router'
+import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
 import VICLogo from '../components/VICLogo'
 import { lessonFromAssignment, pickLatestAssignment } from '../lib/assignment-resolution'
@@ -46,21 +47,6 @@ const GUIDED_ENTRY_OPTIONS = [
     prompt: 'I want to practice a skill. Give me one short practice problem and coach me through it like a teacher.',
   },
 ]
-
-let browserSupabaseClient = null
-
-function getBrowserSupabaseClient() {
-  if (typeof window === 'undefined') return null
-  if (browserSupabaseClient) return browserSupabaseClient
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) return null
-
-  browserSupabaseClient = createClient(supabaseUrl, supabaseKey)
-  return browserSupabaseClient
-}
 
 function getEntryModeMeta({ hasAssignedLesson, hasUserMessages, sessionMode }) {
   if (sessionMode === 'teacher_directed' && hasAssignedLesson && !hasUserMessages) {
@@ -276,6 +262,7 @@ async function loadLatestAssignmentSafe(supabase, studentId, accessToken, active
 }
 
 export default function AskVIC() {
+  const router = useRouter()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [workArea, setWorkArea] = useState('')
@@ -463,7 +450,7 @@ export default function AskVIC() {
       return
     }
 
-      const supabase = getBrowserSupabaseClient()
+      const supabase = supabase
       if (!supabase) {
         setCurrentUserProfile(null)
         setCurrentUserStatus('Supabase is not configured.')
@@ -506,7 +493,8 @@ export default function AskVIC() {
         setStudentGradeLevel('')
         setEnrolledClasses([])
         setActiveClassId(null)
-        setStudentLookupStatus('No student found. You can still chat with VIC.')
+        setStudentLookupStatus('Sign in required.')
+        router.replace('/login')
         return
       }
 
@@ -773,8 +761,11 @@ export default function AskVIC() {
 
     runDetection()
 
-    const sharedSupabase = getBrowserSupabaseClient()
-    const authSubscription = sharedSupabase?.auth.onAuthStateChange(() => {
+    const authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        router.replace('/login')
+        return
+      }
       runDetection()
     })
 
@@ -984,9 +975,19 @@ export default function AskVIC() {
         requestBody.supportLevel = studentSupportLevel
       }
 
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        await supabase.auth.signOut()
+        router.replace('/login')
+        throw new Error('Your session has expired. Please sign in again.')
+      }
+
       const res = await fetch(apiUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: JSON.stringify(requestBody),
       })
       console.log('[AskVIC][sendMessage] fetch returned', {
@@ -994,6 +995,11 @@ export default function AskVIC() {
         ok: res.ok,
         status: res.status,
       })
+      if (res.status === 401) {
+        await supabase.auth.signOut()
+        router.replace('/login')
+        throw new Error('Your session has expired. Please sign in again.')
+      }
       if (!res.ok) {
         throw new Error(`API error: ${res.status}`)
       }
@@ -1055,7 +1061,7 @@ export default function AskVIC() {
     const trimmedClassCode = joinClassCode.trim()
     if (!trimmedClassCode || joinClassLoading) return
 
-    const supabase = getBrowserSupabaseClient()
+    const supabase = supabase
     if (!supabase) {
       setJoinClassStatus({ tone: 'error', text: 'Not authenticated. Please sign in again.' })
       return
