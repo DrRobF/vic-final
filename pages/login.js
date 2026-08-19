@@ -23,7 +23,10 @@ export default function LoginPage() {
     setError('')
 
     try {
-      const normalizedEmail = email.trim().toLowerCase()
+      const normalizedLogin = email.trim().toLowerCase()
+      const normalizedEmail = normalizedLogin.includes('@')
+        ? normalizedLogin
+        : `${normalizedLogin}@students.askvic.ai`
 
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
@@ -87,13 +90,13 @@ export default function LoginPage() {
 
           <div className="card">
             <form onSubmit={handleSubmit} className="form">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="email">Email or student username</label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
+                autoComplete="username"
                 required
               />
 

@@ -913,6 +913,11 @@ export default function TeacherPage() {
                   <div className="cardEyebrow">Class command center</div>
                   <h1>Teacher Dashboard</h1>
                   <p className="helperText">Pick your class, review your roster, and assign support in one compact workflow.</p>
+                  {teacher.email?.trim().toLowerCase() === 'drrobfurman@gmail.com' ? (
+                    <a className="secondaryButton rosterImportLink" href="/admin/import-roster">
+                      Import Student Roster
+                    </a>
+                  ) : null}
                 </div>
                 <div className="heroKicker">Workflow-first</div>
               </div>
@@ -1438,6 +1443,11 @@ export default function TeacherPage() {
           font-size: 14px;
           color: var(--vic-text-secondary);
           background: var(--vic-surface-muted);
+        }
+        .rosterImportLink {
+          display: inline-block;
+          margin-top: 14px;
+          text-decoration: none;
         }
         .sectionCard {
           display: grid;
