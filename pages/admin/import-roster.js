@@ -53,6 +53,16 @@ function downloadFailures(results) {
   URL.revokeObjectURL(url)
 }
 
+function downloadTemplate() {
+  const csv = `${REQUIRED_ROSTER_FIELDS.join(',')}\r\n`
+  const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'ask-vic-student-roster-template.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function ImportRosterPage() {
   const router = useRouter()
   const [access, setAccess] = useState('checking')
@@ -102,6 +112,7 @@ export default function ImportRosterPage() {
     <header><p className="eyebrow">Import Student Roster</p><h1>Student Roster Import</h1><p>Validate student accounts and class enrollments before making any changes.</p></header>
     <section className="card">
       {!results && <><h2>1. Select the student roster CSV</h2><p className="help">Required columns: {REQUIRED_ROSTER_FIELDS.join(', ')}. The file stays in this browser until you confirm.</p>
+        <button type="button" onClick={downloadTemplate}>Download Ask VIC CSV Template</button>
         <label className="picker">Choose student roster CSV<input type="file" accept=".csv,text/csv" onChange={chooseFile} disabled={busy} /></label></>}
       {busy && <p role="status">Working securely…</p>}{error && <p className="error" role="alert">{error}</p>}
     </section>
