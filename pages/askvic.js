@@ -134,54 +134,6 @@ function getUserDisplayName(userRow) {
   return userRow.name || userRow.email || ''
 }
 
-function mapEnrollmentClasses(enrollmentRows) {
-  if (!Array.isArray(enrollmentRows)) return []
-
-  return enrollmentRows
-    .map((row) => {
-      const nestedClass = Array.isArray(row?.classes) ? row.classes[0] : row?.classes
-      const classId = Number(row?.class_id)
-      if (!Number.isInteger(classId)) return null
-
-      return {
-        id: classId,
-        className: typeof nestedClass?.class_name === 'string' ? nestedClass.class_name : '',
-        classCode: typeof nestedClass?.class_code === 'string' ? nestedClass.class_code : '',
-      }
-    })
-    .filter(Boolean)
-}
-
-async function resolveUserProfileRow(supabase, user) {
-  const authUserId = user?.id || ''
-  const rawEmail = user?.email || ''
-  const normalizedEmail = rawEmail.trim().toLowerCase()
-
-  if (authUserId) {
-    const { data: byAuthUserRows } = await supabase
-      .from('users')
-      .select('id, auth_user_id, email, name, role, interest_tags')
-      .eq('auth_user_id', authUserId)
-      .order('id', { ascending: true })
-      .limit(1)
-
-    if (byAuthUserRows?.[0]) {
-      return byAuthUserRows[0]
-    }
-  }
-
-  if (!normalizedEmail) return null
-
-  const { data: byEmailRows } = await supabase
-    .from('users')
-    .select('id, auth_user_id, email, name, role, interest_tags')
-    .ilike('email', normalizedEmail)
-    .order('id', { ascending: true })
-    .limit(1)
-
-  return byEmailRows?.[0] || null
-}
-
 async function loadLatestAssignmentSafe(supabase, studentId, accessToken, activeClassId = null) {
   const apiDebug = {
     status: null,
@@ -450,7 +402,6 @@ export default function AskVIC() {
       return
     }
 
-      const supabase = supabase
       if (!supabase) {
         setCurrentUserProfile(null)
         setCurrentUserStatus('Supabase is not configured.')
@@ -503,7 +454,16 @@ export default function AskVIC() {
       } = await supabase.auth.getSession()
       const accessToken = session?.access_token || ''
 
-      const matchedProfile = await resolveUserProfileRow(supabase, user)
+      const classesResponse = await fetch('/api/student/classes', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      })
+      const classesPayload = await classesResponse.json().catch(() => null)
+      if (classesResponse.status === 401) {
+        await supabase.auth.signOut()
+        router.replace('/login')
+        return
+      }
+      const matchedProfile = classesResponse.ok ? classesPayload?.profile || null : null
       debugAskVicStudentResolution('auth-and-profile', {
         authUserId: user?.id || null,
         authEmail: user?.email || null,
@@ -576,14 +536,17 @@ export default function AskVIC() {
       const interests = Array.isArray(student.interest_tags) ? student.interest_tags : []
       setStudentInterest(interests.join(', '))
 
-      const { data: enrollmentRows } = await supabase
-        .from('enrollments')
-        .select('class_id, support_level, classes:class_id(id, class_name, class_code, grade_level)')
-        .eq('student_id', student.id)
-        .order('class_id', { ascending: true })
-
-      const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
-      const classOptions = mapEnrollmentClasses(safeEnrollmentRows)
+      const classOptions = Array.isArray(classesPayload?.classes) ? classesPayload.classes : []
+      const safeEnrollmentRows = classOptions.map((item) => ({
+        class_id: item.id,
+        support_level: item.supportLevel,
+        classes: {
+          id: item.id,
+          class_name: item.className,
+          class_code: item.classCode,
+          grade_level: item.gradeLevel,
+        },
+      }))
       setEnrolledClasses(classOptions)
       const fallbackClassId = classOptions[0]?.id ?? null
       const hasExistingActiveClass = classOptions.some((option) => option.id === activeClassId)
@@ -1323,7 +1286,10 @@ ${context}`
             </select>
           </label>
 
-          <div style={styles.joinClassControlRow}>
+          {enrolledClasses.length === 0 ? (
+            <>
+              <div style={styles.joinClassFallbackText}>Not enrolled yet? Enter the class code from your teacher.</div>
+              <div style={styles.joinClassControlRow}>
             <input
               type="text"
               value={joinClassCode}
@@ -1350,7 +1316,23 @@ ${context}`
             >
               {joinClassLoading ? 'Joining…' : 'Join class'}
             </button>
-          </div>
+              </div>
+            </>
+          ) : (
+            <div style={styles.enrolledClassGrid}>
+              {enrolledClasses.map((enrolledClass) => (
+                <button
+                  key={enrolledClass.id}
+                  type="button"
+                  onClick={() => setActiveClassId(enrolledClass.id)}
+                  style={enrolledClass.id === activeClassId ? styles.enrolledClassCardActive : styles.enrolledClassCard}
+                >
+                  <strong>{enrolledClass.className || `Class ${enrolledClass.id}`}</strong>
+                  <span>{enrolledClass.id === activeClassId ? 'Selected • Ask VIC' : 'Select class'}</span>
+                </button>
+              ))}
+            </div>
+          )}
           {joinClassStatus.text ? (
             <div
               style={
@@ -3323,6 +3305,44 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       alignItems: 'center',
       gap: '6px',
       flexWrap: 'wrap',
+    },
+
+    joinClassFallbackText: {
+      color: 'var(--vic-text-secondary)',
+      fontSize: '12px',
+      lineHeight: 1.4,
+    },
+
+    enrolledClassGrid: {
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+      gap: '8px',
+    },
+
+    enrolledClassCard: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      textAlign: 'left',
+      border: '1px solid var(--vic-border)',
+      borderRadius: '10px',
+      background: 'var(--vic-surface)',
+      color: 'var(--vic-text-primary)',
+      padding: '10px',
+      cursor: 'pointer',
+    },
+
+    enrolledClassCardActive: {
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '4px',
+      textAlign: 'left',
+      border: '2px solid var(--vic-accent)',
+      borderRadius: '10px',
+      background: 'rgba(181, 83, 47, 0.10)',
+      color: 'var(--vic-text-primary)',
+      padding: '9px',
+      cursor: 'pointer',
     },
 
     classSwitcherControlLabel: {
