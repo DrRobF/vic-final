@@ -108,17 +108,13 @@ export default function LoginPage() {
               />
 
               <p className="mutedLine">
-                Need an account? <a href="/signup">Create one</a>
+                Need an account? <a href="/signup">Request access</a>
               </p>
 
               <button className="primaryButton" type="submit" disabled={loading}>
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </form>
-
-            <p className="exploreLine">
-              Just exploring? You can use VIC without logging in.
-            </p>
 
             {error ? (
               <p className="errorText" role="alert">
