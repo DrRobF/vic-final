@@ -850,37 +850,20 @@ export default function TeacherPage() {
     setLessonFeedback(null)
     setSaving(true)
 
-    const { data: createdLesson, error: lessonError } = await supabase
-      .from('lessons')
-      .insert({
+    const { data: { session } } = await supabase.auth.getSession()
+    const response = await fetch('/api/teacher/assign-lesson', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+      body: JSON.stringify({
+        classId: selectedClass.id,
         title: lessonTitle.trim(),
-        lesson_text: lessonText.trim(),
-      })
-      .select('id')
-      .single()
-
-    if (lessonError || !createdLesson?.id) {
-      setLessonFeedback({ type: 'error', message: lessonError?.message || 'Could not create lesson.' })
-      setSaving(false)
-      return
-    }
-
-    const assignmentRows = Object.entries(assignmentSelections).map(([studentId, mode]) => ({
-      lesson_id: createdLesson.id,
-      student_id: Number(studentId),
-      class_id: selectedClass.id,
-      mode: mode === 'core' ? 'on-level' : mode,
-      status: 'assigned',
-      assigned_at: new Date().toISOString(),
-    }))
-
-    const { error: assignmentError } = await supabase.from('assignments').insert(assignmentRows)
-
-    if (assignmentError) {
-      setLessonFeedback({
-        type: 'error',
-        message: assignmentError.message || 'Lesson was created, but assignment failed.',
-      })
+        lessonText: lessonText.trim(),
+        assignments: Object.entries(assignmentSelections).map(([studentId, mode]) => ({ studentId: Number(studentId), mode: mode === 'core' ? 'on-level' : mode })),
+      }),
+    })
+    const payload = await response.json().catch(() => ({}))
+    if (!response.ok) {
+      setLessonFeedback({ type: 'error', message: payload.error || 'Could not assign lesson.' })
       setSaving(false)
       return
     }
