@@ -45,7 +45,7 @@ test('missing or cross-class enrollment cannot resolve an assignment', () => {
 
 test('on-level assignment maps to core enrollment without changing stored meaning', () => {
   assert.equal(normalizeSupportLevel('on-level'), 'core')
-  const assignment = { id: 40, class_id: 4, mode: 'on-level', status: 'assigned' }
+  const assignment = { id: 40, lessons: { class_id: 4 }, mode: 'on-level', status: 'assigned' }
   assert.equal(selectActiveAssignment([assignment], { class_id: 4, support_level: 'core' }), assignment)
 })
 
@@ -66,8 +66,8 @@ test('student page does not render temporary debug information', async () => {
 test('class-scoped assignments never leak between Math and Reading ELA', () => {
   const readingEnrollment = { class_id: 11, support_level: 'core' }
   const assignments = [
-    { id: 2, class_id: 10, lesson_id: 90, mode: 'on-level', status: 'assigned' },
-    { id: 1, class_id: 11, lesson_id: 91, mode: 'on-level', status: 'assigned' },
+    { id: 2, lessons: { class_id: 10 }, lesson_id: 90, mode: 'on-level', status: 'assigned' },
+    { id: 1, lessons: { class_id: 11 }, lesson_id: 91, mode: 'on-level', status: 'assigned' },
   ]
   assert.equal(selectActiveAssignment(assignments, readingEnrollment)?.lesson_id, 91)
   assert.equal(selectActiveAssignment(assignments, { class_id: 12, support_level: 'core' }), null)

@@ -2,7 +2,6 @@ import { requireApprovedProfile } from '../../lib/server-auth'
 import {
   buildVicContext,
   normalizeSessionMode,
-  selectActiveAssignment,
   selectActiveEnrollment,
   TEACHER_DIRECTED,
 } from '../../lib/ask-vic-context.mjs'
@@ -55,23 +54,25 @@ export default async function handler(req, res) {
       // before OpenAI even ran on deployments where that optional column is absent.
       const { data: assignments, error: assignmentError } = await auth.admin
         .from('assignments')
-        .select('id, lesson_id, class_id, mode, status, assigned_at')
+        .select('id, lesson_id, mode, status, assigned_at, lessons!inner(id, class_id)')
         .eq('student_id', auth.profile.id)
-        .eq('class_id', enrollment.class_id)
+        .eq('status', 'assigned')
+        .eq('lessons.class_id', enrollment.class_id)
         .order('assigned_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(20)
       if (assignmentError) throw assignmentError
 
-      const assignment = selectActiveAssignment(assignments, enrollment)
+      const assignment = assignments?.[0] || null
       if (!assignment?.lesson_id) {
         return res.status(409).json({ error: 'No active teacher lesson is available for the selected class.' })
       }
 
       const { data: lessons, error: lessonError } = await auth.admin
         .from('lessons')
-        .select('id, subject, title, lesson_text, is_active')
+        .select('id, class_id, subject, title, lesson_text, is_active')
         .eq('id', assignment.lesson_id)
+        .eq('class_id', enrollment.class_id)
         .limit(1)
       if (lessonError) throw lessonError
       const lesson = lessons?.[0] || null
