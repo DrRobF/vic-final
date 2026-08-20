@@ -43,6 +43,7 @@ export default function TeacherPage() {
   const [isSendingReportForStudentId, setIsSendingReportForStudentId] = useState(null)
   const [isSavingParentEmailForStudentId, setIsSavingParentEmailForStudentId] = useState(null)
   const [isRosterCollapsed, setIsRosterCollapsed] = useState(false)
+  const [justAssignedStudentIds, setJustAssignedStudentIds] = useState([])
 
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
@@ -221,7 +222,7 @@ export default function TeacherPage() {
   }, [selectedClass?.id])
 
   async function loadStudents(classId) {
-    if (!classId) return
+    if (!classId) return false
 
     const requestId = latestStudentRequestIdRef.current + 1
     latestStudentRequestIdRef.current = requestId
@@ -234,32 +235,40 @@ export default function TeacherPage() {
     } = await supabase.auth.getSession()
 
     if (sessionError || !session?.access_token) {
-      if (requestId !== latestStudentRequestIdRef.current) return
+      if (requestId !== latestStudentRequestIdRef.current) return false
       setError('Please sign in again to load students.')
       setLoadingStudents(false)
-      return
+      return false
     }
 
-    const response = await fetch('/api/teacher/class-students', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ classId }),
-    })
-
-    const payload = await response.json().catch(() => null)
+    let response
+    let payload
+    try {
+      response = await fetch('/api/teacher/class-students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ classId }),
+      })
+      payload = await response.json().catch(() => null)
+    } catch {
+      if (requestId !== latestStudentRequestIdRef.current) return false
+      setError('Could not load students for this class.')
+      setLoadingStudents(false)
+      return false
+    }
 
     if (!response.ok) {
-      if (requestId !== latestStudentRequestIdRef.current) return
+      if (requestId !== latestStudentRequestIdRef.current) return false
       setError(payload?.error || 'Could not load students for this class.')
       setLoadingStudents(false)
-      return
+      return false
     }
 
     if (requestId !== latestStudentRequestIdRef.current || selectedClass?.id !== classId) {
-      return
+      return false
     }
 
     const nextStudents = Array.isArray(payload?.students) ? payload.students : []
@@ -282,6 +291,7 @@ export default function TeacherPage() {
     setParentEmailStatusByStudentId({})
     setIsRosterCollapsed(false)
     setLoadingStudents(false)
+    return true
   }
 
   function handleSelectClass(classRow) {
@@ -296,6 +306,7 @@ export default function TeacherPage() {
 
     setSelectedClass(classRow)
     setCopiedCode(false)
+    setJustAssignedStudentIds([])
     setAssignmentSelections({})
     setParentEmailStatusByStudentId({})
     setReportStatusByStudentId({})
@@ -848,7 +859,10 @@ export default function TeacherPage() {
 
     setError('')
     setLessonFeedback(null)
+    setJustAssignedStudentIds([])
     setSaving(true)
+
+    const assignedStudentIds = Object.keys(assignmentSelections).map(Number)
 
     const { data: { session } } = await supabase.auth.getSession()
     const response = await fetch('/api/teacher/assign-lesson', {
@@ -872,8 +886,14 @@ export default function TeacherPage() {
       return
     }
 
-    setLessonFeedback({ type: 'success', message: `Lesson assigned to ${selectedCount} students.` })
-    setAssignmentSelections({})
+    setJustAssignedStudentIds(assignedStudentIds)
+    const rosterRefreshed = await loadStudents(selectedClass.id)
+    setLessonFeedback({
+      type: rosterRefreshed ? 'success' : 'error',
+      message: rosterRefreshed
+        ? `Lesson assigned to ${selectedCount} students. The roster has been refreshed.`
+        : 'Lesson assigned successfully, but the roster could not refresh. Use Refresh Roster.',
+    })
     setLessonTitle('')
     setLessonText('')
     setSaving(false)
@@ -1061,6 +1081,14 @@ export default function TeacherPage() {
                   </div>
                   <div className="studentHeaderActions">
                     <span className="selectionPill">{selectedCount} selected</span>
+                    <button
+                      type="button"
+                      className="secondaryButton rosterToggleButton"
+                      onClick={() => loadStudents(selectedClass.id)}
+                      disabled={loadingStudents || saving}
+                    >
+                      {loadingStudents ? 'Refreshing...' : 'Refresh Roster'}
+                    </button>
                     {students.length > 0 ? (
                       <button
                         type="button"
@@ -1174,6 +1202,9 @@ export default function TeacherPage() {
                                 <td>
                                   <div className="studentMetaLine">
                                     <strong>{lessonContext.label}:</strong> {lessonContext.title}
+                                    {justAssignedStudentIds.includes(Number(student.id)) ? (
+                                      <span className="justAssignedBadge">Just assigned</span>
+                                    ) : null}
                                   </div>
                                 </td>
                                 <td>
@@ -1713,6 +1744,17 @@ export default function TeacherPage() {
         .rosterToggleButton {
           padding: 8px 12px;
           font-size: 13px;
+        }
+        .justAssignedBadge {
+          display: inline-block;
+          margin-left: 8px;
+          border-radius: 999px;
+          padding: 3px 8px;
+          background: var(--vic-success-soft);
+          color: var(--vic-success);
+          font-size: 11px;
+          font-weight: 800;
+          white-space: nowrap;
         }
         .rosterSummaryBar {
           border: 1px solid var(--vic-primary-soft);

@@ -46,3 +46,18 @@ test('write and read endpoints use only columns from the real schema', async () 
   const assignmentQuery = readSource.slice(readSource.indexOf("from('assignments')"))
   assert.doesNotMatch(assignmentQuery, /eq\('class_id', activeClassId\)/)
 })
+
+test('teacher assignment success awaits a roster refresh before reporting completion', async () => {
+  const teacherSource = await readFile(new URL('../pages/teacher.js', import.meta.url), 'utf8')
+  const confirmedAssignment = teacherSource.indexOf("payload.assignmentCount !== selectedCount")
+  const awaitedRefresh = teacherSource.indexOf('const rosterRefreshed = await loadStudents(selectedClass.id)', confirmedAssignment)
+  const refreshedFeedback = teacherSource.indexOf('The roster has been refreshed.', awaitedRefresh)
+
+  assert.notEqual(confirmedAssignment, -1)
+  assert.ok(awaitedRefresh > confirmedAssignment)
+  assert.ok(refreshedFeedback > awaitedRefresh)
+  assert.match(teacherSource, /Lesson assigned successfully, but the roster could not refresh\. Use Refresh Roster\./)
+  assert.match(teacherSource, /justAssignedStudentIds\.includes\(Number\(student\.id\)\)/)
+  assert.match(teacherSource, />Just assigned<\/span>/)
+  assert.match(teacherSource, /onClick=\{\(\) => loadStudents\(selectedClass\.id\)\}/)
+})
