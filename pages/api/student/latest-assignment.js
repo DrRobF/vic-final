@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { normalizeSupportLevel } from '../../../lib/ask-vic-context.mjs'
 
 function normalizeNumericId(value) {
   const parsed = Number(value)
@@ -68,8 +69,12 @@ export default async function handler(req, res) {
 
   const safeEnrollmentRows = Array.isArray(enrollmentRows) ? enrollmentRows : []
   const activeEnrollment = requestedActiveClassId
-    ? safeEnrollmentRows.find((row) => row?.class_id === requestedActiveClassId) || null
+    ? safeEnrollmentRows.find((row) => Number(row?.class_id) === requestedActiveClassId) || null
     : null
+
+  if (!activeEnrollment) {
+    return res.status(403).json({ error: 'The selected class is not available for this student.' })
+  }
 
   const { data: rows, error: assignmentsError } = await supabaseAuth
     .from('assignments')
@@ -84,19 +89,16 @@ export default async function handler(req, res) {
   }
 
   const safeRows = Array.isArray(rows) ? rows : []
-  const activeSupportLevel =
-    typeof activeEnrollment?.support_level === 'string'
-      ? activeEnrollment.support_level.trim().toLowerCase()
-      : ''
+  const activeSupportLevel = normalizeSupportLevel(activeEnrollment.support_level)
   const classScopedRows =
     activeSupportLevel && safeEnrollmentRows.length > 1
       ? safeRows.filter(
           (row) =>
-            typeof row?.mode === 'string' &&
-            row.mode.trim().toLowerCase() === activeSupportLevel
+            normalizeSupportLevel(row?.mode) === activeSupportLevel &&
+            String(row?.status || 'assigned').toLowerCase() === 'assigned'
         )
       : safeRows
-  const latestAssignment = classScopedRows[0] || safeRows[0] || null
+  const latestAssignment = classScopedRows[0] || null
   let assignedLesson = null
 
   if (latestAssignment?.lesson_id) {
@@ -111,7 +113,7 @@ export default async function handler(req, res) {
     }
   }
 
-  const scopedRows = classScopedRows.length > 0 ? classScopedRows : safeRows
+  const scopedRows = classScopedRows
 
   const rowsWithAssignedLesson =
     latestAssignment && assignedLesson
