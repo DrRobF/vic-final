@@ -431,9 +431,11 @@ export default function AskVIC() {
         error: assignmentError,
       } = await loadLatestAssignmentSafe(accessToken, resolvedActiveClassId)
       debugAskVicStudentResolution('assignment-query-result', {
-        assignmentError: assignmentError?.message || null,
-        assignmentRowCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
-        assignmentRowsPreview: Array.isArray(assignmentRows) ? assignmentRows.slice(0, 3) : [],
+        selectedClassId: resolvedActiveClassId,
+        studentId: student.id,
+        createdLessonId: assignedLessonFromApi?.id || null,
+        createdAssignmentId: latestAssignmentFromApi?.id || null,
+        returnedAssignmentCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
       })
 
       const activeEnrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)

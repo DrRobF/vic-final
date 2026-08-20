@@ -19,7 +19,7 @@ function getBearerToken(req) {
 async function loadAssignmentsSafe(supabaseAdmin, studentIds) {
   const assignmentQueryPlans = [
     {
-      select: 'id, student_id, lesson_id, status, mode, assigned_at, created_at, lessons ( id, title, subject )',
+      select: 'id, student_id, lesson_id, status, mode, assigned_at, created_at, lessons ( id, class_id, title, subject )',
       orders: [
         ['assigned_at', { ascending: false, nullsFirst: false }],
         ['created_at', { ascending: false, nullsFirst: false }],
@@ -28,7 +28,7 @@ async function loadAssignmentsSafe(supabaseAdmin, studentIds) {
       reason: 'full_assignment_with_join',
     },
     {
-      select: 'id, student_id, lesson_id, status, mode, assigned_at, lessons ( id, title, subject )',
+      select: 'id, student_id, lesson_id, status, mode, assigned_at, lessons ( id, class_id, title, subject )',
       orders: [
         ['assigned_at', { ascending: false, nullsFirst: false }],
         ['id', { ascending: false }],
@@ -208,7 +208,16 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: studentLookupError.message || 'Could not load student records.' })
   }
 
-  const { rows: assignmentRowsSafe } = await loadAssignmentsSafe(supabaseAdmin, studentIds)
+  const { rows: unscopedAssignmentRows } = await loadAssignmentsSafe(supabaseAdmin, studentIds)
+  const lessonIds = [...new Set(unscopedAssignmentRows.map((row) => row?.lesson_id).filter(Number.isInteger))]
+  const { data: scopedLessons, error: scopedLessonError } = lessonIds.length
+    ? await supabaseAdmin.from('lessons').select('id, class_id, title, subject').in('id', lessonIds).eq('class_id', classId)
+    : { data: [], error: null }
+  if (scopedLessonError) return res.status(500).json({ error: 'Could not scope assignments to the selected class.' })
+  const scopedLessonById = new Map((scopedLessons || []).map((lesson) => [lesson.id, lesson]))
+  const assignmentRowsSafe = unscopedAssignmentRows
+    .filter((row) => scopedLessonById.has(row.lesson_id))
+    .map((row) => ({ ...row, lessons: lessonFromAssignment(row) || scopedLessonById.get(row.lesson_id) }))
   const latestAssignmentByStudentId = new Map()
   const assignmentRowsByStudentId = new Map()
   assignmentRowsSafe.forEach((row) => {
