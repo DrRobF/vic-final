@@ -868,6 +868,7 @@ export default function TeacherPage() {
     const assignmentRows = Object.entries(assignmentSelections).map(([studentId, mode]) => ({
       lesson_id: createdLesson.id,
       student_id: Number(studentId),
+      class_id: selectedClass.id,
       mode: mode === 'core' ? 'on-level' : mode,
       status: 'assigned',
       assigned_at: new Date().toISOString(),
