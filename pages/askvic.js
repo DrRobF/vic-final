@@ -105,11 +105,40 @@ function titleFromAssignmentRow(assignmentRow) {
   )
 }
 
-function
+function debugAskVicStudentResolution() {}
+
+function getUserDisplayName(userRow) {
+  if (!userRow) return ''
+
+  return userRow.name || userRow.email || ''
+}
+
+async function loadLatestAssignmentSafe(accessToken, activeClassId = null) {
+  if (!accessToken || !activeClassId) {
+    return {
+      rows: [],
+      latestAssignment: null,
+      assignedLesson: null,
+      error: new Error('Select an enrolled class.'),
+    }
+  }
+
+  try {
+    const response = await fetch('/api/student/latest-assignment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ activeClassId }),
+    })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
-      return { rows: [], latestAssignment: null, assignedLesson: null, error: new Error(payload?.error || 'Could not load assignment.') }
+      return {
+        rows: [],
+        latestAssignment: null,
+        assignedLesson: null,
+        error: new Error(payload?.error || 'Could not load assignment.'),
+      }
     }
+
     return {
       rows: Array.isArray(payload?.rows) ? payload.rows : [],
       latestAssignment: payload?.latestAssignment || null,
@@ -117,7 +146,12 @@ function
       error: null,
     }
   } catch (_error) {
-    return { rows: [], latestAssignment: null, assignedLesson: null, error: new Error('Could not load assignment.') }
+    return {
+      rows: [],
+      latestAssignment: null,
+      assignedLesson: null,
+      error: new Error('Could not load assignment.'),
+    }
   }
 }
 
@@ -395,12 +429,12 @@ export default function AskVIC() {
         latestAssignment: latestAssignmentFromApi,
         assignedLesson: assignedLessonFromApi,
         error: assignmentError,
-      } = await loadLatestAssignmentSafe(
-        supabase,
-        student.id,
-        accessToken,
-        resolvedActiveClassId
-      )
+      } = await loadLatestAssignmentSafe(accessToken, resolvedActiveClassId)
+      debugAskVicStudentResolution('assignment-query-result', {
+        assignmentError: assignmentError?.message || null,
+        assignmentRowCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
+        assignmentRowsPreview: Array.isArray(assignmentRows) ? assignmentRows.slice(0, 3) : [],
+      })
 
       const activeEnrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)
       const filteredAssignmentRowsByClass =
