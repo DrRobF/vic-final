@@ -8,13 +8,12 @@ import { messagesForModeSwitch } from '../lib/ask-vic-context.mjs'
 
 const SKETCH_BG_COLOR = '#f8fafc'
 const SKETCH_INK_COLOR = '#0f172a'
-const SESSION_INTEREST_STORAGE_KEY = 'vic-session-interest-today'
 
 const INITIAL_MESSAGES = [
   {
     role: 'assistant',
     text:
-      'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nChoose a quick start below or type your own question.',
+      'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nType what you want help with, and VIC will help you get started.',
     visual: { type: 'idle', title: 'Visual Support' },
   },
 ]
@@ -30,24 +29,6 @@ const ASSIGNED_LESSON_UNAVAILABLE_MESSAGE = {
   text: 'Your teacher assigned a lesson, but the lesson details are unavailable right now.',
   visual: { type: 'tip', title: 'Assigned lesson unavailable' },
 }
-
-const GUIDED_ENTRY_OPTIONS = [
-  {
-    id: 'homework_help',
-    label: 'Get Homework Help',
-    prompt: 'I need help with homework. Please coach me step by step and check my understanding as we go.',
-  },
-  {
-    id: 'start_lesson',
-    label: 'Start a Lesson',
-    prompt: 'I want to start a lesson. Please choose a focused starting point and teach me one clear step at a time.',
-  },
-  {
-    id: 'practice_skill',
-    label: 'Practice a Skill',
-    prompt: 'I want to practice a skill. Give me one short practice problem and coach me through it like a teacher.',
-  },
-]
 
 function getEntryModeMeta({ hasAssignedLesson, hasUserMessages, sessionMode }) {
   if (sessionMode === 'teacher_directed' && hasAssignedLesson && !hasUserMessages) {
@@ -66,7 +47,7 @@ function getEntryModeMeta({ hasAssignedLesson, hasUserMessages, sessionMode }) {
 
   return {
     label: 'My Own Work',
-    helper: 'Choose a quick start below or type your own question.',
+    helper: 'Type what you want help with, and VIC will help you get started.',
   }
 }
 
@@ -124,24 +105,7 @@ function titleFromAssignmentRow(assignmentRow) {
   )
 }
 
-function debugAskVicStudentResolution() {}
-
-function getUserDisplayName(userRow) {
-  if (!userRow) return ''
-
-  return userRow.name || userRow.email || ''
-}
-
-async function loadLatestAssignmentSafe(_supabase, _studentId, accessToken, activeClassId = null) {
-  if (!accessToken || !activeClassId) {
-    return { rows: [], latestAssignment: null, assignedLesson: null, error: new Error('Select an enrolled class.') }
-  }
-  try {
-    const response = await fetch('/api/student/latest-assignment', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ activeClassId }),
-    })
+function
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
       return { rows: [], latestAssignment: null, assignedLesson: null, error: new Error(payload?.error || 'Could not load assignment.') }
@@ -163,9 +127,7 @@ export default function AskVIC() {
   const [loading, setLoading] = useState(false)
   const [workArea, setWorkArea] = useState('')
   const [notes, setNotes] = useState('')
-  const [activeTool, setActiveTool] = useState('practice')
-  const [sketchExpanded, setSketchExpanded] = useState(false)
-  const [sketchMinimized, setSketchMinimized] = useState(false)
+  const [activeTool, setActiveTool] = useState(null)
   const [calcInput, setCalcInput] = useState('')
   const [calcResult, setCalcResult] = useState('')
   const [viewportWidth, setViewportWidth] = useState(1400)
@@ -176,8 +138,9 @@ export default function AskVIC() {
   const [studentSupportLevel, setStudentSupportLevel] = useState('')
   const [studentInterest, setStudentInterest] = useState('')
   const [sessionInterestInput, setSessionInterestInput] = useState('')
-  const [sessionInterestToday, setSessionInterestToday] = useState('')
   const [isEditingSessionInterest, setIsEditingSessionInterest] = useState(false)
+  const [interestStatus, setInterestStatus] = useState({ tone: '', text: '' })
+  const [interestSaving, setInterestSaving] = useState(false)
   const [joinClassCode, setJoinClassCode] = useState('')
   const [joinClassStatus, setJoinClassStatus] = useState({ tone: '', text: '' })
   const [joinClassLoading, setJoinClassLoading] = useState(false)
@@ -189,24 +152,7 @@ export default function AskVIC() {
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
-  const [pendingEntryIntent, setPendingEntryIntent] = useState('')
-  const [debugAuthUserId, setDebugAuthUserId] = useState(null)
-  const [debugAuthEmail, setDebugAuthEmail] = useState(null)
-  const [debugResolvedUserId, setDebugResolvedUserId] = useState(null)
-  const [debugResolvedRole, setDebugResolvedRole] = useState(null)
-  const [debugLatestAssignment, setDebugLatestAssignment] = useState({
-    found: false,
-    id: null,
-    lessonId: null,
-    lessonTitle: null,
-  })
-  const [debugLatestAssignmentApi, setDebugLatestAssignmentApi] = useState({
-    status: null,
-    ok: null,
-    responseJson: null,
-    error: null,
-  })
-  const [isDebugPanelOpen, setIsDebugPanelOpen] = useState(false)
+
 
   const resolvedAssignedLessonTitle = cleanLessonTitle(assignedLesson?.title)
   const hasAssignedLessonContent =
@@ -219,7 +165,7 @@ export default function AskVIC() {
       ? hasResolvedAssignedLessonTitle
         ? `Assigned lesson: ${resolvedAssignedLessonTitle}`
         : 'Your teacher assigned a lesson, but the lesson details are unavailable right now.'
-      : 'No active assignment is available for the selected class.'
+      : 'No teacher lesson assigned for this class yet.'
 
   const hasUserMessages = messages.some((message) => message.role === 'user')
   const hasAssignedLesson = hasTeacherAssignment && hasResolvedAssignedLessonTitle && hasAssignedLessonContent && assignedLesson?.is_active !== false
@@ -234,86 +180,51 @@ export default function AskVIC() {
     hasUserMessages,
     sessionMode,
   })
-  const debugValue = (value) => {
-    if (value === null || value === undefined || value === '') return '—'
-    if (typeof value === 'boolean') return value ? 'true' : 'false'
-    return String(value)
-  }
-  const debugJsonValue = (value) => {
-    if (value === null || value === undefined) return '—'
-    try {
-      return JSON.stringify(value)
-    } catch (_error) {
-      return '[unserializable JSON]'
-    }
-  }
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const storedInterest = window.sessionStorage.getItem(SESSION_INTEREST_STORAGE_KEY) || ''
-    const normalizedStoredInterest = storedInterest.trim()
-    if (normalizedStoredInterest) {
-      setSessionInterestToday(normalizedStoredInterest)
-      setSessionInterestInput(normalizedStoredInterest)
-    }
-  }, [])
-
-  useEffect(() => {
-    debugAskVicStudentResolution('final-state', {
-      selectedStudentId,
-      hasTeacherAssignment,
-      assignedLesson,
-      sessionMode,
-      teacherLessonDisabled,
-      teacherLessonDisabledReason,
-      studentLookupStatus,
-    })
-  }, [
-    assignedLesson,
-    hasTeacherAssignment,
-    selectedStudentId,
-    sessionMode,
-    studentLookupStatus,
-    teacherLessonDisabled,
-    teacherLessonDisabledReason,
-  ])
 
   function handleSessionModeToggle(nextMode) {
     if (nextMode === sessionMode) return
     if (nextMode === 'teacher_directed' && !hasAssignedLesson) return
     setSessionMode(nextMode)
-    setPendingEntryIntent('')
     setInput('')
     setMessages(messagesForModeSwitch(nextMode, resolvedAssignedLessonTitle || 'your assigned lesson'))
   }
 
-  function applySessionInterestForToday() {
-    const normalizedInterest = sessionInterestInput.trim().slice(0, 120)
-    setSessionInterestToday(normalizedInterest)
-
-    if (typeof window !== 'undefined') {
-      if (normalizedInterest) {
-        window.sessionStorage.setItem(SESSION_INTEREST_STORAGE_KEY, normalizedInterest)
-      } else {
-        window.sessionStorage.removeItem(SESSION_INTEREST_STORAGE_KEY)
-      }
+  async function commitSessionInterestInline() {
+    const interest = sessionInterestInput.replace(/[<>]/g, '').trim().replace(/\s+/g, ' ').slice(0, 120)
+    if (!interest) {
+      setInterestStatus({ tone: 'error', text: 'Please enter an interest.' })
+      return
+    }
+    if (interest === studentInterest) {
+      setIsEditingSessionInterest(false)
+      setInterestStatus({ tone: '', text: '' })
+      return
+    }
+    setInterestSaving(true)
+    setInterestStatus({ tone: '', text: '' })
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Please sign in again.')
+      const response = await fetch('/api/student/interest', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ interest }),
+      })
+      const payload = await response.json().catch(() => null)
+      if (!response.ok) throw new Error(payload?.error || 'Could not save your interest.')
+      setStudentInterest(payload.interest)
+      setSessionInterestInput(payload.interest)
+      setIsEditingSessionInterest(false)
+      setInterestStatus({ tone: 'success', text: `Interest changed to ${payload.interest}. VIC will use it in new examples.` })
+    } catch (error) {
+      setSessionInterestInput(studentInterest)
+      setInterestStatus({ tone: 'error', text: error?.message || 'Could not save your interest. Your previous interest is still saved.' })
+    } finally {
+      setInterestSaving(false)
     }
   }
 
-  async function commitSessionInterestInline() {
-    applySessionInterestForToday()
-    setIsEditingSessionInterest(false)
-    const interest = sessionInterestInput.trim().slice(0, 120)
-    if (!supabase || !currentUserProfile || interest === studentInterest) return
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.access_token) return
-    const response = await fetch('/api/student/interest', {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-      body: JSON.stringify({ interest }),
-    })
-    if (response.ok) setStudentInterest(interest)
-  }
 
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
@@ -323,21 +234,18 @@ export default function AskVIC() {
   const assignmentIntroKeyRef = useRef('')
 
   const detectStudentAndLesson = useCallback(async () => {
-    debugAskVicStudentResolution('detect-start', {})
     setStudentLookupStatus('Loading student...')
     setCurrentUserStatus('Loading signed-in user...')
-    setDebugAuthUserId(null)
-    setDebugAuthEmail(null)
-    setDebugResolvedUserId(null)
-    setDebugResolvedRole(null)
-    setDebugLatestAssignment({ found: false, id: null, lessonId: null, lessonTitle: null })
-    setDebugLatestAssignmentApi({ status: null, ok: null, responseJson: null, error: null })
+
+
+
+
+
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
 
     if (!supabaseUrl || !supabaseKey) {
-      debugAskVicStudentResolution('supabase-not-configured', {})
       setCurrentUserProfile(null)
       setCurrentUserStatus('Supabase is not configured.')
       setSelectedStudentId(null)
@@ -375,16 +283,10 @@ export default function AskVIC() {
       } = await supabase.auth.getUser()
 
       if (userError || !user?.email) {
-        debugAskVicStudentResolution('auth-user-missing', {
-          userError: userError?.message || null,
-          authUserId: user?.id || null,
-          authEmail: user?.email || null,
-        })
         setCurrentUserProfile(null)
-        setDebugAuthUserId(user?.id || null)
-        setDebugAuthEmail(user?.email || null)
-        setDebugResolvedUserId(null)
-        setDebugResolvedRole(null)
+
+
+
         setCurrentUserStatus('No signed-in user found.')
         setSelectedStudentId(null)
         setAssignedLesson(null)
@@ -415,16 +317,9 @@ export default function AskVIC() {
         return
       }
       const matchedProfile = classesResponse.ok ? classesPayload?.profile || null : null
-      debugAskVicStudentResolution('auth-and-profile', {
-        authUserId: user?.id || null,
-        authEmail: user?.email || null,
-        resolvedUserId: matchedProfile?.id || null,
-        resolvedUserRoleRaw: matchedProfile?.role || null,
-      })
       setCurrentUserProfile(matchedProfile)
-      setDebugAuthUserId(user?.id || null)
-      setDebugAuthEmail(user?.email || null)
-      setDebugResolvedUserId(matchedProfile?.id || null)
+
+
       setCurrentUserStatus(
         matchedProfile
           ? 'Signed in.'
@@ -434,19 +329,8 @@ export default function AskVIC() {
       const resolvedRole = normalizeUserRole(
         matchedProfile?.role || user?.user_metadata?.role || user?.app_metadata?.role || ''
       )
-      setDebugResolvedRole(resolvedRole || null)
-
-      debugAskVicStudentResolution('resolved-role', {
-        matchedProfileRole: matchedProfile?.role || null,
-        userMetadataRole: user?.user_metadata?.role || null,
-        appMetadataRole: user?.app_metadata?.role || null,
-        resolvedRole,
-      })
 
       if (resolvedRole && resolvedRole !== 'student') {
-        debugAskVicStudentResolution('non-student-role-branch', {
-          resolvedRole,
-        })
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setHasTeacherAssignment(false)
@@ -463,10 +347,6 @@ export default function AskVIC() {
       const student = matchedProfile
 
       if (!student?.id) {
-        debugAskVicStudentResolution('student-profile-not-found', {
-          authUserId: user?.id || null,
-          authEmail: user?.email || null,
-        })
         setSelectedStudentId(null)
         setAssignedLesson(null)
         setHasTeacherAssignment(false)
@@ -481,9 +361,6 @@ export default function AskVIC() {
       }
 
       setSelectedStudentId(student.id)
-      debugAskVicStudentResolution('student-selected', {
-        selectedStudentId: student.id,
-      })
       const interests = Array.isArray(student.interest_tags) ? student.interest_tags : []
       setStudentInterest(interests.join(', '))
 
@@ -524,11 +401,6 @@ export default function AskVIC() {
         accessToken,
         resolvedActiveClassId
       )
-      debugAskVicStudentResolution('assignment-query-result', {
-        assignmentError: assignmentError?.message || null,
-        assignmentRowCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
-        assignmentRowsPreview: Array.isArray(assignmentRows) ? assignmentRows.slice(0, 3) : [],
-      })
 
       const activeEnrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)
       const filteredAssignmentRowsByClass =
@@ -547,17 +419,7 @@ export default function AskVIC() {
         lessonTitle: lessonRow?.title || null,
       })
 
-      debugAskVicStudentResolution('assignment-selected', {
-        latestAssignment,
-        lessonFromAssignment: lessonRow,
-      })
-
       if (assignmentError || !latestAssignment?.id || !lessonRow) {
-        debugAskVicStudentResolution('assignment-not-fully-resolved', {
-          assignmentError: assignmentError?.message || null,
-          hasLatestAssignment: Boolean(latestAssignment?.id),
-          hasLessonRow: Boolean(lessonRow),
-        })
         if (latestAssignment?.id) {
           const fallbackLessonTitle = titleFromAssignmentRow(latestAssignment)
           setAssignedLesson({
@@ -605,14 +467,6 @@ export default function AskVIC() {
       setStudentMode(latestAssignment.mode || '')
       setStudentSupportLevel(resolvedSupportLevel)
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
-      debugAskVicStudentResolution('assignment-resolved-success', {
-        selectedStudentId: student.id,
-        latestAssignment,
-        lessonRow,
-        hasTeacherAssignment: true,
-        assignedLesson: lessonRow,
-        sessionMode: 'teacher_directed',
-      })
   }, [activeClassId])
 
   useEffect(() => {
@@ -672,6 +526,19 @@ export default function AskVIC() {
     return () => window.removeEventListener('resize', updateViewport)
   }, [])
 
+  useEffect(() => {
+    if (!activeTool) return undefined
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') setActiveTool(null)
+    }
+    document.addEventListener('keydown', handleEscape)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleEscape)
+      document.body.style.overflow = ''
+    }
+  }, [activeTool])
+
   const isMobile = viewportWidth <= 768
   const isTablet = viewportWidth > 768 && viewportWidth <= 1100
   const isCompact = viewportWidth <= 1100
@@ -719,7 +586,7 @@ export default function AskVIC() {
       window.cancelAnimationFrame(raf)
       window.removeEventListener('resize', syncCanvasSize)
     }
-}, [activeTool, isCompact, isMobile, viewportWidth, sketchExpanded])
+}, [activeTool, isCompact, isMobile, viewportWidth])
 
   useEffect(() => {
     const container = messageAreaRef.current
@@ -761,7 +628,6 @@ export default function AskVIC() {
 [Sketch attached]` : outgoing
     const userMessage = { role: 'user', text: userTextForThread }
     const nextMessages = [...messages, userMessage]
-    const isFirstUserTurn = !messages.some((message) => message.role === 'user')
 
     setMessages([
       ...nextMessages,
@@ -782,16 +648,13 @@ export default function AskVIC() {
 
       const apiUrl = '/api/vic'
 
-      const activeInterest = sessionInterestToday || studentInterest
       const requestBody = {
         messages: apiMessages,
         sketchImage,
         activeClassId,
         sessionMode,
-        studentInterest: activeInterest,
+        studentInterest,
         gradeLevel: studentGradeLevel,
-        entryIntent: pendingEntryIntent || null,
-        isFirstUserTurn,
       }
 
 
@@ -830,7 +693,6 @@ export default function AskVIC() {
           visual,
         },
       ])
-      setPendingEntryIntent('')
 
       return finalReply
     } catch (error) {
@@ -853,11 +715,6 @@ export default function AskVIC() {
     }
   }
 
-  function handleGuidedEntry(option) {
-    if (!option) return
-    setPendingEntryIntent(option.id)
-    setInput(option.prompt)
-  }
 
   function handleKeyDown(e) {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -1066,14 +923,14 @@ ${context}`
     await sendMessage(prompt)
   }
 
-    const styles = buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMinimized })
+    const styles = buildStyles({ isMobile, isTablet, isCompact })
 
   const heroSection = (
     <section style={styles.controlCenterCard}>
       <div style={styles.controlCenterHeader}>
         <div style={styles.sectionEyebrow}>Student controls</div>
         <div style={styles.controlCenterTitle}>Control Center</div>
-        <div style={styles.controlCenterSubtext}>Manage mode, class, start action, and interest.</div>
+        <div style={styles.controlCenterSubtext}>Manage your mode, class, and interest.</div>
       </div>
 
       <div style={styles.controlCenterSection}>
@@ -1195,22 +1052,6 @@ ${context}`
       </div>
 
       <div style={styles.controlCenterSection}>
-        <div style={styles.controlCenterSectionLabel}>Start actions</div>
-        <div style={styles.guidedEntryRow}>
-          {GUIDED_ENTRY_OPTIONS.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              style={pendingEntryIntent === option.id ? styles.guidedEntryButtonActive : styles.guidedEntryButton}
-              onClick={() => handleGuidedEntry(option)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div style={styles.controlCenterSection}>
         <div style={styles.controlCenterSectionLabel}>Interest</div>
         <div style={styles.sessionInterestInline}>
           <span style={styles.sessionInterestInlineLabel}>Interest:</span>
@@ -1220,8 +1061,7 @@ ${context}`
               type="text"
               value={sessionInterestInput}
               onChange={(e) => setSessionInterestInput(e.target.value)}
-              onBlur={commitSessionInterestInline}
-              onKeyDown={(event) => {
+                            onKeyDown={(event) => {
                 if (event.key === 'Enter') {
                   event.preventDefault()
                   commitSessionInterestInline()
@@ -1229,32 +1069,35 @@ ${context}`
               }}
               placeholder="Set interest"
               style={styles.sessionInterestInlineInput}
+              maxLength={120}
               autoFocus
             />
           ) : (
             <button
               type="button"
               onClick={() => {
-                setSessionInterestInput(sessionInterestToday || studentInterest || '')
+                setSessionInterestInput(studentInterest || '')
                 setIsEditingSessionInterest(true)
               }}
               style={styles.sessionInterestInlineValue}
             >
-              {sessionInterestToday || studentInterest || 'None (Set)'}
+              {studentInterest || 'None (Set)'}
             </button>
           )}
           <button
             type="button"
             onClick={() => {
-              setSessionInterestInput(sessionInterestToday || studentInterest || '')
+              setSessionInterestInput(studentInterest || '')
               setIsEditingSessionInterest(true)
             }}
             aria-label="Change interest"
+            disabled={interestSaving}
             style={styles.sessionInterestInlineEdit}
           >
-            {sessionInterestToday || studentInterest ? 'Change' : 'Set'}
+            {studentInterest ? 'Change' : 'Set'}
           </button>
         </div>
+        {interestStatus.text ? <div style={interestStatus.tone === 'success' ? styles.joinClassStatusSuccess : styles.joinClassStatusError} role="status">{interestStatus.text}</div> : null}
       </div>
     </section>
   )
@@ -1266,183 +1109,54 @@ ${context}`
         <div style={styles.toolsHeaderText}>
           <div style={styles.sectionEyebrow}>Workspace</div>
           <div style={styles.sectionTitle}>Student Tools</div>
-          <div style={styles.toolsSubtext}>Work while VIC teaches.</div>
+          <div style={styles.toolsSubtext}>Click a tool to open your large workspace. Your work stays here while you switch tools.</div>
         </div>
       </div>
-
-      <div style={styles.toolTabsStickyWrap}>
-        <div style={styles.toolTabsWrap}>
-          <button
-            style={activeTool === 'practice' ? styles.toolTabActive : styles.toolTab}
-            onClick={() => setActiveTool('practice')}
-          >
-            Practice
+      <div style={styles.toolLauncherGrid}>
+        {['practice', 'sketch', 'notes', 'calculator'].map((tool) => (
+          <button key={tool} type="button" style={styles.toolLauncher} onClick={() => setActiveTool(tool)}>
+            {tool[0].toUpperCase() + tool.slice(1)}
           </button>
-          <button
-            style={activeTool === 'sketch' ? styles.toolTabActive : styles.toolTab}
-            onClick={() => setActiveTool('sketch')}
-          >
-            Sketch
-          </button>
-          <button
-            style={activeTool === 'notes' ? styles.toolTabActive : styles.toolTab}
-            onClick={() => setActiveTool('notes')}
-          >
-            Notes
-          </button>
-          <button
-            style={activeTool === 'calculator' ? styles.toolTabActive : styles.toolTab}
-            onClick={() => setActiveTool('calculator')}
-          >
-            Calc
-          </button>
-        </div>
-      </div>
-
-      {activeTool === 'practice' ? (
-        <div style={styles.workspacePanel}>
-          <div style={styles.practiceHeaderRow}>
-            <div style={styles.miniLabelDarkText}>Practice</div>
-            <div style={styles.practiceHintDarkText}>Work out your thinking here.</div>
-          </div>
-
-          <textarea
-            value={workArea}
-            onChange={(e) => setWorkArea(e.target.value)}
-            placeholder="Work out your thinking here..."
-            style={styles.sideTextarea}
-          />
-        </div>
-      ) : null}
-
-      {activeTool === 'sketch' ? (
-        <div style={styles.workspacePanel}>
-          <div style={styles.practiceHeaderRow}>
-            <div style={styles.miniLabelDarkText}>Sketch</div>
-            <div style={styles.practiceHintDarkText}>
-              Draw a model, label a science idea, or sketch out a math problem.
-            </div>
-          </div>
-
-          <div style={styles.sketchToolbar}>
-            <button style={styles.sketchToolButton} onClick={() => setCanvasMode('draw')}>
-              Pen
-            </button>
-            <button style={styles.sketchToolButton} onClick={() => setCanvasMode('erase')}>
-              Erase
-            </button>
-            <button style={styles.sketchToolButton} onClick={clearCanvas}>
-              Clear
-            </button>
-          </div>
-                   {!sketchExpanded ? (
-            <div style={styles.sketchCanvasWrap}>
-              <button
-                type="button"
-                style={styles.sketchCornerExpandButton}
-                onClick={() => setSketchExpanded(true)}
-                aria-label="Open large sketch pad"
-                title="Open large sketch pad"
-              >
-                ↗
-              </button>
-
-              <canvas
-                ref={canvasRef}
-                style={styles.sketchCanvas}
-                onPointerDown={startCanvasStroke}
-                onPointerMove={moveCanvasStroke}
-                onPointerUp={stopCanvasStroke}
-                onPointerLeave={stopCanvasStroke}
-              />
-            </div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {activeTool === 'notes' ? (
-        <div style={styles.workspacePanel}>
-          <div style={styles.practiceHeaderRow}>
-            <div style={styles.miniLabelDarkText}>Notes</div>
-            <div style={styles.practiceHintDarkText}>Save the important ideas cleanly here.</div>
-          </div>
-
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Save important ideas here..."
-            style={styles.notesTextareaLarge}
-          />
-        </div>
-      ) : null}
-
-      {activeTool === 'notes' ? (
-        <div style={styles.supportRowTwoUp}>
-          <button style={styles.supportButtonWhite} onClick={requestHint}>
-            Hint
-          </button>
-          <button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>
-            Ask VIC About This
-          </button>
-        </div>
-      ) : null}
-
-      {activeTool === 'calculator' ? (
-        <div style={styles.workspacePanel}>
-          <div style={styles.practiceHeaderRow}>
-            <div style={styles.miniLabelDarkText}>Calculator</div>
-            <div style={styles.practiceHintDarkText}>Use it when it helps — not before you think.</div>
-          </div>
-
-          <div style={styles.toolPanelWhite}>
-            <input
-              value={calcInput}
-              onChange={(e) => setCalcInput(e.target.value)}
-              placeholder="Example: 12 * (4 + 3)"
-              style={styles.calcInput}
-            />
-            <div style={styles.calcRow}>
-              <button style={styles.smallButtonDark} onClick={runCalculator}>
-                Calculate
-              </button>
-              <div style={styles.calcResultDark}>{calcResult || 'Result will appear here.'}</div>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {activeTool === 'practice' ? (
-        <div style={styles.supportRowTwoUp}>
-          <button style={styles.supportButtonWhite} onClick={requestHint}>
-            Hint
-          </button>
-          <button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>
-            Ask VIC About This
-          </button>
-        </div>
-      ) : null}
-
-      {activeTool === 'sketch' ? (
-        <div style={styles.supportRowTwoUp}>
-          <button style={styles.supportButtonWhite} onClick={requestHint}>
-            Hint
-          </button>
-          <button style={styles.supportButtonWhiteStrong} onClick={discussSketch}>
-            Discuss My Sketch
-          </button>
-        </div>
-      ) : null}
-
-      <div style={styles.reportFeatureCardCompact}>
-        <div style={styles.reportFeatureLabelCompact}>Session Report</div>
-        <div style={styles.reportFeatureTitleCompact}>Session Report for teachers</div>
-        <div style={styles.reportFeatureTextCompact}>
-          After each session, teachers can review and send a summary to families from the Teacher Dashboard.
-        </div>
-        <div style={styles.reportFeatureHintCompact}>Look for Report controls in each student's session view.</div>
+        ))}
       </div>
     </section>
   )
+
+  const toolModal = activeTool ? (
+    <div style={styles.toolModalBackdrop} role="presentation" onMouseDown={(event) => {
+      if (event.target === event.currentTarget) setActiveTool(null)
+    }}>
+      <section style={styles.toolModal} role="dialog" aria-modal="true" aria-labelledby="student-tool-title">
+        <div style={styles.toolModalHeader}>
+          <div>
+            <div style={styles.sectionEyebrow}>Student workspace</div>
+            <div id="student-tool-title" style={styles.sectionTitle}>{activeTool[0].toUpperCase() + activeTool.slice(1)}</div>
+          </div>
+          <button type="button" autoFocus style={styles.toolCloseButton} onClick={() => setActiveTool(null)}>Close</button>
+        </div>
+        <div style={styles.toolModalBody}>
+          {activeTool === 'practice' ? <>
+            <textarea aria-label="Practice workspace" value={workArea} onChange={(e) => setWorkArea(e.target.value)} placeholder="Work out your thinking here..." style={styles.modalTextarea} />
+            <div style={styles.supportRowTwoUp}><button style={styles.supportButtonWhite} onClick={requestHint}>Hint</button><button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>Ask VIC About This</button></div>
+          </> : null}
+          {activeTool === 'notes' ? <>
+            <textarea aria-label="Notes workspace" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Save important ideas here..." style={styles.modalTextarea} />
+            <div style={styles.supportRowTwoUp}><button style={styles.supportButtonWhite} onClick={requestHint}>Hint</button><button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>Ask VIC About This</button></div>
+          </> : null}
+          {activeTool === 'sketch' ? <>
+            <div style={styles.sketchToolbar}><button style={styles.sketchToolButton} onClick={() => setCanvasMode('draw')}>Pen</button><button style={styles.sketchToolButton} onClick={() => setCanvasMode('erase')}>Erase</button><button style={styles.sketchToolButton} onClick={clearCanvas}>Clear</button></div>
+            <div style={styles.modalCanvasWrap}><canvas aria-label="Sketch workspace" ref={canvasRef} style={styles.sketchCanvas} onPointerDown={startCanvasStroke} onPointerMove={moveCanvasStroke} onPointerUp={stopCanvasStroke} onPointerLeave={stopCanvasStroke} /></div>
+            <div style={styles.supportRowTwoUp}><button style={styles.supportButtonWhite} onClick={requestHint}>Hint</button><button style={styles.supportButtonWhiteStrong} onClick={discussSketch}>Discuss My Sketch</button></div>
+          </> : null}
+          {activeTool === 'calculator' ? <div style={styles.calculatorWorkspace}>
+            <input aria-label="Calculator expression" value={calcInput} onChange={(e) => setCalcInput(e.target.value)} style={styles.calcInput} />
+            <div style={styles.calcResultDark} aria-live="polite">{calcResult || 'Result will appear here.'}</div>
+            <div style={styles.calculatorGrid}>{['7','8','9','/','4','5','6','*','1','2','3','-','0','.','(',')','+'].map((key) => <button key={key} style={styles.calculatorKey} onClick={() => setCalcInput((value) => value + key)}>{key}</button>)}<button style={styles.calculatorKey} onClick={() => setCalcInput('')}>Clear</button><button style={styles.calculatorEquals} onClick={runCalculator}>=</button></div>
+          </div> : null}
+        </div>
+      </section>
+    </div>
+  ) : null
 
   return (
     <div style={styles.page}>
@@ -1536,7 +1250,7 @@ ${context}`
                 placeholder={
                   sessionMode === 'teacher_directed' && assignedLesson
                     ? 'Send your opening line to begin this lesson...'
-                    : 'Ask a question or pick a quick start above...'
+                    : 'Type what you want help with...'
                 }
                 style={styles.mainTextarea}
               />
@@ -1558,50 +1272,7 @@ ${context}`
 
                         {isCompact ? toolsSection : null}
 
-            {sketchExpanded ? (
-              <div style={styles.sketchOverlay}>
-                <div style={styles.sketchOverlayTopBar}>
-                  <div style={styles.sketchOverlayTitle}>Large Sketch Pad</div>
-
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                    <button
-                      type="button"
-                      style={styles.sketchSendButton}
-                      onClick={discussSketch}
-                    >
-                      Send to VIC
-                    </button>
-
-                    <button
-                      type="button"
-                      style={styles.sketchOverlayCloseButton}
-                      onClick={() => setSketchMinimized(!sketchMinimized)}
-                    >
-                      {sketchMinimized ? 'Expand' : 'Shrink'}
-                    </button>
-
-                    <button
-                      type="button"
-                      style={styles.sketchOverlayCloseButton}
-                      onClick={() => setSketchExpanded(false)}
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-
-                <div style={styles.sketchOverlayCanvasWrap}>
-                  <canvas
-                    ref={canvasRef}
-                    style={styles.sketchCanvas}
-                    onPointerDown={startCanvasStroke}
-                    onPointerMove={moveCanvasStroke}
-                    onPointerUp={stopCanvasStroke}
-                    onPointerLeave={stopCanvasStroke}
-                  />
-                </div>
-              </div>
-            ) : null}
+            {toolModal}
           </div>
         </div>
       </div>
@@ -1835,7 +1506,7 @@ function extractVocabularyCard(text) {
   }
 }
 
-function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMinimized }) {
+function buildStyles({ isMobile, isTablet, isCompact }) {
   const desktopFixedHeight = !isCompact
 
   return {
@@ -2271,6 +1942,19 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       boxShadow: 'inset 0 1px 0 rgba(239, 231, 220, 0.85)',
     },
 
+    toolLauncherGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(2, minmax(0, 1fr))', gap: '12px', marginTop: '18px' },
+    toolLauncher: { minHeight: '68px', border: '2px solid var(--vic-accent)', borderRadius: '16px', background: 'var(--vic-surface)', color: 'var(--vic-accent)', fontSize: '18px', fontWeight: 800, cursor: 'pointer' },
+    toolModalBackdrop: { position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '8px' : '24px', background: 'rgba(15, 23, 42, 0.72)' },
+    toolModal: { width: isMobile ? 'calc(100vw - 16px)' : '80vw', height: isMobile ? 'calc(100dvh - 16px)' : '80vh', maxWidth: '1100px', maxHeight: '850px', display: 'flex', flexDirection: 'column', borderRadius: isMobile ? '16px' : '24px', background: 'var(--vic-surface)', boxShadow: '0 24px 80px rgba(0,0,0,.35)', overflow: 'hidden' },
+    toolModalHeader: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px', padding: isMobile ? '16px' : '22px 28px', borderBottom: '1px solid var(--vic-border)' },
+    toolCloseButton: { minWidth: '100px', minHeight: '52px', border: 0, borderRadius: '14px', background: 'var(--vic-accent)', color: '#fff', fontSize: '17px', fontWeight: 800, cursor: 'pointer' },
+    toolModalBody: { flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', gap: '16px', padding: isMobile ? '14px' : '24px', overflow: 'auto' },
+    modalTextarea: { flex: 1, minHeight: '300px', width: '100%', resize: 'none', padding: '20px', border: '2px solid var(--vic-border)', borderRadius: '16px', fontSize: '20px', lineHeight: 1.55, color: 'var(--vic-ink)', background: '#fff', boxSizing: 'border-box' },
+    modalCanvasWrap: { flex: 1, minHeight: '300px', border: '2px solid var(--vic-border)', borderRadius: '16px', overflow: 'hidden', background: SKETCH_BG_COLOR },
+    calculatorWorkspace: { width: '100%', maxWidth: '620px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '16px' },
+    calculatorGrid: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' },
+    calculatorKey: { minHeight: '64px', border: '1px solid var(--vic-border)', borderRadius: '14px', background: '#fff', color: 'var(--vic-ink)', fontSize: '24px', fontWeight: 800, cursor: 'pointer' },
+    calculatorEquals: { minHeight: '64px', gridColumn: 'span 3', border: 0, borderRadius: '14px', background: 'var(--vic-accent)', color: '#fff', fontSize: '28px', fontWeight: 800, cursor: 'pointer' },
     toolsCard: {
       minHeight: 0,
       background: 'var(--vic-surface)',
@@ -2408,8 +2092,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
 
     sketchCanvasWrap: {
       width: '100%',
-      minHeight: isMobile ? '340px' : sketchExpanded ? '78vh' : '560px',
-      height: isMobile ? '340px' : sketchExpanded ? '78vh' : '560px',
+      minHeight: isMobile ? '340px' : '560px',
+      height: isMobile ? '340px' : '560px',
       maxHeight: isMobile ? '340px' : '900px',
       borderRadius: '18px',
       border: '1px solid var(--vic-border)',
@@ -2478,8 +2162,8 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       top: '110px',
       left: '24px',
       right: 'auto',
-           width: isMobile ? 'calc(100vw - 24px)' : sketchMinimized ? '260px' : '50vw',
-      height: isMobile ? '72vh' : sketchMinimized ? '140px' : '74vh',
+           width: isMobile ? 'calc(100vw - 24px)' : '50vw',
+      height: isMobile ? '72vh' : '74vh',
       maxWidth: '920px',
       minWidth: isMobile ? '0' : '620px',
       zIndex: 9999,
@@ -3398,12 +3082,6 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       textAlign: 'right',
     },
 
-    guidedEntryRow: {
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '6px',
-    },
-
     sessionInterestInline: {
       display: 'inline-flex',
       alignItems: 'center',
@@ -3461,158 +3139,6 @@ function buildStyles({ isMobile, isTablet, isCompact, sketchExpanded, sketchMini
       lineHeight: 1.2,
       fontWeight: 700,
       cursor: 'pointer',
-    },
-
-    guidedEntryButton: {
-      border: '1px solid var(--vic-border)',
-      background: 'var(--vic-surface)',
-      color: 'var(--vic-text-primary)',
-      borderRadius: '999px',
-      padding: '8px 14px',
-      fontSize: '12px',
-      fontWeight: 700,
-      cursor: 'pointer',
-    },
-
-    guidedEntryButtonActive: {
-      border: '1px solid var(--vic-primary)',
-      background: 'rgba(181, 83, 47, 0.1)',
-      color: 'var(--vic-text-primary)',
-      borderRadius: '999px',
-      padding: '8px 14px',
-      fontSize: '12px',
-      fontWeight: 800,
-      cursor: 'pointer',
-    },
-
-    mainTextarea: {
-      width: '100%',
-      minHeight: isMobile ? '58px' : '58px',
-      resize: 'vertical',
-      borderRadius: '10px',
-      border: '1px solid var(--vic-border)',
-      background: 'var(--vic-surface)',
-      color: 'var(--vic-text-primary)',
-      padding: '9px 11px',
-      boxSizing: 'border-box',
-      outline: 'none',
-      fontSize: '15px',
-      lineHeight: 1.45,
-      boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.9)',
-    },
-
-    inputFooter: {
-      display: 'flex',
-      alignItems: isMobile ? 'stretch' : 'center',
-      justifyContent: 'flex-end',
-      gap: '8px',
-      flexDirection: isMobile ? 'column' : 'row',
-    },
-
-    sendButton: {
-      border: '1px solid var(--vic-primary)',
-      background: 'var(--vic-primary)',
-      color: 'var(--vic-surface)',
-      padding: isMobile ? '11px 18px' : '12px 22px',
-      borderRadius: '10px',
-      fontSize: '16px',
-      fontWeight: 900,
-      minWidth: isMobile ? '100%' : '120px',
-      boxShadow: '0 10px 22px rgba(181,83,47,0.28)',
-    },
-
-    visualIdleCard: {
-      position: 'relative',
-      marginTop: '12px',
-      borderRadius: '18px',
-      overflow: 'hidden',
-      background: 'linear-gradient(180deg, rgba(232, 216, 200, 0.72), rgba(239, 231, 220, 0.82))',
-      border: '1px solid rgba(232, 216, 200, 0.72)',
-    },
-
-    visualIdleGlow: {
-      position: 'absolute',
-      inset: 0,
-      background: 'radial-gradient(circle at 20% 20%, rgba(181, 83, 47,0.18), transparent 40%)',
-      pointerEvents: 'none',
-    },
-
-    visualIdleInner: {
-      position: 'relative',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
-      padding: '14px',
-    },
-
-    visualIdleTextWrap: {
-      minWidth: 0,
-    },
-
-    visualIdleTitle: {
-      fontSize: '14px',
-      fontWeight: 800,
-      color: 'var(--vic-text-primary)',
-      marginBottom: '4px',
-    },
-
-    visualIdleText: {
-      fontSize: '13px',
-      lineHeight: 1.45,
-      color: 'var(--vic-text-secondary)',
-    },
-
-    visualCard: {
-      marginTop: '12px',
-      borderRadius: '18px',
-      background: 'var(--vic-surface)',
-      padding: '14px',
-      color: 'var(--vic-text-primary)',
-      boxShadow: '0 12px 28px rgba(181, 83, 47, 0.35)',
-      overflow: 'hidden',
-    },
-
-    visualHeaderRow: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      gap: '10px',
-      marginBottom: '12px',
-      flexWrap: 'wrap',
-    },
-
-    visualTitle: {
-      fontSize: '14px',
-      fontWeight: 800,
-      color: 'var(--vic-text-primary)',
-    },
-
-    visualBadge: {
-      fontSize: '11px',
-      fontWeight: 800,
-      color: 'var(--vic-primary)',
-      background: 'var(--vic-text-primary)',
-      borderRadius: '999px',
-      padding: '6px 10px',
-    },
-
-    visualDescription: {
-      fontSize: '13px',
-      lineHeight: 1.45,
-      color: 'var(--vic-text-secondary)',
-      marginTop: '10px',
-    },
-
-    fractionBarWrap: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(22px, 1fr))',
-      gap: '6px',
-    },
-
-    fractionPiece: {
-      height: '36px',
-      borderRadius: '10px',
-      border: '1px solid rgba(148,163,184,0.18)',
     },
 
     numberLineWrap: {

@@ -14,7 +14,7 @@ const cleanInterest = (value) => typeof value === 'string' ? value.trim().slice(
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' })
 
-  const { messages, sketchImage, sessionMode, studentId, activeClassId, studentInterest, entryIntent, isFirstUserTurn } = req.body || {}
+  const { messages, sketchImage, sessionMode, studentId, activeClassId } = req.body || {}
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Send at least one message.' })
   }
@@ -55,8 +55,9 @@ export default async function handler(req, res) {
       // before OpenAI even ran on deployments where that optional column is absent.
       const { data: assignments, error: assignmentError } = await auth.admin
         .from('assignments')
-        .select('id, lesson_id, mode, status, assigned_at')
+        .select('id, lesson_id, class_id, mode, status, assigned_at')
         .eq('student_id', auth.profile.id)
+        .eq('class_id', enrollment.class_id)
         .order('assigned_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(20)
@@ -88,10 +89,7 @@ export default async function handler(req, res) {
       }
     } else {
       // Assignment data is never queried or added to My Own Work context.
-      context = buildVicContext({ mode, interest: savedInterest || cleanInterest(studentInterest) })
-      if (isFirstUserTurn) {
-        context += `\n- Entry intent: ${cleanInterest(entryIntent) || 'student choice'}. Begin with one practical next step.`
-      }
+      context = buildVicContext({ mode, interest: savedInterest })
     }
 
     const safeMessages = messages
