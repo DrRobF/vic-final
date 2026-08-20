@@ -78,9 +78,9 @@ export default async function handler(req, res) {
 
   const { data: rows, error: assignmentsError } = await supabaseAuth
     .from('assignments')
-    .select('id, student_id, lesson_id, class_id, mode, status, assigned_at')
+    .select('id, student_id, lesson_id, mode, status, assigned_at, lessons!inner(id, class_id, title, lesson_text, subject, is_active)')
     .eq('student_id', resolvedStudentId)
-    .eq('class_id', activeEnrollment.class_id)
+    .eq('lessons.class_id', activeEnrollment.class_id)
     .order('assigned_at', { ascending: false, nullsFirst: false })
     .order('id', { ascending: false })
     .limit(20)
@@ -100,19 +100,9 @@ export default async function handler(req, res) {
         )
       : safeRows
   const latestAssignment = classScopedRows[0] || null
-  let assignedLesson = null
-
-  if (latestAssignment?.lesson_id) {
-    const { data: lessonRow, error: lessonError } = await supabaseAuth
-      .from('lessons')
-      .select('id, title, lesson_text, subject, is_active')
-      .eq('id', latestAssignment.lesson_id)
-      .single()
-
-    if (!lessonError && lessonRow) {
-      assignedLesson = lessonRow
-    }
-  }
+  const assignedLesson = Array.isArray(latestAssignment?.lessons)
+    ? latestAssignment.lessons[0] || null
+    : latestAssignment?.lessons || null
 
   const scopedRows = classScopedRows
 

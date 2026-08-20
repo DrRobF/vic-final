@@ -16,64 +16,20 @@ function getBearerToken(req) {
   return token
 }
 
-async function loadAssignmentsSafe(supabaseAdmin, studentIds) {
-  const assignmentQueryPlans = [
-    {
-      select: 'id, student_id, lesson_id, status, mode, assigned_at, created_at, lessons ( id, title, subject )',
-      orders: [
-        ['assigned_at', { ascending: false, nullsFirst: false }],
-        ['created_at', { ascending: false, nullsFirst: false }],
-        ['id', { ascending: false }],
-      ],
-      reason: 'full_assignment_with_join',
-    },
-    {
-      select: 'id, student_id, lesson_id, status, mode, assigned_at, lessons ( id, title, subject )',
-      orders: [
-        ['assigned_at', { ascending: false, nullsFirst: false }],
-        ['id', { ascending: false }],
-      ],
-      reason: 'no_created_at_fallback',
-    },
-    {
-      select: 'id, student_id, lesson_id, status, mode, assigned_at, created_at',
-      orders: [
-        ['assigned_at', { ascending: false, nullsFirst: false }],
-        ['created_at', { ascending: false, nullsFirst: false }],
-        ['id', { ascending: false }],
-      ],
-      reason: 'no_join_fallback',
-    },
-    {
-      select: 'id, student_id, lesson_id, status, mode, assigned_at',
-      orders: [
-        ['assigned_at', { ascending: false, nullsFirst: false }],
-        ['id', { ascending: false }],
-      ],
-      reason: 'minimal_assignment_fallback',
-    },
-  ]
+async function loadAssignmentsSafe(supabaseAdmin, studentIds, classId) {
+  const { data, error } = await supabaseAdmin
+    .from('assignments')
+    .select('id, student_id, lesson_id, status, mode, assigned_at, lessons!inner(id, class_id, title, subject)')
+    .in('student_id', studentIds)
+    .eq('lessons.class_id', classId)
+    .order('assigned_at', { ascending: false, nullsFirst: false })
+    .order('id', { ascending: false })
 
-  for (const plan of assignmentQueryPlans) {
-    let query = supabaseAdmin.from('assignments').select(plan.select).in('student_id', studentIds)
-    plan.orders.forEach(([column, options]) => {
-      query = query.order(column, options)
-    })
-
-    const { data, error } = await query
-
-    if (!error) {
-      return { rows: Array.isArray(data) ? data : [], mode: plan.reason }
-    }
-
-    console.error('[teacher/class-students] Assignment lookup fallback triggered.', {
-      reason: plan.reason,
-      code: error.code,
-      message: error.message,
-    })
+  if (error) {
+    console.error('[teacher/class-students] Class-scoped assignment lookup failed.', { code: error.code, message: error.message })
+    return { rows: [] }
   }
-
-  return { rows: [], mode: 'failed_all_assignment_lookups' }
+  return { rows: Array.isArray(data) ? data : [] }
 }
 
 export default async function handler(req, res) {
@@ -208,7 +164,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: studentLookupError.message || 'Could not load student records.' })
   }
 
-  const { rows: assignmentRowsSafe } = await loadAssignmentsSafe(supabaseAdmin, studentIds)
+  const { rows: assignmentRowsSafe } = await loadAssignmentsSafe(supabaseAdmin, studentIds, classId)
   const latestAssignmentByStudentId = new Map()
   const assignmentRowsByStudentId = new Map()
   assignmentRowsSafe.forEach((row) => {
