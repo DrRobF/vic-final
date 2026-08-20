@@ -60,7 +60,34 @@ test('inactive or incomplete assignments disable Teacher Lesson', () => {
 
 test('student page does not render temporary debug information', async () => {
   const source = await import('node:fs/promises').then((fs) => fs.readFile(new URL('../pages/askvic.js', import.meta.url), 'utf8'))
-  assert.doesNotMatch(source, /TEMP DEBUG|latest-assignment API response JSON|auth user id:/)
+  assert.doesNotMatch(source, /TEMP DEBUG|latest-assignment API response JSON|auth user id:|setDebugLatestAssignment|\bsetDebug[A-Z]\w*|debugAskVicStudentResolution/)
+})
+
+test('every Ask VIC setter reference is declared', async () => {
+  const source = await import('node:fs/promises').then((fs) => fs.readFile(new URL('../pages/askvic.js', import.meta.url), 'utf8'))
+  const referencedSetters = new Set(source.match(/\bset[A-Z]\w*/g) || [])
+  const stateSetters = new Set(
+    [...source.matchAll(/const\s*\[[^,\]]+,\s*(set[A-Z]\w*)\]\s*=\s*useState/g)].map((match) => match[1])
+  )
+  const declaredFunctions = new Set(
+    [...source.matchAll(/function\s+(set[A-Z]\w*)\s*\(/g)].map((match) => match[1])
+  )
+  const undeclared = [...referencedSetters].filter(
+    (setter) => !stateSetters.has(setter) && !declaredFunctions.has(setter)
+  )
+
+  assert.deepEqual(undeclared, [])
+})
+
+test('interest editor opens, saves through the profile endpoint, and updates visible state', async () => {
+  const source = await import('node:fs/promises').then((fs) => fs.readFile(new URL('../pages/askvic.js', import.meta.url), 'utf8'))
+  const endpoint = await import('node:fs/promises').then((fs) => fs.readFile(new URL('../pages/api/student/interest.js', import.meta.url), 'utf8'))
+
+  assert.match(source, /aria-label=\{isEditingSessionInterest \? 'Save interest' : 'Change interest'\}/)
+  assert.match(source, /onClick=\{isEditingSessionInterest\s*\? commitSessionInterestInline/)
+  assert.match(source, /fetch\('\/api\/student\/interest',[\s\S]*?method: 'PUT'/)
+  assert.match(source, /setStudentInterest\(payload\.interest\)/)
+  assert.match(endpoint, /update\(\{ interest_tags: interest \? \[interest\] : \[\] \}\)/)
 })
 
 test('class-scoped assignments never leak between Math and Reading ELA', () => {

@@ -105,8 +105,6 @@ function titleFromAssignmentRow(assignmentRow) {
   )
 }
 
-function debugAskVicStudentResolution() {}
-
 function getUserDisplayName(userRow) {
   if (!userRow) return ''
 
@@ -430,14 +428,6 @@ export default function AskVIC() {
         assignedLesson: assignedLessonFromApi,
         error: assignmentError,
       } = await loadLatestAssignmentSafe(accessToken, resolvedActiveClassId)
-      debugAskVicStudentResolution('assignment-query-result', {
-        selectedClassId: resolvedActiveClassId,
-        studentId: student.id,
-        createdLessonId: assignedLessonFromApi?.id || null,
-        createdAssignmentId: latestAssignmentFromApi?.id || null,
-        returnedAssignmentCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
-      })
-
       const activeEnrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)
       const filteredAssignmentRowsByClass =
         activeEnrollmentSupportLevel && safeEnrollmentRows.length > 1
@@ -448,13 +438,6 @@ export default function AskVIC() {
       const latestAssignment =
         latestAssignmentFromApi || pickLatestAssignment(filteredAssignmentRowsByClass) || pickLatestAssignment(assignmentRows)
       let lessonRow = assignedLessonFromApi || lessonFromAssignment(latestAssignment)
-      setDebugLatestAssignment({
-        found: Boolean(latestAssignment?.id),
-        id: latestAssignment?.id || null,
-        lessonId: latestAssignment?.lesson_id || lessonRow?.id || null,
-        lessonTitle: lessonRow?.title || null,
-      })
-
       if (assignmentError || !latestAssignment?.id || !lessonRow) {
         if (latestAssignment?.id) {
           const fallbackLessonTitle = titleFromAssignmentRow(latestAssignment)
@@ -1122,15 +1105,17 @@ ${context}`
           )}
           <button
             type="button"
-            onClick={() => {
-              setSessionInterestInput(studentInterest || '')
-              setIsEditingSessionInterest(true)
-            }}
-            aria-label="Change interest"
+            onClick={isEditingSessionInterest
+              ? commitSessionInterestInline
+              : () => {
+                  setSessionInterestInput(studentInterest || '')
+                  setIsEditingSessionInterest(true)
+                }}
+            aria-label={isEditingSessionInterest ? 'Save interest' : 'Change interest'}
             disabled={interestSaving}
             style={styles.sessionInterestInlineEdit}
           >
-            {studentInterest ? 'Change' : 'Set'}
+            {interestSaving ? 'Saving…' : isEditingSessionInterest ? 'Save' : studentInterest ? 'Change' : 'Set'}
           </button>
         </div>
         {interestStatus.text ? <div style={interestStatus.tone === 'success' ? styles.joinClassStatusSuccess : styles.joinClassStatusError} role="status">{interestStatus.text}</div> : null}
@@ -2928,60 +2913,6 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontSize: '11px',
       lineHeight: 1.25,
       color: '#b91c1c',
-    },
-
-    tempDebugPanelFloating: {
-      position: 'fixed',
-      right: isMobile ? '10px' : '16px',
-      bottom: isMobile ? '58px' : '64px',
-      width: isMobile ? 'calc(100vw - 20px)' : 'min(520px, calc(100vw - 32px))',
-      maxHeight: isMobile ? '38vh' : '36vh',
-      borderRadius: '8px',
-      border: '1px dashed rgba(181, 83, 47, 0.45)',
-      background: 'rgba(248, 250, 252, 0.97)',
-      padding: '8px 10px',
-      display: 'grid',
-      gap: '3px',
-      overflowY: 'auto',
-      boxShadow: 'var(--vic-shadow-card)',
-      zIndex: 35,
-    },
-    debugToggleButton: {
-      position: 'fixed',
-      right: isMobile ? '10px' : '16px',
-      bottom: isMobile ? '10px' : '16px',
-      border: '1px solid rgba(181, 83, 47, 0.34)',
-      background: 'rgba(181, 83, 47, 0.14)',
-      color: 'var(--vic-text-primary)',
-      borderRadius: '999px',
-      padding: '8px 12px',
-      fontSize: '11px',
-      lineHeight: 1.2,
-      fontWeight: 800,
-      cursor: 'pointer',
-      zIndex: 36,
-    },
-    tempDebugTitle: {
-      fontSize: '10px',
-      fontWeight: 900,
-      letterSpacing: '0.04em',
-      color: 'var(--vic-text-primary)',
-      textTransform: 'uppercase',
-      marginBottom: '2px',
-    },
-    tempDebugSection: {
-      marginTop: '4px',
-      fontSize: '10px',
-      fontWeight: 800,
-      color: 'var(--vic-text-secondary)',
-      textTransform: 'uppercase',
-      letterSpacing: '0.04em',
-    },
-    tempDebugRow: {
-      fontSize: '10px',
-      lineHeight: 1.25,
-      color: 'var(--vic-text-primary)',
-      wordBreak: 'break-word',
     },
 
     modeStatusPill: {
