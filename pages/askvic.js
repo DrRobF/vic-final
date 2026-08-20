@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
 import VICLogo from '../components/VICLogo'
 import { lessonFromAssignment, pickLatestAssignment } from '../lib/assignment-resolution'
+import { messagesForModeSwitch } from '../lib/ask-vic-context.mjs'
 
 const SKETCH_BG_COLOR = '#f8fafc'
 const SKETCH_INK_COLOR = '#0f172a'
@@ -123,10 +124,7 @@ function titleFromAssignmentRow(assignmentRow) {
   )
 }
 
-function debugAskVicStudentResolution(label, payload = {}) {
-  if (typeof window === 'undefined') return
-  console.log(`[AskVIC][student-resolution] ${label}`, payload)
-}
+function debugAskVicStudentResolution() {}
 
 function getUserDisplayName(userRow) {
   if (!userRow) return ''
@@ -134,82 +132,28 @@ function getUserDisplayName(userRow) {
   return userRow.name || userRow.email || ''
 }
 
-async function loadLatestAssignmentSafe(supabase, studentId, accessToken, activeClassId = null) {
-  const apiDebug = {
-    status: null,
-    ok: null,
-    responseJson: null,
-    error: null,
+async function loadLatestAssignmentSafe(_supabase, _studentId, accessToken, activeClassId = null) {
+  if (!accessToken || !activeClassId) {
+    return { rows: [], latestAssignment: null, assignedLesson: null, error: new Error('Select an enrolled class.') }
   }
-
-  if (accessToken) {
-    try {
-      const response = await fetch('/api/student/latest-assignment', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ studentId, activeClassId }),
-      })
-
-      const payload = await response.json().catch(() => null)
-      apiDebug.status = response.status
-      apiDebug.ok = response.ok
-      apiDebug.responseJson = payload
-
-      if (response.ok) {
-        return {
-          rows: Array.isArray(payload?.rows) ? payload.rows : [],
-          latestAssignment: payload?.latestAssignment || null,
-          assignedLesson: payload?.assignedLesson || null,
-          error: null,
-          apiDebug,
-        }
-      }
-    } catch (error) {
-      apiDebug.error = error?.message || 'Unknown fetch error'
+  try {
+    const response = await fetch('/api/student/latest-assignment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
+      body: JSON.stringify({ activeClassId }),
+    })
+    const payload = await response.json().catch(() => null)
+    if (!response.ok) {
+      return { rows: [], latestAssignment: null, assignedLesson: null, error: new Error(payload?.error || 'Could not load assignment.') }
     }
-  }
-
-  const assignmentQueryPlans = [
-    {
-      select:
-        'id, mode, assigned_at, lesson_id, lessons:lesson_id (id, subject, title, lesson_text, is_active)',
-    },
-    {
-      select: 'id, mode, assigned_at, lesson_id',
-    },
-  ]
-
-  for (const plan of assignmentQueryPlans) {
-    let query = supabase
-      .from('assignments')
-      .select(plan.select)
-      .eq('student_id', studentId)
-      .order('assigned_at', { ascending: false, nullsFirst: false })
-      .order('id', { ascending: false })
-      .limit(20)
-
-    const { data, error } = await query
-
-    if (!error) {
-      return {
-        rows: Array.isArray(data) ? data : [],
-        latestAssignment: null,
-        assignedLesson: null,
-        error: null,
-        apiDebug,
-      }
+    return {
+      rows: Array.isArray(payload?.rows) ? payload.rows : [],
+      latestAssignment: payload?.latestAssignment || null,
+      assignedLesson: payload?.assignedLesson || null,
+      error: null,
     }
-  }
-
-  return {
-    rows: [],
-    latestAssignment: null,
-    assignedLesson: null,
-    error: new Error('Could not load assignments with available schema.'),
-    apiDebug,
+  } catch (_error) {
+    return { rows: [], latestAssignment: null, assignedLesson: null, error: new Error('Could not load assignment.') }
   }
 }
 
@@ -269,22 +213,16 @@ export default function AskVIC() {
     typeof assignedLesson?.lesson_text === 'string' && assignedLesson.lesson_text.trim().length > 0
   const hasResolvedAssignedLessonTitle = Boolean(resolvedAssignedLessonTitle)
 
-  const lessonStatusText = hasTeacherAssignment
-    ? hasResolvedAssignedLessonTitle
-      ? `Assigned lesson: ${resolvedAssignedLessonTitle}`
-      : 'Your teacher assigned a lesson, but the lesson details are unavailable right now.'
-    : studentLookupStatus === 'Loading student...'
-      ? 'Checking your student profile...'
-      : studentLookupStatus === 'Student detected. No assigned lesson found.'
-        ? 'No assigned lesson right now. You can ask VIC anything.'
-        : studentLookupStatus === 'Signed in as non-student. Ask VIC is in free mode.'
-          ? 'Free Ask VIC is ready.'
-          : studentLookupStatus === 'Could not match your student profile. Using free mode.'
-            ? 'Student profile not found. Free Ask VIC is ready.'
-            : studentLookupStatus
+  const lessonStatusText = sessionMode === 'student_directed'
+    ? 'My Own Work: choose what you want to learn.'
+    : hasTeacherAssignment
+      ? hasResolvedAssignedLessonTitle
+        ? `Assigned lesson: ${resolvedAssignedLessonTitle}`
+        : 'Your teacher assigned a lesson, but the lesson details are unavailable right now.'
+      : 'No active assignment is available for the selected class.'
 
   const hasUserMessages = messages.some((message) => message.role === 'user')
-  const hasAssignedLesson = hasTeacherAssignment
+  const hasAssignedLesson = hasTeacherAssignment && hasResolvedAssignedLessonTitle && hasAssignedLessonContent && assignedLesson?.is_active !== false
   const teacherLessonDisabled = !hasAssignedLesson
   const teacherLessonDisabledReason = teacherLessonDisabled
     ? hasTeacherAssignment
@@ -344,6 +282,9 @@ export default function AskVIC() {
     if (nextMode === sessionMode) return
     if (nextMode === 'teacher_directed' && !hasAssignedLesson) return
     setSessionMode(nextMode)
+    setPendingEntryIntent('')
+    setInput('')
+    setMessages(messagesForModeSwitch(nextMode, resolvedAssignedLessonTitle || 'your assigned lesson'))
   }
 
   function applySessionInterestForToday() {
@@ -359,9 +300,19 @@ export default function AskVIC() {
     }
   }
 
-  function commitSessionInterestInline() {
+  async function commitSessionInterestInline() {
     applySessionInterestForToday()
     setIsEditingSessionInterest(false)
+    const interest = sessionInterestInput.trim().slice(0, 120)
+    if (!supabase || !currentUserProfile || interest === studentInterest) return
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const response = await fetch('/api/student/interest', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ interest }),
+    })
+    if (response.ok) setStudentInterest(interest)
   }
 
   const messageAreaRef = useRef(null)
@@ -567,22 +518,16 @@ export default function AskVIC() {
         latestAssignment: latestAssignmentFromApi,
         assignedLesson: assignedLessonFromApi,
         error: assignmentError,
-        apiDebug,
       } = await loadLatestAssignmentSafe(
         supabase,
         student.id,
         accessToken,
         resolvedActiveClassId
       )
-      setDebugLatestAssignmentApi(apiDebug || { status: null, ok: null, responseJson: null, error: null })
       debugAskVicStudentResolution('assignment-query-result', {
         assignmentError: assignmentError?.message || null,
         assignmentRowCount: Array.isArray(assignmentRows) ? assignmentRows.length : 0,
         assignmentRowsPreview: Array.isArray(assignmentRows) ? assignmentRows.slice(0, 3) : [],
-        latestAssignmentApiStatus: apiDebug?.status ?? null,
-        latestAssignmentApiOk: typeof apiDebug?.ok === 'boolean' ? apiDebug.ok : null,
-        latestAssignmentApiResponseJson: apiDebug?.responseJson ?? null,
-        latestAssignmentApiError: apiDebug?.error ?? null,
       })
 
       const activeEnrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)
@@ -607,28 +552,6 @@ export default function AskVIC() {
         lessonFromAssignment: lessonRow,
       })
 
-      if (!assignedLessonFromApi && latestAssignment?.id && !lessonRow && latestAssignment?.lesson_id) {
-        const { data: fallbackLessonRows } = await supabase
-          .from('lessons')
-          .select('id, subject, title, lesson_text, is_active')
-          .eq('id', latestAssignment.lesson_id)
-          .order('id', { ascending: true })
-          .limit(1)
-
-        lessonRow = fallbackLessonRows?.[0] || null
-        setDebugLatestAssignment({
-          found: Boolean(latestAssignment?.id),
-          id: latestAssignment?.id || null,
-          lessonId: latestAssignment?.lesson_id || lessonRow?.id || null,
-          lessonTitle: lessonRow?.title || null,
-        })
-        debugAskVicStudentResolution('assignment-lesson-fallback', {
-          lessonId: latestAssignment.lesson_id,
-          fallbackLessonFound: Boolean(lessonRow),
-          fallbackLesson: lessonRow,
-        })
-      }
-
       if (assignmentError || !latestAssignment?.id || !lessonRow) {
         debugAskVicStudentResolution('assignment-not-fully-resolved', {
           assignmentError: assignmentError?.message || null,
@@ -646,16 +569,6 @@ export default function AskVIC() {
           setHasTeacherAssignment(true)
           setStudentMode(latestAssignment.mode || '')
           setStudentSupportLevel(normalizeSupportLevel(latestAssignment.mode || ''))
-          setSessionMode('teacher_directed')
-          const fallbackIntroKey = `assignment:${latestAssignment.id || 'unknown'}:unavailable`
-          if (assignmentIntroKeyRef.current !== fallbackIntroKey) {
-            assignmentIntroKeyRef.current = fallbackIntroKey
-            setMessages((prev) =>
-              prev.some((message) => message.role === 'user')
-                ? prev
-                : [ASSIGNED_LESSON_UNAVAILABLE_MESSAGE]
-            )
-          }
           setStudentLookupStatus('Teacher lesson found, but details are unavailable.')
           return
         }
@@ -691,16 +604,6 @@ export default function AskVIC() {
       setHasTeacherAssignment(true)
       setStudentMode(latestAssignment.mode || '')
       setStudentSupportLevel(resolvedSupportLevel)
-      setSessionMode('teacher_directed')
-      const introKey = `assignment:${latestAssignment.id}:ready`
-      if (assignmentIntroKeyRef.current !== introKey) {
-        assignmentIntroKeyRef.current = introKey
-        setMessages((prev) =>
-          prev.some((message) => message.role === 'user')
-            ? prev
-            : [ASSIGNED_LESSON_READY_MESSAGE(cleanLessonTitle(lessonRow.title) || 'your assigned lesson')]
-        )
-      }
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
       debugAskVicStudentResolution('assignment-resolved-success', {
         selectedStudentId: student.id,
@@ -848,32 +751,8 @@ export default function AskVIC() {
         : null
 
     const trimmedOutgoing = outgoing.trim()
-    const missingState = {
-      missingInput: !trimmedOutgoing,
-      loadingInProgress: loading,
-      missingUserSession: !currentUserProfile && currentUserStatus !== 'Signed in.',
-      missingStudentMode: !studentMode,
-      missingSessionMode: !sessionMode,
-      missingSelectedStudentInTeacherMode: sessionMode === 'teacher_directed' && !selectedStudentId,
-      missingAssignedLessonInTeacherMode: sessionMode === 'teacher_directed' && !assignedLesson,
-      missingAssignedLessonSubjectInTeacherMode:
-        sessionMode === 'teacher_directed' && !assignedLesson?.subject,
-      missingAssignedLessonTextInTeacherMode: sessionMode === 'teacher_directed' && !hasAssignedLessonContent,
-    }
-
-    console.log('[AskVIC][sendMessage] handler start', {
-      inputText: outgoing,
-      trimmedInputText: trimmedOutgoing,
-      hasCustomMessage: typeof customMessage !== 'undefined',
-      missingState,
-    })
 
     if (!trimmedOutgoing || loading) {
-      console.log('[AskVIC][sendMessage] early return before send', {
-        reason: !trimmedOutgoing ? 'empty_input' : 'loading_state',
-        inputText: outgoing,
-        missingState,
-      })
       return null
     }
 
@@ -902,28 +781,11 @@ export default function AskVIC() {
       }))
 
       const apiUrl = '/api/vic'
-      console.log('[AskVIC][sendMessage] about to fetch', {
-        url: apiUrl,
-        inputText: outgoing,
-        missingState,
-        payloadPreview: {
-          messagesCount: apiMessages.length,
-          hasSketchImage: Boolean(sketchImage),
-          studentId: selectedStudentId,
-          sessionMode,
-          hasAssignedLesson: Boolean(assignedLesson),
-          studentMode,
-          studentSupportLevel,
-          studentInterest,
-          studentGradeLevel,
-        },
-      })
 
       const activeInterest = sessionInterestToday || studentInterest
       const requestBody = {
         messages: apiMessages,
         sketchImage,
-        studentId: selectedStudentId,
         activeClassId,
         sessionMode,
         studentInterest: activeInterest,
@@ -932,11 +794,6 @@ export default function AskVIC() {
         isFirstUserTurn,
       }
 
-      if (sessionMode === 'teacher_directed') {
-        requestBody.assignedLesson = assignedLesson
-        requestBody.studentMode = studentMode
-        requestBody.supportLevel = studentSupportLevel
-      }
 
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
@@ -953,21 +810,15 @@ export default function AskVIC() {
         },
         body: JSON.stringify(requestBody),
       })
-      console.log('[AskVIC][sendMessage] fetch returned', {
-        url: apiUrl,
-        ok: res.ok,
-        status: res.status,
-      })
       if (res.status === 401) {
         await supabase.auth.signOut()
         router.replace('/login')
         throw new Error('Your session has expired. Please sign in again.')
       }
+      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        throw new Error(`API error: ${res.status}`)
+        throw new Error(data?.error || 'VIC could not respond right now.')
       }
-
-      const data = await res.json()
       const finalReply = data.reply || 'No reply'
       const visual = inferVisualFromConversation(outgoing, finalReply)
 
@@ -983,12 +834,7 @@ export default function AskVIC() {
 
       return finalReply
     } catch (error) {
-      console.error('[AskVIC][sendMessage] caught error', {
-        error,
-        inputText: outgoing,
-        missingState,
-      })
-      const errorReply = 'Something went wrong. Please try again.'
+      const errorReply = error?.message || 'Something went wrong. Please try again.'
       setMessages([
         ...nextMessages,
         {
@@ -997,7 +843,7 @@ export default function AskVIC() {
           visual: {
             type: 'tip',
             title: 'Quick fix',
-            body: 'Try sending the message again. If it keeps happening, check the API route or OpenAI response.',
+            body: 'Try sending the message again. If it keeps happening, ask an adult for help.',
           },
         },
       ])
@@ -1024,7 +870,6 @@ export default function AskVIC() {
     const trimmedClassCode = joinClassCode.trim()
     if (!trimmedClassCode || joinClassLoading) return
 
-    const supabase = supabase
     if (!supabase) {
       setJoinClassStatus({ tone: 'error', text: 'Not authenticated. Please sign in again.' })
       return
@@ -1760,73 +1605,6 @@ ${context}`
           </div>
         </div>
       </div>
-      <button
-        type="button"
-        style={styles.debugToggleButton}
-        onClick={() => setIsDebugPanelOpen((prev) => !prev)}
-      >
-        {isDebugPanelOpen ? 'Hide Debug' : 'Debug'}
-      </button>
-
-      {isDebugPanelOpen ? (
-        <aside style={styles.tempDebugPanelFloating}>
-          <div style={styles.tempDebugTitle}>TEMP DEBUG — Teacher Lesson Resolution</div>
-          <div style={styles.tempDebugSection}>1) Auth/session info</div>
-          <div style={styles.tempDebugRow}>auth user id: {debugValue(debugAuthUserId)}</div>
-          <div style={styles.tempDebugRow}>auth email: {debugValue(debugAuthEmail)}</div>
-
-          <div style={styles.tempDebugSection}>2) Resolved app user info</div>
-          <div style={styles.tempDebugRow}>
-            resolved public.users id: {debugValue(debugResolvedUserId)}
-          </div>
-          <div style={styles.tempDebugRow}>resolved role: {debugValue(debugResolvedRole)}</div>
-          <div style={styles.tempDebugRow}>
-            selectedStudentId: {debugValue(selectedStudentId)}
-          </div>
-
-          <div style={styles.tempDebugSection}>3) Teacher lesson resolution</div>
-          <div style={styles.tempDebugRow}>
-            latest assignment found: {debugLatestAssignment.found ? 'yes' : 'no'}
-          </div>
-          <div style={styles.tempDebugRow}>
-            latest assignment id: {debugValue(debugLatestAssignment.id)}
-          </div>
-          <div style={styles.tempDebugRow}>
-            latest lesson id: {debugValue(debugLatestAssignment.lessonId)}
-          </div>
-          <div style={styles.tempDebugRow}>
-            latest lesson title: {debugValue(debugLatestAssignment.lessonTitle)}
-          </div>
-          <div style={styles.tempDebugRow}>
-            latest-assignment API status: {debugValue(debugLatestAssignmentApi.status)}
-          </div>
-          <div style={styles.tempDebugRow}>
-            latest-assignment API ok: {debugValue(debugLatestAssignmentApi.ok)}
-          </div>
-          <div style={styles.tempDebugRow}>
-            latest-assignment API response JSON:{' '}
-            {debugJsonValue(debugLatestAssignmentApi.responseJson)}
-          </div>
-          <div style={styles.tempDebugRow}>
-            latest-assignment API error: {debugValue(debugLatestAssignmentApi.error)}
-          </div>
-          <div style={styles.tempDebugRow}>
-            hasTeacherAssignment: {hasTeacherAssignment ? 'true' : 'false'}
-          </div>
-          <div style={styles.tempDebugRow}>
-            assignedLesson present: {assignedLesson ? 'true' : 'false'}
-          </div>
-
-          <div style={styles.tempDebugSection}>4) Mode state</div>
-          <div style={styles.tempDebugRow}>current sessionMode: {debugValue(sessionMode)}</div>
-          <div style={styles.tempDebugRow}>
-            Teacher Lesson disabled: {teacherLessonDisabled ? 'true' : 'false'}
-          </div>
-          <div style={styles.tempDebugRow}>
-            disabled reason: {debugValue(teacherLessonDisabledReason)}
-          </div>
-        </aside>
-      ) : null}
     </div>
   )
 }
