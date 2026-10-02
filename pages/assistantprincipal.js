@@ -20,6 +20,7 @@ export default function AssistantPrincipalPage() {
   const [dashboard, setDashboard] = useState(null)
   const [view, setView] = useState('staff')
   const [expanded, setExpanded] = useState('')
+  const [editingStaff, setEditingStaff] = useState(null)
   const [reminder, setReminder] = useState(null)
   const [attentionOnly, setAttentionOnly] = useState(false)
   const [clockNow, setClockNow] = useState(() => new Date())
@@ -95,7 +96,7 @@ export default function AssistantPrincipalPage() {
 
   async function switchSchool(id) {
     setMessage(''); setBusy(true)
-    try { const result = await request('GET', null, id); setDashboard(result.dashboard); setExpanded('') }
+    try { const result = await request('GET', null, id); setDashboard(result.dashboard); setExpanded(''); setEditingStaff(null) }
     catch (error) { setMessage(error.message) }
     finally { setBusy(false) }
   }
@@ -172,8 +173,12 @@ export default function AssistantPrincipalPage() {
         {!cards.length && <div className="ap-panel"><h3>Add your staff to begin</h3><p>Open School setup to add a roster. Cards will show only commitments that apply to each role.</p><button className="ap-outline" onClick={() => setView('setup')}>Open setup</button></div>}
         {cards.length > 0 && visibleCards.length === 0 && <div className="ap-panel">No staff have an overdue commitment right now.</div>}
         <div className="ap-card-list">{visibleCards.map(person => <article className="ap-panel ap-person" key={person.id}>
-          <button className="ap-person-top" aria-expanded={expanded === person.id} onClick={() => setExpanded(expanded === person.id ? '' : person.id)}><strong>{person.display_name}<small>{person.role}{person.assignment ? ` · ${person.assignment}` : ''}</small></strong><span>{person.items.length} tracked</span><span className={person.needsAttention ? 'ap-tag warning' : 'ap-tag'}>{person.needsAttention ? 'Needs review' : 'No overdue items'}</span><span aria-hidden="true">{expanded === person.id ? '−' : '+'}</span></button>
+          <button className="ap-person-top" aria-expanded={expanded === person.id} onClick={() => { setExpanded(expanded === person.id ? '' : person.id); setEditingStaff(null) }}><strong>{person.display_name}<small>{person.role}{person.assignment ? ` · ${person.assignment}` : ''}</small></strong><span>{person.items.length} tracked</span><span className={person.needsAttention ? 'ap-tag warning' : 'ap-tag'}>{person.needsAttention ? 'Needs review' : 'No overdue items'}</span><span aria-hidden="true">{expanded === person.id ? '−' : '+'}</span></button>
           {expanded === person.id && <div className="ap-person-body">
+            {editingStaff?.id === person.id ? <form className="ap-staff-edit" onSubmit={async e => { e.preventDefault(); if (await mutate({ action: 'update_staff', staffId: person.id, displayName: editingStaff.displayName, role: editingStaff.role, assignment: editingStaff.assignment, email: editingStaff.email }, 'Staff details updated.')) setEditingStaff(null) }}>
+              <h3>Edit staff details</h3><div className="ap-grid"><label>Name<input value={editingStaff.displayName} onChange={e => setEditingStaff({ ...editingStaff, displayName: e.target.value })} required minLength="2" maxLength="120" /></label><label>Role<select value={editingStaff.role} onChange={e => setEditingStaff({ ...editingStaff, role: e.target.value })}>{['teacher', 'office', 'support', 'leader', 'other'].map(role => <option key={role} value={role}>{role}</option>)}</select></label><label>Grade or assignment<input value={editingStaff.assignment} onChange={e => setEditingStaff({ ...editingStaff, assignment: e.target.value })} maxLength="120" placeholder="Grade 2" /></label><label>Email<input type="email" value={editingStaff.email} onChange={e => setEditingStaff({ ...editingStaff, email: e.target.value })} maxLength="254" /></label></div>
+              <div className="ap-actions"><button className="ap-primary" disabled={busy}>Save staff</button><button type="button" className="ap-outline" onClick={() => setEditingStaff(null)}>Cancel</button></div>
+            </form> : <button className="ap-outline" onClick={() => setEditingStaff({ id: person.id, displayName: person.display_name, role: person.role, assignment: person.assignment || '', email: person.email || '' })}>Edit staff</button>}
             {!person.items.length && <p>No commitments apply to this role yet.</p>}
             {person.items.map(item => <div className="ap-item" key={item.id}><div><strong>{item.title}</strong><small>{item.cadence === 'weekly' ? `${DAYS[item.due_weekday]} by ${item.due_time.slice(0, 5)}` : item.cadence === 'monthly' ? `Monthly on day ${item.due_monthday} by ${item.due_time.slice(0, 5)}` : `Daily by ${item.due_time.slice(0, 5)}`} · {item.status}</small></div><div className="ap-actions"><button className="ap-outline" disabled={busy} onClick={() => mutate({ action: 'record_evidence', staffId: person.id, commitmentId: item.id, state: 'received' }, 'Receipt recorded for this period.')}>Mark received</button><button className="ap-outline" disabled={busy || !item.evidence} onClick={() => mutate({ action: 'record_evidence', staffId: person.id, commitmentId: item.id, state: 'reviewed' }, 'Review recorded for this period.')}>Mark reviewed</button></div></div>)}
             {person.role === 'teacher' && source('grades') && <p><a href={source('grades').url} target="_blank" rel="noreferrer noopener">Open grade source ↗</a> <small>Source link only; teacher-specific gradebook import is next.</small></p>}
@@ -248,6 +253,7 @@ function Styles() { return <style jsx global>{`
   .ap-person { margin: 0; padding: 0; overflow: hidden; }.ap-person-top { width: 100%; display: grid; grid-template-columns: minmax(160px, 1fr) 100px 140px 20px; align-items: center; gap: 10px; padding: 17px 18px; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
   .ap-person-top small, .ap-item small, .ap-panel small { display: block; font-size: 12px; color: var(--vic-text-secondary); font-weight: 400; }.ap-tag { background: var(--vic-success-soft); color: var(--vic-text-primary); border-radius: 7px; padding: 6px 8px; font-size: 12px; }.ap-tag.warning { background: var(--vic-danger-soft); }
   .ap-person-body { border-top: 1px solid var(--vic-border-soft); padding: 8px 18px 18px; }.ap-item { display: flex; justify-content: space-between; gap: 12px; align-items: center; border-bottom: 1px solid var(--vic-border-soft); padding: 10px 0; }
+  .ap-staff-edit { padding: 10px 0 18px; border-bottom: 1px solid var(--vic-border-soft); margin-bottom: 8px; }
   .ap-item:last-child { border-bottom: 0; }.ap-item .ap-outline { margin: 0; white-space: nowrap; font-size: 12px; }.ap-message { padding: 10px 14px; border-radius: 8px; background: var(--vic-accent-soft); }.ap-small { font-size: 12px; }.ap-footer { margin-top: 32px; padding: 18px 0; color: var(--vic-text-secondary); font-size: 13px; }
   .ap-overlay { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(43,36,31,.55); }.ap-dialog { width: min(520px, 100%); margin: 0; }
   @media (max-width: 730px) { .ap-grid { grid-template-columns: 1fr; }.ap-heading { align-items: start; flex-direction: column; }.ap-person-top { grid-template-columns: 1fr 110px; }.ap-person-top > span:nth-child(2) { display: none; }.ap-item { display: block; }.ap-item .ap-actions { margin-top: 10px; } }
