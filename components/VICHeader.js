@@ -6,11 +6,12 @@ const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/askvic', label: 'Ask VIC' },
   { href: '/teacher', label: 'Teacher Portal' },
+  { href: '/assistantprincipal', label: 'Assistant Principal' },
   { href: '/login', label: 'Log In' },
   { href: '/signup', label: 'Request Access' },
 ]
 
-const PRIMARY_PATHS = new Set(['/askvic', '/teacher'])
+const PRIMARY_PATHS = new Set(['/askvic', '/teacher', '/assistantprincipal'])
 
 function getDisplayName(profile, authUser) {
   if (profile?.name) return profile.name

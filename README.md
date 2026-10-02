@@ -36,3 +36,11 @@ To enable emailing VIC Learning Reports, configure:
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY`
+
+
+## Assistant Principal first build
+
+`/assistantprincipal` is a school-scoped principal workspace. Run
+`sql/assistant_principal.sql` before enabling it and provision a verified
+`principal` profile. See `docs/assistantprincipal-onboarding.md` for setup,
+school onboarding, current capabilities, and data-connection limits.

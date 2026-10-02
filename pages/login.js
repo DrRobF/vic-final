@@ -68,6 +68,11 @@ export default function LoginPage() {
         return
       }
 
+      if (role === 'principal') {
+        router.push('/assistantprincipal')
+        return
+      }
+
       setError(INVALID_ROLE_MESSAGE)
     } catch {
       setError('Something went wrong while signing in. Please try again.')
