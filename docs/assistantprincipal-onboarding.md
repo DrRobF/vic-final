@@ -15,8 +15,8 @@ Route: `/assistantprincipal` in Ask VIC. This is the first working slice: a prot
 - School name and time zone.
 - Staff names, roles, and optional email addresses.
 - Commitments: title, roles, daily/weekly cadence, weekday, and due time.
-- Staff CSV columns: `Staff name,Role,Email (optional)`. Roles: teacher, office, support, leader, other.
-- Commitments CSV columns: `Commitment,Applies to,Repeats,Due day,Due time`. Use Teachers or All staff, Daily or Weekly, a weekday for weekly rules, and a time such as 10:00 AM. Leave the day blank for daily rules. Each upload previews row errors and imports atomically; duplicate rows are skipped.
+- Staff CSV columns: `Staff name,Role,Grade or assignment (optional),Email (optional)`. Roles: teacher, office, support, leader, other. Grade or assignment is separate from role; an existing staff member can gain an assignment/email on reimport.
+- Commitments CSV columns: `Commitment,Applies to,Repeats,Due day,Due time`. Use Teacher or All staff, Daily/Weekly/Monthly, a weekday for weekly rules, a date such as First day of the Month for monthly rules, and a time such as 10:00 AM. Leave the day blank for daily rules. Example rows in the templates are ignored until replaced. Each upload previews row errors and imports atomically; duplicate commitments are skipped.
 - Optional HTTPS links to existing data sources. Saving a link does not grant access or start syncing. An import needs school authorization, field mapping, consent/retention decisions, and a separate tested connector.
 - Friday or Monday non-confidential notes for a weekly brief. The school leader edits and approves the draft.
 

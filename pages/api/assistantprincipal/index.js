@@ -16,11 +16,13 @@ async function rows(query) {
 async function getDashboard(auth, schoolId) {
   const school = await rows(auth.admin.from('ap_schools').select('id,name,time_zone').eq('id', schoolId).limit(1))
   if (!school[0]) throw new Error('Missing school')
-  const weekStart = mondayOf(schoolClock(new Date(), school[0].time_zone).date)
+  const today = schoolClock(new Date(), school[0].time_zone).date
+  const weekStart = mondayOf(today)
+  const monthStart = `${today.slice(0, 7)}-01`
   const [staff, commitments, evidence, sources, briefs] = await Promise.all([
-    rows(auth.admin.from('ap_staff').select('id,display_name,role,email,active').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
-    rows(auth.admin.from('ap_commitments').select('id,title,applies_to,cadence,due_weekday,due_time,enabled').eq('school_id', schoolId).order('created_at').limit(100)),
-    rows(auth.admin.from('ap_evidence').select('id,staff_id,commitment_id,period_start,state,note,recorded_at').eq('school_id', schoolId).gte('period_start', weekStart).order('recorded_at', { ascending: false }).limit(2000)),
+    rows(auth.admin.from('ap_staff').select('id,display_name,role,assignment,email,active').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
+    rows(auth.admin.from('ap_commitments').select('id,title,applies_to,cadence,due_weekday,due_monthday,due_time,enabled').eq('school_id', schoolId).order('created_at').limit(100)),
+    rows(auth.admin.from('ap_evidence').select('id,staff_id,commitment_id,period_start,state,note,recorded_at').eq('school_id', schoolId).in('period_start', [...new Set([today, weekStart, monthStart])]).order('recorded_at', { ascending: false }).limit(2000)),
     rows(auth.admin.from('ap_sources').select('id,kind,label,url,connection_state').eq('school_id', schoolId).order('kind').limit(30)),
     rows(auth.admin.from('ap_briefs').select('id,week_start,notes,draft,state,created_at,approved_at').eq('school_id', schoolId).order('week_start', { ascending: false }).limit(4)),
   ])
@@ -105,21 +107,23 @@ export default async function handler(req, res) {
     } else if (action === 'add_staff') {
       const displayName = clean(body.displayName)
       const role = clean(body.role, 20)
+      const assignment = clean(body.assignment)
       const email = clean(body.email, 254).toLowerCase()
       if (displayName.length < 2 || !roles.has(role) || (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
         return res.status(400).json({ error: 'Enter a name, role, and optional valid email.' })
       }
-      await rows(auth.admin.from('ap_staff').insert({ school_id: schoolId, display_name: displayName, role, email: email || null }).select('id'))
+      await rows(auth.admin.from('ap_staff').insert({ school_id: schoolId, display_name: displayName, role, assignment, email: email || null }).select('id'))
     } else if (action === 'add_commitment') {
       const title = clean(body.title)
       const cadence = clean(body.cadence, 20)
       const appliesTo = clean(body.appliesTo, 20)
       const weekday = Number(body.dueWeekday)
+      const monthday = Number(body.dueMonthday)
       const dueTime = clean(body.dueTime, 5)
-      if (title.length < 2 || !['daily', 'weekly'].includes(cadence) || !['all', 'teachers'].includes(appliesTo) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(dueTime) || (cadence === 'weekly' && (!Number.isInteger(weekday) || weekday < 0 || weekday > 6))) {
+      if (title.length < 2 || !['daily', 'weekly', 'monthly'].includes(cadence) || !['all', 'teachers'].includes(appliesTo) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(dueTime) || (cadence === 'weekly' && (!Number.isInteger(weekday) || weekday < 0 || weekday > 6)) || (cadence === 'monthly' && (!Number.isInteger(monthday) || monthday < 1 || monthday > 31))) {
         return res.status(400).json({ error: 'Check the commitment name and due time.' })
       }
-      await rows(auth.admin.from('ap_commitments').insert({ school_id: schoolId, title, cadence, applies_to: appliesTo, due_weekday: cadence === 'weekly' ? weekday : null, due_time: dueTime }).select('id'))
+      await rows(auth.admin.from('ap_commitments').insert({ school_id: schoolId, title, cadence, applies_to: appliesTo, due_weekday: cadence === 'weekly' ? weekday : null, due_monthday: cadence === 'monthly' ? monthday : null, due_time: dueTime }).select('id'))
     } else if (action === 'record_evidence') {
       if (!uuid(body.staffId) || !uuid(body.commitmentId) || !['received', 'reviewed'].includes(body.state)) {
         return res.status(400).json({ error: 'Choose a staff member, commitment, and status.' })
