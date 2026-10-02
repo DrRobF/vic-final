@@ -113,6 +113,17 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: 'Enter a name, role, and optional valid email.' })
       }
       await rows(auth.admin.from('ap_staff').insert({ school_id: schoolId, display_name: displayName, role, assignment, email: email || null }).select('id'))
+    } else if (action === 'update_staff') {
+      const displayName = clean(body.displayName)
+      const role = clean(body.role, 20)
+      const assignment = clean(body.assignment)
+      const email = clean(body.email, 254).toLowerCase()
+      if (!uuid(body.staffId) || displayName.length < 2 || !roles.has(role) || (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
+        return res.status(400).json({ error: 'Enter a valid staff name, role, and optional email.' })
+      }
+      const updated = await rows(auth.admin.from('ap_staff').update({ display_name: displayName, role, assignment, email: email || null })
+        .eq('school_id', schoolId).eq('id', body.staffId).eq('active', true).select('id'))
+      if (!updated.length) return res.status(404).json({ error: 'Staff member not found in this school.' })
     } else if (action === 'add_commitment') {
       const title = clean(body.title)
       const cadence = clean(body.cadence, 20)
