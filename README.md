@@ -41,6 +41,7 @@ To enable emailing VIC Learning Reports, configure:
 ## Assistant Principal first build
 
 `/assistantprincipal` is a school-scoped principal workspace. Run
-`sql/assistant_principal.sql` before enabling it and provision a verified
-`principal` profile. See `docs/assistantprincipal-onboarding.md` for setup,
+`sql/assistant_principal.sql` before enabling it and provision an entitlement
+for a verified school leader account. An existing teacher account may retain its
+teacher role. See `docs/assistantprincipal-onboarding.md` for setup,
 school onboarding, current capabilities, and data-connection limits.
