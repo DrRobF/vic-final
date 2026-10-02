@@ -58,6 +58,11 @@ export default function LoginPage() {
         return
       }
 
+      if (router.query.next === '/assistantprincipal' && ['teacher', 'principal'].includes(role)) {
+        router.push('/assistantprincipal')
+        return
+      }
+
       if (role === 'teacher') {
         router.push('/teacher')
         return
@@ -65,6 +70,11 @@ export default function LoginPage() {
 
       if (role === 'student') {
         router.push('/askvic')
+        return
+      }
+
+      if (role === 'principal') {
+        router.push('/assistantprincipal')
         return
       }
 
