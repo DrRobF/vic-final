@@ -7,7 +7,7 @@ Route: `/assistantprincipal` in Ask VIC. This is the first working slice: a prot
 1. Run `sql/assistant_principal.sql` in the existing AskVic Supabase project. Check that `public.users.role` can hold `principal`; if the deployed database has a role check constraint, extend that constraint through a reviewed migration before assigning the role.
 2. Create or identify the buyer's Supabase Auth account and matching `public.users` row. Its `auth_user_id` must match the Auth user's ID. An existing teacher profile may keep its teacher role and use both portals. A dedicated school leader profile may use `principal` (check the deployed `users.role` constraint first). Provision an `ap_entitlements` row for the Auth user (`trial` or `active`, school limit, optional expiry) after confirming the pilot/license. Only an authorized school administrator grants entitlements; no public visitor can grant their own.
 3. Keep `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, and `OPENAI_API_KEY` configured server-side as appropriate. The service role and OpenAI key never belong in client-side variables.
-4. The principal signs in, creates a school workspace, adds staff and commitments, then saves reference links for attendance, lesson plans, grades, walkthroughs, and absences. Every new school starts empty. Do not paste student data, credentials, or access tokens into setup.
+4. The principal signs in, creates a school workspace, then downloads the CSV template from School setup. Staff and commitments can be pasted in bulk, previewed, and imported together. Repeated rows are skipped. The principal then saves reference links for attendance, lesson plans, grades, walkthroughs, and absences. Every new school starts empty. Do not paste student data, credentials, or access tokens into setup.
 5. Confirm a second principal account cannot read another school's dashboard by changing `schoolId` in an API request. The API verifies membership on every request, and new tables have no direct browser grants.
 
 ## What a school supplies
@@ -15,6 +15,7 @@ Route: `/assistantprincipal` in Ask VIC. This is the first working slice: a prot
 - School name and time zone.
 - Staff names, roles, and optional email addresses.
 - Commitments: title, roles, daily/weekly cadence, weekday, and due time.
+- CSV columns: `type,name,role,email,applies_to,cadence,due_day,due_time`. A `staff` row uses name, role, and optional email. A `commitment` row uses name, applies_to (`teachers` or `all`), cadence (`daily` or `weekly`), weekday name for weekly rules, and 24-hour due time. The preview lists row errors before any import. One upload is atomic and duplicate rows are skipped.
 - Optional HTTPS links to existing data sources. Saving a link does not grant access or start syncing. An import needs school authorization, field mapping, consent/retention decisions, and a separate tested connector.
 - Friday or Monday non-confidential notes for a weekly brief. The school leader edits and approves the draft.
 
