@@ -58,6 +58,11 @@ export default function LoginPage() {
         return
       }
 
+      if (router.query.next === '/assistantprincipal' && ['teacher', 'principal'].includes(role)) {
+        router.push('/assistantprincipal')
+        return
+      }
+
       if (role === 'teacher') {
         router.push('/teacher')
         return
