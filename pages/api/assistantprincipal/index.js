@@ -1,4 +1,5 @@
 import { requirePrincipal, requireSchool } from '../../../lib/assistant-principal-auth'
+import { parseSetupCsv } from '../../../lib/assistant-principal-import.mjs'
 import { mondayOf, periodFor, planningWeekFor, safeSourceUrl, schoolClock } from '../../../lib/assistant-principal-rules.mjs'
 
 const clean = (value, max = 120) => typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -88,8 +89,20 @@ export default async function handler(req, res) {
     const access = await requireSchool(auth, body.schoolId)
     if (access.error) return res.status(access.status).json({ error: access.error })
     const schoolId = access.schoolId
+    let importResult = null
 
-    if (action === 'add_staff') {
+    if (action === 'import_setup') {
+      let parsed
+      try { parsed = parseSetupCsv(body.csvText) }
+      catch (error) { return res.status(400).json({ error: error.message }) }
+      if (parsed.errors.length) return res.status(400).json({ error: parsed.errors.slice(0, 8).join(' ') })
+      const { data, error } = await auth.admin.rpc('ap_import_setup', {
+        p_school: schoolId, p_actor: auth.user.id,
+        p_staff: parsed.staff, p_commitments: parsed.commitments,
+      })
+      if (error) throw error
+      importResult = data
+    } else if (action === 'add_staff') {
       const displayName = clean(body.displayName)
       const role = clean(body.role, 20)
       const email = clean(body.email, 254).toLowerCase()
@@ -162,7 +175,7 @@ export default async function handler(req, res) {
     } else {
       return res.status(400).json({ error: 'Unknown action.' })
     }
-    return res.status(200).json({ dashboard: await getDashboard(auth, schoolId) })
+    return res.status(200).json({ dashboard: await getDashboard(auth, schoolId), ...(importResult ? { import: importResult } : {}) })
   } catch (error) {
     console.error('Assistant Principal request failed.', { name: error?.name, action: req.body?.action })
     return res.status(500).json({ error: 'Assistant Principal could not save this change. Please try again.' })
