@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import VICHeader from '../components/VICHeader'
 import { supabase } from '../lib/supabase'
-import { parseSetupCsv } from '../lib/assistant-principal-import.mjs'
+import { parseStaffCsv, parseCommitmentsCsv } from '../lib/assistant-principal-import.mjs'
 import { appliesTo as commitmentAppliesTo, commitmentStatus, periodFor, planningWeekFor, schoolClock } from '../lib/assistant-principal-rules.mjs'
 
 const SOURCE_TYPES = [
@@ -38,9 +38,7 @@ export default function AssistantPrincipalPage() {
   const [sourceUrl, setSourceUrl] = useState('')
   const [notes, setNotes] = useState('')
   const [draftEdit, setDraftEdit] = useState('')
-  const [importText, setImportText] = useState('')
-  const [importPreview, setImportPreview] = useState(null)
-  const [importError, setImportError] = useState('')
+  const [imports, setImports] = useState({ staff: { text: '', preview: null, error: '' }, commitments: { text: '', preview: null, error: '' } })
 
   async function request(method, body, schoolId, accessToken = session?.access_token) {
     const url = schoolId ? `/api/assistantprincipal?schoolId=${encodeURIComponent(schoolId)}` : '/api/assistantprincipal'
@@ -100,27 +98,28 @@ export default function AssistantPrincipalPage() {
     finally { setBusy(false) }
   }
 
-  async function chooseImport(file) {
-    setImportText(''); setImportPreview(null); setImportError(''); setMessage('')
+  async function chooseImport(kind, file) {
+    setImports(current => ({ ...current, [kind]: { text: '', preview: null, error: '' } })); setMessage('')
     if (!file) return
-    if (file.size > 524288) { setImportError('Choose a CSV smaller than 512 KB.'); return }
+    if (file.size > 524288) { setImports(current => ({ ...current, [kind]: { text: '', preview: null, error: 'Choose a CSV smaller than 512 KB.' } })); return }
     try {
       const text = await file.text()
-      setImportPreview(parseSetupCsv(text))
-      setImportText(text)
-    } catch (error) { setImportError(error.message) }
+      const preview = kind === 'staff' ? parseStaffCsv(text) : parseCommitmentsCsv(text)
+      setImports(current => ({ ...current, [kind]: { text, preview, error: '' } }))
+    } catch (error) { setImports(current => ({ ...current, [kind]: { text: '', preview: null, error: error.message } })) }
   }
 
-  async function importSetup() {
-    if (!importPreview || importPreview.errors.length || !importText) return
+  async function importBatch(kind) {
+    const selected = imports[kind]
+    if (!selected.preview || selected.preview.errors.length || !selected.text) return
     setBusy(true); setMessage('')
     try {
-      const result = await request('POST', { action: 'import_setup', schoolId: dashboard.school.id, csvText: importText })
+      const result = await request('POST', { action: kind === 'staff' ? 'import_staff' : 'import_commitments', schoolId: dashboard.school.id, csvText: selected.text })
       setDashboard(result.dashboard)
       const count = result.import || {}
-      setMessage(`Imported ${count.staffAdded || 0} staff and ${count.commitmentsAdded || 0} commitments. Skipped ${count.staffSkipped || 0} staff and ${count.commitmentsSkipped || 0} commitments already present.`)
-      setImportText(''); setImportPreview(null)
-    } catch (error) { setImportError(error.message) }
+      setMessage(kind === 'staff' ? `Added ${count.staffAdded || 0} staff; skipped ${count.staffSkipped || 0} already present.` : `Added ${count.commitmentsAdded || 0} commitments; skipped ${count.commitmentsSkipped || 0} already present.`)
+      setImports(current => ({ ...current, [kind]: { text: '', preview: null, error: '' } }))
+    } catch (error) { setImports(current => ({ ...current, [kind]: { ...current[kind], error: error.message } })) }
     finally { setBusy(false) }
   }
 
@@ -187,15 +186,27 @@ export default function AssistantPrincipalPage() {
           <div className="ap-panel"><h3>Review draft</h3>{latestBrief ? <><p className="ap-small">Week of {latestBrief.week_start} · {latestBrief.state}</p><textarea value={draftEdit} onChange={e => setDraftEdit(e.target.value)} rows="16" disabled={latestBrief.state === 'approved'} /><button className="ap-primary" disabled={busy || latestBrief.state === 'approved'} onClick={() => mutate({ action: 'approve_brief', briefId: latestBrief.id, draft: draftEdit }, 'Brief approved. Nothing has been sent or assigned.')}>Approve this brief</button></> : <p>Your first draft will appear here. Approval does not send it to staff.</p>}</div></div>
       </section>}
       {view === 'setup' && <section><div className="ap-section-title"><div><h2>School setup</h2><p>Bring your own staff, rules, and data sources. Linked sheets remain under your school’s control.</p></div></div>
-        <div className="ap-panel"><h3>Import staff and commitments together</h3><p>Download the CSV, paste in as many rows as you need, save it as a CSV, and choose the file here. Review the preview before importing. Repeating the same file skips rows already present.</p>
-          <a className="ap-outline" href="/assistant-principal-setup-template.csv" download>Download CSV template</a>
-          <p className="ap-small">For each person: <strong>staff</strong> in type, name, role (teacher, office, support, leader, or other), and optional email. For each rule: <strong>commitment</strong> in type, name, applies_to (teachers or all), cadence (daily or weekly), due_day (such as Monday for weekly rules; blank for daily), and due_time in 24-hour format (such as 10:00). Leave unused columns blank. Do not put student records or kiosk codes in this file.</p>
-          <label>Choose completed CSV<input type="file" accept=".csv,text/csv" onChange={e => chooseImport(e.target.files?.[0])} /></label>
-          {importError && <p role="alert">{importError}</p>}
-          {importPreview && <div className="ap-import-preview"><h4>Preview: {importPreview.staff.length} staff · {importPreview.commitments.length} commitments</h4>
-            {importPreview.errors.length ? <><p role="alert">Fix these rows in the CSV and choose it again:</p><ul>{importPreview.errors.slice(0, 12).map((error, i) => <li key={i}>{error}</li>)}</ul></> : <><p>{importPreview.staff.slice(0, 5).map(item => item.display_name).join(', ')}{importPreview.staff.length > 5 ? '…' : ''}</p><p>{importPreview.commitments.slice(0, 5).map(item => item.title).join(', ')}{importPreview.commitments.length > 5 ? '…' : ''}</p><button className="ap-primary" disabled={busy} onClick={importSetup}>Import these rows</button></>}
-          </div>}
+        <div className="ap-grid">
+          <div className="ap-panel"><h3>1. Add your staff list</h3><p>One row per person. Paste names from your roster, add a role, and include email if you have it.</p>
+            <a className="ap-outline" href="/assistant-principal-staff-template.csv" download>Download staff sheet</a>
+            <p className="ap-small">Columns: Staff name · Role · Email (optional). Roles: teacher, office, support, leader, or other.</p>
+            <label>Upload completed staff CSV<input type="file" accept=".csv,text/csv" onChange={e => chooseImport('staff', e.target.files?.[0])} /></label>
+            {imports.staff.error && <p role="alert">{imports.staff.error}</p>}
+            {imports.staff.preview && <div className="ap-import-preview"><h4>Preview: {imports.staff.preview.staff.length} staff</h4>
+              {imports.staff.preview.errors.length ? <><p role="alert">Fix these rows and choose the file again:</p><ul>{imports.staff.preview.errors.slice(0, 12).map((error, i) => <li key={i}>{error}</li>)}</ul></> : <><p>{imports.staff.preview.staff.slice(0, 5).map(item => item.display_name).join(', ')}{imports.staff.preview.staff.length > 5 ? '…' : ''}</p><button className="ap-primary" disabled={busy} onClick={() => importBatch('staff')}>Import {imports.staff.preview.staff.length} staff</button></>}
+            </div>}
+          </div>
+          <div className="ap-panel"><h3>2. Add recurring commitments</h3><p>One row per schoolwide rule, such as weekly grades or daily check-in. Set these up once; the assistant tracks each cycle.</p>
+            <a className="ap-outline" href="/assistant-principal-commitments-template.csv" download>Download commitments sheet</a>
+            <p className="ap-small">Columns: Commitment · Applies to (Teachers or All staff) · Repeats (Daily or Weekly) · Due day (for weekly rules) · Due time (for example, 10:00 AM). Leave Due day blank for daily rules.</p>
+            <label>Upload completed commitments CSV<input type="file" accept=".csv,text/csv" onChange={e => chooseImport('commitments', e.target.files?.[0])} /></label>
+            {imports.commitments.error && <p role="alert">{imports.commitments.error}</p>}
+            {imports.commitments.preview && <div className="ap-import-preview"><h4>Preview: {imports.commitments.preview.commitments.length} commitments</h4>
+              {imports.commitments.preview.errors.length ? <><p role="alert">Fix these rows and choose the file again:</p><ul>{imports.commitments.preview.errors.slice(0, 12).map((error, i) => <li key={i}>{error}</li>)}</ul></> : <><p>{imports.commitments.preview.commitments.slice(0, 5).map(item => item.title).join(', ')}{imports.commitments.preview.commitments.length > 5 ? '…' : ''}</p><button className="ap-primary" disabled={busy} onClick={() => importBatch('commitments')}>Import {imports.commitments.preview.commitments.length} commitments</button></>}
+            </div>}
+          </div>
         </div>
+        <p className="ap-small">Open a downloaded CSV in Numbers, Excel, or Google Sheets. When finished, export or download it as CSV for upload. Existing rows are skipped on repeat uploads. Keep student records and kiosk codes out of these sheets.</p>
         <div className="ap-grid"><form className="ap-panel" onSubmit={async e => { e.preventDefault(); if (await mutate({ action: 'add_staff', displayName: staffName, role: staffRole, email: staffEmail }, 'Staff card added.')) { setStaffName(''); setStaffEmail('') } }}><h3>Add staff</h3><label>Name<input value={staffName} onChange={e => setStaffName(e.target.value)} required /></label><label>Role<select value={staffRole} onChange={e => setStaffRole(e.target.value)}>{['teacher', 'office', 'support', 'leader', 'other'].map(role => <option key={role} value={role}>{role}</option>)}</select></label><label>Email (optional)<input type="email" value={staffEmail} onChange={e => setStaffEmail(e.target.value)} /></label><button className="ap-primary" disabled={busy}>Add staff card</button></form>
           <form className="ap-panel" onSubmit={async e => { e.preventDefault(); if (await mutate({ action: 'add_commitment', title, cadence, appliesTo: targetGroup, dueWeekday, dueTime }, 'Commitment added.')) setTitle('') }}><h3>Add a commitment</h3><label>What is due?<input value={title} onChange={e => setTitle(e.target.value)} placeholder="Weekly grades" required /></label><label>Applies to<select value={targetGroup} onChange={e => setTargetGroup(e.target.value)}><option value="teachers">Teachers</option><option value="all">All staff</option></select></label><label>Repeats<select value={cadence} onChange={e => setCadence(e.target.value)}><option value="weekly">Weekly</option><option value="daily">Daily</option></select></label>{cadence === 'weekly' && <label>Due day<select value={dueWeekday} onChange={e => setDueWeekday(Number(e.target.value))}>{DAYS.map((day, index) => <option key={day} value={index}>{day}</option>)}</select></label>}<label>Due time<input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} required /></label><button className="ap-primary" disabled={busy}>Add commitment</button></form>
         </div><div className="ap-panel"><h3>Current commitments</h3>{dashboard.commitments.length ? <ul>{dashboard.commitments.map(item => <li key={item.id}>{item.title} · {item.applies_to} · {item.cadence === 'weekly' ? DAYS[item.due_weekday] : 'daily'} {item.due_time.slice(0, 5)}</li>)}</ul> : <p>None yet. Your school sets its own requirements.</p>}</div>

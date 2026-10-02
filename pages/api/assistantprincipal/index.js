@@ -1,5 +1,5 @@
 import { requirePrincipal, requireSchool } from '../../../lib/assistant-principal-auth'
-import { parseSetupCsv } from '../../../lib/assistant-principal-import.mjs'
+import { parseStaffCsv, parseCommitmentsCsv } from '../../../lib/assistant-principal-import.mjs'
 import { mondayOf, periodFor, planningWeekFor, safeSourceUrl, schoolClock } from '../../../lib/assistant-principal-rules.mjs'
 
 const clean = (value, max = 120) => typeof value === 'string' ? value.trim().slice(0, max) : ''
@@ -91,14 +91,14 @@ export default async function handler(req, res) {
     const schoolId = access.schoolId
     let importResult = null
 
-    if (action === 'import_setup') {
+    if (action === 'import_staff' || action === 'import_commitments') {
       let parsed
-      try { parsed = parseSetupCsv(body.csvText) }
+      try { parsed = action === 'import_staff' ? parseStaffCsv(body.csvText) : parseCommitmentsCsv(body.csvText) }
       catch (error) { return res.status(400).json({ error: error.message }) }
       if (parsed.errors.length) return res.status(400).json({ error: parsed.errors.slice(0, 8).join(' ') })
       const { data, error } = await auth.admin.rpc('ap_import_setup', {
         p_school: schoolId, p_actor: auth.user.id,
-        p_staff: parsed.staff, p_commitments: parsed.commitments,
+        p_staff: parsed.staff || [], p_commitments: parsed.commitments || [],
       })
       if (error) throw error
       importResult = data
