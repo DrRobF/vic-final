@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { appliesTo, commitmentStatus, mondayOf, periodFor, planningWeekFor, safeSourceUrl, schoolClock } from '../lib/assistant-principal-rules.mjs'
+import { appliesTo, commitmentStatus, mondayOf, monthlyDueDate, periodFor, planningWeekFor, safeSourceUrl, schoolClock } from '../lib/assistant-principal-rules.mjs'
 
 const lessonPlans = { cadence: 'weekly', due_weekday: 1, due_time: '10:00:00', enabled: true, applies_to: 'teachers' }
 
@@ -24,4 +24,13 @@ test('school time zone, role applicability and URL validation are explicit', () 
   assert.equal(appliesTo(lessonPlans, { role: 'teacher' }), true)
   assert.equal(safeSourceUrl('javascript:alert(1)'), null)
   assert.equal(safeSourceUrl('https://user:password@example.com'), null)
+})
+
+test('monthly commitments reset at the month boundary and clamp the last day', () => {
+  const monthly = { cadence: 'monthly', due_monthday: 1, due_time: '15:30:00', enabled: true, applies_to: 'teachers' }
+  assert.equal(periodFor(monthly, '2026-10-02'), '2026-10-01')
+  assert.equal(commitmentStatus(monthly, null, { date: '2026-10-01', time: '15:29' }), 'due')
+  assert.equal(commitmentStatus(monthly, null, { date: '2026-10-02', time: '09:00' }), 'overdue')
+  assert.equal(commitmentStatus(monthly, { state: 'received' }, { date: '2026-10-02', time: '09:00' }), 'received')
+  assert.equal(monthlyDueDate('2027-02-01', 31), '2027-02-28')
 })
