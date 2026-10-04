@@ -1,6 +1,6 @@
 import catalogue from '../../../data/lesson-standards.json'
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
-import { normalizeLessonInput, lessonSchema, buildLessonInstructions, validateLessonPlan } from '../../../lib/lesson-designer.mjs'
+import { normalizeLessonInput, lessonSchema, buildLessonInstructions, validateLessonPlan, materializeLessonPlan } from '../../../lib/lesson-designer.mjs'
 export const config={api:{bodyParser:{sizeLimit:'64kb'}},maxDuration:60}
 const windows=new Map()
 export default async function handler(req,res) {
@@ -15,11 +15,11 @@ export default async function handler(req,res) {
   const window=windows.get(auth.user.id)||{start:now,count:0}
   if(window.count>=10){res.setHeader('Retry-After','600');return res.status(429).json({error:'You have created several drafts quickly. Please wait a few minutes before generating another.'})}
   window.count++;windows.set(auth.user.id,window)
-  const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(50000),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:6500,instructions:buildLessonInstructions(),input:JSON.stringify(input),text:{format:{type:'json_schema',name:'lesson_plan',strict:true,schema:lessonSchema(input.sections)}}})})
+  const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(50000),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:buildLessonInstructions(),input:JSON.stringify(input),text:{format:{type:'json_schema',name:'lesson_plan',strict:true,schema:lessonSchema(input.sections,input.standards)}}})})
   const data=await response.json().catch(()=>null)
   if(!response.ok){console.error('Lesson provider failed',{status:response.status});return res.status(502).json({error:'The lesson service could not finish this draft. Please try again.'})}
   const output=data?.output_text || (data?.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('')
-  let plan;try{plan=validateLessonPlan(JSON.parse(output),input)}catch{return res.status(502).json({error:'The draft was incomplete or did not match your sections. Please try again.'})}
+  let plan;try{plan=validateLessonPlan(materializeLessonPlan(JSON.parse(output),input),input)}catch(error){console.error('Lesson draft validation failed',{status:data?.status,reason:error.message,incompleteReason:data?.incomplete_details?.reason});return res.status(502).json({error:'The lesson service returned an incomplete draft. Please try again; your selected standards and settings are still here.'})}
   return res.status(200).json({plan,input,createdAt:new Date().toISOString()})
  } catch(error) {
   console.error('Lesson Designer request failed',{name:error?.name})
