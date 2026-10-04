@@ -42,6 +42,7 @@ export default function Home() {
                   Open Full VIC
                 </button>
                 <a className="secondaryLink" href="/teacher">Teacher Portal</a>
+                <a className="secondaryLink" href="/lessonplan">AI Lesson Designer</a>
               </div>
             </div>
 
