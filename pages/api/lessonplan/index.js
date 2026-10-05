@@ -1,9 +1,9 @@
 import { lessonFailure } from '../../../lib/lesson-behavior.mjs'
 import catalogue from '../../../data/lesson-standards.json'
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
-import { normalizeLessonInput, lessonSchema, buildLessonInstructions, validateLessonPlan, materializeLessonPlan, planAsText } from '../../../lib/lesson-designer.mjs'
+import { normalizeLessonInput, lessonGenerationInput, lessonSchema, buildLessonInstructions, validateLessonPlan, materializeLessonPlan, planAsText } from '../../../lib/lesson-designer.mjs'
 import { worksheetSettings, worksheetSchema, worksheetInstructions, materializeWorksheet, validateWorksheet } from '../../../lib/lesson-worksheet.mjs'
-export const config={api:{bodyParser:{sizeLimit:'160kb'}},maxDuration:60}
+export const config={api:{bodyParser:{sizeLimit:'160kb'}},maxDuration:180}
 const windows=new Map()
 export default async function handler(req,res) {
  res.setHeader('Cache-Control','no-store')
@@ -19,9 +19,9 @@ export default async function handler(req,res) {
   const window=windows.get(auth.user.id)||{start:now,count:0}
   if(window.count>=10){res.setHeader('Retry-After','600');return res.status(429).json({error:'You have created several drafts quickly. Please wait a few minutes before generating another.'})}
   window.count++;windows.set(auth.user.id,window)
-  const deadline=Date.now()+50000
+  const deadline=Date.now()+150000
   async function requestDraft(){
-   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:worksheet?worksheetInstructions():buildLessonInstructions(),input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:input),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
+   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:worksheet?worksheetInstructions():buildLessonInstructions(),input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:lessonGenerationInput(input)),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
    const data=await response.json().catch(()=>null)
    if(!response.ok){console.error('Lesson provider failed',{status:response.status});return null}
    const output=data?.output_text || (data?.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('')
@@ -34,9 +34,10 @@ export default async function handler(req,res) {
   let plan
   try{plan=validateLessonPlan(materializeLessonPlan(JSON.parse(output),input),input,true)}
   catch(error){const failure=lessonFailure(error,data);console.error('Lesson draft validation failed',{status:data?.status,code:failure.code,reason:error.message});return res.status(502).json(failure)}
+  console.info('Lesson generation completed',{durationMs:Date.now()-(deadline-150000),outputTokens:data?.usage?.output_tokens,sections:input.sections.length,sessions:input.sessions})
   return res.status(200).json({plan,input,createdAt:new Date().toISOString()})
  } catch(error) {
   console.error('Lesson Designer request failed',{name:error?.name})
-  return res.status(error?.name==='TimeoutError'?504:500).json({error:error?.name==='TimeoutError'?'This draft took too long. Try fewer standards or sections.':'Could not create this lesson right now. Please try again.'})
+  return res.status(error?.name==='TimeoutError'?504:500).json({error:error?.name==='TimeoutError'?'The lesson service took longer than expected and could not finish. Your previous draft is still saved.':'Could not create this lesson right now. Please try again.'})
  }
 }
