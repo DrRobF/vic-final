@@ -117,3 +117,22 @@ test('Writing feedback and revision can span successive unit sessions',()=>{
  p.objectives[0].statement='Students will be able to revise an explanation after feedback.'
  p.sessions[0].phases[4].kind='feedback';p.sessions[1].phases[4].kind='revise';assert.doesNotThrow(()=>validateActivityDesign(p,i,true))
 })
+
+test('An exit ticket in a closure phase is accepted without requiring an assessment label',()=>{
+ const i=normalizeLessonInput(base,catalogue),raw=structured(i)
+ raw.sessions.session_1.phases.at(-1).kind='closure'
+ const p=materializeLessonPlan(raw,i);assert.doesNotThrow(()=>validateLessonPlan(p,i,true));assert.equal(p.sessions[0].phases.length,6);assert.equal(p.sessions[0].assessmentTimingAdjusted,undefined)
+})
+test('A missing scheduled assessment gets its supplied exit ticket within the original time budget',async()=>{
+ const i=normalizeLessonInput({...base,lessonStyle:'inquiry',creativeActivity:'group'},catalogue),raw=structured(i)
+ raw.sessions.session_1.phases.at(-1).kind='closure';raw.sessions.session_1.phases.at(-1).title='Closing reflection';raw.sessions.session_1.phases.at(-1).studentAction='Reflect on the activity.';raw.sessions.session_1.phases.at(-1).teacherAction='Summarize the main idea.'
+ raw.sessions.session_1.phases.forEach(p=>p.teacherAction='Facilitate the activity.')
+ const before=raw.sessions.session_1.phases.reduce((n,p)=>n+p.minutes,0),p=materializeLessonPlan(raw,i)
+ assert.doesNotThrow(()=>validateLessonPlan(p,i,true));assert.equal(p.sessions[0].phases.reduce((n,p)=>n+p.minutes,0),before);assert.equal(p.sessions[0].phases.at(-1).kind,'assess');assert.match(p.sessions[0].steps,/Complete the questions supplied/);assert.match(planAsText(p,i),/VIC reserved 3 minutes/)
+ let calls=0;const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'assessment-fix'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(raw)})}}})
+ const res=response();await handler({method:'POST',body:{...base,lessonStyle:'inquiry',creativeActivity:'group'}},res);assert.equal(res.code,200);assert.equal(calls,1)
+})
+test('Missing assessment materials still fail rather than claiming an exit ticket exists',()=>{
+ const i=normalizeLessonInput(base,catalogue),raw=structured(i);raw.teachingKit.assessment=''
+ assert.throws(()=>validateLessonPlan(materializeLessonPlan(raw,i),i,true),/teaching materials/)
+})
