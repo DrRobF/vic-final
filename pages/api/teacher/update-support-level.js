@@ -1,3 +1,4 @@
+import { requiresPasswordChange } from '../../../lib/password-policy.mjs'
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -81,6 +82,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Invalid or expired session.' })
   }
 
+  if (requiresPasswordChange(authUser)) return res.status(403).json({ error: 'Choose your personal password before using VIC.' })
+
   const { data: teacherRows, error: teacherLookupError } = await supabaseAdmin
     .from('users')
     .select('id, auth_user_id, email, role')
@@ -157,3 +160,4 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ success: true })
 }
+

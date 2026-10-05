@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
+import { requiresPasswordChange } from '../lib/password-policy.mjs'
 
 const INVALID_ROLE_MESSAGE =
   'Your account does not have a valid role yet in your profile. Please contact your teacher or administrator.'
@@ -28,13 +29,18 @@ export default function LoginPage() {
         ? normalizedLogin
         : `${normalizedLogin}@students.askvic.ai`
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
         password,
       })
 
       if (signInError) {
         setError(signInError.message || 'Unable to sign in. Please try again.')
+        return
+      }
+
+      if (requiresPasswordChange(signInData?.user)) {
+        await router.replace('/change-password')
         return
       }
 
@@ -267,3 +273,4 @@ export default function LoginPage() {
     </main>
   )
 }
+

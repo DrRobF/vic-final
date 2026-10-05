@@ -1,7 +1,9 @@
+import PasswordGate from '../components/PasswordGate'
+
 export default function App({ Component, pageProps }) {
   return (
     <>
-      <Component {...pageProps} />
+      <PasswordGate><Component {...pageProps} /></PasswordGate>
       <style jsx global>{`
         :root {
           --vic-bg: #F7F2EA;
@@ -66,3 +68,4 @@ export default function App({ Component, pageProps }) {
     </>
   )
 }
+

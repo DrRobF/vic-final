@@ -1,3 +1,4 @@
+import { requiresPasswordChange } from '../../../lib/password-policy.mjs'
 import { createClient } from '@supabase/supabase-js'
 import { lessonFromAssignment, pickLatestAssignment } from '../../../lib/assignment-resolution'
 
@@ -121,6 +122,8 @@ export default async function handler(req, res) {
   if (authError || !authUser?.id) {
     return res.status(401).json({ error: 'Invalid or expired session.' })
   }
+
+  if (requiresPasswordChange(authUser)) return res.status(403).json({ error: 'Choose your personal password before using VIC.' })
 
   const { data: teacherRows, error: teacherLookupError } = await supabaseAdmin
     .from('users')
@@ -298,3 +301,4 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ students })
 }
+
