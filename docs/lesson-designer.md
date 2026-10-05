@@ -46,3 +46,6 @@ Run `npm test` and `npm run build` with the existing public Supabase build varia
 - Socratic seminars request 6–8 sequenced questions with probes, possible evidence and participation norms. Pacing reserves revision time when revision is an objective; creative choices require an actual product or challenge.
 - Browser, print, text and Word use one presentation of each section. Copy/Edit operate on that presentation; persisted edits flow into worksheet generation and invalidate the old worksheet. Official standards remain read-only.
 - Existing saved drafts still export; regenerate/revise them to receive the required teaching kit. Content quality remains subject to teacher review.
+
+## PDF deployment packaging fix — October 5, 2026
+PDF.js loads native canvas through a runtime createRequire call, which was absent from Next's serverless file trace. Explicitly include canvas packages and native bindings with PDF dependencies. Load the PDF reader only inside PDF extraction so an initialization failure cannot crash other imports or the route before authorization. The UI handles HTML/platform error responses with a useful upload message.
