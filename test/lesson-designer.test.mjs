@@ -166,15 +166,17 @@ test('A response after 60 seconds has sufficient configured processing budget an
 
 test('Structured teaching materials survive generation, copying and Word export in one provider call',async()=>{
  const input=normalizeLessonInput(base,catalogue),raw=structured(input)
+ raw.teachingKit.teacherModel={models:[{sessionNumber:1,example:'Three groups of four counters.',thinkAloud:'Count four, eight, twelve.'}]}
+ raw.teachingKit.supports={groups:[{group:'More support',materials:'Completed organizer: Rows = 3; counters per row = 4; total = 12. Student stem: I counted __ because __.',use:'Read the completed example, then fill your own organizer.'}]}
  raw.teachingKit.discussionGuide={norms:'Support answers with the array.',questions:[{question:'How many counters?',followUp:'Show how rows prove it.',sampleResponse:'Three rows of four give twelve.'}]}
- raw.teachingKit.studentTask={directions:'Build and explain the array.',organizers:[{title:'Array record',directions:'Record the structure and total.',fields:['Rows','Counters per row','Total']}],individualCheck:'Independently explain a new array.',checklist:['Equal rows','Justified total']}
+ raw.teachingKit.studentTask={directions:'Build and explain the array.',sharedWork:'Team array model.',individualWork:'An individual array explanation.',transition:'Draw your own copy of the team array before writing your explanation.',organizers:[{title:'Array record',directions:'Record the structure and total.',fields:['Rows','Counters per row','Total']}],individualCheck:'Independently explain a new array.',checklist:['Equal rows','Justified total']}
  raw.teachingKit.assessment={directions:'Work independently.',items:[{prompt:'Show three groups of four.',sampleResponse:'Twelve counters.',successCriteria:'Three equal groups, four each, twelve total.'}]}
  let calls=0
  const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'complete-kit'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(raw)})}}})
  const res=response();await handler({method:'POST',body:base},res)
  assert.equal(res.code,200);assert.equal(calls,1)
  const plan=res.data.plan,text=planAsText(plan,input)
- for(const phrase of ['Follow-up: Show how rows prove it.','Rows: ____________________','Individual evidence of learning:','Teacher sample response / acceptable evidence: Twelve counters.'])assert.ok(text.includes(phrase),phrase)
+ for(const phrase of ['Follow-up: Show how rows prove it.','Rows: ____________________','Individual evidence of learning:','Completed organizer: Rows = 3','Each student\'s own work:','Teacher sample response / acceptable evidence: Twelve counters.'])assert.ok(text.includes(phrase),phrase)
  const exportHandler=loadHandler('../pages/api/lessonplan/export.js',{...vars,Document,Packer,Paragraph,TextRun,HeadingLevel,requireLessonEducator:async()=>({user:{id:'complete-kit'}})})
  const doc=response();await exportHandler({method:'POST',body:{input,plan}},doc);assert.equal(doc.code,200)
  const xml=await (await JSZip.loadAsync(doc.data)).file('word/document.xml').async('string')
