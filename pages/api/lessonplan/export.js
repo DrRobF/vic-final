@@ -11,7 +11,7 @@ export default async function handler(req,res){
   const auth=await requireLessonEducator(req);if(auth.error)return res.status(auth.status).json({error:auth.error})
   const worksheetExport=['worksheet','answer-key'].includes(req.body?.kind)
   const answers=req.body?.kind==='answer-key'
-  let input,plan,sheet;try{input=normalizeLessonInput(req.body?.input,catalogue);plan=validateLessonPlan(req.body?.plan,input);if(worksheetExport)sheet=validateWorksheet(req.body?.worksheet)}catch(e){return res.status(400).json({error:e.message})}
+  let input,plan,sheet;try{input=normalizeLessonInput({...req.body?.input,preserveExisting:false,startingPoint:'new'},catalogue);plan=validateLessonPlan(req.body?.plan,input);if(worksheetExport)sheet=validateWorksheet(req.body?.worksheet)}catch(e){return res.status(400).json({error:e.message})}
   const paragraphs=[]
   const heading=(value,level=HeadingLevel.HEADING_1)=>paragraphs.push(new Paragraph({text:value,heading:level,spacing:{before:220,after:100}}))
   const body=value=>String(value).split('\n').forEach(line=>paragraphs.push(new Paragraph({children:[new TextRun(line)],spacing:{after:100}})))
