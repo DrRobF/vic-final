@@ -96,3 +96,17 @@ test('A writing revision objective cannot pass with only a plan to revise or fee
  assert.throws(()=>validateActivityDesign(p,i,true),/revision/)
  p.sessions[0].phases[2].kind='feedback';p.sessions[0].phases[4].kind='revise';assert.doesNotThrow(()=>validateActivityDesign(p,i,true))
 })
+
+test('A rejected conversion gets one automatic repair and the previous failed attempt is supplied as data',async()=>{
+ const body={...base,startingPoint:'convert',sourceLesson:'Teacher explains the answer before students write.',lessonStyle:'inquiry',creativeActivity:'group'},i=normalizeLessonInput(body,catalogue)
+ const bad=structured(i);bad.sessions.session_1.phases[0].kind='model'
+ let calls=0,last
+ const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'repair-teacher'}}),fetch:async(url,options)=>{last=JSON.parse(options.body);calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(calls===1?bad:structured(i))})}}})
+ const res=response();await handler({method:'POST',body},res)
+ assert.equal(calls,2);assert.equal(res.code,200);assert.match(JSON.parse(last.input).repairFeedback,/Inquiry/);assert.ok(JSON.parse(last.input).previousAttempt);assert.match(res.data.plan.sessions[0].steps,/Test array arrangements/)
+})
+test('Repeated incomplete drafts stop after one repair attempt',async()=>{
+ let calls=0
+ const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'repair-failure'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:'{}'})}}})
+ const res=response();await handler({method:'POST',body:base},res);assert.equal(calls,2);assert.equal(res.code,502);assert.match(res.data.error,/previous draft has not been replaced/)
+})
