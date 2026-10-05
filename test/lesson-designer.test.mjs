@@ -1,4 +1,4 @@
-import {renderActivitySteps,validateActivityDesign} from '../lib/lesson-behavior.mjs'
+import {renderActivitySteps,validateActivityDesign,lessonFailure} from '../lib/lesson-behavior.mjs'
 import {readExistingLesson} from '../lib/lesson-existing.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -15,7 +15,7 @@ const good=input=>({changeEvidence:input.startingPoint&&input.startingPoint!=='n
 const structured=input=>{const p=good(input);return {...p,objectives:Object.fromEntries(p.objectives.map((o,i)=>[`objective_${i+1}`,o])),sessions:Object.fromEntries(p.sessions.map(({number,...v},i)=>[`session_${i+1}`,v])),sections:Object.fromEntries(p.sections.map((s,i)=>[`section_${i+1}`,s.body])),alignment:Object.fromEntries(p.alignment.map(({code,...a},i)=>[`standard_${i+1}`,a]))}}
 function response(){return {headers:{},setHeader(k,v){this.headers[k]=v},status(n){this.code=n;return this},json(data){this.data=data;return this},send(data){this.data=data;return this}}}
 function loadHandler(path,variables){let src=readFileSync(new URL(path,import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace(/export const /g,'const ').replace('export default async function handler','async function handler');src+='\nthis.handler=handler';const context={console:{error(){}},AbortSignal,Date,Map,process:{env:{OPENAI_API_KEY:'fake-test-key'}},...variables};vm.createContext(context);vm.runInContext(src,context);return context.handler}
-const vars={worksheetSettings,worksheetSchema,worksheetInstructions,materializeWorksheet,validateWorksheet,catalogue,normalizeLessonInput,validateLessonPlan,materializeLessonPlan,lessonSchema,buildLessonInstructions,planAsText,lessonOutputSections}
+const vars={lessonFailure,worksheetSettings,worksheetSchema,worksheetInstructions,materializeWorksheet,validateWorksheet,catalogue,normalizeLessonInput,validateLessonPlan,materializeLessonPlan,lessonSchema,buildLessonInstructions,planAsText,lessonOutputSections}
 test('Catalogue covers all 36 state/subject/grade combinations with sourced, unique entries',()=>{
  assert.equal(new Set(catalogue.map(s=>s.id)).size,catalogue.length)
  for(const state of ['FL','PA'])for(const subject of ['reading','math'])for(const grade of ['K',...'12345678'])assert.ok(catalogue.some(s=>s.state===state&&s.subject===subject&&s.grade===grade),`${state}/${subject}/${grade}`)
@@ -86,10 +86,9 @@ test('Collaborative conversion requires a scheduled team challenge with product,
  assert.match(plan.sessions[0].steps,/Create and defend a shared evidence map/);assert.ok(!plan.sessions[0].steps.includes('unrelated'))
  assert.match(plan.changes[0],/Test array arrangements/);assert.match(plan.teachingKit.studentTask,/Team roles: Builder/);assert.match(planAsText(plan,i),/Shared product: Shared labeled evidence map/)
 })
-test('Refresh change evidence must reference the uploaded source and an actual new activity',()=>{
- const i=normalizeLessonInput({...base,startingPoint:'refresh',sourceLesson:'Teacher gives a worksheet.'},catalogue),p=good(i)
- for(const change of [{originalExcerpt:'Not in the original'},{phaseNumber:90},{originalExcerpt:p.sessions[0].phases[1].studentAction}]){const bad=structuredClone(p);Object.assign(bad.changeEvidence[0],change);assert.throws(()=>validateActivityDesign(bad,i,true))}
- const legacy=good(i);delete legacy.changeEvidence;legacy.sessions.forEach(s=>delete s.phases);assert.doesNotThrow(()=>validateLessonPlan(legacy,i));assert.throws(()=>validateLessonPlan(legacy,i,true))
+test('Unmatched change-summary excerpts do not reject usable lessons or produce unsupported claims',()=>{
+ const i=normalizeLessonInput({...base,startingPoint:'refresh',sourceLesson:'Teacher gives a worksheet.'},catalogue)
+ for(const change of [{originalExcerpt:'Not in the original'},{phaseNumber:90},{originalExcerpt:'Test array arrangements and record evidence.'}]){const raw=structured(i);Object.assign(raw.changeEvidence[0],change);const p=materializeLessonPlan(raw,i);assert.doesNotThrow(()=>validateLessonPlan(p,i,true));assert.deepEqual(p.changes,[]);assert.match(p.reviewNotes.join(' '),/could not support/)}
 })
 test('A writing revision objective cannot pass with only a plan to revise or feedback after revision',()=>{
  const i=normalizeLessonInput(base,catalogue),p=good(i);p.objectives[0].statement='Students will be able to revise their explanation after feedback.'
@@ -97,16 +96,24 @@ test('A writing revision objective cannot pass with only a plan to revise or fee
  p.sessions[0].phases[2].kind='feedback';p.sessions[0].phases[4].kind='revise';assert.doesNotThrow(()=>validateActivityDesign(p,i,true))
 })
 
-test('A rejected conversion gets one automatic repair and the previous failed attempt is supplied as data',async()=>{
- const body={...base,startingPoint:'convert',sourceLesson:'Teacher explains the answer before students write.',lessonStyle:'inquiry',creativeActivity:'group'},i=normalizeLessonInput(body,catalogue)
- const bad=structured(i);bad.sessions.session_1.phases[0].kind='model'
- let calls=0,last
- const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'repair-teacher'}}),fetch:async(url,options)=>{last=JSON.parse(options.body);calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(calls===1?bad:structured(i))})}}})
- const res=response();await handler({method:'POST',body},res)
- assert.equal(calls,2);assert.equal(res.code,200);assert.match(JSON.parse(last.input).repairFeedback,/Inquiry/);assert.ok(JSON.parse(last.input).previousAttempt);assert.match(res.data.plan.sessions[0].steps,/Test array arrangements/)
+test('Rejected inquiry returns its specific reason after one provider call',async()=>{
+ const body={...base,startingPoint:'convert',sourceLesson:'Teacher explains the answer before students write.',lessonStyle:'inquiry',creativeActivity:'group'},i=normalizeLessonInput(body,catalogue),bad=structured(i)
+ bad.sessions.session_1.phases[0].kind='model';let calls=0
+ const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'quality-failure'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(bad)})}}})
+ const res=response();await handler({method:'POST',body},res);assert.equal(calls,1);assert.equal(res.code,502);assert.match(res.data.error,/investigation before teacher/);assert.equal(res.data.code,'lesson_quality_check')
 })
-test('Repeated incomplete drafts stop after one repair attempt',async()=>{
+test('Truncated provider output names the actual failure without a second request',async()=>{
  let calls=0
- const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'repair-failure'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:'{}'})}}})
- const res=response();await handler({method:'POST',body:base},res);assert.equal(calls,2);assert.equal(res.code,502);assert.match(res.data.error,/previous draft has not been replaced/)
+ const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'truncated-draft'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({status:'incomplete',output_text:'{"title":'})}}})
+ const res=response();await handler({method:'POST',body:base},res);assert.equal(calls,1);assert.equal(res.code,502);assert.equal(res.data.code,'draft_truncated');assert.match(res.data.error,/cut short/)
+})
+test('Inquiry can investigate and discuss evidence during a single team phase',()=>{
+ const i=normalizeLessonInput({...base,lessonStyle:'inquiry',creativeActivity:'group'},catalogue),p=good(i)
+ p.sessions[0].phases[1].kind='collaborate';p.sessions[0].phases[1].studentAction='Teams investigate array arrangements and compare evidence.'
+ p.sessions[0].phases[2].kind='practice';p.sessions[0].phases[3].kind='practice';assert.doesNotThrow(()=>validateActivityDesign(p,i,true))
+})
+test('Writing feedback and revision can span successive unit sessions',()=>{
+ const i=normalizeLessonInput({...base,scope:'unit',sessions:2},catalogue),p=good(i)
+ p.objectives[0].statement='Students will be able to revise an explanation after feedback.'
+ p.sessions[0].phases[4].kind='feedback';p.sessions[1].phases[4].kind='revise';assert.doesNotThrow(()=>validateActivityDesign(p,i,true))
 })
