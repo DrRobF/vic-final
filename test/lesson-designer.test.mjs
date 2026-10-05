@@ -1,4 +1,4 @@
-import {renderActivitySteps,validateActivityDesign,lessonFailure} from '../lib/lesson-behavior.mjs'
+import {renderActivitySteps,validateActivityDesign,activityReviewNotes,lessonFailure} from '../lib/lesson-behavior.mjs'
 import {readExistingLesson} from '../lib/lesson-existing.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
@@ -70,13 +70,13 @@ test('Refresh keeps its default approach choice but an explicit new approach bec
  assert.equal(refresh.startingPoint,'refresh');assert.equal(refresh.lessonStyle,'recommend')
  assert.equal(normalizeLessonInput({...refresh,lessonStyle:'inquiry'},catalogue).startingPoint,'convert')
 })
-test('Reject a relabeled inquiry that models the answer before investigation, wrong approach, and inaccurate timing',()=>{
+test('Pacing and inquiry-sequence suggestions do not block a lesson; wrong selected approach still fails',()=>{
  const i=normalizeLessonInput({...base,startingPoint:'convert',sourceLesson:'Teacher explains the answer. Students write a paragraph.',lessonStyle:'inquiry'},catalogue)
  const p=good(i);validateActivityDesign(p,i,true)
  const clone=()=>structuredClone(p)
- let bad=clone();bad.sessions[0].phases[0].kind='model';assert.throws(()=>validateActivityDesign(bad,i,true),/Inquiry/)
+ let bad=clone();bad.sessions[0].phases[0].kind='model';assert.doesNotThrow(()=>validateActivityDesign(bad,i,true));assert.match(activityReviewNotes(bad,i).join(' '),/investigate/)
  bad=clone();bad.sessions[0].approach='explicit';assert.throws(()=>validateActivityDesign(bad,i,true),/selected approach/)
- bad=clone();bad.sessions[0].phases[1].minutes++;assert.throws(()=>validateActivityDesign(bad,i,true),/time budget/)
+ bad=clone();bad.sessions[0].phases[1].minutes++;assert.doesNotThrow(()=>validateActivityDesign(bad,i,true))
 })
 test('Collaborative conversion requires a scheduled team challenge with product, roles and criteria',()=>{
  const i=normalizeLessonInput({...base,startingPoint:'convert',sourceLesson:'Write a paragraph and swap with a partner.',lessonStyle:'inquiry',creativeActivity:'group'},catalogue),p=good(i)
@@ -90,17 +90,17 @@ test('Unmatched change-summary excerpts do not reject usable lessons or produce 
  const i=normalizeLessonInput({...base,startingPoint:'refresh',sourceLesson:'Teacher gives a worksheet.'},catalogue)
  for(const change of [{originalExcerpt:'Not in the original'},{phaseNumber:90},{originalExcerpt:'Test array arrangements and record evidence.'}]){const raw=structured(i);Object.assign(raw.changeEvidence[0],change);const p=materializeLessonPlan(raw,i);assert.doesNotThrow(()=>validateLessonPlan(p,i,true));assert.deepEqual(p.changes,[]);assert.match(p.reviewNotes.join(' '),/could not support/)}
 })
-test('A writing revision objective cannot pass with only a plan to revise or feedback after revision',()=>{
+test('Writing revision is a teacher review note rather than a generation blocker',()=>{
  const i=normalizeLessonInput(base,catalogue),p=good(i);p.objectives[0].statement='Students will be able to revise their explanation after feedback.'
- assert.throws(()=>validateActivityDesign(p,i,true),/revision/)
+ assert.doesNotThrow(()=>validateActivityDesign(p,i,true));assert.match(activityReviewNotes(p,i).join(' '),/apply the feedback/)
  p.sessions[0].phases[2].kind='feedback';p.sessions[0].phases[4].kind='revise';assert.doesNotThrow(()=>validateActivityDesign(p,i,true))
 })
 
-test('Rejected inquiry returns its specific reason after one provider call',async()=>{
+test('A mismatched approach still returns its specific reason after one provider call',async()=>{
  const body={...base,startingPoint:'convert',sourceLesson:'Teacher explains the answer before students write.',lessonStyle:'inquiry',creativeActivity:'group'},i=normalizeLessonInput(body,catalogue),bad=structured(i)
- bad.sessions.session_1.phases[0].kind='model';let calls=0
+ bad.sessions.session_1.approach='explicit';let calls=0
  const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'quality-failure'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(bad)})}}})
- const res=response();await handler({method:'POST',body},res);assert.equal(calls,1);assert.equal(res.code,502);assert.match(res.data.error,/investigation before teacher/);assert.equal(res.data.code,'lesson_quality_check')
+ const res=response();await handler({method:'POST',body},res);assert.equal(calls,1);assert.equal(res.code,502);assert.match(res.data.error,/selected approach/);assert.equal(res.data.code,'lesson_quality_check')
 })
 test('Truncated provider output names the actual failure without a second request',async()=>{
  let calls=0
@@ -123,16 +123,24 @@ test('An exit ticket in a closure phase is accepted without requiring an assessm
  raw.sessions.session_1.phases.at(-1).kind='closure'
  const p=materializeLessonPlan(raw,i);assert.doesNotThrow(()=>validateLessonPlan(p,i,true));assert.equal(p.sessions[0].phases.length,6);assert.equal(p.sessions[0].assessmentTimingAdjusted,undefined)
 })
-test('A missing scheduled assessment gets its supplied exit ticket within the original time budget',async()=>{
+test('An assessment scheduling suggestion does not alter timings or block a usable lesson',async()=>{
  const i=normalizeLessonInput({...base,lessonStyle:'inquiry',creativeActivity:'group'},catalogue),raw=structured(i)
  raw.sessions.session_1.phases.at(-1).kind='closure';raw.sessions.session_1.phases.at(-1).title='Closing reflection';raw.sessions.session_1.phases.at(-1).studentAction='Reflect on the activity.';raw.sessions.session_1.phases.at(-1).teacherAction='Summarize the main idea.'
  raw.sessions.session_1.phases.forEach(p=>p.teacherAction='Facilitate the activity.')
  const before=raw.sessions.session_1.phases.reduce((n,p)=>n+p.minutes,0),p=materializeLessonPlan(raw,i)
- assert.doesNotThrow(()=>validateLessonPlan(p,i,true));assert.equal(p.sessions[0].phases.reduce((n,p)=>n+p.minutes,0),before);assert.equal(p.sessions[0].phases.at(-1).kind,'assess');assert.match(p.sessions[0].steps,/Complete the questions supplied/);assert.match(planAsText(p,i),/VIC reserved 3 minutes/)
+ assert.doesNotThrow(()=>validateLessonPlan(p,i,true));assert.equal(p.sessions[0].phases.reduce((n,p)=>n+p.minutes,0),before);assert.equal(p.sessions[0].phases.at(-1).kind,'closure');assert.match(planAsText(p,i),/use the supplied exit ticket/)
  let calls=0;const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'assessment-fix'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(raw)})}}})
  const res=response();await handler({method:'POST',body:{...base,lessonStyle:'inquiry',creativeActivity:'group'}},res);assert.equal(res.code,200);assert.equal(calls,1)
 })
 test('Missing assessment materials still fail rather than claiming an exit ticket exists',()=>{
  const i=normalizeLessonInput(base,catalogue),raw=structured(i);raw.teachingKit.assessment=''
  assert.throws(()=>validateLessonPlan(materializeLessonPlan(raw,i),i,true),/teaching materials/)
+})
+
+test('Approximate pacing and integrated writing revision succeed through the handler in one request',async()=>{
+ const i=normalizeLessonInput(base,catalogue),raw=structured(i)
+ raw.objectives.objective_1.statement='Students will be able to revise their explanation.'
+ raw.sessions.session_1.phases[1].minutes+=10
+ let calls=0;const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'flexible-pacing'}}),fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify(raw)})}}})
+ const res=response();await handler({method:'POST',body:base},res);assert.equal(res.code,200);assert.equal(calls,1);assert.match(res.data.plan.reviewNotes.join(' '),/about 55 minutes/);assert.match(res.data.plan.reviewNotes.join(' '),/separate timed revision block is optional/)
 })
