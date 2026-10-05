@@ -49,3 +49,6 @@ Run `npm test` and `npm run build` with the existing public Supabase build varia
 
 ## PDF deployment packaging fix — October 5, 2026
 PDF.js loads native canvas through a runtime createRequire call, which was absent from Next's serverless file trace. Explicitly include canvas packages and native bindings with PDF dependencies. Load the PDF reader only inside PDF extraction so an initialization failure cannot crash other imports or the route before authorization. The UI handles HTML/platform error responses with a useful upload message.
+
+## Existing lesson workflow — October 5, 2026
+Refresh/convert now shows the source lesson and requested changes first. Metadata and known standard codes are read from the original, retaining exact catalogue wording when matched. Missing official standards remain unverified teacher-provided original learning goals. Unknown grade/subject remain “Same as original” for the generator rather than silently using new-lesson defaults. Only an absent overall duration requires a small follow-up field. Optional detail overrides expand the full form. New-lesson workflow is unchanged. Common source headings, objective count and numbered unit sessions are retained.
