@@ -1,3 +1,4 @@
+import { requiresPasswordChange } from '../../lib/password-policy.mjs'
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
@@ -46,6 +47,8 @@ export default async function handler(req, res) {
     if (authError || !authUser) {
       return res.status(401).json({ error: 'Not authenticated' })
     }
+
+    if (requiresPasswordChange(authUser)) return res.status(403).json({ error: 'Choose your personal password before using VIC.' })
 
     const { data: studentRow, error: studentError } = await supabase
       .from('users')
@@ -125,3 +128,4 @@ export default async function handler(req, res) {
     })
   }
 }
+

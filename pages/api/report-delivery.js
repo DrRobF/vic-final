@@ -1,3 +1,4 @@
+import { requiresPasswordChange } from '../../lib/password-policy.mjs'
 import { createClient } from '@supabase/supabase-js'
 import { buildReportEmailText, buildReportHtml } from '../../lib/report-format'
 
@@ -125,6 +126,8 @@ export default async function handler(req, res) {
     return res.status(401).json({ success: false, error: 'Invalid or expired session.' })
   }
 
+  if (requiresPasswordChange(authUser)) return res.status(403).json({ error: 'Choose your personal password before using VIC.' })
+
   const { data: profileRows } = await supabaseAdmin
     .from('users')
     .select('id, email, role')
@@ -221,3 +224,4 @@ export default async function handler(req, res) {
     })
   }
 }
+
