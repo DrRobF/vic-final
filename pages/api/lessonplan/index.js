@@ -1,3 +1,4 @@
+import { lessonFailure } from '../../../lib/lesson-behavior.mjs'
 import catalogue from '../../../data/lesson-standards.json'
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { normalizeLessonInput, lessonSchema, buildLessonInstructions, validateLessonPlan, materializeLessonPlan, planAsText } from '../../../lib/lesson-designer.mjs'
@@ -19,8 +20,8 @@ export default async function handler(req,res) {
   if(window.count>=10){res.setHeader('Retry-After','600');return res.status(429).json({error:'You have created several drafts quickly. Please wait a few minutes before generating another.'})}
   window.count++;windows.set(auth.user.id,window)
   const deadline=Date.now()+50000
-  async function requestDraft(repairFeedback='',previousAttempt=''){
-   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:worksheet?worksheetInstructions():buildLessonInstructions(),input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:repairFeedback?{...input,repairFeedback,previousAttempt}:input),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
+  async function requestDraft(){
+   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:worksheet?worksheetInstructions():buildLessonInstructions(),input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:input),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
    const data=await response.json().catch(()=>null)
    if(!response.ok){console.error('Lesson provider failed',{status:response.status});return null}
    const output=data?.output_text || (data?.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('')
@@ -31,17 +32,8 @@ export default async function handler(req,res) {
   let {data,output}=result
   if(worksheet){try{const sheet=validateWorksheet(materializeWorksheet(JSON.parse(output),settings));const source=lesson.displayEdits?.kit_sourceMaterial??lesson.teachingKit?.sourceMaterial;if(input.subject==='reading'&&source){for(const version of sheet.versions)version.passage=source;validateWorksheet(sheet)}return res.status(200).json({worksheet:sheet,createdAt:new Date().toISOString()})}catch(error){console.error('Worksheet validation failed',{status:data?.status,reason:error.message});return res.status(502).json({error:'The worksheet was incomplete. Try fewer questions or one classroom version.'})}}
   let plan
-  for(let attempt=0;attempt<2;attempt++){
-   try{plan=validateLessonPlan(materializeLessonPlan(JSON.parse(output),input),input,true);break}
-   catch(error){
-    console.error('Lesson draft validation failed',{status:data?.status,reason:error.message,attempt})
-    if(attempt===1||deadline-Date.now()<5000)break
-    result=await requestDraft(error.message,output.slice(0,30000))
-    if(!result)break
-    ;({data,output}=result)
-   }
-  }
-  if(!plan)return res.status(502).json({error:'VIC tried to repair this draft but could not finish a complete lesson. Your previous draft has not been replaced. Please try again.'})
+  try{plan=validateLessonPlan(materializeLessonPlan(JSON.parse(output),input),input,true)}
+  catch(error){const failure=lessonFailure(error,data);console.error('Lesson draft validation failed',{status:data?.status,code:failure.code,reason:error.message});return res.status(502).json(failure)}
   return res.status(200).json({plan,input,createdAt:new Date().toISOString()})
  } catch(error) {
   console.error('Lesson Designer request failed',{name:error?.name})
