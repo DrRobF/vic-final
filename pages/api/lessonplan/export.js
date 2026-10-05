@@ -22,8 +22,11 @@ export default async function handler(req,res){
    })
    if(answers){heading('Teacher review');sheet.reviewNotes.forEach(body);body('Check every question and answer before sharing the student worksheet.')}
   }else{
-  heading(plan.title,HeadingLevel.TITLE);body(`${input.state} | Grade ${input.grade} | ${input.subject} | ${input.minutes} minutes`)
+  heading(plan.title,HeadingLevel.TITLE);body(`${input.state} | Grade ${input.grade} | ${input.subject} | ${input.sessions||1} session(s), ${input.minutes} minutes each`)
   heading('Standards');for(const s of input.standards){body(`${s.code}: ${s.text}`);if(s.source)body(`Source: ${s.source} | PDF page ${s.page} | ${s.version}`);else body('Teacher-provided standard; confirm wording and applicability.')}
+  if(plan.objectives){heading('Learning objectives');plan.objectives.forEach((o,i)=>body(`${i+1}. ${o.statement}\nStandards: ${o.standardCodes.join(', ')}\nActivity: ${o.activity}\nEvidence of learning: ${o.assessment}`))}
+  if(plan.sessions){heading(plan.sessions.length>1?'Unit session sequence':'Session plan');plan.sessions.forEach(v=>{heading(`Session ${v.number}: ${v.title}`,HeadingLevel.HEADING_2);body(v.steps);body(`Assessment: ${v.assessment}`)})}
+  if(plan.changes?.length){heading('What changed and why');plan.changes.forEach(body)}
   for(const s of plan.sections){heading(s.heading);body(s.body)}
   heading('Standard alignment');for(const a of plan.alignment){heading(a.code,HeadingLevel.HEADING_2);body(`Objective: ${a.objective}\nActivity: ${a.activity}\nAssessment: ${a.assessment}`)}
   heading('Teacher review');plan.reviewNotes.forEach(body);body('Review accuracy, pacing, materials, and suitability before teaching or submitting.');body('Created with Ask VIC Lesson Designer | askvic.ai/lessonplan')

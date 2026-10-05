@@ -32,3 +32,10 @@ Rebuild: download the five PDFs to a source directory using the URLs in `scripts
 ## Validation
 
 Run `npm test` and `npm run build` with the existing public Supabase build variables. Tests include catalogue coverage, trusted-source resolution, forged/mismatched IDs, custom standards, heading/group validation, output/standard alignment, auth rejection before provider calls, provider failures, burst limits, and real DOCX creation. Provider tests use controlled replies; a signed-in live generation/export check is separately required to confirm production provider access.
+
+
+## Teacher planning update — October 5, 2026
+- New or refreshed/converted lesson; paste or import DOCX, readable PDF, TXT, or Markdown. Authenticated imports use plain text only, up to 3 MB, 30 PDF pages, and 30,000 extracted characters; original files are not stored. Scanned PDFs require pasted text.
+- Single lesson or unit of 1–10 sessions, 10–180 minutes per session. Approach and creative task are optional, with 1–5 measurable objectives (default two).
+- School headings remain authoritative, including existing saved formats. Structured standards, objectives with activity/evidence, session sequences, and change summaries accompany the requested sections in browser, text, print, and Word output. Legacy drafts remain exportable.
+- Curriculum audit, shared lesson storage, school/district accounts, and coverage tracking are future work, not part of this release.
