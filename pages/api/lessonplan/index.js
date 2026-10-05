@@ -11,7 +11,7 @@ export default async function handler(req,res) {
  try {
   const auth=await requireLessonEducator(req)
   if(auth.error)return res.status(auth.status).json({error:auth.error})
-  let input;try{input=normalizeLessonInput(req.body,catalogue)}catch(e){return res.status(400).json({error:e.message})}
+  let input;try{input=normalizeLessonInput(req.body?.kind==='worksheet'?{...req.body,preserveExisting:false,startingPoint:'new'}:req.body,catalogue)}catch(e){return res.status(400).json({error:e.message})}
   const worksheet=req.body?.kind==='worksheet'
   let settings,lesson;try{if(worksheet){lesson=validateLessonPlan(req.body?.plan,input);settings=worksheetSettings(req.body,input)}}catch(e){return res.status(400).json({error:e.message})}
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'Lesson generation is temporarily unavailable. Please try again later.'})

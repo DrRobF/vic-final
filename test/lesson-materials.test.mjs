@@ -73,12 +73,12 @@ test('Generation instructions resolve modeling conflicts and preserve open-ended
 })
 
 
-test('Unsupported answer evidence is withheld without failing the entire lesson',()=>{
+test('Citation mismatches preserve suggested answers with a clear qualification',()=>{
  const kit=kitFor(examples[0]);kit.discussionGuide.questions[0].sourceEvidence='The animals taught Sam to fly.';kit.discussionGuide.questions[0].sampleResponse='Sam learned to fly.'
  kit.assessment.items[0].sourceEvidence='Unwritten event.';kit.assessment.items[0].sampleResponse='Invented explanation.'
  const rendered=materializeTeachingKit(kit)
- assert.ok(!rendered.discussionGuide.includes('Sam learned to fly.'));assert.ok(!rendered.assessment.includes('Invented explanation.'))
- assert.match(rendered.discussionGuide,/Teacher review needed/);assert.match(rendered.assessment,/Teacher review needed/)
+ assert.ok(rendered.discussionGuide.includes('Sam learned to fly.'));assert.ok(rendered.assessment.includes('Invented explanation.'))
+ assert.match(rendered.discussionGuide,/Evidence note:/);assert.match(rendered.assessment,/Evidence note:/)
 })
 test('Personal and performance responses can have no text evidence; inferred answers are labeled',()=>{
  const kit=kitFor(examples[4]);kit.discussionGuide.questions[0].responseType='performance';kit.discussionGuide.questions[0].sourceEvidence=''

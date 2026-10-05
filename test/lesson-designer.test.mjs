@@ -84,7 +84,7 @@ test('Collaborative conversion requires a scheduled team challenge with product,
  for(const mutate of [p=>p.sessions[0].challenge=null,p=>p.sessions[0].challenge.product='',p=>p.sessions[0].phases[2].kind='practice']){const bad=structuredClone(p);mutate(bad);assert.throws(()=>validateActivityDesign(bad,i,true))}
  const raw=structured(i);raw.sessions.session_1.steps='An unrelated old sequence';const plan=materializeLessonPlan(raw,i)
  assert.match(plan.sessions[0].steps,/Create and defend a shared evidence map/);assert.ok(!plan.sessions[0].steps.includes('unrelated'))
- assert.match(plan.changes[0],/Test array arrangements/);assert.match(plan.teachingKit.studentTask,/Team roles: Builder/);assert.match(planAsText(plan,i),/Shared product: Shared labeled evidence map/)
+ assert.match(plan.changes.join(' '),/Test array arrangements/);assert.match(plan.teachingKit.studentTask,/Team roles: Builder/);assert.match(planAsText(plan,i),/Shared product: Shared labeled evidence map/)
 })
 test('Unmatched change-summary excerpts do not reject usable lessons or produce unsupported claims',()=>{
  const i=normalizeLessonInput({...base,startingPoint:'refresh',sourceLesson:'Teacher gives a worksheet.'},catalogue)
@@ -187,4 +187,23 @@ test('Revision change excerpts are checked against the current edited draft rath
  raw.changeEvidence=[{originalExcerpt:'The currently edited lesson.',sessionNumber:1,phaseNumber:2,reason:'Updated investigation.'}]
  const plan=materializeLessonPlan(raw,input)
  assert.equal(plan.changes.length,1);assert.match(plan.changes[0],/The currently edited lesson/)
+})
+
+
+test('A problem-based role-play rebuild sends learning targets, never the old activities, to the provider',async()=>{
+ const source='OLD_SEMINAR_TITLE\nGrade 3 ELA\n45 minutes each\nStandards\nELA.3.R.1.1: Explain how characters develop.\nLearning objectives\n1. Students will be able to explain character development using evidence.\nActivity: OLD_PARAGRAPH_TASK\nSession plan\nOLD_SEMINAR_ACTIVITY and OLD_ROLE_JOBS\nShared text / lesson stimulus\nOLD_STORY_PASSAGE\nTeacher model and think-aloud\nOLD_MODEL'
+ const body={...base,subject:'reading',standardIds:['FL:ELA.3.R.1.1'],startingPoint:'convert',sourceLesson:source,lessonStyle:'problem',creativeActivity:'roleplay'},input=normalizeLessonInput(body,catalogue)
+ let sent,calls=0
+ const handler=loadHandler('../pages/api/lessonplan/index.js',{...vars,requireLessonEducator:async()=>({user:{id:'rebuild-targets'}}),fetch:async(url,options)=>{calls++;sent=JSON.parse(options.body);return {ok:true,json:async()=>({output_text:JSON.stringify(structured(input))})}}})
+ const res=response();await handler({method:'POST',body},res);assert.equal(res.code,200);assert.equal(calls,1)
+ const payload=JSON.parse(sent.input),serialized=JSON.stringify(payload)
+ for(const marker of ['OLD_SEMINAR_TITLE','OLD_PARAGRAPH_TASK','OLD_SEMINAR_ACTIVITY','OLD_ROLE_JOBS','OLD_STORY_PASSAGE','OLD_MODEL'])assert.ok(!serialized.includes(marker),marker)
+ assert.equal(payload.lessonStyle,'problem');assert.equal(payload.creativeActivity,'roleplay');assert.deepEqual(payload.learningObjectives,['Students will be able to explain character development using evidence.'])
+ assert.equal(res.data.plan.objectives[0].statement,payload.learningObjectives[0]);assert.match(sent.instructions,/student-facing role cards/)
+})
+test('Saved older rebuild drafts remain downloadable without re-counting their original objectives',async()=>{
+ const input=normalizeLessonInput({...base,startingPoint:'convert',sourceLesson:'Learning objectives\nStudents will be able to model arrays.\nProcedure\nUse counters.'},catalogue)
+ const saved={...input,objectiveCount:4},plan=good(saved)
+ const handler=loadHandler('../pages/api/lessonplan/export.js',{...vars,Document,Packer,Paragraph,TextRun,HeadingLevel,requireLessonEducator:async()=>({user:{id:'legacy-convert'}})})
+ const res=response();await handler({method:'POST',body:{input:saved,plan}},res);assert.equal(res.code,200)
 })
