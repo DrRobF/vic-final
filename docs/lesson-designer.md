@@ -39,3 +39,10 @@ Run `npm test` and `npm run build` with the existing public Supabase build varia
 - Single lesson or unit of 1–10 sessions, 10–180 minutes per session. Approach and creative task are optional, with 1–5 measurable objectives (default two).
 - School headings remain authoritative, including existing saved formats. Structured standards, objectives with activity/evidence, session sequences, and change summaries accompany the requested sections in browser, text, print, and Word output. Legacy drafts remain exportable.
 - Curriculum audit, shared lesson storage, school/district accounts, and coverage tracking are future work, not part of this release.
+
+
+## Complete teaching kit — October 5, 2026
+- New drafts require complete shared text/stimulus, worked teacher model, discussion guide, student task/handouts, actual differentiation scaffolds, and exit ticket with answers/success criteria. The optional worksheet remains additional practice.
+- Socratic seminars request 6–8 sequenced questions with probes, possible evidence and participation norms. Pacing reserves revision time when revision is an objective; creative choices require an actual product or challenge.
+- Browser, print, text and Word use one presentation of each section. Copy/Edit operate on that presentation; persisted edits flow into worksheet generation and invalidate the old worksheet. Official standards remain read-only.
+- Existing saved drafts still export; regenerate/revise them to receive the required teaching kit. Content quality remains subject to teacher review.
