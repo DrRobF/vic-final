@@ -8,8 +8,6 @@ const NAV_ITEMS = [
   { href: '/teacher', label: 'Teacher Portal' },
   { href: '/assistantprincipal', label: 'Assistant Principal' },
   { href: '/lessonplan', label: 'Lesson Designer' },
-  { href: '/login', label: 'Log In' },
-  { href: '/signup', label: 'Request Access' },
 ]
 
 const PRIMARY_PATHS = new Set(['/askvic', '/teacher', '/assistantprincipal', '/lessonplan'])
@@ -126,10 +124,11 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
               {loggingOut ? 'Logging out...' : 'Logout'}
             </button>
           </>
-        ) : currentPath === '/login' ? null : (
-          <a className="authPrompt" href="/login">
-            Sign in
-          </a>
+        ) : (
+          <>
+            <a className="authPrompt" href="/login">Log in</a>
+            <a className="authPrompt signupPrompt" href="/lessonplan/access">Sign up — it’s free</a>
+          </>
         )}
       </div>
 
@@ -161,7 +160,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         .primaryLink { color: var(--vic-text-primary); }
         .navLink:hover { border-color: rgba(181, 83, 47, 0.42); color: var(--vic-primary); background: var(--vic-surface-muted); }
         .active { background: var(--vic-primary); border-color: var(--vic-primary); color: var(--vic-surface); box-shadow: 0 10px 20px rgba(150,69,40,0.28); }
-        .userArea { display: flex; align-items: center; gap: 7px; margin-left: auto; }
+        .userArea { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-left: auto; }
         .headerStatus {
           display: inline-flex;
           align-items: center;
@@ -191,6 +190,8 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         .signedInName { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vic-text-secondary); font-weight: 700; }
         .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border); background: var(--vic-surface); border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 800; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
         .logoutButton:hover, .authPrompt:hover { background: var(--vic-surface-muted); border-color: rgba(181, 83, 47, 0.34); }
+        .signupPrompt { background: var(--vic-primary); color: white; border-color: var(--vic-primary); white-space: nowrap; }
+        .signupPrompt:hover { background: var(--vic-primary-hover, var(--vic-primary)); color: white; }
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
         @media (max-width: 980px) {
           .vicHeader { padding: 8px 10px; gap: 8px; flex-wrap: wrap; }

@@ -103,13 +103,15 @@ export default function LoginPage() {
         <VICHeader currentPath="/login" />
         <section className="contentWrap">
           <div className="introBlock">
-            <h1>Log in to connect your learning experience</h1>
+            <h1>Log in to Ask VIC</h1>
             <p className="subText">
-              Access your classroom, teacher assignments, and saved progress.
+              For Lesson Designer, use a secure email link. School accounts use the password form below.
             </p>
           </div>
 
           <div className="card">
+            <a className="emailLink" href="/lessonplan/access">Lesson Designer email link</a>
+            <h2>School account</h2>
             <form onSubmit={handleSubmit} className="form">
               <label htmlFor="email">Email or student username</label>
               <input
@@ -132,11 +134,11 @@ export default function LoginPage() {
               />
 
               <p className="mutedLine">
-                Need an account? <a href="/signup">Request access</a>
+                Free educator signup is available using the button above.
               </p>
 
               <button className="primaryButton" type="submit" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? 'Logging in...' : 'Log in'}
               </button>
             </form>
 
@@ -200,6 +202,8 @@ export default function LoginPage() {
           color: var(--vic-text-secondary);
           line-height: 1.45;
         }
+        .emailLink { display: block; padding: 14px 16px; border-radius: 10px; background: var(--vic-primary); color: white; text-decoration: none; text-align: center; }
+        h2 { margin: 24px 0 12px; font-size: 20px; }
         .form {
           display: grid;
           gap: 10px;

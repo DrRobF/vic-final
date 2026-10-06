@@ -56,8 +56,7 @@ export default function Home() {
 
                   <div className="previewCard">
                     <div className="responseView">
-                      <div className="bubble vicBubble"><div className="bubbleLabel">Approved access</div><p>Sign in with your school-managed account to start a secure VIC conversation.</p></div>
-                      <button type="button" className="continueButton" onClick={openFullVIC}>Sign in to Ask VIC</button>
+                      <div className="bubble vicBubble"><div className="bubbleLabel">VIC for students</div><p>School-managed VIC helps students think through questions step by step. Educators can use the free Lesson Designer to prepare classroom lessons.</p></div>
                     </div>
                   </div>
                 </div>
@@ -67,7 +66,7 @@ export default function Home() {
 
           <section className="contactSection">
             <h2>Test VIC or bring it to your school</h2>
-            <p>Ask VIC access is currently provided through approved school accounts. If you are interested in testing VIC, using it at your school, or collaborating, contact Dr. Rob Furman.</p>
+            <p>Lesson Designer is free for educators — use the signup button above to get started. Student VIC uses school-managed accounts. To bring student VIC to your school or discuss a collaboration, contact Dr. Rob Furman.</p>
             <a href="mailto:drrobfurman@gmail.com?subject=Ask%20VIC%20Access%20Request">drrobfurman@gmail.com</a>
           </section>
 
