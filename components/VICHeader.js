@@ -127,7 +127,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         ) : (
           <>
             <a className="authPrompt" href="/login">Log in</a>
-            <a className="authPrompt signupPrompt" href="/lessonplan/access">Sign up — it’s free</a>
+            <a className="authPrompt signupPrompt" href="/signup">Sign up — it’s free</a>
           </>
         )}
       </div>

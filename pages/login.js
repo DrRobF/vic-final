@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import Head from 'next/head'
+import EducatorAuth from '../components/EducatorAuth'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
@@ -99,19 +101,21 @@ export default function LoginPage() {
 
   return (
     <main className="authPage">
+      <Head><title>Log in | Ask VIC</title></Head>
       <div className="authShell">
         <VICHeader currentPath="/login" />
         <section className="contentWrap">
           <div className="introBlock">
             <h1>Log in to Ask VIC</h1>
             <p className="subText">
-              For Lesson Designer, use a secure email link. School accounts use the password form below.
+              Welcome back. Use your educator email, or open school account login below.
             </p>
           </div>
 
-          <div className="card">
-            <a className="emailLink" href="/lessonplan/access">Lesson Designer email link</a>
-            <h2>School account</h2>
+          <EducatorAuth mode="login"/>
+          <details className="card schoolLogin">
+            <summary>School account login (students &amp; staff)</summary>
+            <p className="mutedLine">Use the username or email and password provided by your school.</p>
             <form onSubmit={handleSubmit} className="form">
               <label htmlFor="email">Email or student username</label>
               <input
@@ -147,7 +151,7 @@ export default function LoginPage() {
                 {error}
               </p>
             ) : null}
-          </div>
+          </details>
         </section>
       </div>
 
@@ -166,7 +170,7 @@ export default function LoginPage() {
           flex-direction: column;
         }
         .contentWrap {
-          width: min(100%, 460px);
+          width: min(100%, 650px);
           margin: 0 auto;
           padding: clamp(26px, 7vh, 72px) 14px 22px;
           border-radius: 18px;
@@ -202,6 +206,8 @@ export default function LoginPage() {
           color: var(--vic-text-secondary);
           line-height: 1.45;
         }
+        .schoolLogin { margin-top: 20px; }
+        summary { font-weight: 800; cursor: pointer; }
         .emailLink { display: block; padding: 14px 16px; border-radius: 10px; background: var(--vic-primary); color: white; text-decoration: none; text-align: center; }
         h2 { margin: 24px 0 12px; font-size: 20px; }
         .form {
