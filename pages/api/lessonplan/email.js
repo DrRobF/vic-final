@@ -1,3 +1,4 @@
+import {LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION} from '../../../lib/lesson-access.mjs'
 import {createClient} from '@supabase/supabase-js'
 import {createHash} from 'node:crypto'
 import {lessonSignupEnabled,signupEmail,lessonSigninLink} from '../../../lib/lesson-signup.mjs'
@@ -16,8 +17,11 @@ export default async function handler(req,res){
  if(!allowed){res.setHeader('Retry-After','600');return res.status(429).json({error:'Please wait before requesting another sign-in email.'})}
  const {data,error}=await admin.auth.admin.generateLink({type:'magiclink',email})
  if(error)return res.status(503).json({error:'Could not prepare your sign-in email. Please try again later.'})
+ if(!data.user?.id)return res.status(503).json({error:'Could not prepare your signup. Please try again.'})
+ const {error:consentError}=await admin.from('lesson_signup_consents').upsert({user_id:data.user.id,email,consent_text:LESSON_CONSENT_TEXT,consent_version:LESSON_CONSENT_VERSION,consented_at:new Date().toISOString()},{onConflict:'user_id'})
+ if(consentError)return res.status(503).json({error:'Could not save your signup choices. Please try again.'})
  const link=lessonSigninLink(data.properties)
- const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`lesson-signin-${hash(data.properties.hashed_token)}`},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.REPORTS_FROM_EMAIL,to:[email],subject:'Your secure Ask VIC Lesson Designer sign-in link',text:`You requested free educator access to Ask VIC Lesson Designer.\n\nOpen this one-time link to verify your email and sign in:\n${link}\n\nAfter signing in, confirm your email preferences to complete signup. This link expires according to the account verification settings. If you did not request it, you can ignore this email.\n\nDr. Rob Furman\nAsk VIC Lesson Designer\nhttps://www.askvic.ai/lessonplan`})})
+ const response=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':`lesson-signin-${hash(data.properties.hashed_token)}`},signal:AbortSignal.timeout(15000),body:JSON.stringify({from:process.env.REPORTS_FROM_EMAIL,to:[email],subject:'Your secure Ask VIC Lesson Designer sign-in link',text:`You requested free educator access to Ask VIC Lesson Designer.\n\nOpen this one-time link to verify your email and sign in:\n${link}\n\nYour email link completes signup and opens Lesson Designer. This link expires according to the account verification settings. If you did not request it, you can ignore this email.\n\nDr. Rob Furman\nAsk VIC Lesson Designer\nhttps://www.askvic.ai/lessonplan`})})
  const sent=await response.json().catch(()=>null)
  if(!response.ok||!sent?.id){console.error('Lesson sign-in email failed',{status:response.status});return res.status(503).json({error:'Could not send your sign-in email. Please try again later.'})}
  return res.json({success:true})
