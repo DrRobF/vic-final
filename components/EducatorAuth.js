@@ -45,7 +45,7 @@ export default function EducatorAuth({mode='signup'}){
    window.location.replace('/lessonplan')
   }catch(e){setError(e.message)}finally{setBusy(false)}
  }
- const checks=<><label className="check"><input type="checkbox" required checked={adult} onChange={e=>setAdult(e.target.checked)}/>I am an adult educator using this tool for lesson preparation.</label><label className="check"><input type="checkbox" required checked={consent} onChange={e=>setConsent(e.target.checked)}/>{LESSON_CONSENT_TEXT}</label></>
+ const checks=<><label className="check" style={{display:"flex",alignItems:"flex-start",gap:12,margin:"18px 0",fontSize:14,fontWeight:400,lineHeight:1.6}}><input type="checkbox" style={{marginTop:5,flexShrink:0}} required checked={adult} onChange={e=>setAdult(e.target.checked)}/>I am an adult educator using this tool for lesson preparation.</label><label className="check" style={{display:"flex",alignItems:"flex-start",gap:12,margin:"18px 0",fontSize:14,fontWeight:400,lineHeight:1.6}}><input type="checkbox" style={{marginTop:5,flexShrink:0}} required checked={consent} onChange={e=>setConsent(e.target.checked)}/>{LESSON_CONSENT_TEXT}</label></>
  return <section className="auth-card" aria-label={signup?'Free educator signup':'Educator login'}>
   {!ready||checking?<p role="status">Checking your account and opening Lesson Designer…</p>:finishConsent&&session?<>
    <h2>One last step for your account</h2><p>Your email <strong>{session.user.email}</strong> is verified. Confirm these choices once to finish your free signup. You do not need another email.</p>
