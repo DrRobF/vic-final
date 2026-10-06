@@ -19,7 +19,7 @@ export default async function handler(req,res){
  const returning=req.body?.intent==='login'
  const school=await admin.from('users').select('role,auth_user_id').eq('email',email).order('id',{ascending:true}).limit(1).maybeSingle()
  if(school.error)throw new Error('Account lookup failed')
- if(studentProfile(school.data))return res.json({success:true})
+ if(studentProfile(school.data)||school.data?.role==='archived')return res.json({success:true})
  if(returning){
   const member=await admin.from('lesson_memberships').select('user_id').eq('email',email).maybeSingle()
   const pending=await admin.from('lesson_signup_consents').select('user_id').eq('email',email).maybeSingle()

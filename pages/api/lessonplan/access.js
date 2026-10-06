@@ -1,3 +1,4 @@
+import {accountUnavailable} from '../../../lib/admin-management.mjs'
 import {schoolEducator,studentProfile} from '../../../lib/educator-account.mjs'
 import {lessonSignupEnabled} from '../../../lib/lesson-signup.mjs'
 import {createClient} from '@supabase/supabase-js'
@@ -19,7 +20,9 @@ export default async function handler(req,res){
  const profileLookup=await admin.from('users').select('id,role').eq('auth_user_id',user.id).order('id',{ascending:true}).limit(1).maybeSingle()
  if(profileLookup.error)throw profileLookup.error
  if(studentProfile(profileLookup.data))return res.status(403).json({error:'Students use the separate student VIC workspace.'})
+ if(accountUnavailable(user))return res.status(403).json({error:'This account has been removed. Contact your school administrator.'})
  if(req.body?.completeFromEmail===true&&schoolEducator(profileLookup.data))return res.json({success:true})
+ if(accountUnavailable(user)||profileLookup.data?.role==='archived')return res.status(403).json({error:'This account has been removed. Contact your school administrator.'})
  if(!verifiedLessonEmail(user))return res.status(403).json({error:'Confirm your email before completing signup.'})
  if(req.method==='GET'){
  const {data,error}=await admin.from('lesson_memberships').select('newsletter_consent,consented_at').eq('user_id',user.id).maybeSingle()

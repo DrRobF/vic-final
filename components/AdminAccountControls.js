@@ -1,0 +1,18 @@
+import {useState} from 'react'
+import {supabase} from '../lib/supabase'
+export default function AdminAccountControls({account,onChanged}){
+ const [password,setPassword]=useState(''),[confirmPassword,setConfirmPassword]=useState(''),[action,setAction]=useState(''),[busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState('')
+ async function run(e){
+  e.preventDefault();setError('');setMessage('')
+  if(action==='reset-password'&&password!==confirmPassword){setError('The two passwords must match.');return}
+  setBusy(true)
+  try{
+   const {data:{session}}=await supabase.auth.getSession()
+   const r=await fetch('/api/admin/account-actions',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${session?.access_token}`},body:JSON.stringify({id:account.id,action,confirm:`${action}:${account.id}`,...(action==='reset-password'?{password}:{})})}),d=await r.json()
+   if(!r.ok)throw new Error(d.error||'Could not complete this action.')
+   setMessage(d.message);setPassword('');setConfirmPassword('');setAction('');if(d.account)onChanged(d.account)
+  }catch(e){setError(e.message)}finally{setBusy(false)}
+ }
+ const own=account.email?.toLowerCase()==='drrobfurman@gmail.com',removed=account.role==='archived'
+ return <section className="controls"><h3>Login &amp; account access</h3>{own?<p>Your administrator account is protected from removal and password reset here.</p>:<>{!action?<div className="buttons">{removed?<button onClick={()=>setAction('restore')}>Restore account</button>:<><button onClick={()=>setAction('reset-password')}>Reset password</button><button className="danger" onClick={()=>setAction('archive')}>Remove account</button></>}</div>:<form onSubmit={run}>{action==='reset-password'?<><h4>Reset password for {account.name}</h4><p>{account.role==='student'?'Set a new password and give it to the student.':'Set a temporary password. The staff member will choose a personal password at their next login.'}</p><label>New {account.role==='student'?'':'temporary '}password<input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={e=>setPassword(e.target.value)}/></label><label>Repeat password<input type="password" required minLength={8} autoComplete="new-password" value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)}/></label></>:<><h4>{removed?'Restore':'Remove'} {account.name}?</h4><p>{removed?'This will reactivate their existing account.':'They will no longer be able to sign in or use their school account. Saved work, class rosters and classrooms are retained so you can restore the account later.'}</p></>}<button disabled={busy} className={action==='archive'?'danger':''}>{busy?'Saving…':action==='reset-password'?'Confirm password reset':removed?'Confirm restore':'Confirm account removal'}</button><button type="button" disabled={busy} onClick={()=>{setAction('');setPassword('');setConfirmPassword('')}}>Cancel</button></form>}</>}{error&&<p role="alert" className="error">{error}</p>}{message&&<p role="status">{message}</p>}<style jsx>{`.controls{border-top:1px solid var(--vic-border);margin-top:28px;padding-top:12px}h4{font-size:18px;margin:10px 0}p{line-height:1.6;color:var(--vic-text-secondary)}form{display:grid;gap:12px}label{display:grid;gap:8px;font-weight:700}input{width:100%;padding:12px;border:1px solid var(--vic-border);border-radius:8px}button{padding:12px;border:1px solid var(--vic-border);border-radius:8px;background:var(--vic-surface-muted);font-weight:700;cursor:pointer}.buttons{display:flex;gap:12px;flex-wrap:wrap}.danger{color:var(--vic-danger);border-color:var(--vic-danger)}button:disabled{opacity:.5;cursor:default}.error{color:var(--vic-danger)}`}</style></section>
+}
