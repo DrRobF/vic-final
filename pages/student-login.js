@@ -1,0 +1,3 @@
+import Head from 'next/head'
+import SchoolAccountLogin from '../components/SchoolAccountLogin'
+export default function StudentLogin(){return <><Head><title>Student login | Ask VIC</title></Head><main><a href="/">Ask VIC</a><section><h1>Student login</h1><p>Your school account opens your student VIC workspace.</p><SchoolAccountLogin student/><p>Teacher or principal? <a href="/login">Use educator login</a>.</p></section></main><style jsx>{`main{max-width:650px;margin:6vh auto;padding:24px}section{margin-top:24px;padding:32px;border:1px solid var(--vic-border);border-radius:18px;background:var(--vic-surface);box-shadow:var(--vic-shadow-card)}h1{font-size:34px}p{line-height:1.6;color:var(--vic-text-secondary)}`}</style></>}

@@ -3,7 +3,7 @@ import {useRouter} from 'next/router'
 import {supabase} from '../lib/supabase'
 import {requiresPasswordChange} from '../lib/password-policy.mjs'
 
-const ACCOUNT_ROUTES=new Set(['/login','/signup','/lessonplan/access','/lessonplan/confirm','/change-password'])
+const ACCOUNT_ROUTES=new Set(['/login','/student-login','/signup','/lessonplan/access','/lessonplan/confirm','/change-password'])
 export default function PasswordGate({children}){
  const router=useRouter(),accountPage=ACCOUNT_ROUTES.has(router.pathname)
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)

@@ -4,6 +4,7 @@ import VICLogo from './VICLogo'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
+  { href: '/educator', label: 'Educator workspace' },
   { href: '/askvic', label: 'Ask VIC' },
   { href: '/teacher', label: 'Teacher Portal' },
   { href: '/assistantprincipal', label: 'Assistant Principal' },
@@ -42,8 +43,8 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
 
       const { data } = await supabase
         .from('users')
-        .select('name, email')
-        .eq('email', user.email)
+        .select('name, email, role')
+        .eq('auth_user_id', user.id)
         .order('id', { ascending: true })
         .limit(1)
 
@@ -68,13 +69,14 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
 
   const signedInName = useMemo(() => getDisplayName(profile, authUser), [profile, authUser])
   const isSignedIn = Boolean(authUser)
+  const isStudent=profile?.role==='student'
 
   async function handleLogout() {
     if (loggingOut) return
     setLoggingOut(true)
     await supabase.auth.signOut()
     setLoggingOut(false)
-    window.location.href = '/login'
+    window.location.href = isStudent?'/student-login':'/login'
   }
 
   return (
@@ -90,7 +92,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
       </a>
 
       <nav className="navLinks" aria-label="Primary">
-        {NAV_ITEMS.map((item) => {
+        {(isStudent?NAV_ITEMS.filter(item=>['/','/askvic'].includes(item.href)):NAV_ITEMS).map((item) => {
           const isPrimary = PRIMARY_PATHS.has(item.href)
           const classes = [
             'navLink',
@@ -126,7 +128,8 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
           </>
         ) : (
           <>
-            <a className="authPrompt" href="/login">Log in</a>
+            <a className="authPrompt" href="/login">Educator log in</a>
+            <a className="authPrompt" href="/student-login">Student log in</a>
             <a className="authPrompt signupPrompt" href="/signup">Sign up — it’s free</a>
           </>
         )}
