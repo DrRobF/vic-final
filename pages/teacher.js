@@ -922,7 +922,7 @@ export default function TeacherPage() {
                   <h1>Teacher Dashboard</h1>
                   <p className="helperText">Pick your class, review your roster, and assign support in one compact workflow.</p>
                   {teacher.email?.trim().toLowerCase() === 'drrobfurman@gmail.com' ? (
-                    <><a className="secondaryButton rosterImportLink" href="/admin/accounts">Manage teachers &amp; students</a> <a className="secondaryButton rosterImportLink" href="/admin/import-roster">
+                    <><a className="secondaryButton rosterImportLink" href="/admin/accounts">Manage teachers &amp; students</a> <a className="secondaryButton rosterImportLink" href="/admin/classrooms">Manage all classrooms</a> <a className="secondaryButton rosterImportLink" href="/admin/import-roster">
                       Upload student roster (CSV)
                     </a></>
                   ) : null}

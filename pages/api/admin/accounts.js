@@ -11,9 +11,9 @@ export default async function handler(req,res){
  if(!canManageAccounts(auth,ADMIN_EMAIL))return res.status(403).json({error:'Only the approved school administrator can manage these accounts.'})
  try{
   if(req.method==='GET'){
-   const role=['teacher','student','principal'].includes(req.query.role)?req.query.role:null
+   const role=['teacher','student','principal','archived'].includes(req.query.role)?req.query.role:null
    const page=Math.max(0,Math.min(1000,Number.parseInt(req.query.page,10)||0)),query=String(req.query.q||'').trim().slice(0,100)
-   let lookup=auth.admin.from('users').select(FIELDS,{count:'exact'}).in('role',role?[role]:['teacher','student','principal'])
+   let lookup=auth.admin.from('users').select(FIELDS,{count:'exact'}).in('role',role?[role]:['teacher','student','principal','archived'])
    // Strip PostgREST filter syntax; keep ordinary letters/numbers for name/email search.
    const search=query.replace(/[^\p{L}\p{N}@ ._+-]/gu,'').trim()
    if(search)lookup=lookup.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
