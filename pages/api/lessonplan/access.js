@@ -1,11 +1,12 @@
+import {lessonSignupEnabled} from '../../../lib/lesson-signup.mjs'
 import {createClient} from '@supabase/supabase-js'
 import {readBearerToken} from '../../../lib/server-auth'
 import {verifiedLessonEmail,LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION} from '../../../lib/lesson-access.mjs'
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')
  if(!['GET','POST'].includes(req.method)){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Method not allowed.'})}
- if(req.method==='GET'&&!readBearerToken(req))return res.json({signupEnabled:process.env.LESSON_PUBLIC_SIGNUP_ENABLED==='true'})
- if(req.method==='POST'&&req.body?.unsubscribe!==true&&process.env.LESSON_PUBLIC_SIGNUP_ENABLED!=='true')return res.status(503).json({error:'Public signup is not open yet. We are completing email delivery and account access setup.'})
+ if(req.method==='GET'&&!readBearerToken(req))return res.json({signupEnabled:lessonSignupEnabled(process.env)})
+ if(req.method==='POST'&&req.body?.unsubscribe!==true&&!lessonSignupEnabled(process.env))return res.status(503).json({error:'Public signup is not open yet. We are completing email delivery and account access setup.'})
  try{
  const url=process.env.NEXT_PUBLIC_SUPABASE_URL,key=process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,service=process.env.SUPABASE_SERVICE_ROLE_KEY
  if(!url||!key||!service)return res.status(503).json({error:'Signup is temporarily unavailable.'})
