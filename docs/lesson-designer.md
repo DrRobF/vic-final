@@ -52,3 +52,23 @@ PDF.js loads native canvas through a runtime createRequire call, which was absen
 
 ## Existing lesson workflow — October 5, 2026
 Refresh/convert now shows the source lesson and requested changes first. Metadata and known standard codes are read from the original, retaining exact catalogue wording when matched. Missing official standards remain unverified teacher-provided original learning goals. Unknown grade/subject remain “Same as original” for the generator rather than silently using new-lesson defaults. Only an absent overall duration requires a small follow-up field. Optional detail overrides expand the full form. New-lesson workflow is unchanged. Common source headings, objective count and numbered unit sessions are retained.
+
+## Full-width editing and section proposals (October 6)
+
+After generating, `/lessonplan?view=lesson` displays the lesson at full width. The teacher can return to setup or open the saved lesson in a separate tab. The title and all non-official sections can be edited before copying, printing or downloading. Official standard wording remains protected.
+
+Each editable section has **Ask VIC to rewrite**. `/api/lessonplan/section` authenticates the educator, validates the selected section, and returns only a proposal. Teacher edits elsewhere are included as context. The teacher may edit, accept, or cancel the proposal. Applying it changes only that section's display edit; other lesson content is untouched. A stale preview is refused if the lesson has changed. Worksheets are invalidated after an applied edit; standards alignment and other repeated references are not regenerated automatically, so the teacher reviews dependencies. Text and Word exports use the same canonical sections, including edited alignment/review.
+
+## Public email access — staged, not enabled
+
+`/lessonplan/access` implements passwordless email sign-in and an explicit adult-educator declaration and newsletter checkbox. Signup records are server-written to `lesson_memberships` after `getUser` verifies the email. No school user profile is created. Email preferences permit unsubscribing while retaining existing lesson access. No newsletters are automatically sent by this release.
+
+Before setting server environment variable `LESSON_PUBLIC_SIGNUP_ENABLED=true`:
+
+1. The school-access policy changes in `sql/proposed_public_signup_school_protection.sql` were approved by Rob and applied on October 6. Public users can no longer insert school profiles. Anonymous lesson/assignment reads were removed; approved students retain authenticated lesson access. Verify original VIC behavior before opening public signup.
+2. Configure/confirm custom SMTP in Supabase. Default SMTP restricts recipients and is unsuitable for public launch. Confirm email signup is enabled and production URLs `https://askvic.ai/lessonplan/access` and `https://www.askvic.ai/lessonplan/access` are in the redirect allowlist. The MCP tools available for this build do not expose Auth SMTP configuration, so delivery has not been verified.
+3. Complete one real signup with an external educator address, confirmation, recorded consent, generation, and unsubscribe before promotion.
+
+Applied cloud migration: `free_lesson_memberships_and_usage_guard` (SQL mirrored in `sql/free_lesson_access.sql`). Both tables have RLS enabled; anon/authenticated access is revoked. The `claim_lesson_request` RPC is invoker-only and executable only by service_role. It serializes request reservations to enforce 10 requests per user per 10 minutes and a global daily request budget, default 500. This is operating-cost/abuse protection, not a lifetime trial allowance. Configure `LESSON_DAILY_REQUEST_BUDGET` based on measured cost. Lesson, worksheet and section generation all use it. Downloads and existing draft editing do not spend requests.
+
+Validation: unit and mocked-handler tests, real database rollback check for the RPC, production build, and export verification with mock provider responses. Browser interaction testing could not run because this environment could not download the required browser executable. These checks do not establish live AI quality, visual behavior, or real email delivery.

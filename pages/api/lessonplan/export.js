@@ -24,8 +24,7 @@ export default async function handler(req,res){
   }else{
   heading(plan.title,HeadingLevel.TITLE);body(`${input.state} | Grade ${input.grade} | ${input.subject} | ${input.sessions||1} session(s), ${input.minutes} minutes each`)
   for(const s of lessonOutputSections(plan,input)){heading(s.heading);body(s.body)}
-  heading('Standard alignment');for(const a of plan.alignment){heading(a.code,HeadingLevel.HEADING_2);body(`Objective: ${a.objective}\nActivity: ${a.activity}\nAssessment: ${a.assessment}`)}
-  heading('Teacher review');plan.reviewNotes.forEach(body);body('Review accuracy, pacing, materials, and suitability before teaching or submitting.');body('Created with Ask VIC Lesson Designer | askvic.ai/lessonplan')
+  body('Review accuracy, pacing, materials, and suitability before teaching or submitting.');body('Created with Ask VIC Lesson Designer | askvic.ai/lessonplan')
   }
   const buffer=await Packer.toBuffer(new Document({creator:'Ask VIC Lesson Designer',title:worksheetExport?sheet.title:plan.title,styles:{default:{document:{run:{font:'Calibri',size:22}}}},sections:[{properties:{},children:paragraphs}]}))
   res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.setHeader('Content-Disposition',`attachment; filename="${worksheetExport?(answers?'Ask-VIC-Answer-Key':'Ask-VIC-Student-Worksheet'):'Ask-VIC-Lesson-Plan'}.docx"`);return res.status(200).send(buffer)
