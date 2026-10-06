@@ -6,7 +6,7 @@ export default function Home() {
   const router = useRouter();
 
   function openFullVIC() {
-    router.push("/login");
+    router.push("/student-login");
   }
 
   return (

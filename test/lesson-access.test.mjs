@@ -1,10 +1,11 @@
+import {schoolEducator,studentProfile} from '../lib/educator-account.mjs'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import vm from 'node:vm'
 import {readFileSync} from 'node:fs'
 import {lessonSignupEnabled} from '../lib/lesson-signup.mjs'
 import {verifiedLessonEmail,LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION} from '../lib/lesson-access.mjs'
-function load(user,stored,save,pending=null){const src=readFileSync(new URL('../pages/api/lessonplan/access.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('export default async function handler','async function handler')+'\nthis.handler=handler';const context={Date,console:{error(){}},process:{env:{LESSON_PUBLIC_SIGNUP_ENABLED:'true',RESEND_API_KEY:'fake',REPORTS_FROM_EMAIL:'VIC <reports@example.com>',NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'public',SUPABASE_SERVICE_ROLE_KEY:'server'}},lessonSignupEnabled,readBearerToken:req=>req.headers?.authorization,verifiedLessonEmail,LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION,createClient:()=>({auth:{getUser:async()=>({data:{user},error:null})},from:table=>{assert.ok(['lesson_memberships','lesson_signup_consents'].includes(table));return {select(){return this},eq(){return this},maybeSingle:async()=>({data:table==='lesson_signup_consents'?pending:stored,error:null}),upsert:async value=>{save.push(value);return {error:null}},update(value){save.push(value);return this},then(resolve){resolve({error:null})}}}})};vm.createContext(context);vm.runInContext(src,context);return {run:context.handler,context}}
+function load(user,stored,save,pending=null,profile=null){const src=readFileSync(new URL('../pages/api/lessonplan/access.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('export default async function handler','async function handler')+'\nthis.handler=handler';const context={Date,console:{error(){}},process:{env:{LESSON_PUBLIC_SIGNUP_ENABLED:'true',RESEND_API_KEY:'fake',REPORTS_FROM_EMAIL:'VIC <reports@example.com>',NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'public',SUPABASE_SERVICE_ROLE_KEY:'server'}},schoolEducator,studentProfile,lessonSignupEnabled,readBearerToken:req=>req.headers?.authorization,verifiedLessonEmail,LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION,createClient:()=>({auth:{getUser:async()=>({data:{user},error:null})},from:table=>{assert.ok(['lesson_memberships','lesson_signup_consents','users'].includes(table));return {select(){return this},eq(){return this},order(){return this},limit(){return this},maybeSingle:async()=>({data:table==='users'?profile:table==='lesson_signup_consents'?pending:stored,error:null}),upsert:async value=>{save.push(value);return {error:null}},update(value){save.push(value);return this},then(resolve){resolve({error:null})}}}})};vm.createContext(context);vm.runInContext(src,context);return {run:context.handler,context}}
 const res=()=>({setHeader(){},status(code){this.code=code;return this},json(data){this.data=data;return this}})
 const user={id:'educator',email:'teacher@example.com',email_confirmed_at:'2026-10-06'}
 test('Enrollment requires verified account, explicit consent and adult confirmation',async()=>{
@@ -29,4 +30,11 @@ test('Email completion cannot fabricate missing consent or enroll a different em
 })
 test('Returning email sign-in preserves a previous unsubscribe preference',async()=>{
  const saves=[],{run}=load(user,{newsletter_consent:false},saves),r=res();await run({method:'POST',headers:{authorization:'token'},body:{completeFromEmail:true}},r);assert.equal(r.data.success,true);assert.equal(saves.length,0)
+})
+
+test('School teacher shared login completes without another signup or newsletter consent record',async()=>{
+ const writes=[],{run}=load({id:'teacher',email:'t@example.com',email_confirmed_at:'2026-10-06'},null,writes,null,{id:1,role:'teacher'}),r=res();await run({method:'POST',headers:{authorization:'token'},body:{completeFromEmail:true}},r);assert.equal(r.data.success,true);assert.equal(writes.length,0);
+})
+test('Student profile cannot enroll through educator signup or complete an educator login',async()=>{
+ const writes=[],{run}=load({id:'student',email:'s@example.com',email_confirmed_at:'2026-10-06'},null,writes,null,{id:2,role:'student'}),r=res();await run({method:'POST',headers:{authorization:'token'},body:{completeFromEmail:true}},r);assert.equal(r.code,403);assert.equal(writes.length,0);
 })

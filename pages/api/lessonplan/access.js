@@ -1,3 +1,4 @@
+import {schoolEducator,studentProfile} from '../../../lib/educator-account.mjs'
 import {lessonSignupEnabled} from '../../../lib/lesson-signup.mjs'
 import {createClient} from '@supabase/supabase-js'
 import {readBearerToken} from '../../../lib/server-auth'
@@ -15,6 +16,10 @@ export default async function handler(req,res){
  const client=createClient(url,key,options),admin=createClient(url,service,options)
  const {data:{user},error}=await client.auth.getUser(token)
  if(error||!user)return res.status(401).json({error:'Your session expired. Please sign in again.'})
+ const profileLookup=await admin.from('users').select('id,role').eq('auth_user_id',user.id).order('id',{ascending:true}).limit(1).maybeSingle()
+ if(profileLookup.error)throw profileLookup.error
+ if(studentProfile(profileLookup.data))return res.status(403).json({error:'Students use the separate student VIC workspace.'})
+ if(req.body?.completeFromEmail===true&&schoolEducator(profileLookup.data))return res.json({success:true})
  if(!verifiedLessonEmail(user))return res.status(403).json({error:'Confirm your email before completing signup.'})
  if(req.method==='GET'){
  const {data,error}=await admin.from('lesson_memberships').select('newsletter_consent,consented_at').eq('user_id',user.id).maybeSingle()

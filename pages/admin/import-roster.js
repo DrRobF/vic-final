@@ -109,7 +109,7 @@ export default function ImportRosterPage() {
   if (access !== 'allowed') return <main className="shell"><p>{access === 'checking' ? 'Verifying administrator access…' : error}</p><style jsx>{`.shell{padding:48px;font:16px system-ui;color:#242a38}`}</style></main>
 
   return <main className="page"><Head><title>Student Roster Import | Ask VIC</title></Head><div className="shell"><VICHeader currentPath="/admin/import-roster" />
-    <header><p className="eyebrow">Import Student Roster</p><h1>Student Roster Import</h1><p>Validate student accounts and class enrollments before making any changes.</p></header>
+    <p><a href="/admin/accounts">← Edit individual teachers and students</a></p><header><p className="eyebrow">Import Student Roster</p><h1>Student Roster Import</h1><p>Validate student accounts and class enrollments before making any changes.</p></header>
     <section className="card">
       {!results && <><h2>1. Select the student roster CSV</h2><p className="help">Required columns: {REQUIRED_ROSTER_FIELDS.join(', ')}. The file stays in this browser until you confirm.</p>
         <button type="button" onClick={downloadTemplate}>Download Ask VIC CSV Template</button>

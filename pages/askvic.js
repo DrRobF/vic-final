@@ -330,7 +330,7 @@ export default function AskVIC() {
         setEnrolledClasses([])
         setActiveClassId(null)
         setStudentLookupStatus('Sign in required.')
-        router.replace('/login')
+        router.replace('/student-login')
         return
       }
 
@@ -345,7 +345,7 @@ export default function AskVIC() {
       const classesPayload = await classesResponse.json().catch(() => null)
       if (classesResponse.status === 401) {
         await supabase.auth.signOut()
-        router.replace('/login')
+        router.replace('/student-login')
         return
       }
       const matchedProfile = classesResponse.ok ? classesPayload?.profile || null : null
@@ -502,7 +502,7 @@ export default function AskVIC() {
 
     const authSubscription = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        router.replace('/login')
+        router.replace('/student-login')
         return
       }
       runDetection()
@@ -680,7 +680,7 @@ export default function AskVIC() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) {
         await supabase.auth.signOut()
-        router.replace('/login')
+        router.replace('/student-login')
         throw new Error('Your session has expired. Please sign in again.')
       }
 
@@ -694,7 +694,7 @@ export default function AskVIC() {
       })
       if (res.status === 401) {
         await supabase.auth.signOut()
-        router.replace('/login')
+        router.replace('/student-login')
         throw new Error('Your session has expired. Please sign in again.')
       }
       const data = await res.json().catch(() => null)
