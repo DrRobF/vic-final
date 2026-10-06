@@ -52,7 +52,7 @@ export default function EducatorAuth({mode='signup'}){
    <form onSubmit={finishSignup}>{checks}<button className="primary" disabled={busy}>{busy?'Opening Lesson Designer…':'Finish signup & open Lesson Designer'}</button></form>
   </>:sent?<>
    <h2>Check your email</h2><p>{signup?'We sent a verification email to':'If this email has an educator account, we sent a login email to'} <strong>{email}</strong>.</p>
-   <p><strong>Click the email link to open Lesson Designer.</strong> If it opens in another browser, enter the code here instead.</p>
+   <p><strong>Open the email link and keep working in that browser.</strong> Or stay in this browser and enter the code below instead of opening the link.</p>
    <form onSubmit={verifyCode}><label>Verification code<input required inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e=>setCode(e.target.value.replace(/\D/g,''))} minLength={6} maxLength={10}/></label><button className="primary" disabled={busy}>{busy?'Opening Lesson Designer…':'Verify code & open Lesson Designer'}</button></form>
    <p className="small">Use your newest email. The link and code are one-time use; once you use either, the other stops working.</p>
    <button className="text-button" disabled={busy} onClick={()=>{setSent(false);setCode('');setError('')}}>Change email or request a new email</button>
