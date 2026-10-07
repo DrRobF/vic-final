@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react'
 import Head from 'next/head'
 import {supabase} from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
+import MyEducatorLessons from '../components/MyEducatorLessons'
 import VICClassroomWorkspace from '../components/VICClassroomWorkspace'
 
 export default function EducatorDashboard(){
@@ -23,6 +24,7 @@ export default function EducatorDashboard(){
  {account.classroom?<a className="toolCard learning" href="/askvic"><p className="eyebrow">TEACH &amp; SUPPORT</p><h2>VIC Co-Teacher</h2><p>Open VIC for guided learning. Manage your classes, students, and lesson assignments right below.</p><strong>Open VIC Co-Teacher →</strong></a>:<section className="toolCard learning"><p className="eyebrow">TEACH &amp; SUPPORT</p><h2>VIC Co-Teacher</h2><p>School classroom access is available when your administrator links your educator account to a school.</p><a href="mailto:drrobfurman@gmail.com?subject=VIC%20classroom%20access">Ask about classroom access →</a></section>}
  {account.principal?<a className="toolCard leadership" href="/assistantprincipal"><p className="eyebrow">ORGANIZE &amp; LEAD</p><h2>Assistant Principal</h2><p>Bring together weekly priorities, staff meeting agendas, and professional learning ideas.</p><strong>Open Assistant Principal →</strong></a>:<section className="toolCard leadership"><p className="eyebrow">ORGANIZE &amp; LEAD</p><h2>Assistant Principal</h2><p>Leadership tools are available with a linked school account.</p><a href="mailto:drrobfurman@gmail.com?subject=VIC%20leadership%20tools">Ask about leadership access →</a></section>}
  </section>
+ <MyEducatorLessons/>
  {account.manageAccounts&&<section className="adminTools" aria-label="School administration"><div><p className="eyebrow">SCHOOL ADMINISTRATION</p><h2>People &amp; classrooms</h2><p>Edit individual accounts, reset passwords, manage class membership, or upload a roster.</p></div><nav aria-label="Administration tools"><a href="/admin/accounts">Manage accounts →</a><a href="/admin/classrooms">Manage all classrooms →</a><a href="/admin/import-roster">Bulk roster upload →</a></nav></section>}
  {account.classroom&&<section id="classrooms" aria-label="Classroom management"><VICClassroomWorkspace/></section>}
  <p className="note">Students use <a href="/student-login">their separate student login</a> to learn with VIC.</p>
