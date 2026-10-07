@@ -134,7 +134,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         })}
       </nav>
 
-        {!isStudent && <nav className="workspaceLinks" aria-label="Account workspaces"><span>YOUR WORKSPACES</span><a href="/educator">Educator workspace</a><a href="/teacher">Teacher portal</a></nav>}
+        {!isStudent && <nav className="workspaceLinks" aria-label="Educator dashboard"><a href="/educator" aria-current={currentPath==='/educator'?'page':undefined}>Educator Dashboard →</a></nav>}
       </div>
 
       <style jsx>{`
