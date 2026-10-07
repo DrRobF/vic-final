@@ -4,11 +4,9 @@ import VICLogo from './VICLogo'
 
 const NAV_ITEMS = [
   { href: '/', label: 'Home' },
-  { href: '/educator', label: 'Educator workspace' },
-  { href: '/askvic', label: 'Ask VIC' },
-  { href: '/teacher', label: 'Teacher Portal' },
-  { href: '/assistantprincipal', label: 'Assistant Principal' },
+  { href: '/askvic', label: 'VIC Co-Teacher' },
   { href: '/lessonplan', label: 'Lesson Designer' },
+  { href: '/assistantprincipal', label: 'Assistant Principal' },
 ]
 
 const PRIMARY_PATHS = new Set(['/askvic', '/teacher', '/assistantprincipal', '/lessonplan'])
@@ -91,25 +89,6 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         </div>
       </a>
 
-      <nav className="navLinks" aria-label="Primary">
-        {(isStudent?NAV_ITEMS.filter(item=>['/','/askvic'].includes(item.href)):NAV_ITEMS).map((item) => {
-          const isPrimary = PRIMARY_PATHS.has(item.href)
-          const classes = [
-            'navLink',
-            isPrimary ? 'primaryLink' : 'secondaryLink',
-            currentPath === item.href ? 'active' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')
-
-          return (
-            <a key={item.href} href={item.href} className={classes}>
-              {item.label}
-            </a>
-          )
-        })}
-      </nav>
-
       <div className="userArea">
         {statusLabel ? (
           <div className={`headerStatus ${statusTone === 'thinking' ? 'thinking' : 'ready'}`}>
@@ -135,10 +114,34 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         )}
       </div>
 
+      <div className="navigationRow">
+      <nav className="navLinks" aria-label="Primary">
+        {(isStudent?NAV_ITEMS.filter(item=>['/','/askvic'].includes(item.href)):NAV_ITEMS).map((item) => {
+          const isPrimary = PRIMARY_PATHS.has(item.href)
+          const classes = [
+            'navLink',
+            isPrimary ? 'primaryLink' : 'secondaryLink',
+            currentPath === item.href ? 'active' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')
+
+          return (
+            <a key={item.href} href={item.href} className={classes}>
+              {item.label}
+            </a>
+          )
+        })}
+      </nav>
+
+        {!isStudent && <nav className="workspaceLinks" aria-label="Account workspaces"><span>YOUR WORKSPACES</span><a href="/educator">Educator workspace</a><a href="/teacher">Teacher portal</a></nav>}
+      </div>
+
       <style jsx>{`
         .vicHeader {
           width: 100%;
-          display: flex;
+          display: grid;
+          grid-template-columns: auto 1fr;
           align-items: center;
           gap: 12px;
           justify-content: space-between;
@@ -196,12 +199,19 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
         .signupPrompt { background: var(--vic-primary); color: white; border-color: var(--vic-primary); white-space: nowrap; }
         .signupPrompt:hover { background: var(--vic-primary-hover, var(--vic-primary)); color: white; }
         .logoutButton:disabled { opacity: 0.7; cursor: default; }
-        @media (max-width: 980px) {
-          .vicHeader { padding: 8px 10px; gap: 8px; flex-wrap: wrap; }
-          .brandTitle { font-size: 18px; }
-          .brandSub { display: none; }
-          .userArea { margin-left: 0; }
-        }
+        .vicHeader{padding:16px 20px;border-radius:18px;box-shadow:none;gap:16px}
+        .userArea{justify-content:flex-end;margin-left:0}
+        .navigationRow{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--vic-border-soft);padding-top:12px}
+        .navLinks{gap:5px;flex-wrap:nowrap}
+        .navLink{font-size:12px;padding:8px 10px;white-space:nowrap}
+        .active{background:var(--vic-surface-muted);color:var(--vic-primary);box-shadow:none;border-color:var(--vic-border-soft)}
+        .workspaceLinks{display:flex;align-items:center;gap:14px;padding-left:20px;border-left:1px solid var(--vic-border-soft)}
+        .workspaceLinks span{font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--vic-text-secondary)}
+        .workspaceLinks a{font-size:11px;font-weight:700;color:var(--vic-text-secondary);white-space:nowrap;text-decoration:none}
+        .workspaceLinks a:hover{text-decoration:underline;color:var(--vic-primary)}
+        @media(max-width:1100px){.workspaceLinks span{display:none}.navigationRow{gap:10px}.workspaceLinks{gap:10px;padding-left:12px}}
+        @media(max-width:800px){.vicHeader{padding:12px;gap:12px}.brandSub{display:none}.navigationRow{flex-direction:column;align-items:flex-start}.navLinks{flex-wrap:wrap}.workspaceLinks{padding:10px 0 0;border-left:0;border-top:1px solid var(--vic-border-soft);width:100%;flex-wrap:wrap}.workspaceLinks span{display:inline}.authPrompt,.logoutButton{font-size:10px;padding:7px}.userArea{gap:5px}.signedInName{max-width:115px}}
+        @media(max-width:420px){.vicHeader{grid-template-columns:1fr}.userArea{justify-content:flex-start}.brandSub{display:block}.brandTitle{font-size:18px}.navLink{font-size:11px;padding:7px 8px}}
       `}</style>
     </header>
   )
