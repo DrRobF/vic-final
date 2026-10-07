@@ -143,15 +143,15 @@ export default function AssistantPrincipalPage() {
 
   if (!ready) return <main className="ap-page"><div className="ap-shell"><p>Loading Assistant Principal…</p></div></main>
   if (!session) return (
-    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" />
+    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/educatorassistant">← Personal educator assistant</a><span className="ap-small">School leadership mode</span></div>
       <section className="ap-hero"><p className="ap-eyebrow">Ask VIC for school leaders</p><h1>Meet your Assistant Principal.</h1>
         <p>Bring your school’s roster, weekly commitments, and the tools you already use. Plan the week, track follow-through, and review every draft before it goes to anyone.</p>
         <div className="ap-actions"><a className="ap-primary" href="/login?next=/assistantprincipal">Sign in</a><a className="ap-outline" href="/signup">Request school access</a></div>
       </section><Styles /></div></main>
   )
-  if (accessError) return <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><section className="ap-panel"><h1>Assistant Principal access</h1><p role="alert">{accessError}</p><a href="/signup">Request principal access</a></section><Styles /></div></main>
+  if (accessError) return <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/educatorassistant">← Personal educator assistant</a><span className="ap-small">School leadership mode</span></div><section className="ap-panel"><h1>Assistant Principal access</h1><p role="alert">{accessError}</p><a href="/signup">Request principal access</a></section><Styles /></div></main>
   if (!dashboard) return (
-    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><section className="ap-panel ap-setup">
+    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/educatorassistant">← Personal educator assistant</a><span className="ap-small">School leadership mode</span></div><section className="ap-panel ap-setup">
       <p className="ap-eyebrow">School setup</p><h1>Start with your school</h1><p>Each school has its own staff, commitments, and source links. You can add people and connections after this step.</p>
       <form onSubmit={async event => { event.preventDefault(); await mutate({ action: 'create_school', name: schoolName, timeZone }, 'School created. Add your staff and commitments next.') }}>
         <label>School name<input value={schoolName} onChange={e => setSchoolName(e.target.value)} required minLength="2" maxLength="120" /></label>
@@ -162,7 +162,7 @@ export default function AssistantPrincipalPage() {
   )
 
   return (
-    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" />
+    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/educatorassistant">← Personal educator assistant</a><span className="ap-small">School leadership mode</span></div>
       <header className="ap-heading"><div><p className="ap-eyebrow">Assistant Principal</p><h1>{dashboard.school.name}</h1><p>{clock.date} · {dashboard.school.time_zone} · principal review</p></div>
         {schools.length > 1 && <label>School<select value={dashboard.school.id} onChange={e => switchSchool(e.target.value)}>{schools.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       </header>

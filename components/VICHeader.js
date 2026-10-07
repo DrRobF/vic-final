@@ -6,10 +6,10 @@ const NAV_ITEMS = [
   { href: '/', label: 'Home' },
   { href: '/askvic', label: 'VIC Co-Teacher' },
   { href: '/lessonplan', label: 'Lesson Designer' },
-  { href: '/assistantprincipal', label: 'Assistant Principal' },
+  { href: '/educatorassistant', label: 'Educator Assistant' },
 ]
 
-const PRIMARY_PATHS = new Set(['/askvic', '/teacher', '/assistantprincipal', '/lessonplan'])
+const PRIMARY_PATHS = new Set(['/askvic', '/teacher', '/assistantprincipal', '/educatorassistant', '/lessonplan'])
 
 function getDisplayName(profile, authUser) {
   if (profile?.name) return profile.name
@@ -121,7 +121,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
           const classes = [
             'navLink',
             isPrimary ? 'primaryLink' : 'secondaryLink',
-            currentPath === item.href ? 'active' : '',
+            (currentPath === item.href || (currentPath === '/assistantprincipal' && item.href === '/educatorassistant')) ? 'active' : '',
           ]
             .filter(Boolean)
             .join(' ')
