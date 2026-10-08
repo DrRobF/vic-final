@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
+import AddClassStudents from './AddClassStudents'
 import { supabase } from '../lib/supabase'
 import { buildReportHtml } from '../lib/report-format'
 
@@ -1042,6 +1043,8 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
                     ) : null}
                   </div>
                 </div>
+
+                {!assignmentMode && <AddClassStudents key={selectedClass.id} classId={selectedClass.id} className={selectedClass.class_name} onAdded={() => loadStudents(selectedClass.id)}/>}
 
                 <div className="assignmentToolbar" aria-label="Assign reviewed lesson">
                   <div><strong>{lessonTitle.trim() || 'Review or add a lesson above'}</strong><span>{selectedCount} of {students.length} students selected · {selectedClass.class_name}</span></div>
