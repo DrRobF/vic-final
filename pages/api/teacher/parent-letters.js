@@ -6,7 +6,7 @@ export const config={api:{bodyParser:{sizeLimit:'32kb'}},maxDuration:60}
 const idNumber=x=>Number.isInteger(Number(x))&&Number(x)>0?Number(x):null
 const isUuid=x=>typeof x==='string'&&/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(x)
 const escape=x=>String(x||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;')
-const columns='id,student_id,subject,body,inputs,status,recipient_email,approved_at,sent_at,updated_at'
+const columns='id,student_id,subject,body,inputs,status,recipient_email,approved_at,sent_at,created_at,updated_at'
 
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')
@@ -32,7 +32,7 @@ export default async function handler(req,res){
    if(familyError)throw familyError
    const {data:drafts,error:draftError}=await auth.admin.from('parent_letter_drafts').select(columns).eq('teacher_auth_id',auth.user.id).eq('class_id',classId).order('created_at',{ascending:false}).limit(200)
    if(draftError)throw draftError
-   const latest=new Map();for(const draft of drafts||[])if(!latest.has(draft.student_id))latest.set(draft.student_id,draft)
+   const latest=new Map(),history=new Map();for(const draft of drafts||[]){if(!latest.has(draft.student_id))latest.set(draft.student_id,draft);history.set(draft.student_id,[...(history.get(draft.student_id)||[]),draft])}
    const {data:activity,error:activityError}=ids.length?await auth.admin.from('vic_activity_snapshots').select('student_id,updated_at').eq('class_id',classId).in('student_id',ids).order('updated_at',{ascending:false}).limit(200):{data:[],error:null}
    if(activityError)throw activityError
    const active=new Set((activity||[]).map(a=>a.student_id))
@@ -43,11 +43,16 @@ export default async function handler(req,res){
    if(reportError)throw reportError
    const reported=new Set((reports||[]).map(r=>r.student_id))
    const titles=new Map((lessons||[]).map(l=>[l.id,l.title]))
-   return res.json({className:owned.class_name,students:(roster||[]).map(s=>({...s,hasVicActivity:active.has(s.id),hasVicReport:reported.has(s.id),draft:latest.get(s.id)||null})),lessons:lessons||[],familyUpdates:(familyUpdates||[]).filter(u=>titles.has(u.lesson_id)).map(u=>({lessonId:u.lesson_id,title:titles.get(u.lesson_id),updatedAt:u.updated_at})),statements:LETTER_STATEMENTS})
+   return res.json({className:owned.class_name,students:(roster||[]).map(s=>({...s,hasVicActivity:active.has(s.id),hasVicReport:reported.has(s.id),draft:latest.get(s.id)||null,history:history.get(s.id)||[]})),lessons:lessons||[],familyUpdates:(familyUpdates||[]).filter(u=>titles.has(u.lesson_id)).map(u=>({lessonId:u.lesson_id,title:titles.get(u.lesson_id),updatedAt:u.updated_at})),statements:LETTER_STATEMENTS})
   }
   const studentId=idNumber(req.body?.studentId),student=(roster||[]).find(s=>s.id===studentId)
   if(!student)return res.status(403).json({error:'This student is not enrolled in your class.'})
   const action=req.body?.action
+  if(action==='reset'){
+   const {data,error}=await auth.admin.from('parent_letter_drafts').insert({teacher_auth_id:auth.user.id,class_id:classId,student_id:studentId,subject:'',body:'',inputs:{includeVic:false,includeVicReport:false,lessonIds:[],familyIds:[],statements:[],notes:'',classNote:''},status:'draft'}).select(columns).single()
+   if(error)throw error
+   return res.json({draft:data})
+  }
   if(action==='generate'){
    let inputs;try{inputs=letterInputs(req.body.inputs)}catch(e){return res.status(400).json({error:e.message})}
    const {data:selected,error:lessonError}=inputs.lessonIds.length?await auth.admin.from('educator_lessons').select('id,title,draft').eq('user_id',auth.user.id).in('id',inputs.lessonIds):{data:[],error:null}
@@ -106,6 +111,7 @@ export default async function handler(req,res){
   }
   if(action==='approve'||action==='unapprove'){
    if(['sent','sending','failed'].includes(draft.status))return res.status(409).json({error:'Check delivery status before creating a new letter.'})
+   if(action==='approve'&&(!draft.subject?.trim()||!draft.body?.trim()))return res.status(400).json({error:'Write or generate a letter and save it before approval.'})
    const address=(student.parent_email||'').trim().toLowerCase()
    if(action==='approve'&&!validParentEmail(address))return res.status(400).json({error:'Save a valid parent email in the roster before approving.'})
    const {data,error}=await auth.admin.from('parent_letter_drafts').update({status:action==='approve'?'approved':'draft',approved_at:action==='approve'?new Date().toISOString():null,recipient_email:action==='approve'?address:null,updated_at:new Date().toISOString()}).eq('id',draftId).eq('status',draft.status).select(columns).maybeSingle()
@@ -115,6 +121,7 @@ export default async function handler(req,res){
   }
   if(action==='send'){
    if(draft.status!=='approved'||!draft.approved_at)return res.status(409).json({error:'Review and approve this exact letter before sending.'})
+   if(!draft.subject?.trim()||!draft.body?.trim())return res.status(409).json({error:'An empty letter cannot be sent.'})
    const currentAddress=(student.parent_email||'').trim().toLowerCase()
    if(!validParentEmail(currentAddress)||draft.recipient_email!==currentAddress)return res.status(409).json({error:'The parent email changed. Review and approve the address again.'})
    if(!process.env.RESEND_API_KEY||!process.env.REPORTS_FROM_EMAIL)return res.status(503).json({error:'Email delivery is not configured.'})
