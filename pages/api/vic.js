@@ -35,6 +35,7 @@ export default async function handler(req, res) {
       ? auth.profile.interest_tags.map(cleanInterest).filter(Boolean).join(', ').slice(0, 120)
       : ''
     let context
+    let activityAssignment = null
 
     if (mode === TEACHER_DIRECTED) {
       const { data: enrollments, error: enrollmentError } = await auth.admin
@@ -67,6 +68,7 @@ export default async function handler(req, res) {
       if (!assignment?.lesson_id) {
         return res.status(409).json({ error: 'No active teacher lesson is available for the selected class.' })
       }
+      activityAssignment = {student_id:auth.profile.id,class_id:enrollment.class_id,assignment_id:assignment.id}
 
       const { data: lessons, error: lessonError } = await auth.admin
         .from('lessons')
@@ -91,6 +93,12 @@ export default async function handler(req, res) {
     } else {
       // Assignment data is never queried or added to My Own Work context.
       context = buildVicContext({ mode, interest: savedInterest })
+      const classId=Number(activeClassId)
+      if(Number.isInteger(classId)&&classId>0){
+        const {data:enrolled,error:openEnrollmentError}=await auth.admin.from('enrollments').select('class_id').eq('student_id',auth.profile.id).eq('class_id',classId).maybeSingle()
+        if(openEnrollmentError)throw openEnrollmentError
+        if(enrolled)activityAssignment={student_id:auth.profile.id,class_id:classId}
+      }
     }
 
     const safeMessages = messages
@@ -125,6 +133,19 @@ export default async function handler(req, res) {
 
     const reply = data?.output_text || data?.output?.[0]?.content?.[0]?.text
     if (!reply) return res.status(502).json({ error: 'VIC returned an empty response. Please try again.' })
+    if (activityAssignment && input.at(-1)?.role === 'user') {
+      try {
+        const table=activityAssignment.assignment_id?'vic_activity_snapshots':'vic_open_work_snapshots'
+        let query=auth.admin.from(table).select('turns').eq('student_id',activityAssignment.student_id).eq('class_id',activityAssignment.class_id)
+        if(activityAssignment.assignment_id)query=query.eq('assignment_id',activityAssignment.assignment_id)
+        const {data:previous,error:readError}=await query.maybeSingle()
+        if(readError)throw readError
+        const userText=safeMessages.at(-1)?.content?.slice(0,1200)||''
+        const turns=[...(Array.isArray(previous?.turns)?previous.turns:[]),{student:userText,vic:String(reply).slice(0,1800)}].slice(-20)
+        const {error:saveError}=await auth.admin.from(table).upsert({...activityAssignment,turns,updated_at:new Date().toISOString()},{onConflict:activityAssignment.assignment_id?'student_id,class_id,assignment_id':'student_id,class_id'})
+        if(saveError)throw saveError
+      }catch(saveError){console.error('Could not save VIC activity',{name:saveError?.name})}
+    }
     return res.status(200).json({ reply })
   } catch (error) {
     console.error('VIC request failed.', { name: error?.name, mode })
