@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {letterInputs,validParentEmail,fallbackLetter,LETTER_STATEMENTS,includeAtHomeActivity} from '../lib/parent-letter.mjs'
+import {letterInputs,validParentEmail,fallbackLetter,LETTER_STATEMENTS,includeAtHomeActivity,signTeacherLetter} from '../lib/parent-letter.mjs'
 
 test('selected parent-letter inputs are bounded and require a source',()=>{
  assert.throws(()=>letterInputs({}),/source/)
@@ -29,4 +29,13 @@ test('every generated letter gains a parent-child activity tied to a chosen goal
  assert.match(generic.body,/Sally/)
  assert.match(generic.body,/At-home activity:/)
  assert.doesNotMatch(generic.body,/Jake/)
+})
+
+test('teacher signature uses account name in new letters',()=>{
+ const letter=signTeacherLetter({subject:'Hello',body:'Warmly,\n[Teacher\'s Name]'},'Alex Rivera')
+ assert.match(letter.body,/Alex Rivera/)
+ assert.doesNotMatch(letter.body,/\[Teacher\'s Name\]/)
+ assert.equal(letter.body.match(/Alex Rivera/g).length,1)
+ const fresh=signTeacherLetter({subject:'Hello',body:'A parent update.\n\nAt-home activity: Read together.'},'Alex Rivera')
+ assert.match(fresh.body,/At-home activity:[\s\S]*Warmly,\nAlex Rivera$/)
 })
