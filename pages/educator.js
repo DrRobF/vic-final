@@ -3,6 +3,7 @@ import Head from 'next/head'
 import {supabase} from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
 import MyEducatorLessons from '../components/MyEducatorLessons'
+import FamilyUpdates from '../components/FamilyUpdates'
 import VICClassroomWorkspace from '../components/VICClassroomWorkspace'
 
 export default function EducatorDashboard(){
@@ -27,6 +28,7 @@ export default function EducatorDashboard(){
  <a className="toolCard leadership" href="#my-lessons"><p className="eyebrow">PREPARE &amp; FOLLOW THROUGH</p><h2>Teacher Assistant</h2><p>Start with a saved lesson. Prepare materials, draft a family update, adjust tomorrow, or bring instructions into VIC.</p><strong>Choose a lesson below ↓</strong></a>
  </section>
  <div id="my-lessons"><MyEducatorLessons canUseVic={account.classroom} onUseWithVic={useWithVic}/></div>
+ <FamilyUpdates/>
  <p className="note">For a general weekly plan, message, meeting, or professional learning draft, <a href="/educatorassistant">open your personal assistant</a>.</p>
  {account.manageAccounts&&<section className="adminTools" aria-label="School administration"><div><p className="eyebrow">SCHOOL ADMINISTRATION</p><h2>People &amp; classrooms</h2><p>Edit individual accounts, reset passwords, manage class membership, or upload a roster.</p></div><nav aria-label="Administration tools"><a href="/admin/accounts">Manage accounts →</a><a href="/admin/classrooms">Manage all classrooms →</a><a href="/admin/import-roster">Bulk roster upload →</a></nav></section>}
  {account.classroom&&<section id="classrooms" aria-label="Classroom management"><VICClassroomWorkspace prefillLesson={vicPrefill}/></section>}
