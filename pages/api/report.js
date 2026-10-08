@@ -7,15 +7,12 @@ export default async function handler(req, res) {
   }
 
   const {
-    transcript,
     studentId,
     classId,
     date,
   } = req.body || {}
 
-  if (!Array.isArray(transcript) || transcript.length === 0) {
-    return res.status(400).json({ error: 'Missing transcript array' })
-  }
+  // Never treat a browser-provided assignment description as student work.
 
   const auth = await requireApprovedProfile(req)
   if (auth.error) return res.status(auth.status).json({ error: auth.error })
@@ -54,28 +51,29 @@ export default async function handler(req, res) {
 
   const { data: assignments } = await auth.admin
     .from('assignments')
-    .select('lesson_id, assigned_at, lessons:lesson_id(title)')
+    .select('lesson_id, assigned_at, lessons:lesson_id!inner(title,class_id)')
     .eq('student_id', safeStudentId)
+    .eq('lessons.class_id', safeClassId)
     .order('assigned_at', { ascending: false, nullsFirst: false })
     .limit(1)
   const verifiedLesson = Array.isArray(assignments?.[0]?.lessons)
     ? assignments[0].lessons[0]
     : assignments?.[0]?.lessons
-  const safeSessionFocus = verifiedLesson?.title || 'General support session'
+  let safeSessionFocus = verifiedLesson?.title || 'VIC learning conversation'
 
   const safeStudentInterest = Array.isArray(verifiedStudent.interest_tags)
     ? verifiedStudent.interest_tags.join(', ')
     : ''
 
-  const transcriptText = transcript
-    .slice(-20)
-    .map((entry) => {
-      const role = entry?.role === 'assistant' ? 'VIC' : 'Student'
-      const content = typeof entry?.content === 'string' ? entry.content.trim() : ''
-      return content ? `${role}: ${content}` : ''
-    })
-    .filter(Boolean)
-    .join('\n')
+  const {data:snapshots,error:activityError}=await auth.admin.from('vic_activity_snapshots').select('assignment_id,turns,updated_at').eq('student_id',safeStudentId).eq('class_id',safeClassId).order('updated_at',{ascending:false}).limit(3)
+  if(activityError)return res.status(500).json({error:'Could not read recorded VIC activity.'})
+  const {data:openWork,error:openError}=await auth.admin.from('vic_open_work_snapshots').select('turns,updated_at').eq('student_id',safeStudentId).eq('class_id',safeClassId).maybeSingle()
+  if(openError)return res.status(500).json({error:'Could not read recorded VIC activity.'})
+  const sources=[...(snapshots||[]).map(s=>({...s,label:'Teacher Lesson'})),...(openWork?[{...openWork,label:'My Own Work'}]:[])].sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at)).slice(0,3)
+  if(sources[0]?.label==='My Own Work')safeSessionFocus='My Own Work with VIC'
+  else if(sources[0]?.assignment_id){const {data:assignment}=await auth.admin.from('assignments').select('lessons:lesson_id(title)').eq('id',sources[0].assignment_id).eq('student_id',safeStudentId).maybeSingle();const linked=Array.isArray(assignment?.lessons)?assignment.lessons[0]:assignment?.lessons;if(linked?.title)safeSessionFocus=linked.title}
+  const transcriptText=sources.reverse().flatMap(row=>(Array.isArray(row.turns)?row.turns:[]).map(turn=>`Mode: ${row.label}\nStudent: ${String(turn.student||'').slice(0,1200)}\nVIC: ${String(turn.vic||'').slice(0,1800)}`)).slice(-20).join('\n\n')
+  if(!transcriptText.trim())return res.status(409).json({error:'No recorded VIC conversation is available for this student in this class yet. An assigned lesson alone is not a learning report.'})
 
   const contextLines = [
     `Student Name: ${safeStudentName}`,
@@ -100,7 +98,7 @@ export default async function handler(req, res) {
           {
             role: 'system',
             content:
-              'You are a professional instructional coach writing classroom-quality student session reports. Use evidence from the transcript. Keep language specific and actionable. Return valid JSON only.',
+              'You are a professional instructional coach writing classroom-quality student session reports. Use only observed evidence from the recorded conversation. Distinguish a student response from VIC prompting. If evidence is thin, say so; never infer mastery, behavior, or progress from an assignment alone. Return valid JSON only.',
           },
           {
             role: 'user',
@@ -158,15 +156,17 @@ ${transcriptText}`,
       : []
 
     if (!parsedReport.primaryStrength) {
-      parsedReport.primaryStrength = safeSkills[0] || 'Student showed steady progress with guided support.'
+      parsedReport.primaryStrength = safeSkills[0] || 'The recorded exchange does not establish a specific strength yet.'
     }
 
     if (!parsedReport.primaryAreaForGrowth) {
       parsedReport.primaryAreaForGrowth =
-        safeGrowthAreas[0] || 'Continue building independent accuracy on the target skill.'
+        safeGrowthAreas[0] || 'More student responses are needed to identify a specific growth target.'
     }
 
-    return res.status(200).json({ report: parsedReport })
+    const {error:saveError}=await auth.admin.from('vic_learning_reports').upsert({teacher_auth_id:auth.user.id,class_id:safeClassId,student_id:safeStudentId,report:parsedReport,generated_at:new Date().toISOString()},{onConflict:'teacher_auth_id,class_id,student_id'})
+    if(saveError)throw saveError
+    return res.status(200).json({ report: parsedReport, sessionFocus: safeSessionFocus })
   } catch (error) {
     console.error('REPORT API ERROR:', error)
     return res.status(500).json({ error: 'Failed to generate report' })

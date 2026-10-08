@@ -982,6 +982,7 @@ ${context}`
             My Own Work
           </button>
         </div>
+        <div style={{fontSize:12,lineHeight:1.5,marginTop:10,color:'#475569'}}>Learning conversations in your selected class are saved so your teacher can review your work and help you learn.</div>
       </div>
 
       <div style={styles.controlCenterSection}>

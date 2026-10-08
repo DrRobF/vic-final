@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import { buildReportHtml } from '../lib/report-format'
+import ParentLetterStudio from './ParentLetterStudio'
 
 const REDIRECT_DELAY_MS = 1200
 const ASSIGNABLE_SUPPORT_LEVELS = ['remediation', 'core', 'enrichment']
@@ -39,10 +40,10 @@ export default function VICClassroomWorkspace({prefillLesson}) {
   const [reportPayloadByStudentId, setReportPayloadByStudentId] = useState({})
   const [reportStatusByStudentId, setReportStatusByStudentId] = useState({})
   const [isGeneratingReportForStudentId, setIsGeneratingReportForStudentId] = useState(null)
-  const [isSendingReportForStudentId, setIsSendingReportForStudentId] = useState(null)
   const [isSavingParentEmailForStudentId, setIsSavingParentEmailForStudentId] = useState(null)
   const [isRosterCollapsed, setIsRosterCollapsed] = useState(false)
   const [justAssignedStudentIds, setJustAssignedStudentIds] = useState([])
+  const [letterStudentId, setLetterStudentId] = useState(null)
 
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
@@ -540,47 +541,8 @@ export default function VICClassroomWorkspace({prefillLesson}) {
     }
   }
 
-  function buildStudentReportRequestPayload(student) {
-    const latestAssignment = student?.latest_assignment || null
-    const lessonTitle = latestAssignment?.lesson_title || student?.lesson_context_title || ''
-    const assignmentStatus = latestAssignment?.status || 'assigned'
-    const supportLevel = normalizeSupportLevel(student?.support_level) || 'core'
-    const studentName = getStudentName(student)
-
-    if (!lessonTitle || lessonTitle === 'No lesson activity yet') {
-      return null
-    }
-
-    return {
-      transcript: [
-        {
-          role: 'user',
-          content: `${studentName} is working on: ${lessonTitle}.`,
-        },
-        {
-          role: 'assistant',
-          content: `Current assignment status: ${assignmentStatus}. Support level: ${supportLevel}.`,
-        },
-      ],
-      studentName,
-      gradeLevel: selectedClass?.grade_level ? String(selectedClass.grade_level) : '',
-      date: new Date().toLocaleDateString('en-US'),
-      sessionFocus: lessonTitle,
-      studentInterest: '',
-    }
-  }
-
   async function generateReportForStudent(student, { download = true } = {}) {
     if (!student?.id) return null
-
-    const reportRequestPayload = buildStudentReportRequestPayload(student)
-    if (!reportRequestPayload) {
-      setReportStatusByStudentId((previous) => ({
-        ...previous,
-        [student.id]: 'No lesson context found for this student yet.',
-      }))
-      return null
-    }
 
     setIsGeneratingReportForStudentId(student.id)
     setReportStatusByStudentId((previous) => ({ ...previous, [student.id]: 'Generating report...' }))
@@ -595,7 +557,6 @@ export default function VICClassroomWorkspace({prefillLesson}) {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          ...reportRequestPayload,
           studentId: student.id,
           classId: selectedClass?.id,
         }),
@@ -606,11 +567,11 @@ export default function VICClassroomWorkspace({prefillLesson}) {
       }
 
       const reportPayload = {
-        studentName: reportRequestPayload.studentName,
-        gradeLevel: reportRequestPayload.gradeLevel,
-        date: reportRequestPayload.date,
-        sessionFocus: reportRequestPayload.sessionFocus,
-        studentInterest: reportRequestPayload.studentInterest,
+        studentName: getStudentName(student),
+        gradeLevel: selectedClass?.grade_level ? String(selectedClass.grade_level) : '',
+        date: new Date().toLocaleDateString('en-US'),
+        sessionFocus: data.sessionFocus || 'VIC learning conversation',
+        studentInterest: '',
         report: data.report,
       }
 
@@ -638,59 +599,6 @@ export default function VICClassroomWorkspace({prefillLesson}) {
       return null
     } finally {
       setIsGeneratingReportForStudentId(null)
-    }
-  }
-
-  async function emailReportForStudent(student) {
-    if (!student?.id) return
-    setIsSendingReportForStudentId(student.id)
-    setReportStatusByStudentId((previous) => ({ ...previous, [student.id]: 'Sending report...' }))
-
-    try {
-      const existingReportPayload = reportPayloadByStudentId[student.id]
-      const reportPayload = existingReportPayload || (await generateReportForStudent(student, { download: false }))
-      if (!reportPayload) {
-        throw new Error('Generate a report first for this student.')
-      }
-
-      const {
-        data: { session },
-        error: sessionError,
-      } = await supabase.auth.getSession()
-
-      if (sessionError || !session?.access_token) {
-        throw new Error('You must be signed in to send a report email.')
-      }
-
-      const response = await fetch('/api/report-delivery', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        },
-        body: JSON.stringify({
-          reportPayload,
-          parentEmail: getParentEmailValue(student.id).trim().toLowerCase(),
-        }),
-      })
-
-      const payload = await response.json().catch(() => null)
-      if (!response.ok || !payload?.success) {
-        throw new Error(payload?.error || 'Report email delivery failed.')
-      }
-
-      const recipients = Array.isArray(payload.recipients) ? payload.recipients.join(', ') : 'teacher recipient'
-      setReportStatusByStudentId((previous) => ({
-        ...previous,
-        [student.id]: `Report sent successfully (${recipients})`,
-      }))
-    } catch (sendError) {
-      setReportStatusByStudentId((previous) => ({
-        ...previous,
-        [student.id]: sendError?.message || 'Could not send report.',
-      }))
-    } finally {
-      setIsSendingReportForStudentId(null)
     }
   }
 
@@ -1234,17 +1142,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     >
                                       {isGeneratingReportForStudentId === student.id ? 'Generating...' : 'Generate'}
                                     </button>
-                                    <button
-                                      type="button"
-                                      className="secondaryButton groupButton"
-                                      onClick={() => emailReportForStudent(student)}
-                                      disabled={
-                                        isSendingReportForStudentId === student.id ||
-                                        isGeneratingReportForStudentId === student.id
-                                      }
-                                    >
-                                      {isSendingReportForStudentId === student.id ? 'Sending...' : 'Email'}
-                                    </button>
+                                    <button type="button" className="secondaryButton groupButton" onClick={()=>{setLetterStudentId(student.id);document.getElementById('parent-letter-studio')?.scrollIntoView({behavior:'smooth'})}}>Parent letter</button>
                                   </div>
                                 </td>
                                 <td>
@@ -1263,6 +1161,8 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                 ) : null}
               </section>
             ) : null}
+
+            {selectedClass ? <ParentLetterStudio key={selectedClass.id} classId={selectedClass.id} focusStudentId={letterStudentId}/> : null}
 
             {selectedClass ? (
               <section className="card sectionCard lessonShell">
