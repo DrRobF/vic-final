@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {letterInputs,validParentEmail,fallbackLetter,LETTER_STATEMENTS} from '../lib/parent-letter.mjs'
+import {letterInputs,validParentEmail,fallbackLetter,LETTER_STATEMENTS,includeAtHomeActivity} from '../lib/parent-letter.mjs'
 
 test('selected parent-letter inputs are bounded and require a source',()=>{
  assert.throws(()=>letterInputs({}),/source/)
@@ -18,4 +18,15 @@ test('fallback uses only selected child context and checks recipient format',()=
  assert.doesNotMatch(personalized.body,/staying focused/)
  assert.equal(validParentEmail('parent@example.org'),true)
  assert.equal(validParentEmail('not-an-email'),false)
+})
+
+test('every generated letter gains a parent-child activity tied to a chosen goal',()=>{
+ const reading=includeAtHomeActivity({subject:'Update',body:'A learning update.'},{name:'Jake Adams',lessons:[{objectives:['Describe how a character changes in a story']}],familyUpdates:[]})
+ assert.match(reading.body,/At-home activity: Read a short passage/)
+ assert.match(reading.body,/Jake/)
+ assert.match(reading.body,/character changes/)
+ const generic=includeAtHomeActivity({subject:'Update',body:'An update.'},{name:'Sally Jones',lessons:[],familyUpdates:[]})
+ assert.match(generic.body,/Sally/)
+ assert.match(generic.body,/At-home activity:/)
+ assert.doesNotMatch(generic.body,/Jake/)
 })
