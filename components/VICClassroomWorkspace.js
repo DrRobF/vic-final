@@ -24,7 +24,7 @@ function getStoredSupportLevel(value) {
   return normalizedLevel === 'core' ? 'on_level' : normalizedLevel
 }
 
-export default function VICClassroomWorkspace() {
+export default function VICClassroomWorkspace({prefillLesson}) {
   const router = useRouter()
 
   const [loadingTeacher, setLoadingTeacher] = useState(true)
@@ -46,6 +46,12 @@ export default function VICClassroomWorkspace() {
 
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
+  useEffect(() => {
+    if (!prefillLesson?.key) return
+    setLessonTitle(prefillLesson.title || '')
+    setLessonText(prefillLesson.text || '')
+    setLessonFeedback({ type: 'success', message: 'Directions from your saved lesson are ready for review. Choose a class and students before assigning.' })
+  }, [prefillLesson?.key])
   const [newClassName, setNewClassName] = useState('')
   const [newClassGradeLevel, setNewClassGradeLevel] = useState('')
   const [isEditingSelectedClass, setIsEditingSelectedClass] = useState(false)
