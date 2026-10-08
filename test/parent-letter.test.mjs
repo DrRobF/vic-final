@@ -4,7 +4,7 @@ import {letterInputs,validParentEmail,fallbackLetter,LETTER_STATEMENTS} from '..
 
 test('selected parent-letter inputs are bounded and require a source',()=>{
  assert.throws(()=>letterInputs({}),/source/)
- assert.deepEqual(letterInputs({statements:['joy','joy'],notes:'  Student asked a question. '}),{includeVic:false,includeVicReport:false,lessonIds:[],statements:['joy'],notes:'Student asked a question.',classNote:''})
+ assert.deepEqual(letterInputs({statements:['joy','joy'],notes:'  Student asked a question. '}),{includeVic:false,includeVicReport:false,lessonIds:[],familyIds:[],statements:['joy'],notes:'Student asked a question.',classNote:''})
  assert.throws(()=>letterInputs({statements:['unselected']}),/statements/)
  assert.equal(Object.hasOwn(LETTER_STATEMENTS,'routines'),true)
 })
