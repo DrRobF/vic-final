@@ -24,7 +24,7 @@ function getStoredSupportLevel(value) {
   return normalizedLevel === 'core' ? 'on_level' : normalizedLevel
 }
 
-export default function VICClassroomWorkspace({prefillLesson}) {
+export default function VICClassroomWorkspace({prefillLesson, assignmentMode = false}) {
   const router = useRouter()
 
   const [loadingTeacher, setLoadingTeacher] = useState(true)
@@ -811,7 +811,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
   }
 
   return (
-    <div className="teacherPage">
+    <div className={assignmentMode ? "teacherPage focusedAssignment" : "teacherPage"}>
       <div className="teacherShell">
         {loadingTeacher ? <p className="statusText">Loading teacher...</p> : null}
         {!loadingTeacher && !teacher ? <p className="statusText">{error || 'No teacher is logged in.'}</p> : null}
@@ -823,14 +823,14 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                 <div>
                   <div className="cardEyebrow">Class command center</div>
                   <h2 className="workspaceTitle">Your VIC classrooms</h2>
-                  <p className="helperText">Pick your class, review your roster, and assign support in one compact workflow.</p>
+                  <p className="helperText">Choose a class, review the lesson, select students, and assign it.</p>
                 </div>
-                <div className="heroKicker">Workflow-first</div>
+                <div className="heroKicker">Class → Lesson → Students</div>
               </div>
 
               <div className="innerCard classSwitcherCard">
                 <div className="studentHeaderRow">
-                  <h3>Choose class</h3>
+                  <h3>1 · Choose a class</h3>
                   <span className="selectionCount">{classes.length} total</span>
                 </div>
 
@@ -843,11 +843,12 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                       <button
                         key={classRow.id}
                         type="button"
+                        disabled={saving}
                         onClick={() => handleSelectClass(classRow)}
                         className={selectedClass?.id === classRow.id ? 'rowButton selected classRowButton' : 'rowButton classRowButton'}
                       >
                         <div className="rowTitle">{classRow.class_name}</div>
-                        <div className="rowSubtext">{classRow.grade_level ? `Grade ${classRow.grade_level}` : 'Grade not set'}</div>
+                        <div className="rowSubtext">{classRow.grade_level !== null ? `Grade ${classRow.grade_level === 0 ? "K" : classRow.grade_level}` : 'Grade not set'}</div>
                       </button>
                     ))}
                   </div>
@@ -857,7 +858,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
               {!selectedClass ? (
                 <p className="statusText">Select a class above to activate your command center.</p>
               ) : (
-                <div className="commandGrid">
+                <div className="commandGrid classroomManagement">
                   <div className="commandPrimary">
                     <div className="detailLabel">Selected class</div>
                     <div className="commandClassName">{selectedClass.class_name}</div>
@@ -973,12 +974,52 @@ export default function VICClassroomWorkspace({prefillLesson}) {
             </section>
 
             {selectedClass ? (
+              <section className="card sectionCard lessonShell">
+                <div>
+                  <div className="cardEyebrow">2 · Review lesson</div>
+                  <h2>What VIC will teach</h2>
+                  <p className="helperText">Review the standard and learning objectives. Then choose students below; VIC uses each student&apos;s support level.</p>
+                </div>
+
+                <form id="vic-assignment-form" onSubmit={handleSave} className="stackForm lessonForm">
+                  <div className="innerCard lessonSurface">
+                    <label htmlFor="lessonTitle">Lesson title</label>
+                    <input
+                      id="lessonTitle"
+                      type="text"
+                      value={lessonTitle}
+                      onChange={(e) => setLessonTitle(e.target.value)}
+                      placeholder="e.g. Practice solving one-step equations"
+                      required
+                    />
+
+                    <label htmlFor="lessonText">Instructions</label>
+                    <textarea
+                      id="lessonText"
+                      rows={7}
+                      value={lessonText}
+                      onChange={(e) => setLessonText(e.target.value)}
+                      placeholder="Add clear directions students should follow."
+                      required
+                    />
+
+                    <p className="helperText microCopy">Next: select students below and click Assign lesson.</p>
+                  </div>
+
+
+                </form>
+
+
+              </section>
+            ) : null}
+
+            {selectedClass ? (
               <section className="card sectionCard">
                 <div className="studentHeaderRow">
                   <div>
-                    <div className="cardEyebrow">Student selection</div>
-                    <h2>Roster</h2>
-                    <p className="helperText">Support level and assignment inclusion are controlled separately for each student.</p>
+                    <div className="cardEyebrow">3 · Choose students and assign</div>
+                    <h2>Who should receive this lesson?</h2>
+                    <p className="helperText">Select the whole class or individual students. Support levels stay saved for each student.</p>
                   </div>
                   <div className="studentHeaderActions">
                     <span className="selectionPill">{selectedCount} selected</span>
@@ -1002,6 +1043,18 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                   </div>
                 </div>
 
+                <div className="assignmentToolbar" aria-label="Assign reviewed lesson">
+                  <div><strong>{lessonTitle.trim() || 'Review or add a lesson above'}</strong><span>{selectedCount} of {students.length} students selected · {selectedClass.class_name}</span></div>
+                  <button form="vic-assignment-form" className="primaryButton assignButton" type="submit" disabled={saving || loadingStudents || selectedCount === 0 || !lessonTitle.trim() || !lessonText.trim()}>{saving ? 'Assigning…' : `Assign lesson to ${selectedCount} student${selectedCount === 1 ? '' : 's'}`}</button>
+                  {(!lessonTitle.trim() || !lessonText.trim()) && <small>Add the lesson title and learning goals above to enable assignment.</small>}
+                  {lessonTitle.trim() && lessonText.trim() && !selectedCount && <small>Select students below to enable assignment.</small>}
+                {lessonFeedback ? (
+                  <p role={lessonFeedback.type === 'error' ? 'alert' : 'status'} className={lessonFeedback.type === 'error' ? 'errorText' : 'noticeText'}>
+                    {lessonFeedback.message}
+                  </p>
+                ) : null}
+                </div>
+
                 {loadingStudents ? <p className="statusText">Loading students...</p> : null}
                 {!loadingStudents && students.length === 0 ? <p className="statusText">No students enrolled in this class yet.</p> : null}
 
@@ -1023,19 +1076,19 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                 {!loadingStudents && students.length > 0 && !isRosterCollapsed ? (
                   <>
                     <div className="groupSelectionRow">
-                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('remediation')}>
+                      <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('remediation')}>
                         Select Remediation
                       </button>
-                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('core')}>
+                      <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('core')}>
                         Select On-Level
                       </button>
-                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('enrichment')}>
+                      <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('enrichment')}>
                         Select Enrichment
                       </button>
-                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('all')}>
+                      <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('all')}>
                         Select All Students
                       </button>
-                      <button type="button" className="secondaryButton groupButton" onClick={() => handleSelectGroup('clear')}>
+                      <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('clear')}>
                         Clear Selection
                       </button>
                     </div>
@@ -1047,9 +1100,9 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                             <th>Support Level</th>
                             <th>Assign</th>
                             <th>Current / Recent Lesson</th>
-                            <th>Parent Email</th>
-                            <th>Report Actions</th>
-                            <th>Status</th>
+                            <th className="managementOnly">Parent Email</th>
+                            <th className="managementOnly">Report Actions</th>
+                            <th className="managementOnly">Status</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1066,6 +1119,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     <button
                                       type="button"
                                       className={selectedSupport === 'remediation' ? 'supportButton remediation isActive' : 'supportButton remediation'}
+                                      disabled={saving || loadingStudents}
                                       onClick={() => handleSelectStudentSupport(student.id, 'remediation')}
                                       title="Remediation"
                                     >
@@ -1074,6 +1128,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     <button
                                       type="button"
                                       className={selectedSupport === 'core' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
+                                      disabled={saving || loadingStudents}
                                       onClick={() => handleSelectStudentSupport(student.id, 'core')}
                                       title="Core"
                                     >
@@ -1082,6 +1137,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     <button
                                       type="button"
                                       className={selectedSupport === 'enrichment' ? 'supportButton enrichment isActive' : 'supportButton enrichment'}
+                                      disabled={saving || loadingStudents}
                                       onClick={() => handleSelectStudentSupport(student.id, 'enrichment')}
                                       title="Enrichment"
                                     >
@@ -1095,9 +1151,11 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     className={isAssigned ? 'assignToggle isOn' : 'assignToggle isOff'}
                                     onClick={() => handleToggleAssignment(student.id)}
                                     aria-pressed={isAssigned}
+                                    aria-label={`${isAssigned ? 'Deselect' : 'Select'} ${getStudentName(student)}`}
+                                    disabled={saving || loadingStudents}
                                     title={isAssigned ? 'Included in assignment' : 'Not included in assignment'}
                                   >
-                                    {isAssigned ? 'ON' : 'OFF'}
+                                    {isAssigned ? '✓ Selected' : 'Select'}
                                   </button>
                                 </td>
                                 <td>
@@ -1108,7 +1166,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     ) : null}
                                   </div>
                                 </td>
-                                <td>
+                                <td className="managementOnly">
                                   <div className="parentEmailCell">
                                     <input
                                       type="email"
@@ -1133,7 +1191,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     </button>
                                   </div>
                                 </td>
-                                <td>
+                                <td className="managementOnly">
                                   <div className="rowActions">
                                     <button
                                       type="button"
@@ -1146,7 +1204,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     <button type="button" className="secondaryButton groupButton" onClick={() => router.push(`/parentletters?classId=${encodeURIComponent(selectedClass.id)}&studentId=${encodeURIComponent(student.id)}`)}>Parent letter ↗</button>
                                   </div>
                                 </td>
-                                <td>
+                                <td className="managementOnly">
                                   <div className="rowStatus">
                                     {parentEmailStatusByStudentId[student.id] ? <div>{parentEmailStatusByStudentId[student.id]}</div> : null}
                                     <div>{reportStatusByStudentId[student.id] || '—'}</div>
@@ -1159,52 +1217,6 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                       </table>
                     </div>
                   </>
-                ) : null}
-              </section>
-            ) : null}
-
-            {selectedClass ? (
-              <section className="card sectionCard lessonShell">
-                <div>
-                  <div className="cardEyebrow">Assign lesson</div>
-                  <h2>Lesson assignment</h2>
-                  <p className="helperText">Build the task and assign to students using each student&apos;s selected support level.</p>
-                </div>
-
-                <form onSubmit={handleSave} className="stackForm lessonForm">
-                  <div className="innerCard lessonSurface">
-                    <label htmlFor="lessonTitle">Lesson title</label>
-                    <input
-                      id="lessonTitle"
-                      type="text"
-                      value={lessonTitle}
-                      onChange={(e) => setLessonTitle(e.target.value)}
-                      placeholder="e.g. Practice solving one-step equations"
-                      required
-                    />
-
-                    <label htmlFor="lessonText">Instructions</label>
-                    <textarea
-                      id="lessonText"
-                      rows={7}
-                      value={lessonText}
-                      onChange={(e) => setLessonText(e.target.value)}
-                      placeholder="Add clear directions students should follow."
-                      required
-                    />
-
-                    <p className="helperText microCopy">Support level is selected per student in the roster above.</p>
-                  </div>
-
-                  <button className="primaryButton assignButton" type="submit" disabled={saving || selectedCount === 0}>
-                    {saving ? 'Assigning...' : `Assign lesson to ${selectedCount} student${selectedCount === 1 ? '' : 's'}`}
-                  </button>
-                </form>
-
-                {lessonFeedback ? (
-                  <p role={lessonFeedback.type === 'error' ? 'alert' : 'status'} className={lessonFeedback.type === 'error' ? 'errorText' : 'noticeText'}>
-                    {lessonFeedback.message}
-                  </p>
                 ) : null}
               </section>
             ) : null}
@@ -1262,11 +1274,12 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                         <button
                           key={`admin-${classRow.id}`}
                           type="button"
-                          onClick={() => handleSelectClass(classRow)}
+                          disabled={saving}
+                        onClick={() => handleSelectClass(classRow)}
                           className={selectedClass?.id === classRow.id ? 'rowButton selected classRowButton' : 'rowButton classRowButton'}
                         >
                           <div className="rowTitle">{classRow.class_name}</div>
-                          <div className="rowSubtext">{classRow.grade_level ? `Grade ${classRow.grade_level}` : 'Grade not set'}</div>
+                          <div className="rowSubtext">{classRow.grade_level !== null ? `Grade ${classRow.grade_level === 0 ? "K" : classRow.grade_level}` : 'Grade not set'}</div>
                           {classRow.class_code ? <div className="rowSubtext">Code: {classRow.class_code}</div> : null}
                         </button>
                       ))}
@@ -1286,6 +1299,13 @@ export default function VICClassroomWorkspace({prefillLesson}) {
       </div>
 
       <style jsx>{`
+        .assignmentToolbar { position: sticky; top: 8px; z-index: 5; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px; margin:18px 0; border:2px solid var(--vic-primary); border-radius:12px; background:var(--vic-surface); box-shadow:var(--vic-shadow-raised); }
+        .assignmentToolbar strong,.assignmentToolbar span { display:block; }
+        .assignmentToolbar span,.assignmentToolbar small { font-size:13px; color:var(--vic-text-secondary); margin-top:5px; }
+        .assignmentToolbar small { width:100%; }
+        .focusedAssignment .classroomManagement,.focusedAssignment .managementOnly,.focusedAssignment .adminSection { display:none; }
+        .focusedAssignment .studentTable { min-width:0; }
+        @media(max-width:700px) { .assignmentToolbar { top:4px; padding:12px; }.assignmentToolbar button { width:100%; }.assignmentToolbar strong { font-size:14px; } }
         .teacherPage {
           font-family: Inter, system-ui, sans-serif;
           min-height: 0;
