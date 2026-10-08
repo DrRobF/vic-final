@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /educator
+Disallow: /teacher
+Disallow: /student
+Disallow: /assistantprincipal
+Disallow: /parentletters
+Disallow: /assignlesson
+Disallow: /change-password
+Disallow: /test-page
+
+Sitemap: https://www.askvic.ai/sitemap.xml
