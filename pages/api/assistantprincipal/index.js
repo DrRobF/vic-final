@@ -21,7 +21,7 @@ async function getDashboard(auth, schoolId) {
   const monthStart = `${today.slice(0, 7)}-01`
   const [staff, commitments, evidence, sources, briefs] = await Promise.all([
     rows(auth.admin.from('ap_staff').select('id,display_name,role,assignment,email,active').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
-    rows(auth.admin.from('ap_commitments').select('id,title,applies_to,cadence,due_weekday,due_monthday,due_time,enabled').eq('school_id', schoolId).order('created_at').limit(100)),
+    rows(auth.admin.from('ap_commitments').select('id,title,applies_to,cadence,due_weekday,due_monthday,due_time,enabled,source_id').eq('school_id', schoolId).order('created_at').limit(100)),
     rows(auth.admin.from('ap_evidence').select('id,staff_id,commitment_id,period_start,state,note,recorded_at').eq('school_id', schoolId).in('period_start', [...new Set([today, weekStart, monthStart])]).order('recorded_at', { ascending: false }).limit(2000)),
     rows(auth.admin.from('ap_sources').select('id,kind,label,url,connection_state').eq('school_id', schoolId).order('kind').limit(30)),
     rows(auth.admin.from('ap_briefs').select('id,week_start,notes,draft,state,created_at,approved_at').eq('school_id', schoolId).order('week_start', { ascending: false }).limit(4)),
@@ -124,17 +124,26 @@ export default async function handler(req, res) {
       const updated = await rows(auth.admin.from('ap_staff').update({ display_name: displayName, role, assignment, email: email || null })
         .eq('school_id', schoolId).eq('id', body.staffId).eq('active', true).select('id'))
       if (!updated.length) return res.status(404).json({ error: 'Staff member not found in this school.' })
-    } else if (action === 'add_commitment') {
+    } else if (action === 'add_commitment' || action === 'update_commitment') {
       const title = clean(body.title)
       const cadence = clean(body.cadence, 20)
       const appliesTo = clean(body.appliesTo, 20)
       const weekday = Number(body.dueWeekday)
       const monthday = Number(body.dueMonthday)
       const dueTime = clean(body.dueTime, 5)
-      if (title.length < 2 || !['daily', 'weekly', 'monthly'].includes(cadence) || !['all', 'teachers'].includes(appliesTo) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(dueTime) || (cadence === 'weekly' && (!Number.isInteger(weekday) || weekday < 0 || weekday > 6)) || (cadence === 'monthly' && (!Number.isInteger(monthday) || monthday < 1 || monthday > 31))) {
+      if (title.length < 2 || !['daily', 'weekly', 'monthly'].includes(cadence) || !['all', 'teachers'].includes(appliesTo) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(dueTime) || (cadence === 'weekly' && (!Number.isInteger(weekday) || weekday < 0 || weekday > 6)) || (cadence === 'monthly' && (!Number.isInteger(monthday) || monthday < 1 || monthday > 31)) || (action === 'update_commitment' && !uuid(body.commitmentId)) || (body.sourceId && !uuid(body.sourceId))) {
         return res.status(400).json({ error: 'Check the commitment name and due time.' })
       }
-      await rows(auth.admin.from('ap_commitments').insert({ school_id: schoolId, title, cadence, applies_to: appliesTo, due_weekday: cadence === 'weekly' ? weekday : null, due_monthday: cadence === 'monthly' ? monthday : null, due_time: dueTime }).select('id'))
+      if (body.sourceId) {
+        const source = await rows(auth.admin.from('ap_sources').select('id').eq('school_id', schoolId).eq('id', body.sourceId).limit(1))
+        if (!source.length) return res.status(400).json({ error: 'Choose a source from this school.' })
+      }
+      const values = { title, cadence, applies_to: appliesTo, due_weekday: cadence === 'weekly' ? weekday : null, due_monthday: cadence === 'monthly' ? monthday : null, due_time: dueTime, source_id: body.sourceId || null }
+      if (action === 'add_commitment') await rows(auth.admin.from('ap_commitments').insert({ school_id: schoolId, ...values }).select('id'))
+      else {
+        const updated = await rows(auth.admin.from('ap_commitments').update(values).eq('school_id', schoolId).eq('id', body.commitmentId).select('id'))
+        if (!updated.length) return res.status(404).json({ error: 'Commitment not found in this school.' })
+      }
     } else if (action === 'record_evidence') {
       if (!uuid(body.staffId) || !uuid(body.commitmentId) || !['received', 'reviewed'].includes(body.state)) {
         return res.status(400).json({ error: 'Choose a staff member, commitment, and status.' })
@@ -161,10 +170,12 @@ export default async function handler(req, res) {
       if (!kinds.has(kind) || label.length < 2 || !url || url.length > 2000) {
         return res.status(400).json({ error: 'Enter a source type, label, and secure URL.' })
       }
-      const { error } = await auth.admin.from('ap_sources').upsert({
-        school_id: schoolId, kind, label, url, connection_state: 'reference',
-      }, { onConflict: 'school_id,kind' })
-      if (error) throw error
+      if (body.sourceId) {
+        if (!uuid(body.sourceId)) return res.status(400).json({ error: 'Choose a valid source.' })
+        const updated = await rows(auth.admin.from('ap_sources').update({ kind, label, url, connection_state: 'reference' })
+          .eq('school_id', schoolId).eq('id', body.sourceId).select('id'))
+        if (!updated.length) return res.status(404).json({ error: 'Source not found in this school.' })
+      } else await rows(auth.admin.from('ap_sources').insert({ school_id: schoolId, kind, label, url, connection_state: 'reference' }).select('id'))
     } else if (action === 'draft_brief') {
       const notes = clean(body.notes, 5000)
       if (notes.length < 10) return res.status(400).json({ error: 'Add a few notes before drafting.' })
