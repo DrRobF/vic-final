@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import { buildReportHtml } from '../lib/report-format'
-import ParentLetterStudio from './ParentLetterStudio'
 
 const REDIRECT_DELAY_MS = 1200
 const ASSIGNABLE_SUPPORT_LEVELS = ['remediation', 'core', 'enrichment']
@@ -43,7 +42,6 @@ export default function VICClassroomWorkspace({prefillLesson}) {
   const [isSavingParentEmailForStudentId, setIsSavingParentEmailForStudentId] = useState(null)
   const [isRosterCollapsed, setIsRosterCollapsed] = useState(false)
   const [justAssignedStudentIds, setJustAssignedStudentIds] = useState([])
-  const [letterStudentId, setLetterStudentId] = useState(null)
 
   const [lessonTitle, setLessonTitle] = useState('')
   const [lessonText, setLessonText] = useState('')
@@ -865,6 +863,9 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                     <div className="commandClassName">{selectedClass.class_name}</div>
                     <p className="helperText">Use this class code for enrollment and assign lessons to the roster below.</p>
                     <div className="classManagementRow">
+                      <button type="button" className="secondaryButton classManageButton" onClick={() => router.push(`/parentletters?classId=${encodeURIComponent(selectedClass.id)}`)}>
+                        Parent Letters ↗
+                      </button>
                       <button
                         type="button"
                         className="secondaryButton classManageButton"
@@ -1142,7 +1143,7 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                                     >
                                       {isGeneratingReportForStudentId === student.id ? 'Generating...' : 'Generate'}
                                     </button>
-                                    <button type="button" className="secondaryButton groupButton" onClick={()=>{setLetterStudentId(student.id);document.getElementById('parent-letter-studio')?.scrollIntoView({behavior:'smooth'})}}>Parent letter</button>
+                                    <button type="button" className="secondaryButton groupButton" onClick={() => router.push(`/parentletters?classId=${encodeURIComponent(selectedClass.id)}&studentId=${encodeURIComponent(student.id)}`)}>Parent letter ↗</button>
                                   </div>
                                 </td>
                                 <td>
@@ -1161,8 +1162,6 @@ export default function VICClassroomWorkspace({prefillLesson}) {
                 ) : null}
               </section>
             ) : null}
-
-            {selectedClass ? <ParentLetterStudio key={selectedClass.id} classId={selectedClass.id} focusStudentId={letterStudentId}/> : null}
 
             {selectedClass ? (
               <section className="card sectionCard lessonShell">
