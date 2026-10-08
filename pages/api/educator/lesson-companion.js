@@ -2,7 +2,7 @@ import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
 import {validLessonId} from '../../../lib/educator-lessons.mjs'
 import {planAsText} from '../../../lib/lesson-designer.mjs'
-import {companionInput,companionInstructions,vicTargetText,familyFallback,nextFallback} from '../../../lib/lesson-companion.mjs'
+import {companionInput,companionInstructions,vicTargetText,familyFallback,nextFallback,prepFallback} from '../../../lib/lesson-companion.mjs'
 
 export const config={api:{bodyParser:{sizeLimit:'32kb'}},maxDuration:60}
 export default async function handler(req,res){
@@ -45,11 +45,10 @@ export default async function handler(req,res){
    }else if(input.kind==='family'){
     draft=familyFallback(lesson.draft,input.notes)
    }else{
-    if(!process.env.OPENAI_API_KEY){if(input.kind==='next')draft=nextFallback(lesson.draft,input.notes);else return res.status(503).json({error:'Drafting is temporarily unavailable.'})}
+    if(!process.env.OPENAI_API_KEY)draft=input.kind==='next'?nextFallback(lesson.draft,input.notes):prepFallback(lesson.draft)
     if(!draft){
      if(!await claimLessonRequest(auth)){
-      if(input.kind==='next')draft=nextFallback(lesson.draft,input.notes)
-      else{res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling many requests. Please try again shortly.'})}
+      draft=input.kind==='next'?nextFallback(lesson.draft,input.notes):prepFallback(lesson.draft)
      }
      try{
       if(!draft){
@@ -59,7 +58,7 @@ export default async function handler(req,res){
        if(response.ok&&result?.status!=='incomplete')draft=result?.output_text||(result?.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text).join('\n')
       }
      }catch{}
-     if(!draft){if(input.kind==='next')draft=nextFallback(lesson.draft,input.notes);else return res.status(502).json({error:'VIC could not finish this draft. Your previous saved version is still available.'})}
+     if(!draft)draft=input.kind==='next'?nextFallback(lesson.draft,input.notes):prepFallback(lesson.draft)
     }
    }
    draft=draft.slice(0,12000)
