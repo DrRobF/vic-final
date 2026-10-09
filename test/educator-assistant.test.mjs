@@ -15,3 +15,10 @@ test('parent email accepts quick notes and keeps the no-invention rules',()=>{
  assert.match(text,/Subject:/)
  assert.match(text,/Do not invent grades/)
 })
+
+test('tasks keep the For families flag',async()=>{
+ const {assistantTasks}=await import('../lib/educator-assistant.mjs')
+ const [t]=assistantTasks([{title:'Remind families: picture day',due:'2026-10-16',family:true}])
+ assert.equal(t.family,true)
+ assert.equal(assistantTasks([{title:'Grade quizzes'}])[0].family,false)
+})

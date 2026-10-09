@@ -26,9 +26,9 @@ export default async function handler(req,res){
   const {data:pickedUpdates,error:updateError}=inputs.familyIds.length?await auth.admin.from('educator_lesson_companions').select('lesson_id,draft').eq('user_id',auth.user.id).eq('kind','family').in('lesson_id',inputs.familyIds):{data:[],error:null}
   if(updateError)throw updateError
   const updates=(pickedUpdates||[]).map(u=>String(u.draft||'').slice(0,2000)).filter(Boolean)
-  let letter=fallbackClassLetter({lessons,updates,note:inputs.note})
+  let letter=fallbackClassLetter({lessons,updates,note:inputs.note,reminders:inputs.reminders})
   if(process.env.OPENAI_API_KEY&&await claimLessonRequest(auth)){
-   const input=JSON.stringify({lessons:lessons.map(l=>({title:l.title,objectives:l.objectives,standards:l.standards})),lessonUpdates:updates,teacherNote:inputs.note})
+   const input=JSON.stringify({lessons:lessons.map(l=>({title:l.title,objectives:l.objectives,standards:l.standards})),lessonUpdates:updates,reminders:inputs.reminders,teacherNote:inputs.note})
    const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(45000),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:1500,text:{format:{type:'json_schema',name:'class_letter',strict:true,schema:{type:'object',additionalProperties:false,required:['subject','body'],properties:{subject:{type:'string'},body:{type:'string'}}}}},instructions:CLASS_LETTER_INSTRUCTIONS,input})})
    const result=await response.json().catch(()=>null)
    const output=result?.output_text||(result?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('\n')
