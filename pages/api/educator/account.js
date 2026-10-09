@@ -6,5 +6,6 @@ export default async function handler(req,res){
  if(req.method!=='GET'){res.setHeader('Allow','GET');return res.status(405).json({error:'Method not allowed.'})}
  const auth=await requireLessonEducator(req)
  if(auth.error)return res.status(auth.status).json({error:auth.error})
- return res.json({email:auth.user.email,role:auth.profile?.role||'educator',classroom:auth.profile?.role==='teacher',principal:['teacher','principal'].includes(auth.profile?.role),manageAccounts:canManageAccounts(auth,ADMIN_EMAIL)})
+ const {data:lead}=await auth.admin.from('ap_memberships').select('school_id').eq('auth_user_id',auth.user.id).limit(1)
+ return res.json({leader:!!lead?.length,email:auth.user.email,role:auth.profile?.role||'educator',classroom:auth.profile?.role==='teacher',principal:['teacher','principal'].includes(auth.profile?.role),manageAccounts:canManageAccounts(auth,ADMIN_EMAIL)})
 }
