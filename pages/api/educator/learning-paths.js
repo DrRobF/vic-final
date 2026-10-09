@@ -1,6 +1,6 @@
 import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
-import {pathInput,PATH_SCHEMA,PATH_INSTRUCTIONS,RESOURCE_INSTRUCTIONS,cleanPath,publicPath,scoreQuiz,parseResourceList,verifyResources} from '../../../lib/learning-path.mjs'
+import {pathInput,PATH_SCHEMA,PATH_INSTRUCTIONS,RESOURCE_INSTRUCTIONS,cleanPath,publicPath,scoreQuiz,parseResourceList,citedResources,mergeResources,verifyResources} from '../../../lib/learning-path.mjs'
 export const config={api:{bodyParser:{sizeLimit:'32kb'}},maxDuration:60}
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -55,15 +55,20 @@ export default async function handler(req,res){
    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'Finding resources is temporarily unavailable.'})
    if(!await claimLessonRequest(auth)){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling many requests. Please try again shortly.'})}
    const input=`Topic: ${row.topic}\nTeaching context: ${row.context||'K-12'}\nSuggested searches: ${(row.path?.searchQueries||[]).join(' | ')}`
-   let found=[]
+   let found=[],stage='search'
    for(const tool of ['web_search','web_search_preview']){
-    const {ok,result}=await openai({model:'gpt-4.1-mini',max_output_tokens:2000,tools:[{type:tool}],instructions:RESOURCE_INSTRUCTIONS,input})
-    if(ok){found=parseResourceList(outputText(result));break}
+    const {ok,result}=await openai({model:'gpt-4.1-mini',max_output_tokens:2500,tools:[{type:tool}],instructions:RESOURCE_INSTRUCTIONS,input})
+    if(!ok){console.warn('learning-paths search failed',tool,result?.error?.message||result?.status);continue}
+    // Use the JSON list the model returns, plus any pages it actually cited from search results.
+    found=mergeResources(parseResourceList(outputText(result)),citedResources(result))
+    stage=found.length?'verify':'empty'
+    break
    }
    const verified=await verifyResources(found)
+   console.log('learning-paths resources',{stage,found:found.length,verified:verified.length})
    const {data,error}=await table().update({resources:verified,updated_at:new Date().toISOString()}).eq('id',row.id).eq('user_id',auth.user.id).select('*').single()
    if(error)throw error
-   return res.json({item:view(data),checked:found.length})
+   return res.json({item:view(data),found:found.length,verified:verified.length})
   }
   if(action==='progress'){
    const done=body.progress&&typeof body.progress==='object'?Object.fromEntries(Object.entries(body.progress).filter(([k,v])=>typeof k==='string'&&k.length<=600&&v===true).slice(0,20)):{}

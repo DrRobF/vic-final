@@ -12,7 +12,14 @@ test('resource list parsing keeps only real-looking https links',()=>{
  assert.equal(list.length,1);assert.equal(youtubeId(list[0].url),'abc123XYZ');assert.equal(youtubeId('https://youtu.be/q1w2e3r4'),'q1w2e3r4')
 })
 test('dead links are dropped',async()=>{
- const fake=async url=>url.includes('oembed')?{ok:false}:url.includes('good')?{ok:true}:{ok:false}
+ const fake=async url=>url.includes('oembed')?{ok:false,status:404}:url.includes('good')?{ok:true,status:200}:{ok:false,status:404}
  const out=await verifyResources([{type:'article',title:'Good',url:'https://good.example/a'},{type:'article',title:'Dead',url:'https://dead.example/a'},{type:'video',title:'Gone',url:'https://www.youtube.com/watch?v=zzzzzzzz'}],fake)
  assert.deepEqual(out.map(r=>r.title),['Good'])
+})
+
+test('sites that block link checkers are kept; missing pages are dropped',async()=>{
+ const fake=async url=>url.includes('oembed')?(url.includes('noembed')?{ok:false,status:401}:{ok:false,status:404}):url.includes('blocked')?{ok:false,status:403}:{ok:false,status:404}
+ const out=await verifyResources([{type:'article',title:'Blocked but real',url:'https://blocked.example/a'},{type:'article',title:'Missing',url:'https://missing.example/a'},{type:'video',title:'No embed',url:'https://www.youtube.com/watch?v=noembed12'}],fake)
+ assert.deepEqual(out.map(r=>r.title).sort(),['Blocked but real','No embed'])
+ assert.equal(out.find(r=>r.type==='video').embed,false)
 })
