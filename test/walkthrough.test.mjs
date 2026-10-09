@@ -20,3 +20,14 @@ test('teacher email never includes private notes',()=>{
  const m=teacherFeedbackEmail({teacherName:'Karen Green',observerName:'Rob Furman',ratings:{objective:3},strength:'S',nextStep:'N',sharedFeedback:'',privateNotes:'SECRET'})
  assert.match(m.body,/^Hi Karen,/);assert.doesNotMatch(m.body,/SECRET/);assert.match(m.body,/strongly evident/)
 })
+
+test('walkthrough for someone not on the staff list',()=>{
+ const w=walkthroughInput({teacherName:'Guest Teacher',strength:'Warm greeting',nextStep:'Post the objective',emailTeacher:true})
+ assert.equal(w.staffId,null);assert.equal(w.teacherName,'Guest Teacher');assert.equal(w.emailTeacher,false)
+ assert.throws(()=>walkthroughInput({strength:'x'.repeat(10),nextStep:'y'.repeat(10)}),/type their name/)
+})
+test('join codes',async()=>{
+ const {makeJoinCode,normalizeJoinCode}=await import('../lib/walkthrough.mjs')
+ assert.match(makeJoinCode("Saint Peter's Academy",()=>0.5),/^SPA-\d{4}$/)
+ assert.equal(normalizeJoinCode(' spa4821 '),'SPA-4821')
+})

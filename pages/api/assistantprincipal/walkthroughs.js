@@ -1,5 +1,5 @@
 import {requirePrincipal,requireSchool} from '../../../lib/assistant-principal-auth'
-import {LOOK_FORS,RATINGS,SUBJECTS,VISIT_LENGTHS,FOLLOW_UPS,walkthroughInput,lookForSuggestions,NEXT_STEP_TOPIC_INSTRUCTIONS,cleanTopic,combineSuggestions,teacherFeedbackEmail} from '../../../lib/walkthrough.mjs'
+import {makeJoinCode,LOOK_FORS,RATINGS,SUBJECTS,VISIT_LENGTHS,FOLLOW_UPS,walkthroughInput,lookForSuggestions,NEXT_STEP_TOPIC_INSTRUCTIONS,cleanTopic,combineSuggestions,teacherFeedbackEmail} from '../../../lib/walkthrough.mjs'
 export const config={api:{bodyParser:{sizeLimit:'64kb'}},maxDuration:30}
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -33,16 +33,16 @@ export default async function handler(req,res){
   const school=await requireSchool(auth,schoolId)
   if(school.error)return res.status(school.status).json({error:school.error})
 
-  const {data:staff,error:staffError}=await db.from('ap_staff').select('id,display_name,role,assignment,email').eq('school_id',schoolId).eq('active',true).order('display_name').limit(500)
+  const {data:staff,error:staffError}=await db.from('ap_staff').select('id,display_name,role,assignment,email,auth_user_id').eq('school_id',schoolId).eq('active',true).order('display_name').limit(500)
   if(staffError)throw staffError
   const staffById=new Map((staff||[]).map(s=>[s.id,s]))
 
   if(req.method==='GET'){
    const [{data:walks,error:wErr},{data:suggestions,error:sErr},{data:assignments,error:aErr},{data:schoolRow}]=await Promise.all([
-    db.from('ap_walkthroughs').select('id,staff_id,observer_name,subject,visit_length,ratings,strength,next_step,follow_up,shared_feedback,private_notes,feedback_sent_at,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(60),
+    db.from('ap_walkthroughs').select('id,staff_id,teacher_name,observer_name,subject,visit_length,ratings,strength,next_step,follow_up,shared_feedback,private_notes,feedback_sent_at,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(60),
     db.from('ap_path_suggestions').select('id,staff_id,walkthrough_id,topic,reason,created_at').eq('school_id',schoolId).eq('status','pending').order('created_at',{ascending:false}).limit(100),
     db.from('ap_path_assignments').select('id,staff_id,topic,note,due_date,source,learning_path_id,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(200),
-    db.from('ap_schools').select('name').eq('id',schoolId).maybeSingle(),
+    db.from('ap_schools').select('name,join_code,seat_limit').eq('id',schoolId).maybeSingle(),
    ])
    if(wErr||sErr||aErr)throw wErr||sErr||aErr
    // Principals see completion and the teacher's reflection only. Quiz scores are never selected.
@@ -51,12 +51,14 @@ export default async function handler(req,res){
    if(pErr)throw pErr
    const pathById=new Map((paths||[]).map(p=>[p.id,p]))
    const name=id=>staffById.get(id)?.display_name||'Former staff member'
+   let joinCode=schoolRow?.join_code
+   for(let i=0;!joinCode&&i<5;i++){const code=makeJoinCode(schoolRow?.name);const {error:cErr}=await db.from('ap_schools').update({join_code:code}).eq('id',schoolId).is('join_code',null);if(!cErr)joinCode=code}
    return res.json({
-    school:{id:schoolId,name:schoolRow?.name||'',role:school.role},
+    school:{id:schoolId,name:schoolRow?.name||'',role:school.role,joinCode:joinCode||'',seatLimit:schoolRow?.seat_limit??50,seatsUsed:(staff||[]).length},
     me:{name:auth.profile?.name||auth.user.email||''},
     options:{lookFors:LOOK_FORS.map(({key,label})=>({key,label})),ratings:RATINGS,subjects:SUBJECTS,visitLengths:VISIT_LENGTHS,followUps:FOLLOW_UPS},
-    staff:(staff||[]).filter(s=>s.role==='teacher'||s.role==='support'||s.role==='other').map(s=>({id:s.id,name:s.display_name,assignment:s.assignment||'',hasEmail:!!s.email})),
-    walkthroughs:(walks||[]).map(w=>({...w,teacher:name(w.staff_id)})),
+    staff:(staff||[]).filter(s=>s.role==='teacher'||s.role==='support'||s.role==='other').map(s=>({id:s.id,name:s.display_name,assignment:s.assignment||'',hasEmail:!!s.email,joined:!!s.auth_user_id})),
+    walkthroughs:(walks||[]).map(w=>({...w,teacher:w.staff_id?name(w.staff_id):w.teacher_name,listed:!!w.staff_id})),
     suggestions:(suggestions||[]).map(s=>({...s,teacher:name(s.staff_id)})),
     assignments:(assignments||[]).map(a=>{const p=a.learning_path_id&&pathById.get(a.learning_path_id);return {...a,teacher:name(a.staff_id),status:p?(p.status==='completed'?'completed':'started'):'not started',completedAt:p?.completed_at||null,reflection:p?.status==='completed'?p.reflection:''}}),
    })
@@ -65,12 +67,13 @@ export default async function handler(req,res){
   const body=req.body||{},action=body.action
   if(action==='submit'){
    let input;try{input=walkthroughInput(body)}catch(e){return res.status(400).json({error:e.message})}
-   const teacher=staffById.get(input.staffId)
-   if(!teacher)return res.status(400).json({error:'That teacher is not on this school’s active staff list.'})
+   const teacher=input.staffId?staffById.get(input.staffId):null
+   if(input.staffId&&!teacher)return res.status(400).json({error:'That teacher is not on this school’s active staff list.'})
    const observerName=auth.profile?.name||auth.user.email||''
-   const {data:walk,error}=await db.from('ap_walkthroughs').insert({school_id:schoolId,staff_id:input.staffId,observer_user_id:auth.user.id,observer_name:observerName,subject:input.subject,visit_length:input.visitLength,ratings:input.ratings,strength:input.strength,next_step:input.nextStep,follow_up:input.followUp,shared_feedback:input.sharedFeedback,private_notes:input.privateNotes}).select('id,created_at').single()
+   const {data:walk,error}=await db.from('ap_walkthroughs').insert({school_id:schoolId,staff_id:input.staffId,teacher_name:input.teacherName,observer_user_id:auth.user.id,observer_name:observerName,subject:input.subject,visit_length:input.visitLength,ratings:input.ratings,strength:input.strength,next_step:input.nextStep,follow_up:input.followUp,shared_feedback:input.sharedFeedback,private_notes:input.privateNotes}).select('id,created_at').single()
    if(error)throw error
-   const suggestions=combineSuggestions(lookForSuggestions(input.ratings),await topicFromNextStep(input.nextStep))
+   // Suggestions need someone on the staff list to assign to.
+   const suggestions=!input.staffId?[]:combineSuggestions(lookForSuggestions(input.ratings),await topicFromNextStep(input.nextStep))
    if(suggestions.length){const {error:sErr}=await db.from('ap_path_suggestions').insert(suggestions.map(s=>({school_id:schoolId,staff_id:input.staffId,walkthrough_id:walk.id,topic:s.topic,reason:s.reason})));if(sErr)throw sErr}
    let emailed=false,emailNote=''
    if(input.emailTeacher){
@@ -83,7 +86,7 @@ export default async function handler(req,res){
      if(r.ok){emailed=true;await db.from('ap_walkthroughs').update({feedback_sent_at:new Date().toISOString()}).eq('id',walk.id)}else emailNote='The walkthrough is saved, but the feedback email could not be sent.'
     }
    }
-   return res.json({saved:true,suggestions:suggestions.length,emailed,emailNote})
+   return res.json({saved:true,id:walk.id,suggestions:suggestions.length,emailed,emailNote})
   }
 
   async function assign({staffId,topic,note='',dueDate=null,source='manual',suggestionId=null}){
@@ -108,6 +111,11 @@ export default async function handler(req,res){
     const {error:uErr}=await db.from('ap_path_suggestions').update({status:body.decision==='assign'?'assigned':'dismissed',decided_at:new Date().toISOString()}).eq('id',s.id)
     if(uErr)throw uErr
     return res.json({ok:true})
+   }
+   if(action==='newCode'){
+    const {data:row}=await db.from('ap_schools').select('name').eq('id',schoolId).maybeSingle()
+    for(let i=0;i<5;i++){const code=makeJoinCode(row?.name);const {error}=await db.from('ap_schools').update({join_code:code}).eq('id',schoolId);if(!error)return res.json({joinCode:code})}
+    return res.status(503).json({error:'Could not make a new code. Please try again.'})
    }
    if(action==='assign'){await assign({staffId:body.staffId,topic:body.topic,note:body.note,dueDate:body.dueDate});return res.json({ok:true})}
    if(action==='unassign'){

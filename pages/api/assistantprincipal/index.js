@@ -93,11 +93,26 @@ export default async function handler(req, res) {
     const schoolId = access.schoolId
     let importResult = null
 
+    // Seat limit: every active person on the staff list uses one seat, whether added here, imported, or joined with the school code.
+    async function seatsLeft() {
+      const [{ data: school }, { count }] = await Promise.all([
+        auth.admin.from('ap_schools').select('seat_limit').eq('id', schoolId).maybeSingle(),
+        auth.admin.from('ap_staff').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('active', true),
+      ])
+      return (school?.seat_limit ?? 50) - (count || 0)
+    }
     if (action === 'import_staff' || action === 'import_commitments') {
       let parsed
       try { parsed = action === 'import_staff' ? parseStaffCsv(body.csvText) : parseCommitmentsCsv(body.csvText) }
       catch (error) { return res.status(400).json({ error: error.message }) }
       if (parsed.errors.length) return res.status(400).json({ error: parsed.errors.slice(0, 8).join(' ') })
+      if (action === 'import_staff' && parsed.staff?.length) {
+        const { data: existing } = await auth.admin.from('ap_staff').select('email').eq('school_id', schoolId).eq('active', true)
+        const known = new Set((existing || []).map(r => String(r.email || '').toLowerCase()).filter(Boolean))
+        const adding = parsed.staff.filter(r => !known.has(String(r.email || '').toLowerCase())).length
+        const left = await seatsLeft()
+        if (adding > left) return res.status(409).json({ error: `Your plan has ${Math.max(left, 0)} open seat${left === 1 ? '' : 's'}, and this file adds ${adding} people. Remove someone or ask about a larger plan.` })
+      }
       const { data, error } = await auth.admin.rpc('ap_import_setup', {
         p_school: schoolId, p_actor: auth.user.id,
         p_staff: parsed.staff || [], p_commitments: parsed.commitments || [],
@@ -112,6 +127,7 @@ export default async function handler(req, res) {
       if (displayName.length < 2 || !roles.has(role) || (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
         return res.status(400).json({ error: 'Enter a name, role, and optional valid email.' })
       }
+      if (await seatsLeft() < 1) return res.status(409).json({ error: 'Your school has used all of its seats. Remove someone from the staff list or ask about a larger plan.' })
       await rows(auth.admin.from('ap_staff').insert({ school_id: schoolId, display_name: displayName, role, assignment, email: email || null }).select('id'))
     } else if (action === 'update_staff') {
       const displayName = clean(body.displayName)

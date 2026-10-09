@@ -27,7 +27,15 @@ export default async function handler(req,res){
   if(auth.error)return res.status(auth.status).json({error:auth.error})
   const table=()=>auth.admin.from('educator_learning_paths')
   // Paths a school leader assigned to this educator (matched by the email on the school's staff list).
-  const myAssignments=async()=>{const email=String(auth.user.email||'').toLowerCase();if(!email)return [];const {data,error}=await auth.admin.from('ap_path_assignments').select('id,topic,note,due_date,created_at,learning_path_id,ap_schools(name)').eq('staff_email',email).is('learning_path_id',null).order('created_at',{ascending:false}).limit(20);if(error){console.warn('assignments',error.message);return []}return data||[]}
+  const myAssignments=async()=>{
+   const email=String(auth.user.email||'').toLowerCase()
+   const {data:spots,error:spotError}=await auth.admin.from('ap_staff').select('id').eq('active',true).or(email?`auth_user_id.eq.${auth.user.id},email.ilike.${email.replace(/[,()]/g,'')}`:`auth_user_id.eq.${auth.user.id}`)
+   if(spotError){console.warn('assignments',spotError.message);return []}
+   const ids=(spots||[]).map(s=>s.id);if(!ids.length)return []
+   const {data,error}=await auth.admin.from('ap_path_assignments').select('id,topic,note,due_date,created_at,learning_path_id,ap_schools(name)').in('staff_id',ids).is('learning_path_id',null).order('created_at',{ascending:false}).limit(20)
+   if(error){console.warn('assignments',error.message);return []}
+   return data||[]
+  }
   const own=async id=>{if(!UUID.test(String(id||'')))return null;const {data,error}=await table().select('*').eq('id',id).eq('user_id',auth.user.id).maybeSingle();if(error)throw error;return data}
 
   if(req.method==='GET'){
