@@ -30,6 +30,8 @@ export default async function handler(req,res){
    row.draft=text.slice(0,16000)
   }
   const {data,error}=await auth.admin.from('educator_assistant_work').upsert(row,{onConflict:'user_id,kind'}).select('kind,notes,draft,tasks,updated_at').single()
+  // Until the parent_email kind exists in the database, still hand the new draft back (unsaved) instead of losing it.
+  if(error&&error.code==='23514'&&row.kind==='parent_email'&&body.action==='generate')return res.json({work:{kind:row.kind,notes:row.notes,draft:row.draft,tasks:[],updated_at:row.updated_at},unsaved:true})
   if(error)throw error
   return res.json({work:data})
  }catch(e){return res.status(e?.name==='TimeoutError'?504:503).json({error:e?.name==='TimeoutError'?'This draft took too long. Your previous saved work is still available.':'Could not save or load your assistant work. Please retry.'})}
