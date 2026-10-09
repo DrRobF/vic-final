@@ -4,7 +4,7 @@ import {pathInput,PATH_SCHEMA,PATH_INSTRUCTIONS,RESOURCE_INSTRUCTIONS,cleanPath,
 export const config={api:{bodyParser:{sizeLimit:'32kb'}},maxDuration:60}
 
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const LIST='id,topic,status,minutes,updated_at,completed_at,title:path->>title'
+const LIST='id,topic,status,minutes,updated_at,completed_at,assignment_id,title:path->>title'
 const outputText=r=>r?.output_text||(r?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('\n')
 
 async function openai(body){
@@ -26,25 +26,31 @@ export default async function handler(req,res){
   const auth=await requireLessonEducator(req)
   if(auth.error)return res.status(auth.status).json({error:auth.error})
   const table=()=>auth.admin.from('educator_learning_paths')
+  // Paths a school leader assigned to this educator (matched by the email on the school's staff list).
+  const myAssignments=async()=>{const email=String(auth.user.email||'').toLowerCase();if(!email)return [];const {data,error}=await auth.admin.from('ap_path_assignments').select('id,topic,note,due_date,created_at,learning_path_id,ap_schools(name)').eq('staff_email',email).is('learning_path_id',null).order('created_at',{ascending:false}).limit(20);if(error){console.warn('assignments',error.message);return []}return data||[]}
   const own=async id=>{if(!UUID.test(String(id||'')))return null;const {data,error}=await table().select('*').eq('id',id).eq('user_id',auth.user.id).maybeSingle();if(error)throw error;return data}
 
   if(req.method==='GET'){
    if(req.query.id){const row=await own(req.query.id);if(!row)return res.status(404).json({error:'That learning path is not in your account.'});return res.json({item:view(row)})}
    const {data,error}=await table().select(LIST).eq('user_id',auth.user.id).order('updated_at',{ascending:false}).limit(50)
    if(error)throw error
-   return res.json({items:(data||[]).map(r=>({id:r.id,topic:r.topic,title:r.title||r.topic,status:r.status,minutes:r.minutes,updatedAt:r.updated_at,completedAt:r.completed_at}))})
+   const assigned=await myAssignments()
+   return res.json({items:(data||[]).map(r=>({id:r.id,topic:r.topic,title:r.title||r.topic,status:r.status,minutes:r.minutes,updatedAt:r.updated_at,completedAt:r.completed_at,assigned:!!r.assignment_id})),assigned:assigned.map(a=>({id:a.id,topic:a.topic,note:a.note,dueDate:a.due_date,school:a.ap_schools?.name||'',createdAt:a.created_at}))})
   }
 
   const body=req.body||{},action=body.action
   if(action==='create'){
+   let assignment=null
+   if(body.assignmentId){assignment=(await myAssignments()).find(a=>a.id===body.assignmentId);if(!assignment)return res.status(404).json({error:'That assignment is no longer waiting for you.'});body.topic=assignment.topic}
    let input;try{input=pathInput(body)}catch(e){return res.status(400).json({error:e.message})}
    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'Learning Paths are temporarily unavailable.'})
    if(!await claimLessonRequest(auth)){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling many requests. Please try again shortly.'})}
    const {ok,result}=await openai({model:'gpt-4.1-mini',max_output_tokens:3500,instructions:PATH_INSTRUCTIONS,input:JSON.stringify({topic:input.topic,teachingContext:input.context||'not given'}),text:{format:{type:'json_schema',name:'learning_path',strict:true,schema:PATH_SCHEMA}}})
    if(!ok)return res.status(502).json({error:'VIC could not build this path. Please try again.'})
    let path;try{path=cleanPath(JSON.parse(outputText(result)))}catch(e){return res.status(502).json({error:e.message||'VIC could not build this path. Please try again.'})}
-   const {data,error}=await table().insert({user_id:auth.user.id,topic:input.topic,context:input.context,path,minutes:0}).select('*').single()
+   const {data,error}=await table().insert({user_id:auth.user.id,topic:input.topic,context:input.context,path,minutes:0,...(assignment?{assignment_id:assignment.id}:{})}).select('*').single()
    if(error)throw error
+   if(assignment){const {error:linkError}=await auth.admin.from('ap_path_assignments').update({learning_path_id:data.id}).eq('id',assignment.id).is('learning_path_id',null);if(linkError)throw linkError}
    return res.json({item:view(data)})
   }
 

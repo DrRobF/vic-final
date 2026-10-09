@@ -167,7 +167,7 @@ export default function AssistantPrincipalPage() {
   )
 
   return (
-    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/educatorassistant">← Personal educator assistant</a><span className="ap-small">School leadership mode</span></div>
+    <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/educatorassistant">← Personal educator assistant</a><span className="ap-small">School leadership mode</span><a className="ap-primary" href="/walkthroughs">Walkthroughs &amp; Learning Paths →</a></div>
       <header className="ap-heading"><div><p className="ap-eyebrow">Assistant Principal</p><h1>{dashboard.school.name}</h1><p>{clock.date} · {dashboard.school.time_zone} · principal review</p></div>
         {schools.length > 1 && <label>School<select value={dashboard.school.id} onChange={e => switchSchool(e.target.value)}>{schools.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       </header>
