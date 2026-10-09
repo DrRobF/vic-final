@@ -866,7 +866,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
                     <p className="helperText">Use this class code for enrollment and assign lessons to the roster below.</p>
                     <div className="classManagementRow">
                       <button type="button" className="secondaryButton classManageButton" onClick={() => router.push(`/parentletters?classId=${encodeURIComponent(selectedClass.id)}`)}>
-                        Parent Letters ↗
+                        Family Letters ↗
                       </button>
                       <button
                         type="button"

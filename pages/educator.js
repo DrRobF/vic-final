@@ -3,7 +3,6 @@ import Head from 'next/head'
 import {supabase} from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
 import MyEducatorLessons from '../components/MyEducatorLessons'
-import FamilyUpdates from '../components/FamilyUpdates'
 import VICClassroomWorkspace from '../components/VICClassroomWorkspace'
 
 export default function EducatorDashboard(){
@@ -24,12 +23,10 @@ export default function EducatorDashboard(){
  <a className="toolCard planning" href="/lessonplan"><p className="eyebrow">PLAN &amp; CREATE</p><h2>Lesson Designer</h2><p>Create a new lesson, refresh an existing one, edit individual sections, and download your materials.</p><strong>Open Lesson Designer →</strong></a>
  {account.classroom?<a className="toolCard learning" href="/askvic"><p className="eyebrow">TEACH &amp; SUPPORT</p><h2>VIC Co-Teacher</h2><p>Open VIC for guided learning. Manage your classes, students, and lesson assignments right below.</p><strong>Open VIC Co-Teacher →</strong></a>:<section className="toolCard learning"><p className="eyebrow">TEACH &amp; SUPPORT</p><h2>VIC Co-Teacher</h2><p>School classroom access is available when your administrator links your educator account to a school.</p><a href="mailto:drrobfurman@gmail.com?subject=VIC%20classroom%20access">Ask about classroom access →</a></section>}
  <a className="toolCard leadership" href="#my-lessons"><p className="eyebrow">PREPARE &amp; FOLLOW THROUGH</p><h2>Teacher Assistant</h2><p>Start with a saved lesson. Prepare materials, draft a family update, adjust tomorrow, or bring instructions into VIC.</p><strong>Choose a lesson below ↓</strong></a>
- <a className="toolCard letters" href="/educatorassistant?tool=parent_email"><p className="eyebrow">QUICK FAMILY EMAIL</p><h2>Parent Email from Notes</h2><p>Jot a few quick notes about a student. VIC writes a clear, warm email to the family. You review, add the name, and send.</p><strong>Write a parent email →</strong></a>
- {account.classroom&&<a className="toolCard letters" href="/parentletters"><p className="eyebrow">FAMILY COMMUNICATION</p><h2>Parent Letters</h2><p>Combine lesson goals, VIC reports, and your own notes into personal letters. Save, review, approve, and send each one.</p><strong>Open Parent Letters →</strong></a>}
+ <a className="toolCard letters" href="/parentletters"><p className="eyebrow">FAMILY COMMUNICATION</p><h2>Family Letters</h2><p>Every message to families in one place: a quick email from your notes, personal student letters with VIC reports and comments, or a class update from your lessons.</p><strong>Open Family Letters →</strong></a>
  </section>
  <div id="my-lessons"><MyEducatorLessons canUseVic={account.classroom}/></div>
- <FamilyUpdates/>
- <p className="note">For a parent email from quick notes, a weekly plan, message, meeting, or professional learning draft, <a href="/educatorassistant">open your personal assistant</a>.</p>
+ <p className="note">For a weekly plan, a message to a colleague, meeting prep, or professional learning draft, <a href="/educatorassistant">open your personal assistant</a>.</p>
  {account.manageAccounts&&<section className="adminTools" aria-label="School administration"><div><p className="eyebrow">SCHOOL ADMINISTRATION</p><h2>People &amp; classrooms</h2><p>Edit individual accounts, reset passwords, manage class membership, or upload a roster.</p></div><nav aria-label="Administration tools"><a href="/admin/accounts">Manage accounts →</a><a href="/admin/classrooms">Manage all classrooms →</a><a href="/admin/import-roster">Bulk roster upload →</a></nav></section>}
  {account.classroom&&<section id="classrooms" aria-label="Classroom management"><VICClassroomWorkspace/></section>}
  <p className="note">Students use <a href="/student-login">their separate student login</a> to learn with VIC.</p>
