@@ -1,5 +1,5 @@
 import {schoolEducator,studentProfile} from '../../../lib/educator-account.mjs'
-import {LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION} from '../../../lib/lesson-access.mjs'
+import {signupConsentRecord} from '../../../lib/lesson-access.mjs'
 import {createClient} from '@supabase/supabase-js'
 import {createHash} from 'node:crypto'
 import {lessonSignupEnabled,signupEmail,lessonSigninLink} from '../../../lib/lesson-signup.mjs'
@@ -31,7 +31,7 @@ export default async function handler(req,res){
  if(error)return res.status(503).json({error:'Could not prepare your sign-in email. Please try again later.'})
  if(!data.user?.id)return res.status(503).json({error:'Could not prepare your signup. Please try again.'})
  if(!returning){
- const {error:consentError}=await admin.from('lesson_signup_consents').upsert({user_id:data.user.id,email,consent_text:LESSON_CONSENT_TEXT,consent_version:LESSON_CONSENT_VERSION,consented_at:new Date().toISOString()},{onConflict:'user_id'})
+ const {error:consentError}=await admin.from('lesson_signup_consents').upsert({user_id:data.user.id,email,...signupConsentRecord(req.body.updates===true),newsletter_consent:req.body.updates===true,consented_at:new Date().toISOString()},{onConflict:'user_id'})
  if(consentError)return res.status(503).json({error:'Could not save your signup choices. Please try again.'})
  }
  const link=lessonSigninLink(data.properties,req.body?.next)

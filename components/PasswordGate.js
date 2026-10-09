@@ -7,7 +7,7 @@ const ACCOUNT_ROUTES=new Set(['/login','/student-login','/signup','/lessonplan/a
 // Public marketing pages render immediately (including the server-rendered HTML that search
 // engines and link previews read). The account check still runs in the background so a
 // signed-in user who must change their password is redirected.
-const PUBLIC_ROUTES=new Set(['/'])
+const PUBLIC_ROUTES=new Set(['/','/privacy','/terms'])
 export default function PasswordGate({children}){
  const router=useRouter(),accountPage=ACCOUNT_ROUTES.has(router.pathname),publicPage=PUBLIC_ROUTES.has(router.pathname)
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)
