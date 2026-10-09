@@ -24,7 +24,7 @@ export default function Walkthroughs(){
  useEffect(()=>{api().then(d=>{setSchools(d.schools);if(d.schools[0])setSchoolId(d.schools[0].id);else setBlocked('none')}).catch(e=>setBlocked(e.login?'login':e.status===403?e.message:e.message)).finally(()=>setReady(true))},[])
  async function load(id=schoolId){if(!id)return;try{const d=await api(null,`?schoolId=${encodeURIComponent(id)}`);setData(d)}catch(e){setError(e.message)}}
  useEffect(()=>{setData(null);load(schoolId)},[schoolId])
- useEffect(()=>{const t=new URLSearchParams(window.location.search).get('tab');if(TABS.some(([k])=>k===t))setTab(t)},[])
+ useEffect(()=>{const q=new URLSearchParams(window.location.search),t=q.get('tab'),st=q.get('staff');if(TABS.some(([k])=>k===t))setTab(t);if(st)setForm(f=>({...f,staffId:st}))},[])
 
  async function run(label,fn){setBusy(label);setError('');setNotice('');try{await fn()}catch(e){setError(e.message)}finally{setBusy('')}}
  const set=patch=>setForm(f=>({...f,...patch}))

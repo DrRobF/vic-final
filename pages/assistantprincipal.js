@@ -140,6 +140,26 @@ export default function AssistantPrincipalPage() {
     })
     return { ...person, items, needsAttention: items.some(item => item.status === 'overdue') }
   }), [dashboard, clock])
+  const growthOf = id => dashboard?.growth?.[id] || { walkthroughs: 0, lastWalkthrough: null, suggestions: [], assignments: [] }
+  const shortDate = d => new Date(d).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  const growthLine = id => {
+    const g = growthOf(id), done = g.assignments.filter(a => a.status === 'completed').length
+    const stale = !g.lastWalkthrough || (Date.now() - Date.parse(g.lastWalkthrough)) > 30 * 864e5
+    return [g.walkthroughs ? `${g.walkthroughs} walkthrough${g.walkthroughs === 1 ? '' : 's'} · last ${shortDate(g.lastWalkthrough)}${stale ? ' (30+ days)' : ''}` : 'No walkthroughs yet this year',
+      g.assignments.length ? `${g.assignments.length} path${g.assignments.length === 1 ? '' : 's'} assigned · ${done} completed` : null,
+      g.suggestions.length ? `${g.suggestions.length} suggested path${g.suggestions.length === 1 ? '' : 's'} waiting` : null].filter(Boolean).join(' · ')
+  }
+  async function decideSuggestion(suggestionId, decision) {
+    setMessage('')
+    try {
+      const response = await fetch('/api/assistantprincipal/walkthroughs', { method: 'POST', headers: { Authorization: `Bearer ${session?.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'decide', schoolId: dashboard.school.id, suggestionId, decision }) })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.error || 'Could not save that choice.')
+      const refreshed = await request('GET', null, dashboard.school.id)
+      setDashboard(refreshed.dashboard)
+      setMessage(decision === 'assign' ? 'Assigned. It’s waiting in their Learning Paths.' : 'Dismissed.')
+    } catch (error) { setMessage(error.message) }
+  }
   const visibleCards = attentionOnly ? cards.filter(card => card.needsAttention) : cards
   const latestBrief = dashboard?.briefs?.find(item => item.week_start === planningWeekFor(clock.date))
   const source = kind => dashboard?.sources?.find(item => item.kind === kind)
@@ -178,8 +198,15 @@ export default function AssistantPrincipalPage() {
         {!cards.length && <div className="ap-panel"><h3>Add your staff to begin</h3><p>Open School setup to add a roster. Cards will show only commitments that apply to each role.</p><button className="ap-outline" onClick={() => setView('setup')}>Open setup</button></div>}
         {cards.length > 0 && visibleCards.length === 0 && <div className="ap-panel">No past-due items await verification right now.</div>}
         <div className="ap-card-list">{visibleCards.map(person => <article className="ap-panel ap-person" key={person.id}>
-          <button className="ap-person-top" aria-expanded={expanded === person.id} onClick={() => { setExpanded(expanded === person.id ? '' : person.id); setEditingStaff(null) }}><strong>{person.display_name}<small>{person.role}{person.assignment ? ` · ${person.assignment}` : ''}</small></strong><span>{person.items.length} tracked</span><span className={person.needsAttention ? 'ap-tag warning' : 'ap-tag'}>{person.needsAttention ? 'Verify source' : 'No past-due items'}</span><span aria-hidden="true">{expanded === person.id ? '−' : '+'}</span></button>
+          <button className="ap-person-top" aria-expanded={expanded === person.id} onClick={() => { setExpanded(expanded === person.id ? '' : person.id); setEditingStaff(null) }}><strong>{person.display_name}<small>{person.role}{person.assignment ? ` · ${person.assignment}` : ''}</small><small className="ap-growth-line">{growthLine(person.id)}</small></strong><span>{person.items.length} tracked</span><span className={person.needsAttention ? 'ap-tag warning' : 'ap-tag'}>{person.needsAttention ? 'Verify source' : 'No past-due items'}</span><span aria-hidden="true">{expanded === person.id ? '−' : '+'}</span></button>
           {expanded === person.id && <div className="ap-person-body">
+            {(() => { const g = growthOf(person.id); return <section className="ap-growth" aria-label={`Growth for ${person.display_name}`}>
+              <div className="ap-growth-head"><h3>Growth &amp; feedback</h3><a className="ap-outline" href={`/walkthroughs?tab=new&staff=${encodeURIComponent(person.id)}`}>Record a walkthrough</a></div>
+              <p className="ap-small">{g.walkthroughs ? `${g.walkthroughs} walkthrough${g.walkthroughs === 1 ? '' : 's'} this school year · last on ${new Date(g.lastWalkthrough).toLocaleDateString()}` : 'No walkthroughs yet this school year.'} <a href="/walkthroughs?tab=history">See all walkthroughs ↗</a></p>
+              {g.suggestions.length > 0 && <div className="ap-growth-list"><strong>Suggested Learning Paths</strong>{g.suggestions.map(s => <div className="ap-growth-row" key={s.id}><span>{s.topic}<small>{s.reason}</small></span><span className="ap-actions"><button className="ap-primary" onClick={() => decideSuggestion(s.id, 'assign')}>Assign</button><button className="ap-outline" onClick={() => decideSuggestion(s.id, 'dismiss')}>No thanks</button></span></div>)}</div>}
+              {g.assignments.length > 0 && <div className="ap-growth-list"><strong>Assigned Learning Paths</strong>{g.assignments.map(a => <div className="ap-growth-row" key={a.id}><span>{a.topic}{a.dueDate && <small>Due {new Date(a.dueDate + 'T12:00:00').toLocaleDateString()}</small>}{a.reflection && <details><summary>Read reflection</summary><p>{a.reflection}</p></details>}</span><span className={a.status === 'completed' ? 'ap-tag' : 'ap-tag warning'}>{a.status === 'completed' ? `✓ Completed ${shortDate(a.completedAt)}` : a.status === 'started' ? 'Started' : 'Not started'}</span></div>)}</div>}
+              {!g.suggestions.length && !g.assignments.length && <p className="ap-small">No Learning Paths yet. Suggestions appear after a walkthrough, or <a href="/walkthroughs?tab=assigned">assign one directly ↗</a>.</p>}
+            </section> })()}
             {editingStaff?.id === person.id ? <form className="ap-staff-edit" onSubmit={async e => { e.preventDefault(); if (await mutate({ action: 'update_staff', staffId: person.id, displayName: editingStaff.displayName, role: editingStaff.role, assignment: editingStaff.assignment, email: editingStaff.email }, 'Staff details updated.')) setEditingStaff(null) }}>
               <h3>Edit staff details</h3><div className="ap-grid"><label>Name<input value={editingStaff.displayName} onChange={e => setEditingStaff({ ...editingStaff, displayName: e.target.value })} required minLength="2" maxLength="120" /></label><label>Role<select value={editingStaff.role} onChange={e => setEditingStaff({ ...editingStaff, role: e.target.value })}>{['teacher', 'office', 'support', 'leader', 'other'].map(role => <option key={role} value={role}>{role}</option>)}</select></label><label>Grade or assignment<input value={editingStaff.assignment} onChange={e => setEditingStaff({ ...editingStaff, assignment: e.target.value })} maxLength="120" placeholder="Grade 2" /></label><label>Email<input type="email" value={editingStaff.email} onChange={e => setEditingStaff({ ...editingStaff, email: e.target.value })} maxLength="254" /></label></div>
               <div className="ap-actions"><button className="ap-primary" disabled={busy}>Save staff</button><button type="button" className="ap-outline" onClick={() => setEditingStaff(null)}>Cancel</button></div>
@@ -255,6 +282,7 @@ function Styles() { return <style jsx global>{`
   .ap-page label { display: grid; gap: 5px; margin: 10px 0; font-weight: 600; font-size: 13px; }
   .ap-page input:not([type=checkbox]), .ap-page select, .ap-page textarea { width: 100%; padding: 10px 11px; border: 1px solid var(--vic-border); background: var(--vic-surface); color: var(--vic-text-primary); border-radius: 8px; }
   .ap-page textarea { resize: vertical; line-height: 1.5; }.ap-inline { display: flex !important; align-items: center; gap: 7px; }
+  .ap-growth { border: 1px solid var(--vic-border-soft, #e5ddd2); border-radius: 12px; padding: 14px 16px; margin: 0 0 16px; background: #fbf8f3; }.ap-growth-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }.ap-growth-head h3 { margin: 0; }.ap-growth a { color: var(--vic-primary); font-weight: 700; }.ap-growth-list { margin-top: 12px; display: grid; gap: 6px; }.ap-growth-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 0; border-top: 1px solid var(--vic-border-soft, #eee); }.ap-growth-row small { display: block; color: var(--vic-text-secondary); font-size: 12px; }.ap-growth-row details p { white-space: pre-wrap; font-size: 13px; }.ap-growth-line { display: block; font-weight: 500; color: var(--vic-primary); margin-top: 3px; }
   .ap-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }.ap-actions a { text-decoration: none; }
   .ap-primary, .ap-outline { display: inline-flex; align-items: center; justify-content: center; margin-top: 8px; padding: 10px 14px; border-radius: 9px; font-weight: 700; cursor: pointer; border: 1px solid var(--vic-primary); }
   .ap-primary { background: var(--vic-primary); color: var(--vic-surface) !important; }.ap-outline { background: var(--vic-surface); color: var(--vic-primary); }

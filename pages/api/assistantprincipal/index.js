@@ -26,7 +26,32 @@ async function getDashboard(auth, schoolId) {
     rows(auth.admin.from('ap_sources').select('id,kind,label,url,connection_state').eq('school_id', schoolId).order('kind').limit(30)),
     rows(auth.admin.from('ap_briefs').select('id,week_start,notes,draft,state,created_at,approved_at').eq('school_id', schoolId).order('week_start', { ascending: false }).limit(4)),
   ])
-  return { school: school[0], staff, commitments, evidence, sources, briefs }
+  return { school: school[0], staff, commitments, evidence, sources, briefs, growth: await getGrowth(auth, schoolId, today) }
+}
+
+// Walkthroughs and Learning Paths per staff member for Staff pulse.
+// Leaders see completion and reflections only; quiz scores are never selected.
+async function getGrowth(auth, schoolId, today) {
+  try {
+    const yearStart = `${Number(today.slice(5, 7)) >= 7 ? today.slice(0, 4) : Number(today.slice(0, 4)) - 1}-07-01`
+    const [walks, suggestions, assignments] = await Promise.all([
+      rows(auth.admin.from('ap_walkthroughs').select('staff_id,created_at').eq('school_id', schoolId).not('staff_id', 'is', null).gte('created_at', yearStart).order('created_at', { ascending: false }).limit(5000)),
+      rows(auth.admin.from('ap_path_suggestions').select('id,staff_id,topic,reason,created_at').eq('school_id', schoolId).eq('status', 'pending').order('created_at', { ascending: false }).limit(500)),
+      rows(auth.admin.from('ap_path_assignments').select('id,staff_id,topic,due_date,created_at,learning_path_id').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(1000)),
+    ])
+    const pathIds = assignments.map(a => a.learning_path_id).filter(Boolean)
+    const paths = pathIds.length ? await rows(auth.admin.from('educator_learning_paths').select('id,status,reflection,completed_at').in('id', pathIds)) : []
+    const pathById = new Map(paths.map(p => [p.id, p]))
+    const growth = {}
+    const at = id => (growth[id] ||= { walkthroughs: 0, lastWalkthrough: null, suggestions: [], assignments: [] })
+    for (const w of walks) { const g = at(w.staff_id); g.walkthroughs++; if (!g.lastWalkthrough) g.lastWalkthrough = w.created_at }
+    for (const s of suggestions) at(s.staff_id).suggestions.push({ id: s.id, topic: s.topic, reason: s.reason })
+    for (const a of assignments) {
+      const p = a.learning_path_id && pathById.get(a.learning_path_id)
+      at(a.staff_id).assignments.push({ id: a.id, topic: a.topic, dueDate: a.due_date, status: p ? (p.status === 'completed' ? 'completed' : 'started') : 'not started', completedAt: p?.completed_at || null, reflection: p?.status === 'completed' ? p.reflection : '' })
+    }
+    return growth
+  } catch (error) { console.warn('growth', error?.message); return {} }
 }
 
 async function generateBrief(notes, schoolName) {
