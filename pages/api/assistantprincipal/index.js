@@ -26,7 +26,32 @@ async function getDashboard(auth, schoolId) {
     rows(auth.admin.from('ap_sources').select('id,kind,label,url,connection_state').eq('school_id', schoolId).order('kind').limit(30)),
     rows(auth.admin.from('ap_briefs').select('id,week_start,notes,draft,state,created_at,approved_at').eq('school_id', schoolId).order('week_start', { ascending: false }).limit(4)),
   ])
-  return { school: school[0], staff, commitments, evidence, sources, briefs }
+  return { school: school[0], staff, commitments, evidence, sources, briefs, growth: await getGrowth(auth, schoolId, today) }
+}
+
+// Walkthroughs and Learning Paths per staff member for Staff pulse.
+// Leaders see completion and reflections only; quiz scores are never selected.
+async function getGrowth(auth, schoolId, today) {
+  try {
+    const yearStart = `${Number(today.slice(5, 7)) >= 7 ? today.slice(0, 4) : Number(today.slice(0, 4)) - 1}-07-01`
+    const [walks, suggestions, assignments] = await Promise.all([
+      rows(auth.admin.from('ap_walkthroughs').select('staff_id,created_at').eq('school_id', schoolId).not('staff_id', 'is', null).gte('created_at', yearStart).order('created_at', { ascending: false }).limit(5000)),
+      rows(auth.admin.from('ap_path_suggestions').select('id,staff_id,topic,reason,created_at').eq('school_id', schoolId).eq('status', 'pending').order('created_at', { ascending: false }).limit(500)),
+      rows(auth.admin.from('ap_path_assignments').select('id,staff_id,topic,due_date,created_at,learning_path_id').eq('school_id', schoolId).order('created_at', { ascending: false }).limit(1000)),
+    ])
+    const pathIds = assignments.map(a => a.learning_path_id).filter(Boolean)
+    const paths = pathIds.length ? await rows(auth.admin.from('educator_learning_paths').select('id,status,reflection,completed_at').in('id', pathIds)) : []
+    const pathById = new Map(paths.map(p => [p.id, p]))
+    const growth = {}
+    const at = id => (growth[id] ||= { walkthroughs: 0, lastWalkthrough: null, suggestions: [], assignments: [] })
+    for (const w of walks) { const g = at(w.staff_id); g.walkthroughs++; if (!g.lastWalkthrough) g.lastWalkthrough = w.created_at }
+    for (const s of suggestions) at(s.staff_id).suggestions.push({ id: s.id, topic: s.topic, reason: s.reason })
+    for (const a of assignments) {
+      const p = a.learning_path_id && pathById.get(a.learning_path_id)
+      at(a.staff_id).assignments.push({ id: a.id, topic: a.topic, dueDate: a.due_date, status: p ? (p.status === 'completed' ? 'completed' : 'started') : 'not started', completedAt: p?.completed_at || null, reflection: p?.status === 'completed' ? p.reflection : '' })
+    }
+    return growth
+  } catch (error) { console.warn('growth', error?.message); return {} }
 }
 
 async function generateBrief(notes, schoolName) {
@@ -93,11 +118,26 @@ export default async function handler(req, res) {
     const schoolId = access.schoolId
     let importResult = null
 
+    // Seat limit: every active person on the staff list uses one seat, whether added here, imported, or joined with the school code.
+    async function seatsLeft() {
+      const [{ data: school }, { count }] = await Promise.all([
+        auth.admin.from('ap_schools').select('seat_limit').eq('id', schoolId).maybeSingle(),
+        auth.admin.from('ap_staff').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('active', true),
+      ])
+      return (school?.seat_limit ?? 50) - (count || 0)
+    }
     if (action === 'import_staff' || action === 'import_commitments') {
       let parsed
       try { parsed = action === 'import_staff' ? parseStaffCsv(body.csvText) : parseCommitmentsCsv(body.csvText) }
       catch (error) { return res.status(400).json({ error: error.message }) }
       if (parsed.errors.length) return res.status(400).json({ error: parsed.errors.slice(0, 8).join(' ') })
+      if (action === 'import_staff' && parsed.staff?.length) {
+        const { data: existing } = await auth.admin.from('ap_staff').select('email').eq('school_id', schoolId).eq('active', true)
+        const known = new Set((existing || []).map(r => String(r.email || '').toLowerCase()).filter(Boolean))
+        const adding = parsed.staff.filter(r => !known.has(String(r.email || '').toLowerCase())).length
+        const left = await seatsLeft()
+        if (adding > left) return res.status(409).json({ error: `Your plan has ${Math.max(left, 0)} open seat${left === 1 ? '' : 's'}, and this file adds ${adding} people. Remove someone or ask about a larger plan.` })
+      }
       const { data, error } = await auth.admin.rpc('ap_import_setup', {
         p_school: schoolId, p_actor: auth.user.id,
         p_staff: parsed.staff || [], p_commitments: parsed.commitments || [],
@@ -112,6 +152,7 @@ export default async function handler(req, res) {
       if (displayName.length < 2 || !roles.has(role) || (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
         return res.status(400).json({ error: 'Enter a name, role, and optional valid email.' })
       }
+      if (await seatsLeft() < 1) return res.status(409).json({ error: 'Your school has used all of its seats. Remove someone from the staff list or ask about a larger plan.' })
       await rows(auth.admin.from('ap_staff').insert({ school_id: schoolId, display_name: displayName, role, assignment, email: email || null }).select('id'))
     } else if (action === 'update_staff') {
       const displayName = clean(body.displayName)
