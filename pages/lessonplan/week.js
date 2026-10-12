@@ -61,6 +61,7 @@ export default function WeekPlanner(){
  const dates=weekDates(week.weekOf)
  const planned=week.days.map((d,i)=>({...d,index:i})).filter(d=>!d.off)
  const builtCount=planned.filter(d=>d.lessonId).length
+ const buildable=planned.filter(d=>!d.lessonId&&hasStandard(d,d.index)).length
  const allBuilt=planned.length>0&&builtCount===planned.length
  const locked=building||!!busy
  const editedSinceSent=status!=='draft'&&!!weekMeta?.submittedAt&&(weekMeta.editedAfterSubmit||planned.some(d=>d.lessonId&&lessons[d.lessonId]?.updatedAt&&Date.parse(lessons[d.lessonId].updatedAt)>Date.parse(weekMeta.submittedAt)))
@@ -106,7 +107,9 @@ export default function WeekPlanner(){
   if(locked)return
   setError('');setNotice('')
   let normalized
-  try{normalized=normalizeWeekSetup(requestBody(),standards)}catch(e){setError(e.message);return}
+  try{normalized=normalizeWeekSetup(requestBody(),standards,{allowEmpty:true})}catch(e){setError(e.message);return}
+  indexes=indexes.filter(i=>normalized.days[i]&&!normalized.days[i].off&&normalized.days[i].standards.length)
+  if(!indexes.length){setError('Choose a standard for the days you want VIC to build, or plan them in the detailed lesson planner.');return}
   setBuilding(true)
   try{
    await saveWeek()
@@ -118,7 +121,14 @@ export default function WeekPlanner(){
   }catch(e){setError(e.message)}
   finally{setBuilding(false)}
  }
+ function hasStandard(d,i){return pasteDays[i]||!builtIn?!!d.customStandard.trim():d.standardIds.length>0}
  function buildMissing(){const missing=planned.filter(d=>!d.lessonId).map(d=>d.index);if(!missing.length){setNotice('Every planned day already has a lesson. Use Redo on any day to rebuild it.');return}build(missing)}
+ async function planInDetail(i){
+  if(locked)return
+  setBusy('Saving your week…');setError('')
+  try{await saveWeek();window.location.href=`/lessonplan?weekId=${encodeURIComponent(week.id)}&day=${i}`}
+  catch(e){setError(e.message);setBusy('')}
+ }
  function redo(i){if(!window.confirm(`Rebuild ${WEEKDAYS[i]}? The current version stays in My Lessons.`))return;updateDay(i,{lessonId:null});weekRef.current={...weekRef.current,days:weekRef.current.days.map((d,n)=>n===i?{...d,lessonId:null}:d)};build([i])}
 
  async function downloadWeek(){
@@ -170,7 +180,7 @@ export default function WeekPlanner(){
   </div>
 
   <div className="wk-title"><span>2</span><h2>A standard for each day</h2></div>
-  <p className="wk-help">Choose a different standard for each day, or the same one to keep practicing. Mark holidays and test days as no lesson.</p>
+  <p className="wk-help">Choose a standard for each day and let VIC build it, or plan any day yourself in the detailed lesson planner. Mix both. Your week saves as you go, and you send it when all five days are ready. Mark holidays and test days as no lesson.</p>
   <div className="wk-days">{week.days.map((day,i)=>{
    const p=progress[i],lesson=day.lessonId&&lessons[day.lessonId],paste=!builtIn||pasteDays[i]
    const query=(search[i]||'').toLowerCase(),visible=standards.filter(s=>!query||`${s.code} ${s.text}`.toLowerCase().includes(query))
@@ -191,7 +201,7 @@ export default function WeekPlanner(){
      </>}
      <label>Topic or focus (optional)<input maxLength="300" value={day.topic} disabled={locked} onChange={e=>updateDay(i,{topic:e.target.value},{rebuild:true})} placeholder="e.g. Review day, word problems, quiz"/></label>
      <div className={`wk-day-status ${p?.step||(lesson?'done':'')}`}>
-      {p&&p.step!=='done'?<span>{stepLabel[p.step]}{p.note?` ${p.note}`:''}</span>:lesson?<><span>✓ {lesson.title}{lesson.worksheet?' · worksheet + answer key':''}</span>{p?.note&&<small>{p.note}</small>}<div className="wk-actions"><a href={lessonLink(day.lessonId)} target="_blank" rel="noopener noreferrer">Open &amp; edit ↗</a><button type="button" className="wk-text" disabled={locked} onClick={()=>redo(i)}>Redo this day</button></div></>:<span>Not built yet</span>}
+      {p&&p.step!=='done'?<span>{stepLabel[p.step]}{p.note?` ${p.note}`:''}</span>:lesson?<><span>✓ {lesson.title}{lesson.worksheet?' · worksheet + answer key':''}</span>{p?.note&&<small>{p.note}</small>}<div className="wk-actions"><a href={lessonLink(day.lessonId)} target="_blank" rel="noopener noreferrer">Open &amp; edit ↗</a><button type="button" className="wk-text" disabled={locked} onClick={()=>redo(i)}>Redo this day</button></div></>:<><span>{hasStandard(day,i)?'Not built yet':'Not planned yet'}</span><button type="button" className="wk-text wk-detail" disabled={locked} onClick={()=>planInDetail(i)}>Plan this day in the detailed lesson planner →</button></>}
       {p?.step==='error'&&<button type="button" className="wk-text" disabled={locked} onClick={()=>build([i])}>Try this day again</button>}
      </div>
     </>}
@@ -207,13 +217,13 @@ export default function WeekPlanner(){
   <small>Describe needs generally. Leave out student names and records.</small>
   <div className="wk-box"><label className="wk-check"><input type="checkbox" checked={week.settings.worksheet} disabled={locked} onChange={e=>settings({worksheet:e.target.checked})}/> Include a student worksheet and answer key for each day</label>{week.settings.worksheet&&<label>Questions per worksheet<select value={week.settings.worksheetCount} disabled={locked} onChange={e=>settings({worksheetCount:Number(e.target.value)})}>{[3,5,8,10].map(n=><option key={n} value={n}>{n} questions</option>)}</select></label>}<small>Lessons use your saved school format from the single-lesson planner ({format.sections.length} sections).</small></div>
 
-  <button className="wk-primary wk-build" disabled={!user||locked||!planned.length}>{building?'Building your week…':builtCount===0?`Build my week · ${planned.length} lesson${planned.length===1?'':'s'}`:allBuilt?'All days are built':`Build the remaining ${planned.length-builtCount} day${planned.length-builtCount===1?'':'s'}`}</button>
+  <button className="wk-primary wk-build" disabled={!user||locked||!buildable}>{building?'Building your week…':allBuilt?'All days are built':buildable===0?'Choose standards to have VIC build days':builtCount===0&&buildable===planned.length?`Build my week · ${planned.length} lesson${planned.length===1?'':'s'}`:`Build ${buildable} day${buildable===1?'':'s'} with VIC`}</button>
   <small className="wk-center">AI creates drafts. Review every lesson before you teach or send it.</small>
  </form>
 
  <section className="wk-panel">
   <div className="wk-title"><span>4</span><h2>Download or send to administration</h2></div>
-  {!allBuilt?<p className="wk-help">Build every planned day first ({builtCount} of {planned.length} ready). Then download the whole week as one Word document or send it.</p>:<>
+  {!allBuilt?<p className="wk-help">Finish every day first: build it with VIC, plan it in the detailed lesson planner, or mark it as no lesson ({builtCount} of {planned.length} ready). Then download the whole week as one Word document or send it.</p>:<>
    <p className="wk-help">One Word document: week at a glance, then each day’s lesson, worksheet and answer key. If you edit a lesson, the download and anything you send include your edits.</p>
    <div className="wk-actions"><button type="button" className="wk-primary" disabled={locked} onClick={downloadWeek}>Download the week (Word)</button></div>
    {schools.map(s=><div key={s.id} className="wk-send"><div><strong>Send to {s.name} administration</strong><small>Your school leaders see this week in AskVic and get an email with the Word file attached. They see only weeks you send.</small></div><button type="button" className="wk-primary" disabled={locked} onClick={()=>send({schoolId:s.id})}>{status==='draft'?'Send lesson plans':'Send again'}</button></div>)}
@@ -240,6 +250,7 @@ export default function WeekPlanner(){
  .wk-sent{background:var(--vic-primary-soft)}.wk-sent.reviewed{background:var(--vic-success-soft)}
  .wk-working{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#fff9;backdrop-filter:blur(2px);padding:24px}.wk-working-card{width:min(440px,100%);background:var(--vic-surface);border:1px solid var(--vic-border);border-radius:20px;padding:32px;text-align:center;box-shadow:0 16px 60px #0002}.wk-working-card h2{font-size:20px;margin:18px 0 10px}.wk-working-card p{font-size:14px;line-height:1.6;color:var(--vic-text-secondary)}.wk-spinner{width:48px;height:48px;margin:auto;border:5px solid var(--vic-border-soft);border-top-color:var(--vic-primary);border-radius:50%;animation:wk-spin 1s linear infinite}@keyframes wk-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.wk-spinner{animation:none}}
  .wk-progress{list-style:none;padding:0;margin:16px 0 0;text-align:left}.wk-progress li{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;margin-top:4px;background:var(--vic-surface-muted)}.wk-progress li.done{background:var(--vic-success-soft)}.wk-progress li.error{background:var(--vic-danger-soft)}.wk-progress li.lesson,.wk-progress li.worksheet,.wk-progress li.saving{background:var(--vic-primary-soft)}
+ .wk-detail{display:block;text-align:left;margin-top:6px}
  .wk-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.wk-footer{text-align:center;margin-top:30px;font-size:12px;color:var(--vic-text-secondary)}
  @media(max-width:760px){.wk-shell{padding:12px 16px 30px}.wk-hero{grid-template-columns:1fr;gap:20px;padding:26px 0}.wk-panel{padding:18px}.wk-hero h1{font-size:36px}}
  `}</style></>
