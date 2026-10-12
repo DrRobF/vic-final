@@ -12,7 +12,7 @@ import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, weekDates, mondayOf, formatDay, w
 const GRADES=['K','1','2','3','4','5','6','7','8']
 const FORMAT_KEY='vic-lesson-format-v1'
 const BUILD_AT_ONCE=2
-const blankWeek=()=>({id:crypto.randomUUID(),weekOf:defaultWeekOf(),state:'FL',grade:'3',subject:'math',minutes:45,days:Array.from({length:5},emptyWeekDay),settings:{worksheet:true,worksheetCount:5,materials:'',interests:'',groups:GROUP_DEFAULTS.slice(0,3)}})
+const blankWeek=()=>({id:crypto.randomUUID(),weekOf:defaultWeekOf(),state:'FL',grade:'3',subject:'math',minutes:45,days:Array.from({length:5},emptyWeekDay),settings:{mode:'quick',worksheet:true,worksheetCount:5,materials:'',interests:'',groups:GROUP_DEFAULTS.slice(0,3)}})
 
 async function token(){const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error('Log in to plan your week.');return session.access_token}
 async function call(path,{method='GET',body}={}){
@@ -45,7 +45,7 @@ export default function WeekPlanner(){
  useEffect(()=>{
   if(!user||!router.isReady||!router.query.id)return
   let active=true;setBusy('Opening your week…')
-  call(`/api/lessonplan/weeks?id=${encodeURIComponent(router.query.id)}`).then(d=>{if(!active)return;const w=d.week;setWeek({id:w.id,weekOf:w.weekOf,state:w.state,grade:w.grade,subject:w.subject,minutes:w.minutes,days:w.days.map(day=>({off:!!day.off,standardIds:day.standardIds||[],customStandard:day.customStandard||'',customCode:day.customCode||'',topic:day.topic||'',lessonId:day.lessonId||null})),settings:{worksheet:w.settings?.worksheet!==false,worksheetCount:w.settings?.worksheetCount||5,materials:w.settings?.materials||'',interests:w.settings?.interests||'',groups:w.settings?.groups?.length?w.settings.groups:GROUP_DEFAULTS.slice(0,3)}});setPasteDays(Object.fromEntries(w.days.map((day,i)=>[i,!!day.customStandard&&!day.standardIds?.length])));setLessons(d.lessons);setStatus(w.status);setWeekMeta(w);setProgress({})}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setBusy('')})
+  call(`/api/lessonplan/weeks?id=${encodeURIComponent(router.query.id)}`).then(d=>{if(!active)return;const w=d.week;setWeek({id:w.id,weekOf:w.weekOf,state:w.state,grade:w.grade,subject:w.subject,minutes:w.minutes,days:w.days.map(day=>({off:!!day.off,standardIds:day.standardIds||[],customStandard:day.customStandard||'',customCode:day.customCode||'',topic:day.topic||'',lessonId:day.lessonId||null})),settings:{mode:w.settings?.mode==='detail'?'detail':'quick',worksheet:w.settings?.worksheet!==false,worksheetCount:w.settings?.worksheetCount||5,materials:w.settings?.materials||'',interests:w.settings?.interests||'',groups:w.settings?.groups?.length?w.settings.groups:GROUP_DEFAULTS.slice(0,3)}});setPasteDays(Object.fromEntries(w.days.map((day,i)=>[i,!!day.customStandard&&!day.standardIds?.length])));setLessons(d.lessons);setStatus(w.status);setWeekMeta(w);setProgress({})}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setBusy('')})
   return()=>{active=false}
  },[user?.id,router.isReady,router.query.id])
 
@@ -64,6 +64,7 @@ export default function WeekPlanner(){
  const buildable=planned.filter(d=>!d.lessonId&&hasStandard(d,d.index)).length
  const allBuilt=planned.length>0&&builtCount===planned.length
  const locked=building||!!busy
+ const detail=week.settings.mode==='detail'
  const editedSinceSent=status!=='draft'&&!!weekMeta?.submittedAt&&(weekMeta.editedAfterSubmit||planned.some(d=>d.lessonId&&lessons[d.lessonId]?.updatedAt&&Date.parse(lessons[d.lessonId].updatedAt)>Date.parse(weekMeta.submittedAt)))
 
  function update(patch){setWeek(w=>({...w,...patch}));setError('')}
@@ -109,7 +110,7 @@ export default function WeekPlanner(){
   let normalized
   try{normalized=normalizeWeekSetup(requestBody(),standards,{allowEmpty:true})}catch(e){setError(e.message);return}
   indexes=indexes.filter(i=>normalized.days[i]&&!normalized.days[i].off&&normalized.days[i].standards.length)
-  if(!indexes.length){setError('Choose a standard for the days you want VIC to build, or plan them in the detailed lesson planner.');return}
+  if(!indexes.length){setError('Choose a standard for each day first.');return}
   setBuilding(true)
   try{
    await saveWeek()
@@ -122,7 +123,7 @@ export default function WeekPlanner(){
   finally{setBuilding(false)}
  }
  function hasStandard(d,i){return pasteDays[i]||!builtIn?!!d.customStandard.trim():d.standardIds.length>0}
- function buildMissing(){const missing=planned.filter(d=>!d.lessonId).map(d=>d.index);if(!missing.length){setNotice('Every planned day already has a lesson. Use Redo on any day to rebuild it.');return}build(missing)}
+ function buildMissing(){const needs=planned.filter(d=>!d.lessonId&&!hasStandard(d,d.index)).map(d=>WEEKDAYS[d.index]);if(needs.length){setError(`Choose a standard for ${needs.join(', ')} first — or plan ${needs.length===1?'it':'them'} in detail.`);return}const missing=planned.filter(d=>!d.lessonId).map(d=>d.index);if(!missing.length){setNotice('Every planned day already has a lesson. Use Redo on any day to rebuild it.');return}build(missing)}
  async function planInDetail(i){
   if(locked)return
   setBusy('Saving your week…');setError('')
@@ -179,8 +180,13 @@ export default function WeekPlanner(){
    <label>Minutes per lesson<input type="number" min="10" max="180" required value={week.minutes} disabled={locked} onChange={e=>update({minutes:Number(e.target.value)})}/></label>
   </div>
 
-  <div className="wk-title"><span>2</span><h2>A standard for each day</h2></div>
-  <p className="wk-help">Choose a standard for each day and let VIC build it, or plan any day yourself in the detailed lesson planner. Mix both. Your week saves as you go, and you send it when all five days are ready. Mark holidays and test days as no lesson.</p>
+  <div className="wk-title"><span>2</span><h2>How do you want to plan this week?</h2></div>
+  <div className="wk-modes" role="radiogroup" aria-label="Planning style">
+   <button type="button" role="radio" aria-checked={!detail} className={!detail?'active':''} disabled={locked} onClick={()=>settings({mode:'quick'})}><strong>⚡ Quick week</strong><span>Pick a standard for each day. One click and VIC builds all five lessons with worksheets.</span></button>
+   <button type="button" role="radio" aria-checked={detail} className={detail?'active':''} disabled={locked} onClick={()=>settings({mode:'detail'})}><strong>✏️ Day by day</strong><span>Plan each day yourself in the detailed lesson planner, with every option. VIC holds the week until all five are done.</span></button>
+  </div>
+  <div className="wk-title"><span>3</span><h2>{detail?'Your five days':'A standard for each day'}</h2></div>
+  <p className="wk-help">{detail?'Open any day to plan it in detail. Come back anytime — your week saves as you go. Mark holidays and test days as no lesson.':'Choose a different standard for each day, or the same one to keep practicing. Mark holidays and test days as no lesson.'}</p>
   <div className="wk-days">{week.days.map((day,i)=>{
    const p=progress[i],lesson=day.lessonId&&lessons[day.lessonId],paste=!builtIn||pasteDays[i]
    const query=(search[i]||'').toLowerCase(),visible=standards.filter(s=>!query||`${s.code} ${s.text}`.toLowerCase().includes(query))
@@ -188,7 +194,7 @@ export default function WeekPlanner(){
    return <article key={i} className={`wk-day ${day.off?'off':''}`}>
     <header><div><h3>{WEEKDAYS[i]}</h3><small>{formatDay(dates[i],{month:'short',day:'numeric'})}</small></div><label className="wk-check"><input type="checkbox" checked={day.off} disabled={locked} onChange={e=>updateDay(i,{off:e.target.checked},{rebuild:true})}/> No lesson</label></header>
     {day.off?<p className="wk-help">No lesson planned — holiday, testing or another event.</p>:<>
-     {!paste?<>
+     {!detail&&<>{!paste?<>
       <label>Find a standard<input value={search[i]||''} disabled={locked} onChange={e=>setSearch(s=>({...s,[i]:e.target.value}))} placeholder="Code or keyword"/></label>
       <label className="wk-sr" htmlFor={`std-${i}`}>Standard for {WEEKDAYS[i]}</label>
       <select id={`std-${i}`} value={day.standardIds[0]||''} disabled={locked||loadingStandards} onChange={e=>updateDay(i,{standardIds:e.target.value?[e.target.value]:[]},{rebuild:true})}><option value="">{loadingStandards?'Loading standards…':`Choose a standard (${visible.length})`}</option>{chosen&&!visible.includes(chosen)&&<option value={chosen.id}>{chosen.code} — {chosen.text.slice(0,120)}</option>}{visible.map(s=><option key={s.id} value={s.id}>{s.code} — {s.text.slice(0,120)}</option>)}</select>
@@ -199,15 +205,15 @@ export default function WeekPlanner(){
       <label>Standard wording<textarea rows="3" maxLength="5000" value={day.customStandard} disabled={locked} onChange={e=>updateDay(i,{customStandard:e.target.value},{rebuild:true})} placeholder="Paste the standard for this day"/></label>
       {builtIn&&<button type="button" className="wk-text" disabled={locked} onClick={()=>{setPasteDays(d=>({...d,[i]:false}));updateDay(i,{customStandard:'',customCode:''},{rebuild:true})}}>Choose from the list instead</button>}
      </>}
-     <label>Topic or focus (optional)<input maxLength="300" value={day.topic} disabled={locked} onChange={e=>updateDay(i,{topic:e.target.value},{rebuild:true})} placeholder="e.g. Review day, word problems, quiz"/></label>
+     <label>Topic or focus (optional)<input maxLength="300" value={day.topic} disabled={locked} onChange={e=>updateDay(i,{topic:e.target.value},{rebuild:true})} placeholder="e.g. Review day, word problems, quiz"/></label></>}
      <div className={`wk-day-status ${p?.step||(lesson?'done':'')}`}>
-      {p&&p.step!=='done'?<span>{stepLabel[p.step]}{p.note?` ${p.note}`:''}</span>:lesson?<><span>✓ {lesson.title}{lesson.worksheet?' · worksheet + answer key':''}</span>{p?.note&&<small>{p.note}</small>}<div className="wk-actions"><a href={lessonLink(day.lessonId)} target="_blank" rel="noopener noreferrer">Open &amp; edit ↗</a><button type="button" className="wk-text" disabled={locked} onClick={()=>redo(i)}>Redo this day</button></div></>:<><span>{hasStandard(day,i)?'Not built yet':'Not planned yet'}</span><button type="button" className="wk-text wk-detail" disabled={locked} onClick={()=>planInDetail(i)}>Plan this day in the detailed lesson planner →</button></>}
+      {p&&p.step!=='done'?<span>{stepLabel[p.step]}{p.note?` ${p.note}`:''}</span>:lesson?<><span>✓ {lesson.title}{lesson.worksheet?' · worksheet + answer key':''}</span>{p?.note&&<small>{p.note}</small>}<div className="wk-actions"><a href={lessonLink(day.lessonId)} target="_blank" rel="noopener noreferrer">Open &amp; edit ↗</a>{detail?<button type="button" className="wk-text" disabled={locked} onClick={()=>planInDetail(i)}>Re-plan in detail</button>:<button type="button" className="wk-text" disabled={locked} onClick={()=>redo(i)}>Redo this day</button>}</div></>:detail?<><span>Not planned yet</span><button type="button" className="wk-primary wk-plan-day" disabled={locked} onClick={()=>planInDetail(i)}>Plan {WEEKDAYS[i]} →</button></>:<><span>{hasStandard(day,i)?'Ready to build':'Choose a standard above'}</span><button type="button" className="wk-text wk-detail" disabled={locked} onClick={()=>planInDetail(i)}>or plan this day in detail</button></>}
       {p?.step==='error'&&<button type="button" className="wk-text" disabled={locked} onClick={()=>build([i])}>Try this day again</button>}
      </div>
     </>}
    </article>})}</div>
 
-  <div className="wk-title"><span>3</span><h2>Your classroom</h2></div>
+  <div className="wk-title"><span>4</span><h2>Your classroom</h2></div>{detail&&<p className="wk-help">These fill in automatically each time you open a day in the detailed planner.</p>}
   <div className="wk-grid">
    <label>Materials available (optional)<textarea rows="2" maxLength="1200" value={week.settings.materials} disabled={locked} onChange={e=>settings({materials:e.target.value})} placeholder="Paper, counters, no devices…"/></label>
    <label>Interests or context (optional)<textarea rows="2" maxLength="1000" value={week.settings.interests} disabled={locked} onChange={e=>settings({interests:e.target.value})} placeholder="Sports, animals, our community…"/></label>
@@ -215,14 +221,14 @@ export default function WeekPlanner(){
   <label>Differentiation groups<select value={week.settings.groups.length} disabled={locked} onChange={e=>{const n=Number(e.target.value);settings({groups:Array.from({length:n},(_,i)=>week.settings.groups[i]||GROUP_DEFAULTS[i])})}}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} {n===1?'group':'groups'}</option>)}</select></label>
   {week.settings.groups.map((g,i)=><label key={i}>Group {i+1}<textarea rows="2" maxLength="500" value={g} disabled={locked} onChange={e=>settings({groups:week.settings.groups.map((v,n)=>n===i?e.target.value:v)})}/></label>)}
   <small>Describe needs generally. Leave out student names and records.</small>
-  <div className="wk-box"><label className="wk-check"><input type="checkbox" checked={week.settings.worksheet} disabled={locked} onChange={e=>settings({worksheet:e.target.checked})}/> Include a student worksheet and answer key for each day</label>{week.settings.worksheet&&<label>Questions per worksheet<select value={week.settings.worksheetCount} disabled={locked} onChange={e=>settings({worksheetCount:Number(e.target.value)})}>{[3,5,8,10].map(n=><option key={n} value={n}>{n} questions</option>)}</select></label>}<small>Lessons use your saved school format from the single-lesson planner ({format.sections.length} sections).</small></div>
+  {!detail&&<><div className="wk-box"><label className="wk-check"><input type="checkbox" checked={week.settings.worksheet} disabled={locked} onChange={e=>settings({worksheet:e.target.checked})}/> Include a student worksheet and answer key for each day</label>{week.settings.worksheet&&<label>Questions per worksheet<select value={week.settings.worksheetCount} disabled={locked} onChange={e=>settings({worksheetCount:Number(e.target.value)})}>{[3,5,8,10].map(n=><option key={n} value={n}>{n} questions</option>)}</select></label>}<small>Lessons use your saved school format from the single-lesson planner ({format.sections.length} sections).</small></div>
 
-  <button className="wk-primary wk-build" disabled={!user||locked||!buildable}>{building?'Building your week…':allBuilt?'All days are built':buildable===0?'Choose standards to have VIC build days':builtCount===0&&buildable===planned.length?`Build my week · ${planned.length} lesson${planned.length===1?'':'s'}`:`Build ${buildable} day${buildable===1?'':'s'} with VIC`}</button>
-  <small className="wk-center">AI creates drafts. Review every lesson before you teach or send it.</small>
+  <button className="wk-primary wk-build" disabled={!user||locked||allBuilt||!planned.length}>{building?'Building your week…':allBuilt?'✓ All days are built':builtCount===0?`⚡ Build my week · ${planned.length} lesson${planned.length===1?'':'s'}`:`⚡ Build the remaining ${planned.length-builtCount} day${planned.length-builtCount===1?'':'s'}`}</button>
+  <small className="wk-center">AI creates drafts. Review every lesson before you teach or send it.</small></>}
  </form>
 
  <section className="wk-panel">
-  <div className="wk-title"><span>4</span><h2>Download or send to administration</h2></div>
+  <div className="wk-title"><span>5</span><h2>Download or send to administration</h2></div>
   {!allBuilt?<p className="wk-help">Finish every day first: build it with VIC, plan it in the detailed lesson planner, or mark it as no lesson ({builtCount} of {planned.length} ready). Then download the whole week as one Word document or send it.</p>:<>
    <p className="wk-help">One Word document: week at a glance, then each day’s lesson, worksheet and answer key. If you edit a lesson, the download and anything you send include your edits.</p>
    <div className="wk-actions"><button type="button" className="wk-primary" disabled={locked} onClick={downloadWeek}>Download the week (Word)</button></div>
@@ -250,7 +256,8 @@ export default function WeekPlanner(){
  .wk-sent{background:var(--vic-primary-soft)}.wk-sent.reviewed{background:var(--vic-success-soft)}
  .wk-working{position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#fff9;backdrop-filter:blur(2px);padding:24px}.wk-working-card{width:min(440px,100%);background:var(--vic-surface);border:1px solid var(--vic-border);border-radius:20px;padding:32px;text-align:center;box-shadow:0 16px 60px #0002}.wk-working-card h2{font-size:20px;margin:18px 0 10px}.wk-working-card p{font-size:14px;line-height:1.6;color:var(--vic-text-secondary)}.wk-spinner{width:48px;height:48px;margin:auto;border:5px solid var(--vic-border-soft);border-top-color:var(--vic-primary);border-radius:50%;animation:wk-spin 1s linear infinite}@keyframes wk-spin{to{transform:rotate(360deg)}}@media(prefers-reduced-motion:reduce){.wk-spinner{animation:none}}
  .wk-progress{list-style:none;padding:0;margin:16px 0 0;text-align:left}.wk-progress li{display:flex;justify-content:space-between;gap:10px;padding:7px 10px;border-radius:8px;font-size:13px;margin-top:4px;background:var(--vic-surface-muted)}.wk-progress li.done{background:var(--vic-success-soft)}.wk-progress li.error{background:var(--vic-danger-soft)}.wk-progress li.lesson,.wk-progress li.worksheet,.wk-progress li.saving{background:var(--vic-primary-soft)}
- .wk-detail{display:block;text-align:left;margin-top:6px}
+ .wk-detail{display:block;text-align:left;margin-top:6px;font-size:13px}.wk-plan-day{display:block;width:100%;margin-top:10px}
+ .wk-modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}.wk-modes button{text-align:left;border:2px solid var(--vic-border);background:var(--vic-surface);border-radius:14px;padding:16px 18px;cursor:pointer;font-family:inherit;color:var(--vic-text-primary)}.wk-modes button strong{display:block;font-size:17px;margin-bottom:6px}.wk-modes button span{display:block;font-size:13px;line-height:1.5;color:var(--vic-text-secondary)}.wk-modes button.active{border-color:var(--vic-primary);background:var(--vic-primary-soft)}@media(max-width:640px){.wk-modes{grid-template-columns:1fr}}
  .wk-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}.wk-footer{text-align:center;margin-top:30px;font-size:12px;color:var(--vic-text-secondary)}
  @media(max-width:760px){.wk-shell{padding:12px 16px 30px}.wk-hero{grid-template-columns:1fr;gap:20px;padding:26px 0}.wk-panel{padding:18px}.wk-hero h1{font-size:36px}}
  `}</style></>

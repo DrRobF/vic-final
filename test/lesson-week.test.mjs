@@ -123,4 +123,7 @@ test('a detailed single lesson drops into the chosen day with its own standards 
  assert.equal(kept[2].lessonId,LESSON)
  assert.equal(kept[0].topic,'Warm start')
  assert.throws(()=>lessonIntoWeekDay(days,5,LESSON,input),/Monday to Friday/)
+ const moved=lessonIntoWeekDay(days,4,LESSON,input)
+ assert.equal(moved[4].lessonId,LESSON)
+ assert.equal(moved[2].lessonId,null)
 })
