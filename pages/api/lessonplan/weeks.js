@@ -1,6 +1,6 @@
 import catalogue from '../../../data/lesson-standards.json'
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
-import { normalizeWeekSetup, weekStandardRows, buildWeekSubmission, submissionEmail, weekFileName, validEmail, isUuid, MAX_EMAIL_SENDS_PER_DAY } from '../../../lib/lesson-week.mjs'
+import { normalizeWeekSetup, lessonIntoWeekDay, mondayOf, WEEKDAYS, weekStandardRows, buildWeekSubmission, submissionEmail, weekFileName, validEmail, isUuid, MAX_EMAIL_SENDS_PER_DAY } from '../../../lib/lesson-week.mjs'
 import { buildWeekDocx } from '../../../lib/lesson-week-docx.mjs'
 export const config={api:{bodyParser:{sizeLimit:'200kb'},responseLimit:'12mb'},maxDuration:60}
 
@@ -14,6 +14,15 @@ function publicWeek(row){
 // Saving an unchanged week (for example before a download) must not tell leaders the week was edited.
 const plannedShape=w=>JSON.stringify([w.week_of??w.weekOf,w.state,w.grade,w.subject,Number(w.minutes),(w.days||[]).map(d=>[!!d.off,d.lessonId||null,d.topic||'',(d.standards||[]).map(x=>x.code+'|'+x.text)])])
 const changed=(row,week)=>plannedShape(row)!==plannedShape(week)
+async function persistWeek(db,owner,week,existing){
+ const row={id:week.id,user_id:owner,week_of:week.weekOf,state:week.state,grade:week.grade,subject:week.subject,minutes:week.minutes,days:week.days,settings:week.settings,updated_at:new Date().toISOString(),...(existing&&existing.status!=='draft'&&changed(existing,week)?{edited_after_submit:true}:{})}
+ const {error}=await db.from('lesson_weeks').upsert(row,{onConflict:'id'})
+ if(error){console.error('Lesson week save failed',{code:error.code});return false}
+ await db.from('lesson_week_standards').delete().eq('week_id',week.id)
+ const rows=weekStandardRows(week,owner,existing?.school_id||null)
+ if(rows.length){const {error:standardsError}=await db.from('lesson_week_standards').insert(rows);if(standardsError)console.error('Lesson week standards save failed',{code:standardsError.code})}
+ return true
+}
 async function teacherName(auth){
  const {data}=await auth.admin.from('users').select('name').eq('auth_user_id',auth.user.id).limit(1).maybeSingle()
  const name=String(data?.name||auth.user.user_metadata?.full_name||auth.user.user_metadata?.name||'').trim()
@@ -78,17 +87,49 @@ export default async function handler(req,res){
 
   const action=req.body?.action
   if(action==='save'){
-   let week;try{week=normalizeWeekSetup(req.body?.week,catalogue)}catch(e){return res.status(400).json({error:e.message})}
+   let week;try{week=normalizeWeekSetup(req.body?.week,catalogue,{allowEmpty:true})}catch(e){return res.status(400).json({error:e.message})}
    const {data:existing,error:readError}=await db.from('lesson_weeks').select('user_id,status,school_id,week_of,state,grade,subject,minutes,days').eq('id',week.id).maybeSingle()
    if(readError)return res.status(503).json({error:'Your week could not be saved. Please retry.'})
    if(existing&&existing.user_id!==owner)return res.status(404).json({error:'This week is not in your account.'})
-   const row={id:week.id,user_id:owner,week_of:week.weekOf,state:week.state,grade:week.grade,subject:week.subject,minutes:week.minutes,days:week.days,settings:week.settings,updated_at:new Date().toISOString(),...(existing&&existing.status!=='draft'&&changed(existing,week)?{edited_after_submit:true}:{})}
-   const {error}=await db.from('lesson_weeks').upsert(row,{onConflict:'id'})
-   if(error){console.error('Lesson week save failed',{code:error.code});return res.status(503).json({error:'Your week could not be saved. Please retry.'})}
-   await db.from('lesson_week_standards').delete().eq('week_id',week.id)
-   const rows=weekStandardRows(week,owner,existing?.school_id||null)
-   if(rows.length){const {error:standardsError}=await db.from('lesson_week_standards').insert(rows);if(standardsError)console.error('Lesson week standards save failed',{code:standardsError.code})}
+   if(!await persistWeek(db,owner,week,existing))return res.status(503).json({error:'Your week could not be saved. Please retry.'})
    return res.json({saved:true,id:week.id,status:existing?.status||'draft'})
+  }
+
+  // A lesson made in the detailed single-lesson planner goes into one day of a week.
+  if(action==='addLesson'){
+   const lessonId=req.body?.lessonId,day=Number(req.body?.day)
+   if(!isUuid(lessonId))return res.status(400).json({error:'Save this lesson first, then add it to your week.'})
+   if(!Number.isInteger(day)||day<0||day>4)return res.status(400).json({error:'Choose a day from Monday to Friday.'})
+   const lessons=await loadLessons(auth,[lessonId])
+   const lesson=lessons.get(lessonId)
+   if(!lesson?.input||!lesson?.plan)return res.status(404).json({error:'This lesson is not saved in your account yet. Wait a moment and try again.'})
+   const input=lesson.input
+   let row=null
+   if(req.body?.weekId){
+    if(!isUuid(req.body.weekId))return res.status(400).json({error:'Invalid week link.'})
+    const {data,error}=await db.from('lesson_weeks').select('*').eq('user_id',owner).eq('id',req.body.weekId).maybeSingle()
+    if(error)throw error
+    if(!data)return res.status(404).json({error:'That week is not in your account.'})
+    if(data.subject!==input.subject||data.grade!==input.grade)return res.status(409).json({error:`That week is for ${data.grade==='K'?'Kindergarten':'Grade '+data.grade} ${data.subject}. This lesson is ${input.grade==='K'?'Kindergarten':'Grade '+input.grade} ${input.subject}. Choose a different week.`})
+    row=data
+   }else{
+    const weekOf=mondayOf(String(req.body?.weekOf||''))
+    if(!weekOf)return res.status(400).json({error:'Choose the week this lesson belongs to.'})
+    const {data,error}=await db.from('lesson_weeks').select('*').eq('user_id',owner).eq('week_of',weekOf).eq('subject',input.subject).eq('grade',input.grade).order('updated_at',{ascending:false}).limit(1)
+    if(error)throw error
+    row=data?.[0]||null
+    if(!row)row={id:crypto.randomUUID(),week_of:weekOf,state:input.state,grade:input.grade,subject:input.subject,minutes:input.minutes,days:null,settings:{},status:'draft',school_id:null,user_id:owner,_new:true}
+   }
+   const current=Array.isArray(row.days)?row.days[day]:null
+   if(current?.lessonId&&current.lessonId!==lessonId&&req.body?.replace!==true){
+    const other=(await loadLessons(auth,[current.lessonId])).get(current.lessonId)
+    return res.status(409).json({conflict:true,existingTitle:other?.plan?.title||'another lesson',error:`${WEEKDAYS[day]} already has a lesson.`})
+   }
+   const days=lessonIntoWeekDay(row.days,day,lessonId,input)
+   let week;try{week=normalizeWeekSetup({id:row.id,weekOf:row.week_of,state:row.state,grade:row.grade,subject:row.subject,minutes:row.minutes,days,settings:row.settings||{}},catalogue,{allowEmpty:true})}catch(e){return res.status(400).json({error:e.message})}
+   if(!await persistWeek(db,owner,week,row._new?null:row))return res.status(503).json({error:'Your week could not be saved. Please retry.'})
+   const ready=week.days.filter(d=>d.off||d.lessonId).length
+   return res.json({added:true,weekId:week.id,weekOf:week.weekOf,day,dayName:WEEKDAYS[day],ready,status:row._new?'draft':row.status,created:!!row._new})
   }
 
   if(!isUuid(req.body?.id))return res.status(400).json({error:'Choose a week.'})

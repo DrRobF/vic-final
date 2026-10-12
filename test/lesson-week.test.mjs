@@ -2,7 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import catalogue from '../data/lesson-standards.json' with { type: 'json' }
 import { normalizeLessonInput, DEFAULT_SECTIONS, GROUP_DEFAULTS } from '../lib/lesson-designer.mjs'
-import { mondayOf, weekDates, defaultWeekOf, normalizeWeekSetup, weekStandardRows, weekContextInstructions, dayLessonRequest, buildWeekSubmission, submissionEmail, reviewEmail, validEmail, weekFileName } from '../lib/lesson-week.mjs'
+import { mondayOf, weekDates, defaultWeekOf, normalizeWeekSetup, lessonIntoWeekDay, weekStandardRows, weekContextInstructions, dayLessonRequest, buildWeekSubmission, submissionEmail, reviewEmail, validEmail, weekFileName } from '../lib/lesson-week.mjs'
 
 const ID='3b241101-e2bb-4255-8caf-4136c566a962'
 const LESSON='9c2a1d0e-1111-4222-8333-944455556666'
@@ -34,7 +34,7 @@ test('forged or mismatched standards, empty days and all-off weeks are refused',
  const reading=catalogue.find(r=>r.state==='FL'&&r.grade==='3'&&r.subject==='reading')
  assert.throws(()=>normalizeWeekSetup(setup({days:[day(0,{standardIds:[reading.id]}),day(1),day(2),day(3),day(4)]}),catalogue),/Monday: a standard does not match/)
  assert.throws(()=>normalizeWeekSetup(setup({days:[day(0,{standardIds:['FL:MADE.UP']}),day(1),day(2),day(3),day(4)]}),catalogue),/does not match/)
- assert.throws(()=>normalizeWeekSetup(setup({days:[day(0),day(1,{standardIds:[]}),day(2),day(3),day(4)]}),catalogue),/Tuesday: choose or paste a standard/)
+ assert.throws(()=>normalizeWeekSetup(setup({days:[day(0),day(1,{standardIds:[]}),day(2),day(3),day(4)]}),catalogue),/Tuesday: choose a standard, plan it in the detailed lesson planner/)
  assert.throws(()=>normalizeWeekSetup(setup({days:Array.from({length:5},()=>({off:true}))}),catalogue),/at least one day/)
  assert.throws(()=>normalizeWeekSetup(setup({days:[day(0)]}),catalogue),/five school days/)
  assert.throws(()=>normalizeWeekSetup(setup({id:'not-a-uuid'}),catalogue),/could not be saved/)
@@ -96,4 +96,31 @@ test('only plausible email addresses are accepted for emailed weeks', () => {
  assert.equal(validEmail(' Principal@School.org '),'principal@school.org')
  assert.equal(validEmail('nope'),'')
  assert.equal(validEmail('a@b.c, evil@x.com'),'')
+})
+
+test('a saved week can hold days that are not planned yet, and sending still needs every day finished', () => {
+ const partial=setup({days:[day(0,{lessonId:LESSON}),{off:false,standardIds:[],topic:''},{off:true},{off:false,standardIds:[]},day(4)]})
+ assert.throws(()=>normalizeWeekSetup(partial,catalogue),/Tuesday: choose a standard/)
+ const week=normalizeWeekSetup(partial,catalogue,{allowEmpty:true})
+ assert.deepEqual(week.days[1].standards,[])
+ assert.equal(week.days[0].lessonId,LESSON)
+ assert.ok(normalizeWeekSetup(setup({days:Array.from({length:5},()=>({off:false,standardIds:[]}))}),catalogue,{allowEmpty:true}))
+ assert.match(weekContextInstructions(week,4),/Tuesday: a lesson the teacher is planning separately/)
+ const lessons=new Map([[LESSON,{plan:{title:'Arrays'},input:{}}]])
+ assert.throws(()=>buildWeekSubmission(week,lessons,'Ms. Rivera'),/Tuesday does not have a finished lesson yet/)
+})
+
+test('a detailed single lesson drops into the chosen day with its own standards and topic', () => {
+ const official=math3[3]
+ const input={state:'FL',grade:'3',subject:'math',topic:'Area with tiles',standardIds:[official.id],standards:[{code:official.code,text:official.text,origin:'official'},{code:'Teacher-provided standard',text:'Explain with a model.',origin:'teacher'}]}
+ const days=lessonIntoWeekDay(null,2,LESSON,input)
+ assert.equal(days.length,5)
+ assert.deepEqual(days[2],{off:false,standardIds:[official.id],customStandard:'Explain with a model.',customCode:'',topic:'Area with tiles',lessonId:LESSON})
+ assert.equal(days[0].lessonId,null)
+ const week=normalizeWeekSetup(setup({days}),catalogue,{allowEmpty:true})
+ assert.deepEqual(week.days[2].standards.map(s=>s.origin),['official','teacher'])
+ const kept=lessonIntoWeekDay(week.days,0,'0f1e2d3c-1111-4222-8333-944455556666',{standardIds:[math3[0].id],topic:'Warm start'})
+ assert.equal(kept[2].lessonId,LESSON)
+ assert.equal(kept[0].topic,'Warm start')
+ assert.throws(()=>lessonIntoWeekDay(days,5,LESSON,input),/Monday to Friday/)
 })
