@@ -3,6 +3,7 @@ import { lessonFailure } from '../../../lib/lesson-behavior.mjs'
 import catalogue from '../../../data/lesson-standards.json'
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { normalizeLessonInput, lessonGenerationInput, lessonSchema, buildLessonInstructions, validateLessonPlan, materializeLessonPlan, planAsText } from '../../../lib/lesson-designer.mjs'
+import { isUuid, WEEK_USER_REQUEST_LIMIT } from '../../../lib/lesson-week.mjs'
 import { worksheetSettings, worksheetSchema, worksheetInstructions, materializeWorksheet, validateWorksheet } from '../../../lib/lesson-worksheet.mjs'
 export const config={api:{bodyParser:{sizeLimit:'160kb'}},maxDuration:180}
 export default async function handler(req,res) {
@@ -15,7 +16,10 @@ export default async function handler(req,res) {
   const worksheet=req.body?.kind==='worksheet'
   let settings,lesson;try{if(worksheet){lesson=validateLessonPlan(req.body?.plan,input);settings=worksheetSettings(req.body,input)}}catch(e){return res.status(400).json({error:e.message})}
   if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'Lesson generation is temporarily unavailable. Please try again later.'})
-  if(!await claimLessonRequest(auth)){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling a lot of requests. Please try again later. Your saved lesson is still available.'})}
+  // A request that belongs to the teacher's own saved week may use the higher week-building burst.
+  let userLimit
+  if(isUuid(req.body?.weekId)){const {data:week}=await auth.admin.from('lesson_weeks').select('id').eq('id',req.body.weekId).eq('user_id',auth.user.id).maybeSingle();if(week)userLimit=WEEK_USER_REQUEST_LIMIT}
+  if(!await claimLessonRequest(auth,{userLimit})){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling a lot of requests. Please try again later. Your saved lesson is still available.'})}
   const deadline=Date.now()+150000
   async function requestDraft(){
    const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:worksheet?worksheetInstructions():buildLessonInstructions(),input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:lessonGenerationInput(input)),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
