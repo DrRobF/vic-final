@@ -3,7 +3,7 @@ import LegalPage,{CONTACT_EMAIL} from '../components/LegalPage'
 const mail=<a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
 
 export default function Privacy(){
- return <LegalPage title="Privacy Policy" description="How Ask VIC collects, uses, protects, and deletes educator, staff, and student information, including our commitments under FERPA, COPPA, and Florida student privacy law."
+ return <LegalPage path="/privacy" title="Privacy Policy" description="How Ask VIC collects, uses, protects, and deletes educator, staff, and student information, including our commitments under FERPA, COPPA, and Florida student privacy law."
   summary={<>
    <p><strong>The short version.</strong> Ask VIC is built by a principal for educators. We treat the information you trust us with the way a good school treats its records.</p>
    <ul>
