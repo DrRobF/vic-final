@@ -3,7 +3,7 @@ import LegalPage,{CONTACT_EMAIL} from '../components/LegalPage'
 const mail=<a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
 
 export default function Terms(){
- return <LegalPage title="Terms of Use" description="The rules for using Ask VIC: who can use it, protecting student information, AI-generated content, school accounts, and your rights to your work."
+ return <LegalPage path="/terms" title="Terms of Use" description="The rules for using Ask VIC: who can use it, protecting student information, AI-generated content, school accounts, and your rights to your work."
   summary={<>
    <p><strong>The short version.</strong></p>
    <ul>
