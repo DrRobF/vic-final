@@ -1,0 +1,150 @@
+import catalogue from '../../../data/lesson-standards.json'
+import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
+import { normalizeWeekSetup, weekStandardRows, buildWeekSubmission, submissionEmail, weekFileName, validEmail, isUuid, MAX_EMAIL_SENDS_PER_DAY } from '../../../lib/lesson-week.mjs'
+import { buildWeekDocx } from '../../../lib/lesson-week-docx.mjs'
+export const config={api:{bodyParser:{sizeLimit:'200kb'},responseLimit:'12mb'},maxDuration:60}
+
+const SITE=process.env.NEXT_PUBLIC_SITE_URL||'https://www.askvic.ai'
+const LIST_COLUMNS='id,week_of,state,grade,subject,minutes,days,status,school_id,sent_to_email,submitted_at,edited_after_submit,reviewed_at,reviewer_name,principal_comment,updated_at,ap_schools(name)'
+const escape=x=>String(x||'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;')
+
+function publicWeek(row){
+ return {id:row.id,weekOf:row.week_of,state:row.state,grade:row.grade,subject:row.subject,minutes:row.minutes,days:row.days,settings:row.settings,status:row.status,schoolName:row.ap_schools?.name||'',sentToEmail:row.sent_to_email||'',submittedAt:row.submitted_at,editedAfterSubmit:row.edited_after_submit,reviewedAt:row.reviewed_at,reviewerName:row.reviewer_name,principalComment:row.principal_comment,updatedAt:row.updated_at}
+}
+// Saving an unchanged week (for example before a download) must not tell leaders the week was edited.
+const plannedShape=w=>JSON.stringify([w.week_of??w.weekOf,w.state,w.grade,w.subject,Number(w.minutes),(w.days||[]).map(d=>[!!d.off,d.lessonId||null,d.topic||'',(d.standards||[]).map(x=>x.code+'|'+x.text)])])
+const changed=(row,week)=>plannedShape(row)!==plannedShape(week)
+async function teacherName(auth){
+ const {data}=await auth.admin.from('users').select('name').eq('auth_user_id',auth.user.id).limit(1).maybeSingle()
+ const name=String(data?.name||auth.user.user_metadata?.full_name||auth.user.user_metadata?.name||'').trim()
+ return (name||String(auth.user.email||'Teacher').split('@')[0]).slice(0,120)
+}
+async function loadLessons(auth,ids){
+ if(!ids.length)return new Map()
+ const {data,error}=await auth.admin.from('educator_lessons').select('id,draft,updated_at').eq('user_id',auth.user.id).in('id',ids)
+ if(error)throw error
+ return new Map((data||[]).map(r=>[r.id,{...r.draft,updatedAt:r.updated_at}]))
+}
+async function sendEmail({to,replyTo,subject,body,attachment,key}){
+ if(!process.env.RESEND_API_KEY||!process.env.REPORTS_FROM_EMAIL)return {sent:false,note:'Email delivery is not set up yet.'}
+ try{
+  const r=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:`Bearer ${process.env.RESEND_API_KEY}`,'Content-Type':'application/json','Idempotency-Key':key},signal:AbortSignal.timeout(20000),body:JSON.stringify({from:process.env.REPORTS_FROM_EMAIL,to,...(replyTo?{reply_to:replyTo}:{}),subject,text:body,html:`<div style="white-space:pre-wrap;font-family:Arial,sans-serif;line-height:1.6">${escape(body)}</div>`,...(attachment?{attachments:[attachment]}:{})})})
+  if(!r.ok){console.error('Lesson week email failed',{status:r.status});return {sent:false,note:'The email could not be delivered.'}}
+  return {sent:true}
+ }catch(e){console.error('Lesson week email failed',{name:e?.name});return {sent:false,note:'The email could not be delivered.'}}
+}
+// Leaders' addresses come from their own sign-in accounts, never from anything the teacher typed.
+async function leaderEmails(admin,schoolId){
+ const {data,error}=await admin.from('ap_memberships').select('auth_user_id').eq('school_id',schoolId)
+ if(error)throw error
+ const emails=[]
+ for(const m of data||[]){const {data:u}=await admin.auth.admin.getUserById(m.auth_user_id);if(u?.user?.email)emails.push(u.user.email.toLowerCase())}
+ return [...new Set(emails)].slice(0,10)
+}
+
+export default async function handler(req,res){
+ res.setHeader('Cache-Control','no-store')
+ if(!['GET','POST'].includes(req.method)){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Method not allowed.'})}
+ try{
+  const auth=await requireLessonEducator(req)
+  if(auth.error)return res.status(auth.status).json({error:auth.error})
+  const db=auth.admin,owner=auth.user.id
+
+  if(req.method==='GET'){
+   if(!req.query.id){
+    const [{data:weeks,error},{data:staff,error:staffError}]=await Promise.all([
+     db.from('lesson_weeks').select(LIST_COLUMNS).eq('user_id',owner).order('week_of',{ascending:false}).order('updated_at',{ascending:false}).limit(60),
+     db.from('ap_staff').select('id,school_id,ap_schools(name)').eq('auth_user_id',owner).eq('active',true),
+    ])
+    if(error||staffError){console.error('Lesson weeks list failed',{code:(error||staffError)?.code});return res.status(503).json({error:'Could not load your weeks. If this keeps happening, the weekly planner may still be getting set up.'})}
+    return res.json({weeks:(weeks||[]).map(publicWeek),schools:(staff||[]).map(s=>({id:s.school_id,name:s.ap_schools?.name||'My school'}))})
+   }
+   if(!isUuid(req.query.id))return res.status(400).json({error:'Invalid week link.'})
+   const {data:row,error}=await db.from('lesson_weeks').select(LIST_COLUMNS+',settings').eq('user_id',owner).eq('id',req.query.id).maybeSingle()
+   if(error)return res.status(503).json({error:'Could not open this week. Please retry.'})
+   if(!row)return res.status(404).json({error:'This week is not in your account.'})
+   const ids=(row.days||[]).map(d=>d.lessonId).filter(isUuid)
+   const lessons=await loadLessons(auth,ids)
+   if(req.query.format==='docx'){
+    const week={id:row.id,weekOf:row.week_of,state:row.state,grade:row.grade,subject:row.subject,minutes:row.minutes,days:row.days}
+    let submission;try{submission=buildWeekSubmission(week,lessons,await teacherName(auth))}catch(e){return res.status(400).json({error:e.message})}
+    const buffer=await buildWeekDocx(submission)
+    res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.setHeader('Content-Disposition',`attachment; filename="${weekFileName(week)}"`)
+    return res.status(200).send(buffer)
+   }
+   const summaries=Object.fromEntries([...lessons].map(([id,d])=>[id,{title:d.plan?.title||'Untitled lesson',worksheet:!!d.worksheet,updatedAt:d.updatedAt}]))
+   return res.json({week:publicWeek(row),lessons:summaries})
+  }
+
+  const action=req.body?.action
+  if(action==='save'){
+   let week;try{week=normalizeWeekSetup(req.body?.week,catalogue)}catch(e){return res.status(400).json({error:e.message})}
+   const {data:existing,error:readError}=await db.from('lesson_weeks').select('user_id,status,school_id,week_of,state,grade,subject,minutes,days').eq('id',week.id).maybeSingle()
+   if(readError)return res.status(503).json({error:'Your week could not be saved. Please retry.'})
+   if(existing&&existing.user_id!==owner)return res.status(404).json({error:'This week is not in your account.'})
+   const row={id:week.id,user_id:owner,week_of:week.weekOf,state:week.state,grade:week.grade,subject:week.subject,minutes:week.minutes,days:week.days,settings:week.settings,updated_at:new Date().toISOString(),...(existing&&existing.status!=='draft'&&changed(existing,week)?{edited_after_submit:true}:{})}
+   const {error}=await db.from('lesson_weeks').upsert(row,{onConflict:'id'})
+   if(error){console.error('Lesson week save failed',{code:error.code});return res.status(503).json({error:'Your week could not be saved. Please retry.'})}
+   await db.from('lesson_week_standards').delete().eq('week_id',week.id)
+   const rows=weekStandardRows(week,owner,existing?.school_id||null)
+   if(rows.length){const {error:standardsError}=await db.from('lesson_week_standards').insert(rows);if(standardsError)console.error('Lesson week standards save failed',{code:standardsError.code})}
+   return res.json({saved:true,id:week.id,status:existing?.status||'draft'})
+  }
+
+  if(!isUuid(req.body?.id))return res.status(400).json({error:'Choose a week.'})
+  const {data:row,error:rowError}=await db.from('lesson_weeks').select('*').eq('user_id',owner).eq('id',req.body.id).maybeSingle()
+  if(rowError)return res.status(503).json({error:'Could not open this week. Please retry.'})
+  if(!row)return res.status(404).json({error:'This week is not in your account.'})
+
+  if(action==='delete'){
+   if(row.status!=='draft')return res.status(409).json({error:'This week was already sent, so it stays on record for your school.'})
+   const {error}=await db.from('lesson_weeks').delete().eq('id',row.id).eq('user_id',owner)
+   if(error)return res.status(503).json({error:'Could not remove this week. Please retry.'})
+   return res.json({deleted:true})
+  }
+
+  if(action!=='submit')return res.status(400).json({error:'Unknown action.'})
+  const week={id:row.id,weekOf:row.week_of,state:row.state,grade:row.grade,subject:row.subject,minutes:row.minutes,days:row.days}
+  const name=await teacherName(auth)
+  const lessons=await loadLessons(auth,week.days.map(d=>d.lessonId).filter(isUuid))
+  let submission;try{submission=buildWeekSubmission(week,lessons,name)}catch(e){return res.status(400).json({error:e.message})}
+  const now=new Date().toISOString()
+
+  let school=null,staffId=null,recipients=[],externalEmail=null
+  if(req.body?.schoolId){
+   if(!isUuid(req.body.schoolId))return res.status(400).json({error:'Choose your school.'})
+   // Only a school the teacher has joined can receive the week.
+   const {data:staff,error}=await db.from('ap_staff').select('id,display_name,ap_schools(id,name)').eq('school_id',req.body.schoolId).eq('auth_user_id',owner).eq('active',true).maybeSingle()
+   if(error)throw error
+   if(!staff)return res.status(403).json({error:'Join your school in AskVic before sending plans to its leaders.'})
+   school={id:req.body.schoolId,name:staff.ap_schools?.name||''};staffId=staff.id
+   if(staff.display_name)submission.teacherName=staff.display_name
+   recipients=await leaderEmails(db,school.id)
+  }else{
+   externalEmail=validEmail(req.body?.email)
+   if(!externalEmail)return res.status(400).json({error:'Enter your principal’s email address.'})
+   if(!auth.user.email_confirmed_at)return res.status(403).json({error:'Verify your email before sending plans by email.'})
+   const since=new Date(Date.now()-86400000).toISOString()
+   const {count,error}=await db.from('lesson_weeks').select('id',{count:'exact',head:true}).eq('user_id',owner).not('sent_to_email','is',null).gte('submitted_at',since)
+   if(error)throw error
+   if((count||0)>=MAX_EMAIL_SENDS_PER_DAY)return res.status(429).json({error:'You have sent several weeks by email today. Download the Word file and share it instead, or try again tomorrow.'})
+   recipients=[externalEmail]
+  }
+
+  const {error:updateError}=await db.from('lesson_weeks').update({status:'submitted',submitted_at:now,school_id:school?.id||null,staff_id:staffId,teacher_name:submission.teacherName,sent_to_email:externalEmail,submission,edited_after_submit:false,reviewed_at:null,reviewed_by:null,reviewer_name:'',updated_at:now}).eq('id',row.id).eq('user_id',owner)
+  if(updateError){console.error('Lesson week submit failed',{code:updateError.code});return res.status(503).json({error:'Your week could not be sent. Please retry.'})}
+  await db.from('lesson_week_standards').update({school_id:school?.id||null}).eq('week_id',row.id)
+
+  let delivery={sent:false,note:recipients.length?'':'Your school has no leader email on file yet, but your plans are waiting in AskVic.'}
+  if(recipients.length){
+   const buffer=await buildWeekDocx(submission,{schoolName:school?.name||''})
+   const mail=submissionEmail({teacherName:submission.teacherName,teacherEmail:auth.user.email,schoolName:school?.name||'',week,reviewUrl:school?`${SITE}/weeklyplans?school=${school.id}&plan=${row.id}`:'',days:submission.days})
+   delivery=await sendEmail({to:recipients,replyTo:auth.user.email,subject:mail.subject,body:mail.body,attachment:{filename:weekFileName(week),content:Buffer.from(buffer).toString('base64')},key:`lesson-week/${row.id}/${now}`})
+  }
+  if(!school&&!delivery.sent){
+   await db.from('lesson_weeks').update({status:row.status,submitted_at:row.submitted_at,sent_to_email:row.sent_to_email,submission:row.submission,school_id:row.school_id,staff_id:row.staff_id}).eq('id',row.id)
+   return res.status(502).json({error:`${delivery.note||'The email could not be sent.'} Download the Word file and send it yourself.`})
+  }
+  return res.json({submitted:true,status:'submitted',submittedAt:now,school:school?.name||'',emailed:delivery.sent,recipients:recipients.length,note:delivery.note||''})
+ }catch(e){console.error('Lesson weeks request failed',{name:e?.name,message:e?.message});return res.status(500).json({error:'Something went wrong. Your lessons are still saved. Please try again.'})}
+}
