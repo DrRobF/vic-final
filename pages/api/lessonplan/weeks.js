@@ -115,9 +115,10 @@ export default async function handler(req,res){
    }else{
     const weekOf=mondayOf(String(req.body?.weekOf||''))
     if(!weekOf)return res.status(400).json({error:'Choose the week this lesson belongs to.'})
-    const {data,error}=await db.from('lesson_weeks').select('*').eq('user_id',owner).eq('week_of',weekOf).eq('subject',input.subject).eq('grade',input.grade).order('updated_at',{ascending:false}).limit(1)
+    const {data,error}=await db.from('lesson_weeks').select('*').eq('user_id',owner).eq('week_of',weekOf).eq('subject',input.subject).eq('grade',input.grade).order('updated_at',{ascending:false}).limit(10)
     if(error)throw error
-    row=data?.[0]||null
+    // Prefer a week still being planned over one already sent.
+    row=(data||[]).find(w=>w.status==='draft')||data?.[0]||null
     if(!row)row={id:crypto.randomUUID(),week_of:weekOf,state:input.state,grade:input.grade,subject:input.subject,minutes:input.minutes,days:null,settings:{},status:'draft',school_id:null,user_id:owner,_new:true}
    }
    const current=Array.isArray(row.days)?row.days[day]:null
