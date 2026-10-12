@@ -56,10 +56,9 @@ revoke all on public.lesson_weeks, public.lesson_week_standards from public,anon
 grant select,insert,update,delete on public.lesson_weeks, public.lesson_week_standards to service_role;
 
 -- Building a full week takes up to ten AI requests (five lessons and five worksheets), so week requests
--- may use a higher per-user burst. The global daily budget is unchanged and still caps total cost.
--- The two-argument call used everywhere else keeps the original limit of 10 per 10 minutes.
-drop function if exists public.claim_lesson_request(uuid,integer);
-create or replace function public.claim_lesson_request(request_user uuid, daily_budget integer default 500, user_limit integer default 10)
+-- use this separate claim with a higher per-user burst. It shares the same request windows and global daily
+-- budget as claim_lesson_request, which is left unchanged (10 per user per 10 minutes) for everything else.
+create or replace function public.claim_week_lesson_request(request_user uuid, daily_budget integer default 500, user_limit integer default 25)
 returns boolean language plpgsql security invoker set search_path = public,pg_temp as $$
 declare user_count integer; total_count integer;
 begin
@@ -73,9 +72,9 @@ begin
  on conflict (bucket) do update set started_at=case when lesson_request_windows.started_at < now()-interval '10 minutes' then now() else lesson_request_windows.started_at end,
  requests=case when lesson_request_windows.started_at < now()-interval '10 minutes' then 0 else lesson_request_windows.requests end;
  select requests into user_count from public.lesson_request_windows where bucket=request_user::text for update;
- if user_count>=greatest(1,least(coalesce(user_limit,10),30)) then return false; end if;
+ if user_count>=greatest(1,least(coalesce(user_limit,25),30)) then return false; end if;
  update public.lesson_request_windows set requests=requests+1 where bucket in ('global',request_user::text);
  return true;
 end $$;
-revoke all on function public.claim_lesson_request(uuid,integer,integer) from public,anon,authenticated;
-grant execute on function public.claim_lesson_request(uuid,integer,integer) to service_role;
+revoke all on function public.claim_week_lesson_request(uuid,integer,integer) from public,anon,authenticated;
+grant execute on function public.claim_week_lesson_request(uuid,integer,integer) to service_role;
