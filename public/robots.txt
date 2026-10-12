@@ -2,9 +2,10 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /api/
-Disallow: /educator
-Disallow: /teacher
-Disallow: /student
+Disallow: /educator$
+Disallow: /educator/
+Disallow: /teacher$
+Disallow: /student$
 Disallow: /assistantprincipal
 Disallow: /parentletters
 Disallow: /assignlesson
