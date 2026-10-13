@@ -228,7 +228,7 @@ export default function WeekPlanner(){
   <small className="wk-center">AI creates drafts. Review every lesson before you teach or send it.</small></>}
  </form>
 
- <section className="wk-panel">
+ <section className="wk-panel" id="send">
   <div className="wk-title"><span>5</span><h2>Download or send to administration</h2></div>
   {!allBuilt?<p className="wk-help">Finish every day first: build it with VIC, plan it in the detailed lesson planner, or mark it as no lesson ({builtCount} of {planned.length} ready). Then download the whole week as one Word document or send it.</p>:<>
    <p className="wk-help">One Word document: week at a glance, then each day’s lesson, worksheet and answer key. If you edit a lesson, the download and anything you send include your edits.</p>

@@ -9,6 +9,9 @@ export default async function handler(req,res){
  const owner=auth.user.id
  if(req.method==='POST'){
   let row;try{row=lessonRecord(req.body,owner)}catch(e){return res.status(400).json({error:e.message})}
+  // Step progress (Print / Teach / Follow up) is written only by /api/educator/lesson-steps, so an older browser copy can't erase it.
+  const {data:prior}=await auth.admin.from('educator_lessons').select('steps:draft->steps').eq('user_id',owner).eq('id',row.id).maybeSingle()
+  const {steps:_ignored,...rest}=row.draft;row.draft=prior?.steps&&typeof prior.steps==='object'?{...rest,steps:prior.steps}:rest
   const {data,error}=await auth.admin.from('educator_lessons').upsert(row,{onConflict:'user_id,id'}).select('id,updated_at').single()
   if(error)return res.status(503).json({error:'Your lesson could not be saved to your account. Your browser draft is still available. Please retry before starting another lesson.'})
   return res.json(data)
@@ -21,7 +24,7 @@ export default async function handler(req,res){
   return res.json(data)
  }
  const offset=Math.max(0,Math.min(100000,Number.parseInt(req.query.offset,10)||0))
- const {data,error}=await auth.admin.from('educator_lessons').select('id,title,subject,grade,created_at,updated_at').eq('user_id',owner).order('updated_at',{ascending:false}).order('id',{ascending:true}).range(offset,offset+49)
+ const {data,error}=await auth.admin.from('educator_lessons').select('id,title,subject,grade,created_at,updated_at,steps:draft->steps,week:draft->week').eq('user_id',owner).order('updated_at',{ascending:false}).order('id',{ascending:true}).range(offset,offset+49)
  if(error)return res.status(503).json({error:'Could not load your saved lessons. Please retry.'})
  return res.json({lessons:data,hasMore:data.length===50})
 }
