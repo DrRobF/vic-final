@@ -784,6 +784,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
         classId: selectedClass.id,
         title: lessonTitle.trim(),
         lessonText: lessonText.trim(),
+        ...(prefillLesson?.sourceId && lessonTitle.trim() === (prefillLesson.title || '').trim() ? { sourceLessonId: prefillLesson.sourceId } : {}),
         students: Object.entries(assignmentSelections).map(([studentId, mode]) => ({ studentId: Number(studentId), mode })),
       }),
     })

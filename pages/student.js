@@ -5,7 +5,7 @@ export default function StudentPage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace('/askvic')
+    router.replace('/learn')
   }, [router])
 
   return (
