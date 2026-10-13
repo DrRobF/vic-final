@@ -1074,8 +1074,8 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
                     <span className="summarySubtle">
                       {selectedCount} selected student{selectedCount === 1 ? '' : 's'}
                     </span>
-                    {supportCounts.remediation ? <span className="summaryChip remediation">Remediation: {supportCounts.remediation}</span> : null}
-                    {supportCounts.core ? <span className="summaryChip onLevel">Core: {supportCounts.core}</span> : null}
+                    {supportCounts.remediation ? <span className="summaryChip remediation">Support: {supportCounts.remediation}</span> : null}
+                    {supportCounts.core ? <span className="summaryChip onLevel">On level: {supportCounts.core}</span> : null}
                     {supportCounts.enrichment ? <span className="summaryChip enrichment">Enrichment: {supportCounts.enrichment}</span> : null}
                   </div>
                 ) : null}
@@ -1084,13 +1084,13 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
                   <>
                     <div className="groupSelectionRow">
                       <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('remediation')}>
-                        Select Remediation
+                        Select Support group
                       </button>
                       <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('core')}>
-                        Select On-Level
+                        Select On level group
                       </button>
                       <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('enrichment')}>
-                        Select Enrichment
+                        Select Enrichment group
                       </button>
                       <button type="button" className="secondaryButton groupButton" disabled={saving || loadingStudents} onClick={() => handleSelectGroup('all')}>
                         Select All Students
@@ -1128,18 +1128,18 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
                                       className={selectedSupport === 'remediation' ? 'supportButton remediation isActive' : 'supportButton remediation'}
                                       disabled={saving || loadingStudents}
                                       onClick={() => handleSelectStudentSupport(student.id, 'remediation')}
-                                      title="Remediation"
+                                      title="Support"
                                     >
-                                      Rem
+                                      Support
                                     </button>
                                     <button
                                       type="button"
                                       className={selectedSupport === 'core' ? 'supportButton onLevel isActive' : 'supportButton onLevel'}
                                       disabled={saving || loadingStudents}
                                       onClick={() => handleSelectStudentSupport(student.id, 'core')}
-                                      title="Core"
+                                      title="On level"
                                     >
-                                      Core
+                                      On level
                                     </button>
                                     <button
                                       type="button"
@@ -1148,7 +1148,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
                                       onClick={() => handleSelectStudentSupport(student.id, 'enrichment')}
                                       title="Enrichment"
                                     >
-                                      Enr
+                                      Enrichment
                                     </button>
                                   </div>
                                 </td>
@@ -1807,20 +1807,21 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           display: flex;
           align-items: center;
           justify-content: stretch;
-          flex-wrap: nowrap;
-          gap: 8px;
+          flex-wrap: wrap;
+          gap: 6px;
           width: 100%;
+          min-width: 220px;
         }
         .supportButton {
           border: 1px solid var(--vic-border);
           border-radius: 10px;
           background: var(--vic-surface-muted);
           color: var(--vic-text-secondary);
-          padding: 9px 10px;
-          font-size:14px;
+          padding: 8px 9px;
+          font-size: 14px;
           font-weight: 600;
           cursor: pointer;
-          flex: 1 1 0;
+          flex: 1 1 auto;
           min-width: 0;
           text-align: center;
           white-space: nowrap;

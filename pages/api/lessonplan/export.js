@@ -3,6 +3,7 @@ import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { normalizeLessonInput, validateLessonPlan, lessonOutputSections } from '../../../lib/lesson-designer.mjs'
 import catalogue from '../../../data/lesson-standards.json'
 import { validateWorksheet } from '../../../lib/lesson-worksheet.mjs'
+import { versionLabel, versionKey } from '../../../lib/levels.mjs'
 export const config={api:{bodyParser:{sizeLimit:'300kb'}}}
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')
@@ -17,7 +18,8 @@ export default async function handler(req,res){
   const body=value=>String(value).split('\n').forEach(line=>paragraphs.push(new Paragraph({children:[new TextRun(line)],spacing:{after:100}})))
   if(worksheetExport){
    heading(sheet.title+(answers?' — Teacher answer key':''),HeadingLevel.TITLE)
-   sheet.versions.forEach((v,i)=>{if(i)paragraphs.push(new Paragraph({text:'',pageBreakBefore:true}));heading(v.label);if(!answers){body('Name: ______________________________    Date: ______________');body(v.directions);if(v.passage)body(v.passage)}
+   if(answers&&versionKey(sheet,input.groups))body(versionKey(sheet,input.groups))
+   sheet.versions.forEach((v,i)=>{if(i)paragraphs.push(new Paragraph({text:'',pageBreakBefore:true}));heading(answers?versionLabel(v,i,input.groups):v.label);if(!answers){body('Name: ______________________________    Date: ______________');body(v.directions);if(v.passage)body(v.passage)}
     v.questions.forEach((q,n)=>{body(`${n+1}. ${q.prompt}`);if(answers)body(`Answer: ${q.answer}`);else{body('________________________________________________________________');body('________________________________________________________________');body('')}})
    })
    if(answers){heading('Teacher review');sheet.reviewNotes.forEach(body);body('Check every question and answer before sharing the student worksheet.')}
