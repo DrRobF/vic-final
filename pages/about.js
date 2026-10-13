@@ -222,7 +222,7 @@ const styles = {
     position: 'relative',
     overflow: 'hidden',
     background:
-      'radial-gradient(circle at 18% 10%, rgba(37, 99, 235, 0.28), transparent 24%), radial-gradient(circle at 82% 82%, rgba(245, 158, 11, 0.10), transparent 24%), linear-gradient(135deg, var(--vic-bg) 0%, var(--vic-surface-muted) 50%, var(--vic-bg) 100%)',
+      'radial-gradient(circle at 18% 10%, rgba(37, 99, 235, 0.28), transparent 24%), radial-gradient(circle at 82% 82%, rgba(23, 89, 233, 0.10), transparent 24%), linear-gradient(135deg, var(--vic-bg) 0%, var(--vic-surface-muted) 50%, var(--vic-bg) 100%)',
     color: 'var(--vic-bg)',
     padding: '18px 20px 48px 20px',
     fontFamily:
@@ -259,7 +259,7 @@ const styles = {
     left: '70%',
     width: '220px',
     height: '220px',
-    background: 'rgba(245, 158, 11, 0.08)',
+    background: 'rgba(23, 89, 233, 0.08)',
     filter: 'blur(80px)',
     borderRadius: '50%',
     pointerEvents: 'none',
@@ -312,7 +312,7 @@ const styles = {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'linear-gradient(135deg, rgba(37, 99, 235,0.28), rgba(245, 158, 11,0.12))',
+    background: 'linear-gradient(135deg, rgba(37, 99, 235,0.28), rgba(23, 89, 233,0.12))',
     border: '1px solid rgba(206,170,255,0.22)',
     fontWeight: 800,
     fontSize: '20px',
@@ -333,7 +333,7 @@ const styles = {
   },
 
   brandSub: {
-    fontSize: '12px',
+    fontSize: '13px',
     color: 'var(--vic-text-secondary)',
     lineHeight: 1.25,
   },
@@ -367,7 +367,7 @@ const styles = {
   },
 
   eyebrow: {
-    fontSize: '12px',
+    fontSize: '13px',
     letterSpacing: '0.16em',
     textTransform: 'uppercase',
     color: 'var(--vic-primary)',
@@ -447,7 +447,7 @@ const styles = {
     borderRadius: '24px',
     padding: '24px 24px 24px 28px',
     background:
-      'linear-gradient(135deg, rgba(37, 99, 235,0.16), rgba(245, 158, 11,0.06))',
+      'linear-gradient(135deg, rgba(37, 99, 235,0.16), rgba(23, 89, 233,0.06))',
     border: '1px solid rgba(206, 170, 255, 0.18)',
     boxShadow: '0 0 24px rgba(37, 99, 235,0.08)',
   },
@@ -508,7 +508,7 @@ const styles = {
     fontSize: '15px',
     padding: '12px 16px',
     borderRadius: '999px',
-    background: 'linear-gradient(135deg, rgba(37, 99, 235,0.22), rgba(245, 158, 11,0.10))',
+    background: 'linear-gradient(135deg, rgba(37, 99, 235,0.22), rgba(23, 89, 233,0.10))',
     border: '1px solid rgba(206, 170, 255, 0.24)',
     boxShadow: '0 0 22px rgba(37, 99, 235,0.12)',
   },

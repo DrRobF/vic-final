@@ -10,7 +10,7 @@ export default function PlannerModeSwitch({current}){
   .pm-switch{display:inline-grid;grid-template-columns:1fr 1fr;gap:6px;padding:6px;background:var(--vic-surface-muted);border:1px solid var(--vic-border);border-radius:14px;margin-top:24px;max-width:100%}
   a{display:block;text-decoration:none;color:var(--vic-text-secondary);padding:10px 18px;border-radius:10px;min-width:0}
   a strong{display:block;font-size:15px;color:var(--vic-text-primary)}
-  a span{display:block;font-size:12px;margin-top:2px}
+  a span{display:block;font-size:13px;margin-top:2px}
   a:hover{background:var(--vic-surface)}
   a.active{background:var(--vic-primary);box-shadow:0 2px 6px #0002}
   a.active strong,a.active span{color:#fff}
