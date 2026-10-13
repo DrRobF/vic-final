@@ -3,10 +3,25 @@ import {lessonRecord,validLessonId} from '../../../lib/educator-lessons.mjs'
 export const config={api:{bodyParser:{sizeLimit:'1mb'}}}
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')
- if(!['GET','POST'].includes(req.method)){res.setHeader('Allow','GET, POST');return res.status(405).json({error:'Method not allowed.'})}
+ if(!['GET','POST','DELETE'].includes(req.method)){res.setHeader('Allow','GET, POST, DELETE');return res.status(405).json({error:'Method not allowed.'})}
  const auth=await requireLessonEducator(req)
  if(auth.error)return res.status(auth.status).json({error:auth.error})
  const owner=auth.user.id
+ if(req.method==='DELETE'){
+  const id=req.query.id
+  if(!validLessonId(id))return res.status(400).json({error:'Invalid lesson link.'})
+  // Take the lesson off any week it sits on first, so the week shows an empty day instead of a broken link.
+  const {data:weeks,error:wErr}=await auth.admin.from('lesson_weeks').select('id,days').eq('user_id',owner)
+  if(wErr)return res.status(503).json({error:'Could not remove this lesson. Please retry.'})
+  for(const w of weeks||[]){
+   if(!(w.days||[]).some(d=>d?.lessonId===id))continue
+   const {error}=await auth.admin.from('lesson_weeks').update({days:w.days.map(d=>d?.lessonId===id?{...d,lessonId:null}:d)}).eq('id',w.id).eq('user_id',owner)
+   if(error)return res.status(503).json({error:'Could not remove this lesson from your week. Please retry.'})
+  }
+  const {error}=await auth.admin.from('educator_lessons').delete().eq('user_id',owner).eq('id',id)
+  if(error)return res.status(503).json({error:'Could not delete this lesson. Please retry.'})
+  return res.json({deleted:true})
+ }
  if(req.method==='POST'){
   let row;try{row=lessonRecord(req.body,owner)}catch(e){return res.status(400).json({error:e.message})}
   // Step progress (Print / Teach / Follow up) is written only by /api/educator/lesson-steps, so an older browser copy can't erase it.

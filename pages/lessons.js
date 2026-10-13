@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import PageShell, { PanelStyles } from '../components/PageShell'
 import { useAccount } from '../lib/use-account'
-import { lessonLibraryRequest } from '../lib/lesson-library-client'
+import { lessonLibraryRequest, draftKey } from '../lib/lesson-library-client'
+import { supabase } from '../lib/supabase'
 import { STEPS, stepDone, stepHref, nextStep, doneCount } from '../lib/lesson-steps.mjs'
 import { WEEKDAYS, formatDay, gradeLabel, subjectLabel } from '../lib/lesson-week.mjs'
 
 // My Lessons: every saved lesson, where it sits in the week, and its next step.
 export default function MyLessons() {
  const { account, error: accountError } = useAccount({ next: '/lessons' })
- const [lessons, setLessons] = useState([]), [more, setMore] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [filter, setFilter] = useState(''), [show, setShow] = useState('all')
+ const [lessons, setLessons] = useState([]), [more, setMore] = useState(false), [loading, setLoading] = useState(true), [error, setError] = useState(''), [filter, setFilter] = useState(''), [show, setShow] = useState('all'), [confirm, setConfirm] = useState(''), [deleting, setDeleting] = useState(''), [notice, setNotice] = useState('')
 
  async function load(append = false) {
   setLoading(true); setError('')
@@ -17,6 +18,16 @@ export default function MyLessons() {
  }
  useEffect(() => { if (account) load() }, [account])
 
+ async function remove(l) {
+  setDeleting(l.id); setError(''); setNotice('')
+  try {
+   await lessonLibraryRequest(`?id=${encodeURIComponent(l.id)}`, { method: 'DELETE' })
+   // Forget this lesson in the browser too, so the planner can't save it back.
+   try { const { data: { session } } = await supabase.auth.getSession(); const key = draftKey(session.user.id), cached = JSON.parse(localStorage.getItem(key) || 'null'); if (cached?.savedLessonId === l.id) localStorage.removeItem(key) } catch {}
+   setLessons(list => list.filter(x => x.id !== l.id)); setNotice(`Deleted “${l.title || 'Untitled lesson'}.”`)
+  } catch (e) { setError(e.message) } finally { setDeleting(''); setConfirm('') }
+ }
+
  const q = filter.trim().toLowerCase()
  const shown = lessons.filter(l => (!q || `${l.title} ${subjectLabel(l.subject)} ${gradeLabel(l.grade)}`.toLowerCase().includes(q)) && (show === 'all' || (show === 'open' ? doneCount(l.steps) < 4 : doneCount(l.steps) === 4)))
 
@@ -24,13 +35,14 @@ export default function MyLessons() {
   <PanelStyles />
   {accountError ? <p className="alert" role="alert">{accountError} <a href="/login">Log in</a></p> : !account ? <p role="status">Opening your lessons…</p> : <>
    <header className="top">
-    <div><p className="label">My lessons</p><h1>Every lesson you’ve made</h1><p className="muted">Open a step to pick up where you left off.</p></div>
+    <div><p className="label">My lessons</p><h1>Every lesson you’ve made</h1><p className="muted">Open a step to pick up where you left off. Delete lessons you don’t need.</p></div>
     <div className="row"><a className="btn btn-outline" href="/lessonplan/week">Plan a whole week</a><a className="btn btn-primary" href="/lessonplan?new=1">+ New lesson</a></div>
    </header>
    <div className="tools">
     <label className="find">Find a lesson<input value={filter} onChange={e => setFilter(e.target.value)} placeholder="Title, subject or grade" /></label>
     <div className="seg" role="group" aria-label="Show">{[['all', 'All'], ['open', 'Still to do'], ['done', 'Finished']].map(([k, label]) => <button key={k} type="button" aria-pressed={show === k} className={show === k ? 'on' : ''} onClick={() => setShow(k)}>{label}</button>)}</div>
    </div>
+   {notice && <p className="notice" role="status">{notice}</p>}
    {error && <p className="alert" role="alert">{error} <button type="button" className="btn btn-outline" onClick={() => load()}>Try again</button></p>}
    {!loading && !error && !lessons.length && <section className="dark-panel"><h2 className="dh">No lessons yet</h2><p>Make your first lesson and it will show up here with its four steps.</p><div className="row gap"><a className="btn btn-cyan" href="/lessonplan?new=1">Make a lesson</a></div></section>}
    <div className="list">{shown.map(l => {
@@ -42,7 +54,11 @@ export default function MyLessons() {
       <p className="meta">{[gradeLabel(l.grade), subjectLabel(l.subject), when, `Updated ${new Date(l.updated_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`].filter(Boolean).join(' · ')}</p>
      </div>
      <nav className="steps" aria-label={`Steps for ${l.title}`}>{STEPS.map(s => <a key={s.key} href={stepHref(s.key, l.id)} className={stepDone(s.key, l.steps) ? 'st done' : 'st'}>{stepDone(s.key, l.steps) ? '✓ ' : ''}{s.label}</a>)}</nav>
-     {next ? <a className="btn btn-primary nx" href={stepHref(next.key, l.id)}>{next.label} →</a> : <span className="fin">✓ Finished</span>}
+     <div className="acts">
+      {next ? <a className="btn btn-primary nx" href={stepHref(next.key, l.id)}>{next.label} →</a> : <span className="fin">✓ Finished</span>}
+      {confirm === l.id ? <span className="confirm"><span>Delete for good?</span><button type="button" className="btn del" disabled={deleting === l.id} onClick={() => remove(l)}>{deleting === l.id ? 'Deleting…' : 'Yes, delete'}</button><button type="button" className="btn btn-outline" onClick={() => setConfirm('')}>Keep</button></span>
+       : <button type="button" className="trash" aria-label={`Delete ${l.title || 'lesson'}`} title="Delete lesson" onClick={() => setConfirm(l.id)}>Delete</button>}
+     </div>
     </article>
    })}</div>
    {loading && <p role="status">Loading your lessons…</p>}
@@ -69,8 +85,13 @@ export default function MyLessons() {
    .st{padding:6px 10px;border-radius:8px;background:var(--vic-surface-muted);color:var(--vic-text-secondary);font-size:14px;font-weight:700;text-decoration:none}
    .st.done{background:var(--vic-ink);color:var(--vic-volt)}
    .nx{min-width:130px}
+   .acts{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+   .trash{background:none;border:0;color:var(--vic-text-secondary);font-weight:700;font-size:14px;cursor:pointer;padding:8px;text-decoration:underline}
+   .trash:hover{color:var(--vic-danger)}
+   .confirm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:800;color:var(--vic-danger)}
+   .del{background:var(--vic-danger);color:#fff}
    .fin{font-weight:800;color:var(--vic-success);min-width:130px;text-align:center}
-   @media(max-width:860px){.item{grid-template-columns:1fr}.nx,.fin{justify-self:start}}
+   @media(max-width:860px){.item{grid-template-columns:1fr}.acts{justify-content:flex-start}}
   `}</style>
  </PageShell>
 }
