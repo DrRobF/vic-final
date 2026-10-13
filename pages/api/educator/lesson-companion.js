@@ -2,7 +2,7 @@ import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
 import {validLessonId} from '../../../lib/educator-lessons.mjs'
 import {planAsText} from '../../../lib/lesson-designer.mjs'
-import {companionInput,companionInstructions,vicTargetText,familyFallback,nextFallback,prepFallback} from '../../../lib/lesson-companion.mjs'
+import {companionInput,companionInstructions,vicTargetText,familyFallback,nextFallback,prepFallback,plainText} from '../../../lib/lesson-companion.mjs'
 
 export const config={api:{bodyParser:{sizeLimit:'32kb'}},maxDuration:60}
 export default async function handler(req,res){
@@ -61,6 +61,7 @@ export default async function handler(req,res){
      if(!draft)draft=input.kind==='next'?nextFallback(lesson.draft,input.notes):prepFallback(lesson.draft)
     }
    }
+   if(body.action!=='save')draft=plainText(draft)
    draft=draft.slice(0,12000)
   }else return res.status(400).json({error:'Choose generate or save.'})
   const {data,error}=await auth.admin.from('educator_lesson_companions').upsert({user_id:auth.user.id,lesson_id:lessonId,kind:input.kind,notes:input.notes,draft,updated_at:new Date().toISOString()},{onConflict:'user_id,lesson_id,kind'}).select('kind,notes,draft,updated_at').single()
