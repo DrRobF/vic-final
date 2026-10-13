@@ -4,8 +4,8 @@ import fs from 'node:fs'
 import vm from 'node:vm'
 import {educatorDestination,accountPatch,canManageAccounts,schoolEducator,studentProfile} from '../lib/educator-account.mjs'
 test('Shared educator destinations cannot redirect outside the site or into student routes',()=>{
- for(const target of ['https://evil.example','//evil.example','/student','/student-login','/askvic?studentId=2',null])assert.equal(educatorDestination(target),'/educator')
- for(const target of ['/lessonplan','/teacher','/admin/accounts'])assert.equal(educatorDestination(target),target)
+ for(const target of ['https://evil.example','//evil.example','/student','/student-login','/askvic?studentId=2',null])assert.equal(educatorDestination(target),'/teach')
+ for(const target of ['/lessonplan','/teacher','/admin/accounts','/teach','/educator'])assert.equal(educatorDestination(target),target)
 })
 test('Account permissions require both authenticated administrator identity and approved profile',()=>{
  const email='admin@example.com',auth={user:{email},profile:{email,role:'teacher'}}

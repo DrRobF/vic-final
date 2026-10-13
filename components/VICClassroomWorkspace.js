@@ -25,7 +25,7 @@ function getStoredSupportLevel(value) {
   return normalizedLevel === 'core' ? 'on_level' : normalizedLevel
 }
 
-export default function VICClassroomWorkspace({prefillLesson, assignmentMode = false}) {
+export default function VICClassroomWorkspace({prefillLesson, assignmentMode = false, onAssigned}) {
   const router = useRouter()
 
   const [loadingTeacher, setLoadingTeacher] = useState(true)
@@ -803,12 +803,16 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
     setLessonFeedback({
       type: rosterRefreshed ? 'success' : 'error',
       message: rosterRefreshed
-        ? `Lesson assigned to ${selectedCount} students. The roster has been refreshed.`
+        ? `Lesson assigned to ${selectedCount} ${selectedCount === 1 ? 'student' : 'students'}. The roster has been refreshed.`
         : 'Lesson assigned successfully, but the roster could not refresh. Use Refresh Roster.',
     })
-    setLessonTitle('')
-    setLessonText('')
+    // On a lesson's Teach step the lesson stays loaded so another group can get it next.
+    if (!assignmentMode) {
+      setLessonTitle('')
+      setLessonText('')
+    }
     setSaving(false)
+    onAssigned?.(selectedCount)
   }
 
   return (
