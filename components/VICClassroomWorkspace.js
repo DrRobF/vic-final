@@ -1304,7 +1304,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
       <style jsx>{`
         .assignmentToolbar { position: sticky; top: 8px; z-index: 5; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px; margin:18px 0; border:2px solid var(--vic-primary); border-radius:12px; background:var(--vic-surface); box-shadow:var(--vic-shadow-raised); }
         .assignmentToolbar strong,.assignmentToolbar span { display:block; }
-        .assignmentToolbar span,.assignmentToolbar small { font-size:13px; color:var(--vic-text-secondary); margin-top:5px; }
+        .assignmentToolbar span,.assignmentToolbar small { font-size:14px; color:var(--vic-text-secondary); margin-top:5px; }
         .assignmentToolbar small { width:100%; }
         .focusedAssignment .classroomManagement,.focusedAssignment .managementOnly,.focusedAssignment .adminSection { display:none; }
         .focusedAssignment .studentTable { min-width:0; }
@@ -1324,20 +1324,20 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
         }
         .workspaceTitle {
           margin: 0;
-          font-size: 34px;
+          font-size:34px;
           line-height: 1.08;
           font-weight: 800;
           color: var(--vic-text-primary);
         }
         h2 {
           margin: 0;
-          font-size: 25px;
+          font-size:25px;
           font-weight: 750;
           color: var(--vic-text-primary);
         }
         h3 {
           margin: 0;
-          font-size: 20px;
+          font-size:20px;
           font-weight: 700;
           color: var(--vic-text-primary);
         }
@@ -1373,7 +1373,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           border: 1px solid var(--vic-border-soft);
           border-radius: 10px;
           padding: 7px 12px;
-          font-size: 14px;
+          font-size:14px;
           color: var(--vic-text-secondary);
           background: var(--vic-surface-muted);
         }
@@ -1406,7 +1406,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           box-shadow: var(--vic-shadow-soft);
         }
         .commandClassName {
-          font-size: 28px;
+          font-size:28px;
           line-height: 1.08;
           font-weight: 800;
           color: var(--vic-text-primary);
@@ -1422,28 +1422,28 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           box-shadow: none;
         }
         .cardEyebrow {
-          font-size: 12px;
+          font-size:13px;
           text-transform: uppercase;
           letter-spacing: 0.1em;
           color: var(--vic-text-secondary);
         }
         .signedInName {
-          font-size: 18px;
+          font-size:18px;
           font-weight: 650;
           color: var(--vic-text-primary);
         }
         .signedInMeta {
-          font-size: 13px;
+          font-size:14px;
           color: var(--vic-text-secondary);
         }
         .helperText,
         .statusText {
           margin: 0;
           color: var(--vic-text-secondary);
-          font-size: 15px;
+          font-size:15px;
         }
         .microCopy {
-          font-size: 12px;
+          font-size:13px;
           color: var(--vic-text-secondary);
         }
         .stackForm {
@@ -1455,7 +1455,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
         }
         label,
         .detailLabel {
-          font-size: 13px;
+          font-size:14px;
           color: var(--vic-text-secondary);
           font-weight: 500;
         }
@@ -1483,8 +1483,8 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           appearance: none;
           -webkit-appearance: none;
           -moz-appearance: none;
-          background-image: linear-gradient(45deg, transparent 50%, rgba(217, 203, 190, 0.95) 50%),
-            linear-gradient(135deg, rgba(217, 203, 190, 0.95) 50%, transparent 50%);
+          background-image: linear-gradient(45deg, transparent 50%, rgba(187, 197, 220, 0.95) 50%),
+            linear-gradient(135deg, rgba(187, 197, 220, 0.95) 50%, transparent 50%);
           background-position: calc(100% - 18px) calc(50% - 3px), calc(100% - 12px) calc(50% - 3px);
           background-size: 6px 6px, 6px 6px;
           background-repeat: no-repeat;
@@ -1507,10 +1507,10 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           border: 1px solid var(--vic-primary);
           color: var(--vic-surface);
           background: var(--vic-primary);
-          box-shadow: 0 10px 22px rgba(181, 83, 47, 0.24);
+          box-shadow: 0 10px 22px rgba(19, 79, 209, 0.24);
         }
         .assignButton {
-          font-size: 15px;
+          font-size:15px;
           padding: 13px 16px;
         }
         .secondaryButton {
@@ -1559,7 +1559,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
         }
         .classManageButton {
           padding: 8px 12px;
-          font-size: 13px;
+          font-size:14px;
         }
         .inlineClassEditor {
           border: 1px solid var(--vic-border-soft);
@@ -1584,7 +1584,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           gap: 8px;
         }
         .deleteConfirmTitle {
-          font-size: 15px;
+          font-size:15px;
           font-weight: 800;
           color: #7f2d37;
         }
@@ -1612,18 +1612,18 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           background: var(--vic-bg);
         }
         .selected {
-          background: #E8D8C8;
-          border-color: rgba(150, 69, 40, 0.72);
-          box-shadow: 0 0 0 1px rgba(181, 83, 47, 0.18);
+          background: #C9D2E7;
+          border-color: rgba(16, 66, 174, 0.72);
+          box-shadow: 0 0 0 1px rgba(19, 79, 209, 0.18);
         }
         .rowTitle,
         .detailValue {
-          font-size: 16px;
+          font-size:16px;
           font-weight: 500;
           color: var(--vic-text-primary);
         }
         .rowSubtext {
-          font-size: 14px;
+          font-size:14px;
           color: var(--vic-text-secondary);
           margin-top: 2px;
         }
@@ -1636,11 +1636,11 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           justify-content: space-between;
         }
         .selectionCount {
-          font-size: 14px;
+          font-size:14px;
           color: var(--vic-text-secondary);
         }
         .selectionPill {
-          font-size: 14px;
+          font-size:14px;
           font-weight: 800;
           border-radius: 10px;
           border: 1px solid var(--vic-primary-soft);
@@ -1657,7 +1657,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
         }
         .rosterToggleButton {
           padding: 8px 12px;
-          font-size: 13px;
+          font-size:14px;
         }
         .justAssignedBadge {
           display: inline-block;
@@ -1666,7 +1666,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           padding: 3px 8px;
           background: var(--vic-success-soft);
           color: var(--vic-success);
-          font-size: 11px;
+          font-size:13px;
           font-weight: 800;
           white-space: nowrap;
         }
@@ -1681,24 +1681,24 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           gap: 8px;
         }
         .summaryTotal {
-          font-size: 14px;
+          font-size:14px;
           font-weight: 800;
           color: var(--vic-primary-hover);
         }
         .summaryDivider {
           color: var(--vic-primary-hover);
           opacity: 0.75;
-          font-size: 12px;
+          font-size:13px;
         }
         .summarySubtle {
-          font-size: 13px;
+          font-size:14px;
           color: var(--vic-text-secondary);
           margin-right: 2px;
         }
         .summaryChip {
           border-radius: 10px;
           padding: 5px 10px;
-          font-size: 12px;
+          font-size:13px;
           font-weight: 800;
           border: 1px solid var(--vic-border-soft);
           background: var(--vic-surface);
@@ -1738,7 +1738,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           box-shadow: var(--vic-shadow-soft);
         }
         .classCodeValue {
-          font-size: 32px;
+          font-size:32px;
           line-height: 1;
           letter-spacing: 0.08em;
           font-weight: 800;
@@ -1752,7 +1752,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
         }
         .groupButton {
           padding: 8px 12px;
-          font-size: 13px;
+          font-size:14px;
         }
         .studentTableWrap {
           width: 100%;
@@ -1778,7 +1778,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           overflow-wrap: anywhere;
         }
         .studentTable th {
-          font-size: 12px;
+          font-size:13px;
           text-transform: uppercase;
           letter-spacing: 0.05em;
           color: var(--vic-text-secondary);
@@ -1786,16 +1786,16 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           font-weight: 700;
         }
         .studentRow.isSelected {
-          background: rgba(181, 83, 47, 0.08);
+          background: rgba(19, 79, 209, 0.08);
         }
         .studentCellName {
-          font-size: 15px;
+          font-size:15px;
           font-weight: 650;
           color: var(--vic-text-primary);
           overflow-wrap: anywhere;
         }
         .studentMetaLine {
-          font-size: 12px;
+          font-size:13px;
           color: var(--vic-text-secondary);
           margin: 0;
         }
@@ -1813,7 +1813,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           background: var(--vic-surface-muted);
           color: var(--vic-text-secondary);
           padding: 9px 10px;
-          font-size: 14px;
+          font-size:14px;
           font-weight: 600;
           cursor: pointer;
           flex: 1 1 0;
@@ -1844,10 +1844,10 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           box-shadow: 0 0 0 1px rgba(179, 93, 103, 0.3);
         }
         .supportButton.onLevel.isActive {
-          background: #5f8f66;
-          border-color: #5f8f66;
+          background: #586B96;
+          border-color: #586B96;
           color: var(--vic-surface);
-          box-shadow: 0 0 0 1px rgba(95, 143, 102, 0.3);
+          box-shadow: 0 0 0 1px rgba(88, 107, 150, 0.3);
         }
         .supportButton.enrichment.isActive {
           background: #7a68b3;
@@ -1861,7 +1861,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           border-radius: 999px;
           border: 1px solid var(--vic-border);
           padding: 8px 12px;
-          font-size: 12px;
+          font-size:13px;
           font-weight: 800;
           letter-spacing: 0.04em;
           cursor: pointer;
@@ -1877,9 +1877,9 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           color: var(--vic-text-secondary);
         }
         .assignToggle.isOn {
-          background: rgba(95, 143, 102, 0.12);
-          border-color: #5f8f66;
-          color: #3e6345;
+          background: rgba(88, 107, 150, 0.12);
+          border-color: #586B96;
+          color: #394768;
         }
         .parentEmailCell {
           display: grid;
@@ -1888,7 +1888,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
         .saveEmailButton {
           width: fit-content;
           padding: 6px 10px;
-          font-size: 12px;
+          font-size:13px;
         }
         .rowActions {
           display: flex;
@@ -1896,7 +1896,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           flex-wrap: wrap;
         }
         .rowStatus {
-          font-size: 12px;
+          font-size:13px;
           color: var(--vic-text-secondary);
           display: grid;
           gap: 4px;
@@ -1944,13 +1944,13 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           color: var(--vic-danger);
           margin: 0;
           line-height: 1.45;
-          font-size: 14px;
+          font-size:14px;
         }
         .noticeText {
           color: var(--vic-success);
           margin: 0;
           line-height: 1.45;
-          font-size: 14px;
+          font-size:14px;
         }
 
         @media (min-width: 900px) {
@@ -1967,7 +1967,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
             grid-template-columns: 1fr;
           }
           .classCodeValue {
-            font-size: 26px;
+            font-size:26px;
           }
           .studentTable th,
           .studentTable td {

@@ -9,7 +9,7 @@ export default function VICLogo({ size = 72, variant = 'header', alt = 'VIC logo
       style={{
         borderRadius: `${tileRadius}px`,
         padding: '4px',
-        background: '#2B241F',
+        background: '#1D222D',
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',

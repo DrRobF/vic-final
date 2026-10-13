@@ -53,7 +53,7 @@ export default function AddToWeek({draft,targetDay,targetWeekOf,targetWeekId,ope
    {error&&<p role="alert" className="ld-error">{error}</p>}
   </div>}
   <style jsx>{`
-  .atw-status{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:var(--vic-success-soft);font-size:13px;line-height:1.5}
+  .atw-status{margin:12px 0 0;padding:10px 14px;border-radius:10px;background:var(--vic-success-soft);font-size:14px;line-height:1.5}
   .atw-status a{font-weight:700;color:var(--vic-primary)}
   .atw-panel{margin-top:12px;padding:16px;border:1px solid var(--vic-border);border-radius:12px;background:var(--vic-surface-muted)}
   .atw-row{display:grid;grid-template-columns:1fr 1fr;gap:0 12px}

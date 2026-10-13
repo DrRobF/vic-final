@@ -1,218 +1,123 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import VICLogo from './VICLogo'
+import TextSizeControl from './TextSizeControl'
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Home' },
-  { href: '/askvic', label: 'VIC Co-Teacher' },
-  { href: '/lessonplan', label: 'Lesson Designer' },
-  { href: '/educatorassistant', label: 'Educator Assistant' },
+// One top bar for the whole site, in the Midnight Circuit look.
+// Who is signed in decides the menu: visitors, educators and students each see only their own places.
+const VISITOR_NAV = [
+ { href: '/', label: 'Home' },
+ { href: '/lessonplan', label: 'Lesson Designer' },
+ { href: '/askvic', label: 'VIC Co-Teacher' },
+ { href: '/educatorassistant', label: 'Assistant' },
+]
+const EDUCATOR_NAV = [
+ { href: '/educator', label: 'My Dashboard', match: ['/educator', '/teach'] },
+ { href: '/lessonplan', label: 'Lessons', match: ['/lessonplan', '/lesson'] },
+ { href: '/lessonplan/week', label: 'My Week', match: ['/lessonplan/week'] },
+ { href: '/askvic', label: 'VIC', match: ['/askvic', '/teacher', '/assignlesson'] },
+ { href: '/parentletters', label: 'Families', match: ['/parentletters'] },
+]
+const STUDENT_NAV = [
+ { href: '/student', label: 'Today', match: ['/student', '/learn'] },
+ { href: '/askvic', label: 'VIC', match: ['/askvic'] },
 ]
 
-const PRIMARY_PATHS = new Set(['/askvic', '/teacher', '/assistantprincipal', '/educatorassistant', '/lessonplan'])
-
-function getDisplayName(profile, authUser) {
-  if (profile?.name) return profile.name
-  if (profile?.email) return profile.email
-  if (authUser?.email) return authUser.email
-  return ''
+function displayName(profile, user) { return profile?.name || profile?.email || user?.email || '' }
+function isActive(item, currentPath) {
+ const paths = item.match || [item.href]
+ // The most specific match wins, so "/lessonplan/week" lights up My Week rather than Lessons.
+ return paths.some(p => currentPath === p || (p !== '/' && currentPath.startsWith(p + '/') && !(item.href === '/lessonplan' && currentPath.startsWith('/lessonplan/week'))))
 }
 
 export default function VICHeader({ currentPath = '', statusLabel = '', statusTone = 'ready' }) {
-  const [authUser, setAuthUser] = useState(null)
-  const [profile, setProfile] = useState(null)
-  const [loggingOut, setLoggingOut] = useState(false)
+ const [authUser, setAuthUser] = useState(null)
+ const [profile, setProfile] = useState(null)
+ const [loggingOut, setLoggingOut] = useState(false)
+ const [open, setOpen] = useState(false)
 
-  useEffect(() => {
-    let mounted = true
-
-    async function loadUser() {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-
-      if (!mounted) return
-      setAuthUser(user || null)
-
-      if (!user?.email) {
-        setProfile(null)
-        return
-      }
-
-      const { data } = await supabase
-        .from('users')
-        .select('name, email, role')
-        .eq('auth_user_id', user.id)
-        .order('id', { ascending: true })
-        .limit(1)
-
-      if (!mounted) return
-      setProfile(data?.[0] || null)
-    }
-
-    loadUser()
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setAuthUser(session?.user || null)
-      if (!session?.user) {
-        setProfile(null)
-      }
-    })
-
-    return () => {
-      mounted = false
-      authListener?.subscription?.unsubscribe()
-    }
-  }, [])
-
-  const signedInName = useMemo(() => getDisplayName(profile, authUser), [profile, authUser])
-  const isSignedIn = Boolean(authUser)
-  const isStudent=profile?.role==='student'
-
-  async function handleLogout() {
-    if (loggingOut) return
-    setLoggingOut(true)
-    await supabase.auth.signOut()
-    setLoggingOut(false)
-    window.location.href = isStudent?'/student-login':'/login'
+ useEffect(() => {
+  let mounted = true
+  async function load() {
+   const { data: { user } } = await supabase.auth.getUser()
+   if (!mounted) return
+   setAuthUser(user || null)
+   if (!user?.email) { setProfile(null); return }
+   const { data } = await supabase.from('users').select('name, email, role').eq('auth_user_id', user.id).order('id', { ascending: true }).limit(1)
+   if (mounted) setProfile(data?.[0] || null)
   }
+  load()
+  const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => { setAuthUser(session?.user || null); if (!session?.user) setProfile(null) })
+  return () => { mounted = false; listener?.subscription?.unsubscribe() }
+ }, [])
 
-  return (
-    <header className="vicHeader">
-      <a className="brand" href="/">
-        <div className="brandMark">
-          <VICLogo size={56} variant="header" />
-        </div>
-        <div>
-          <div className="brandTitle">VIC</div>
-          <div className="brandSub">Virtual Co-Teacher</div>
-        </div>
-      </a>
+ const name = useMemo(() => displayName(profile, authUser), [profile, authUser])
+ const isStudent = profile?.role === 'student'
+ const nav = !authUser ? VISITOR_NAV : isStudent ? STUDENT_NAV : EDUCATOR_NAV
 
-      <div className="userArea">
-        {statusLabel ? (
-          <div className={`headerStatus ${statusTone === 'thinking' ? 'thinking' : 'ready'}`}>
-            <span className="headerStatusDot" />
-            <span>{statusLabel}</span>
-          </div>
-        ) : null}
-        {isSignedIn ? (
-          <>
-            <div className="signedInName" title={signedInName}>
-              {signedInName || 'Signed in'}
-            </div>
-            <button type="button" className="logoutButton" onClick={handleLogout} disabled={loggingOut}>
-              {loggingOut ? 'Logging out...' : 'Logout'}
-            </button>
-          </>
-        ) : (
-          <>
-            <a className="authPrompt" href="/login">Educator log in</a>
-            <a className="authPrompt" href="/student-login">Student log in</a>
-            <a className="authPrompt signupPrompt" href="/signup">Sign up — it’s free</a>
-          </>
-        )}
-      </div>
+ async function logout() {
+  if (loggingOut) return
+  setLoggingOut(true)
+  await supabase.auth.signOut()
+  window.location.href = isStudent ? '/student-login' : '/login'
+ }
 
-      <div className="navigationRow">
-      <nav className="navLinks" aria-label="Primary">
-        {(isStudent?NAV_ITEMS.filter(item=>['/','/askvic'].includes(item.href)):NAV_ITEMS).map((item) => {
-          const isPrimary = PRIMARY_PATHS.has(item.href)
-          const classes = [
-            'navLink',
-            isPrimary ? 'primaryLink' : 'secondaryLink',
-            (currentPath === item.href || (currentPath === '/assistantprincipal' && item.href === '/educatorassistant')) ? 'active' : '',
-          ]
-            .filter(Boolean)
-            .join(' ')
-
-          return (
-            <a key={item.href} href={item.href} className={classes}>
-              {item.label}
-            </a>
-          )
-        })}
-      </nav>
-
-        {!isStudent && <nav className="workspaceLinks" aria-label="Educator dashboard"><a href="/educator" aria-current={currentPath==='/educator'?'page':undefined}>Educator Dashboard →</a></nav>}
-      </div>
-
-      <style jsx>{`
-        .vicHeader {
-          width: 100%;
-          display: grid;
-          grid-template-columns: auto 1fr;
-          align-items: center;
-          gap: 12px;
-          justify-content: space-between;
-          padding: 8px 12px;
-          border-radius: 14px;
-          background: var(--vic-surface);
-          border: 1px solid var(--vic-border-soft);
-          box-shadow: var(--vic-shadow-card);
-          margin-bottom: 6px;
-          flex-wrap: nowrap;
-        }
-        .brand { display: flex; align-items: center; gap: 9px; text-decoration: none; color: var(--vic-text-primary); flex-shrink: 0; }
-        .brandMark {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-        }
-        .brandTitle { font-size: 20px; font-weight: 900; letter-spacing: 0.01em; line-height: 1; }
-        .brandSub { font-size: 11px; color: var(--vic-text-secondary); font-weight: 700; line-height: 1.1; }
-        .navLinks { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
-        .navLink { color: var(--vic-text-secondary); text-decoration: none; font-size: 13px; padding: 7px 10px; border-radius: 9px; border: 1px solid transparent; transition: color .15s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease; font-weight: 800; }
-        .primaryLink { color: var(--vic-text-primary); }
-        .navLink:hover { border-color: rgba(181, 83, 47, 0.42); color: var(--vic-primary); background: var(--vic-surface-muted); }
-        .active { background: var(--vic-primary); border-color: var(--vic-primary); color: var(--vic-surface); box-shadow: 0 10px 20px rgba(150,69,40,0.28); }
-        .userArea { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-left: auto; }
-        .headerStatus {
-          display: inline-flex;
-          align-items: center;
-          gap: 7px;
-          padding: 6px 10px;
-          border-radius: 999px;
-          border: 1px solid var(--vic-border-soft);
-          background: var(--vic-surface-muted);
-          font-size: 11px;
-          font-weight: 800;
-          color: var(--vic-text-primary);
-        }
-        .headerStatus.ready .headerStatusDot {
-          background: #22c55e;
-          box-shadow: 0 0 10px rgba(34, 197, 94, 0.48);
-        }
-        .headerStatus.thinking .headerStatusDot {
-          background: #f59e0b;
-          box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
-        }
-        .headerStatusDot {
-          width: 8px;
-          height: 8px;
-          border-radius: 50%;
-          flex-shrink: 0;
-        }
-        .signedInName { max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11px; color: var(--vic-text-secondary); font-weight: 700; }
-        .logoutButton, .authPrompt { color: var(--vic-text-primary); text-decoration: none; border: 1px solid var(--vic-border); background: var(--vic-surface); border-radius: 9px; padding: 7px 10px; font-size: 12px; font-weight: 800; cursor: pointer; transition: background .15s ease, border-color .15s ease; }
-        .logoutButton:hover, .authPrompt:hover { background: var(--vic-surface-muted); border-color: rgba(181, 83, 47, 0.34); }
-        .signupPrompt { background: var(--vic-primary); color: white; border-color: var(--vic-primary); white-space: nowrap; }
-        .signupPrompt:hover { background: var(--vic-primary-hover, var(--vic-primary)); color: white; }
-        .logoutButton:disabled { opacity: 0.7; cursor: default; }
-        .vicHeader{padding:16px 20px;border-radius:18px;box-shadow:none;gap:16px}
-        .userArea{justify-content:flex-end;margin-left:0}
-        .navigationRow{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid var(--vic-border-soft);padding-top:12px}
-        .navLinks{gap:5px;flex-wrap:nowrap}
-        .navLink{font-size:12px;padding:8px 10px;white-space:nowrap}
-        .active{background:var(--vic-surface-muted);color:var(--vic-primary);box-shadow:none;border-color:var(--vic-border-soft)}
-        .workspaceLinks{display:flex;align-items:center;gap:14px;padding-left:20px;border-left:1px solid var(--vic-border-soft)}
-        .workspaceLinks span{font-size:8px;font-weight:800;letter-spacing:.08em;color:var(--vic-text-secondary)}
-        .workspaceLinks a{font-size:11px;font-weight:700;color:var(--vic-text-secondary);white-space:nowrap;text-decoration:none}
-        .workspaceLinks a:hover{text-decoration:underline;color:var(--vic-primary)}
-        @media(max-width:1100px){.workspaceLinks span{display:none}.navigationRow{gap:10px}.workspaceLinks{gap:10px;padding-left:12px}}
-        @media(max-width:800px){.vicHeader{padding:12px;gap:12px}.brandSub{display:none}.navigationRow{flex-direction:column;align-items:flex-start}.navLinks{flex-wrap:wrap}.workspaceLinks{padding:10px 0 0;border-left:0;border-top:1px solid var(--vic-border-soft);width:100%;flex-wrap:wrap}.workspaceLinks span{display:inline}.authPrompt,.logoutButton{font-size:10px;padding:7px}.userArea{gap:5px}.signedInName{max-width:115px}}
-        @media(max-width:420px){.vicHeader{grid-template-columns:1fr}.userArea{justify-content:flex-start}.brandSub{display:block}.brandTitle{font-size:18px}.navLink{font-size:11px;padding:7px 8px}}
-      `}</style>
-    </header>
-  )
+ return (
+  <header className="vicHeader">
+   <a className="brand" href={authUser ? (isStudent ? '/student' : '/educator') : '/'} aria-label="AskVic home">
+    <span className="mark" aria-hidden="true">V</span>
+    <span className="word">AskVic</span>
+   </a>
+   <button type="button" className="menuToggle" aria-expanded={open} aria-controls="vic-primary-nav" onClick={() => setOpen(!open)}>
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+    <span className="sr">Menu</span>
+   </button>
+   <nav id="vic-primary-nav" className={open ? 'nav open' : 'nav'} aria-label="Primary">
+    {nav.map(item => <a key={item.href} href={item.href} className={isActive(item, currentPath) ? 'active' : ''} aria-current={isActive(item, currentPath) ? 'page' : undefined}>{item.label}</a>)}
+   </nav>
+   <div className="right">
+    {statusLabel ? <span className={`status ${statusTone === 'thinking' ? 'thinking' : ''}`}><span className="dot" aria-hidden="true" />{statusLabel}</span> : null}
+    {authUser && <TextSizeControl tone="dark" />}
+    {authUser ? <>
+     <span className="who" title={name}>{name || 'Signed in'}</span>
+     <button type="button" className="ghost" onClick={logout} disabled={loggingOut}>{loggingOut ? 'Logging out…' : 'Log out'}</button>
+    </> : <>
+     <a className="ghost" href="/login">Educator log in</a>
+     <a className="ghost" href="/student-login">Student log in</a>
+     <a className="cta" href="/signup">Sign up free</a>
+    </>}
+   </div>
+   <style jsx>{`
+    .vicHeader{display:flex;align-items:center;gap:24px;padding:12px 24px;background:var(--vic-ink);color:var(--vic-ink-text);border-radius:16px;margin-bottom:12px;flex-wrap:wrap}
+    .brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:#fff;flex-shrink:0}
+    .mark{width:38px;height:38px;border-radius:10px;background:var(--vic-ink-2);border:1px solid var(--vic-ink-line);color:var(--vic-cyan);display:grid;place-items:center;font-family:var(--font-head);font-weight:700;font-size:19px}
+    .word{font-family:var(--font-head);font-weight:700;font-size:21px;letter-spacing:-.01em}
+    .nav{display:flex;gap:4px;flex-wrap:wrap}
+    .nav a{padding:9px 14px;border-radius:9px;color:var(--vic-ink-muted);text-decoration:none;font-weight:700;font-size:16px;white-space:nowrap}
+    .nav a:hover{color:#fff;background:var(--vic-ink-2)}
+    .nav a.active{background:var(--vic-primary);color:#fff}
+    .right{margin-left:auto;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+    .who{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;color:var(--vic-ink-muted)}
+    .ghost,.cta{padding:9px 14px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;cursor:pointer;white-space:nowrap}
+    .ghost{border:1px solid var(--vic-ink-line);background:transparent;color:var(--vic-ink-text)}
+    .ghost:hover{background:var(--vic-ink-2)}
+    .ghost:disabled{opacity:.6}
+    .cta{background:var(--vic-primary);color:#fff;border:1px solid var(--vic-primary)}
+    .cta:hover{background:var(--vic-primary-hover)}
+    .status{display:inline-flex;align-items:center;gap:8px;padding:6px 11px;border-radius:999px;border:1px solid var(--vic-ink-line);font-size:14px;font-weight:700}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--vic-volt);box-shadow:0 0 10px rgba(106, 131, 188,.6)}
+    .status.thinking .dot{background:var(--vic-cyan);box-shadow:0 0 10px rgba(91, 118, 181,.6)}
+    .menuToggle{display:none;margin-left:auto;background:transparent;border:1px solid var(--vic-ink-line);color:#fff;border-radius:10px;padding:8px;cursor:pointer}
+    .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+    @media(max-width:900px){
+     .vicHeader{padding:10px 14px;gap:10px}
+     .menuToggle{display:inline-flex}
+     .nav{display:none;order:3;width:100%;flex-direction:column}
+     .nav.open{display:flex}
+     .right{order:4;width:100%;margin-left:0;justify-content:flex-start}
+     .who{display:none}
+    }
+    @media print{.vicHeader{display:none}}
+   `}</style>
+  </header>
+ )
 }

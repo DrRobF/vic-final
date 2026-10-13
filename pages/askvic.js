@@ -982,7 +982,7 @@ ${context}`
             My Own Work
           </button>
         </div>
-        <div style={{fontSize:12,lineHeight:1.5,marginTop:10,color:'#475569'}}>Learning conversations in your selected class are saved so your teacher can review your work and help you learn.</div>
+        <div style={{fontSize:13,lineHeight:1.5,marginTop:10,color:'#475569'}}>Learning conversations in your selected class are saved so your teacher can review your work and help you learn.</div>
       </div>
 
       <div style={styles.controlCenterSection}>
@@ -1343,7 +1343,7 @@ function VisualCardRenderer({ visual, styles }) {
                 ...styles.fractionPiece,
                 background:
                   index < numerator
-                    ? 'linear-gradient(135deg, rgba(181,83,47,1) 0%, rgba(245,158,11,1) 100%)'
+                    ? 'linear-gradient(135deg, rgba(19, 79, 209,1) 0%, rgba(23, 89, 233,1) 100%)'
                     : 'var(--vic-border)',
               }}
             />
@@ -1386,7 +1386,7 @@ function VisualCardRenderer({ visual, styles }) {
                     style={{
                       ...styles.numberDot,
                       background: isHighlight ? 'var(--vic-primary)' : 'var(--vic-disabled)',
-                      boxShadow: isHighlight ? '0 0 0 5px rgba(181,83,47,0.18)' : 'none',
+                      boxShadow: isHighlight ? '0 0 0 5px rgba(19, 79, 209,0.18)' : 'none',
                     }}
                   />
                   <div
@@ -1551,7 +1551,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       left: '-90px',
       width: '320px',
       height: '320px',
-      background: 'rgba(181, 83, 47, 0.12)',
+      background: 'rgba(19, 79, 209, 0.12)',
       filter: 'blur(90px)',
       borderRadius: '50%',
       pointerEvents: 'none',
@@ -1564,7 +1564,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       right: '-70px',
       width: '340px',
       height: '340px',
-      background: 'rgba(181, 83, 47, 0.09)',
+      background: 'rgba(19, 79, 209, 0.09)',
       filter: 'blur(92px)',
       borderRadius: '50%',
       pointerEvents: 'none',
@@ -1577,7 +1577,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       right: '16%',
       width: '240px',
       height: '240px',
-      background: 'rgba(150, 69, 40, 0.08)',
+      background: 'rgba(16, 66, 174, 0.08)',
       filter: 'blur(82px)',
       borderRadius: '50%',
       pointerEvents: 'none',
@@ -1590,7 +1590,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       left: '8%',
       width: '220px',
       height: '220px',
-      background: 'rgba(181, 83, 47, 0.08)',
+      background: 'rgba(19, 79, 209, 0.08)',
       filter: 'blur(75px)',
       borderRadius: '50%',
       pointerEvents: 'none',
@@ -1612,7 +1612,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       position: 'absolute',
       inset: 0,
       background:
-        'linear-gradient(115deg, transparent 0%, transparent 36%, rgba(181, 83, 47, 0.08) 50%, transparent 64%, transparent 100%)',
+        'linear-gradient(115deg, transparent 0%, transparent 36%, rgba(19, 79, 209, 0.08) 50%, transparent 64%, transparent 100%)',
       pointerEvents: 'none',
     },
 
@@ -1663,16 +1663,16 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     headerBadge: {
-      fontSize: '11px',
+      fontSize: '13px',
       fontWeight: 800,
       letterSpacing: '0.08em',
       textTransform: 'uppercase',
       color: 'var(--vic-text-primary)',
       padding: '8px 12px',
       borderRadius: '999px',
-      background: 'linear-gradient(135deg, rgba(181, 83, 47,0.22), rgba(123, 129, 99,0.12))',
-      border: '1px solid #D8B7A7',
-      boxShadow: '0 0 16px rgba(181, 83, 47,0.12)',
+      background: 'linear-gradient(135deg, rgba(19, 79, 209,0.22), rgba(91, 105, 137,0.12))',
+      border: '1px solid #A7B6D8',
+      boxShadow: '0 0 16px rgba(19, 79, 209,0.12)',
       whiteSpace: 'nowrap',
     },
 
@@ -1690,13 +1690,13 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       width: isMobile ? '42px' : '46px',
       height: isMobile ? '42px' : '46px',
       borderRadius: '14px',
-      background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(239,231,220,0.96) 100%)',
+      background: 'linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(220, 226, 239,0.96) 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
       overflow: 'hidden',
       boxShadow:
-        'inset 0 1px 0 rgba(255,255,255,0.78), 0 8px 18px rgba(0,0,0,0.18), 0 0 18px rgba(181, 83, 47, 0.10)',
+        'inset 0 1px 0 rgba(255,255,255,0.78), 0 8px 18px rgba(0,0,0,0.18), 0 0 18px rgba(19, 79, 209, 0.10)',
       flexShrink: 0,
     },
 
@@ -1722,7 +1722,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     brandSub: {
-      fontSize: '12px',
+      fontSize: '13px',
       color: 'var(--vic-text-secondary)',
       lineHeight: 1.25,
     },
@@ -1742,9 +1742,9 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontWeight: 800,
       padding: isMobile ? '9px 12px' : '10px 14px',
       borderRadius: '12px',
-      background: 'rgba(239, 231, 220, 0.85)',
-      border: '1px solid rgba(232, 216, 200, 0.72)',
-      boxShadow: 'inset 0 1px 0 rgba(239, 231, 220, 0.82)',
+      background: 'rgba(220, 226, 239, 0.85)',
+      border: '1px solid rgba(201, 210, 231, 0.72)',
+      boxShadow: 'inset 0 1px 0 rgba(220, 226, 239, 0.82)',
       whiteSpace: 'nowrap',
     },
 
@@ -1755,9 +1755,9 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontWeight: 800,
       padding: isMobile ? '9px 12px' : '10px 14px',
       borderRadius: '12px',
-      background: 'linear-gradient(135deg, rgba(181, 83, 47,0.24), rgba(123, 129, 99,0.10))',
-      border: '1px solid #D8B7A7',
-      boxShadow: '0 0 18px rgba(181, 83, 47,0.10), inset 0 1px 0 rgba(239, 231, 220, 0.9)',
+      background: 'linear-gradient(135deg, rgba(19, 79, 209,0.24), rgba(91, 105, 137,0.10))',
+      border: '1px solid #A7B6D8',
+      boxShadow: '0 0 18px rgba(19, 79, 209,0.10), inset 0 1px 0 rgba(220, 226, 239, 0.9)',
       whiteSpace: 'nowrap',
     },
 
@@ -1770,7 +1770,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       borderRadius: '12px',
       background: 'var(--vic-surface)',
       border: '1px solid var(--vic-border-soft)',
-      boxShadow: 'inset 0 1px 0 rgba(232, 216, 200, 0.72)',
+      boxShadow: 'inset 0 1px 0 rgba(201, 210, 231, 0.72)',
       whiteSpace: 'nowrap',
     },
 
@@ -1827,7 +1827,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     controlCenterSubtext: {
-      fontSize: '12px',
+      fontSize: '13px',
       color: 'var(--vic-text-secondary)',
       lineHeight: 1.35,
     },
@@ -1841,7 +1841,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     controlCenterSectionLabel: {
-      fontSize: '11px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 800,
       letterSpacing: '0.08em',
@@ -1856,14 +1856,14 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     quickStartText: {
-      fontSize: '13px',
+      fontSize: '14px',
       lineHeight: 1.45,
       color: 'var(--vic-text-secondary)',
       maxWidth: '560px',
     },
 
     sectionEyebrow: {
-      fontSize: '11px',
+      fontSize: '13px',
       letterSpacing: '0.16em',
       textTransform: 'uppercase',
       color: 'var(--vic-primary)',
@@ -1887,7 +1887,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     subjectButton: {
       position: 'relative',
-      border: '1px solid rgba(217, 203, 190, 0.40)',
+      border: '1px solid rgba(187, 197, 220, 0.40)',
       background:
         'linear-gradient(180deg, var(--vic-surface) 0%, var(--vic-surface-muted) 100%)',
       color: 'var(--vic-text-primary)',
@@ -1897,7 +1897,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontWeight: 800,
       textAlign: 'left',
       boxShadow:
-        '0 10px 22px rgba(0,0,0,0.18), 0 0 16px rgba(181, 83, 47,0.08), inset 0 1px 0 rgba(239, 231, 220, 0.82)',
+        '0 10px 22px rgba(0,0,0,0.18), 0 0 16px rgba(19, 79, 209,0.08), inset 0 1px 0 rgba(220, 226, 239, 0.82)',
       display: 'flex',
       flexDirection: 'column',
       gap: '6px',
@@ -1911,7 +1911,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     subjectButtonGlow: {
       position: 'absolute',
       inset: '-35%',
-      background: 'radial-gradient(circle at 18% 18%, rgba(181, 83, 47,0.18), transparent 38%)',
+      background: 'radial-gradient(circle at 18% 18%, rgba(19, 79, 209,0.18), transparent 38%)',
       pointerEvents: 'none',
     },
 
@@ -1923,7 +1923,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     subjectButtonSub: {
-      fontSize: '11px',
+      fontSize: '13px',
       lineHeight: 1.3,
       color: 'var(--vic-text-secondary)',
       fontWeight: 600,
@@ -1940,7 +1940,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     quickStartInlineLabel: {
-      fontSize: '12px',
+      fontSize: '13px',
       fontWeight: 800,
       color: 'var(--vic-text-secondary)',
       whiteSpace: 'nowrap',
@@ -1953,15 +1953,15 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     quickStartPill: {
-      background: 'rgba(232, 216, 200, 0.72)',
+      background: 'rgba(201, 210, 231, 0.72)',
       border: '1px solid rgba(255,255,255,0.26)',
       color: 'var(--vic-text-primary)',
       padding: '8px 12px',
       borderRadius: '999px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
-      boxShadow: 'inset 0 1px 0 rgba(239, 231, 220, 0.85)',
+      boxShadow: 'inset 0 1px 0 rgba(220, 226, 239, 0.85)',
     },
 
     toolLauncherGrid: { display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(2, minmax(0, 1fr))', gap: '12px', marginTop: '18px' },
@@ -2003,7 +2003,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     toolsSubtext: {
-      fontSize: '12px',
+      fontSize: '13px',
       color: 'var(--vic-text-secondary)',
       lineHeight: 1.3,
       marginTop: '4px',
@@ -2050,7 +2050,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontSize: isMobile ? '14px' : '13px',
       lineHeight: 1.2,
       fontWeight: 800,
-      boxShadow: '0 12px 26px rgba(181, 83, 47, 0.35)',
+      boxShadow: '0 12px 26px rgba(19, 79, 209, 0.35)',
       cursor: 'pointer',
       minHeight: '40px',
       display: 'flex',
@@ -2082,26 +2082,26 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     supportButton: {
-      background: 'linear-gradient(135deg, rgba(239, 231, 220, 0.9), rgba(181, 83, 47,0.05))',
-      border: '1px solid rgba(217, 203, 190, 0.45)',
+      background: 'linear-gradient(135deg, rgba(220, 226, 239, 0.9), rgba(19, 79, 209,0.05))',
+      border: '1px solid rgba(187, 197, 220, 0.45)',
       color: 'var(--vic-text-primary)',
       padding: '11px 12px',
       borderRadius: '14px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
     },
 
     supportButtonActive: {
       background:
-        'linear-gradient(135deg, rgba(181, 83, 47,0.24) 0%, rgba(123, 129, 99,0.10) 100%)',
-      border: '1px solid rgba(150, 69, 40, 0.28)',
+        'linear-gradient(135deg, rgba(19, 79, 209,0.24) 0%, rgba(91, 105, 137,0.10) 100%)',
+      border: '1px solid rgba(16, 66, 174, 0.28)',
       color: 'var(--vic-text-primary)',
       padding: '11px 12px',
       borderRadius: '14px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
-      boxShadow: '0 12px 26px rgba(181, 83, 47, 0.35)',
+      boxShadow: '0 12px 26px rgba(19, 79, 209, 0.35)',
       cursor: 'pointer',
     },
 
@@ -2132,7 +2132,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-text-primary)',
       padding: '13px 18px',
       borderRadius: '10px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
     },
@@ -2143,10 +2143,10 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-surface)',
       padding: '14px 20px',
       borderRadius: '10px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
-      boxShadow: '0 12px 28px rgba(181, 83, 47, 0.35)',
+      boxShadow: '0 12px 28px rgba(19, 79, 209, 0.35)',
     },
 
     sketchToolButton: {
@@ -2155,7 +2155,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-text-primary)',
       padding: '10px 15px',
       borderRadius: '12px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
     },
@@ -2166,7 +2166,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       zIndex: 3,
       width: '38px',
       height: '38px',
-      border: '1px solid rgba(231, 220, 207, 0.95)',
+      border: '1px solid rgba(205, 214, 233, 0.95)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       borderRadius: '10px',
@@ -2215,24 +2215,24 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     sketchOverlayCloseButton: {
-      border: '1px solid rgba(231, 220, 207, 0.95)',
+      border: '1px solid rgba(205, 214, 233, 0.95)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       padding: '8px 12px',
       borderRadius: '10px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
       boxShadow: '0 8px 20px rgba(0,0,0,0.12)',
     },
 
     sketchSendButton: {
-      border: '1px solid rgba(181, 83, 47, 0.35)',
+      border: '1px solid rgba(19, 79, 209, 0.35)',
       background: 'linear-gradient(135deg, var(--vic-primary) 0%, var(--vic-primary-hover) 100%)',
       color: 'var(--vic-surface)',
       padding: '8px 12px',
       borderRadius: '10px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
       boxShadow: '0 8px 20px rgba(0,0,0,0.18)',
@@ -2259,9 +2259,9 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       borderRadius: '18px',
       padding: '14px',
       background:
-        'linear-gradient(135deg, rgba(181, 83, 47,0.10), rgba(245, 158, 11,0.04))',
-      border: '1px solid rgba(217, 203, 190, 0.45)',
-      boxShadow: '0 0 18px rgba(181, 83, 47,0.06)',
+        'linear-gradient(135deg, rgba(19, 79, 209,0.10), rgba(23, 89, 233,0.04))',
+      border: '1px solid rgba(187, 197, 220, 0.45)',
+      boxShadow: '0 0 18px rgba(19, 79, 209,0.06)',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
@@ -2275,7 +2275,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     toolStripLabel: {
-      fontSize: '11px',
+      fontSize: '13px',
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       color: 'var(--vic-text-secondary)',
@@ -2314,7 +2314,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     reportFeatureLabelCompact: {
-      fontSize: '11px',
+      fontSize: '13px',
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       color: 'var(--vic-text-secondary)',
@@ -2330,13 +2330,13 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     reportFeatureTextCompact: {
-      fontSize: '13px',
+      fontSize: '14px',
       lineHeight: 1.5,
       color: 'var(--vic-text-secondary)',
     },
 
     reportFeatureHintCompact: {
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.4,
       color: 'var(--vic-text-secondary)',
       borderTop: '1px solid var(--vic-border-soft)',
@@ -2344,7 +2344,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     reportDeliveryStatus: {
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.45,
       color: 'var(--vic-text-secondary)',
       borderRadius: '12px',
@@ -2355,14 +2355,14 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     reportPreviewInline: {
       paddingTop: '6px',
-      borderTop: '1px solid rgba(239, 231, 220, 0.9)',
+      borderTop: '1px solid rgba(220, 226, 239, 0.9)',
       display: 'flex',
       flexDirection: 'column',
       gap: '6px',
     },
 
     reportPreviewInlineLabel: {
-      fontSize: '11px',
+      fontSize: '13px',
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       fontWeight: 800,
@@ -2370,7 +2370,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     reportPreviewInlineText: {
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.45,
       color: 'var(--vic-text-secondary)',
       display: '-webkit-box',
@@ -2383,9 +2383,9 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       borderRadius: '20px',
       padding: '16px',
       background:
-        'linear-gradient(135deg, rgba(181, 83, 47,0.16), rgba(123, 129, 99,0.06))',
-      border: '1px solid rgba(217, 203, 190, 0.45)',
-      boxShadow: '0 0 22px rgba(181, 83, 47,0.08)',
+        'linear-gradient(135deg, rgba(19, 79, 209,0.16), rgba(91, 105, 137,0.06))',
+      border: '1px solid rgba(187, 197, 220, 0.45)',
+      boxShadow: '0 0 22px rgba(19, 79, 209,0.08)',
       display: 'flex',
       flexDirection: 'column',
       gap: '10px',
@@ -2399,7 +2399,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     reportFeatureLabel: {
-      fontSize: '11px',
+      fontSize: '13px',
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       color: 'var(--vic-text-secondary)',
@@ -2424,12 +2424,12 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       marginTop: '4px',
       padding: '12px 13px',
       borderRadius: '16px',
-      background: 'rgba(232, 216, 200, 0.72)',
-      border: '1px solid rgba(232, 216, 200, 0.72)',
+      background: 'rgba(201, 210, 231, 0.72)',
+      border: '1px solid rgba(201, 210, 231, 0.72)',
     },
 
     reportPreviewLabel: {
-      fontSize: '11px',
+      fontSize: '13px',
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
       fontWeight: 800,
@@ -2438,7 +2438,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     reportPreviewText: {
-      fontSize: '13px',
+      fontSize: '14px',
       lineHeight: 1.5,
       color: 'var(--vic-text-primary)',
     },
@@ -2452,7 +2452,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       fontSize: '14px',
       fontWeight: 800,
       whiteSpace: 'nowrap',
-      boxShadow: '0 0 20px rgba(181, 83, 47,0.10)',
+      boxShadow: '0 0 20px rgba(19, 79, 209,0.10)',
       alignSelf: 'start',
       cursor: 'pointer',
     },
@@ -2476,8 +2476,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     toolToggle: {
-      background: 'linear-gradient(135deg, rgba(239, 231, 220, 0.9), rgba(181, 83, 47,0.05))',
-      border: '1px solid rgba(217, 203, 190, 0.45)',
+      background: 'linear-gradient(135deg, rgba(220, 226, 239, 0.9), rgba(19, 79, 209,0.05))',
+      border: '1px solid rgba(187, 197, 220, 0.45)',
       color: 'var(--vic-text-primary)',
       padding: '12px 14px',
       borderRadius: '15px',
@@ -2488,14 +2488,14 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     toolToggleActive: {
       background:
-        'linear-gradient(135deg, rgba(181, 83, 47,0.24) 0%, rgba(123, 129, 99,0.10) 100%)',
-      border: '1px solid rgba(150, 69, 40, 0.28)',
+        'linear-gradient(135deg, rgba(19, 79, 209,0.24) 0%, rgba(91, 105, 137,0.10) 100%)',
+      border: '1px solid rgba(16, 66, 174, 0.28)',
       color: 'var(--vic-text-primary)',
       padding: '12px 14px',
       borderRadius: '15px',
       fontSize: '14px',
       fontWeight: 800,
-      boxShadow: '0 12px 26px rgba(181, 83, 47, 0.35)',
+      boxShadow: '0 12px 26px rgba(19, 79, 209, 0.35)',
       cursor: 'pointer',
     },
 
@@ -2512,31 +2512,31 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     practiceHint: {
-      fontSize: '12px',
+      fontSize: '13px',
       color: 'var(--vic-text-secondary)',
       lineHeight: 1.4,
     },
 
     practiceHintDarkText: {
-      fontSize: '12px',
+      fontSize: '13px',
       color: 'var(--vic-text-secondary)',
       lineHeight: 1.4,
     },
 
     miniLabel: {
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       color: 'var(--vic-text-primary)',
     },
 
     miniLabelDarkText: {
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       color: 'var(--vic-text-primary)',
     },
 
     miniLabelDark: {
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       color: 'var(--vic-text-primary)',
       marginBottom: '8px',
@@ -2559,8 +2559,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     toolPanel: {
       borderRadius: '18px',
-      border: '1px solid rgba(217, 203, 190, 0.35)',
-      background: 'rgba(239, 231, 220, 0.82)',
+      border: '1px solid rgba(187, 197, 220, 0.35)',
+      background: 'rgba(220, 226, 239, 0.82)',
       padding: '14px',
     },
 
@@ -2575,7 +2575,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     calcInput: {
       width: '100%',
       borderRadius: '14px',
-      border: '1px solid rgba(231, 220, 207, 0.95)',
+      border: '1px solid rgba(205, 214, 233, 0.95)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       padding: '12px 14px',
@@ -2593,8 +2593,8 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     smallButton: {
-      border: '1px solid rgba(217, 203, 190, 0.5)',
-      background: 'linear-gradient(135deg, rgba(181, 83, 47,0.18), rgba(123, 129, 99,0.08))',
+      border: '1px solid rgba(187, 197, 220, 0.5)',
+      background: 'linear-gradient(135deg, rgba(19, 79, 209,0.18), rgba(91, 105, 137,0.08))',
       color: 'var(--vic-text-primary)',
       padding: '10px 14px',
       borderRadius: '12px',
@@ -2649,7 +2649,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       minHeight: '120px',
       resize: 'vertical',
       borderRadius: '14px',
-      border: '1px solid rgba(217, 203, 190, 0.45)',
+      border: '1px solid rgba(187, 197, 220, 0.45)',
       background: 'var(--vic-surface)',
       color: 'var(--vic-text-primary)',
       padding: '12px 14px',
@@ -2701,7 +2701,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     chatEyebrow: {
-      fontSize: '11px',
+      fontSize: '13px',
       letterSpacing: '0.14em',
       textTransform: 'uppercase',
       color: 'var(--vic-primary)',
@@ -2717,7 +2717,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     chatStatusMessage: {
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.35,
       color: 'var(--vic-text-secondary)',
       opacity: 0.92,
@@ -2742,7 +2742,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-text-secondary)',
       borderRadius: '999px',
       padding: '7px 14px',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 700,
       cursor: 'pointer',
@@ -2751,12 +2751,12 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     sessionModeButtonActive: {
-      border: '1px solid rgba(181, 83, 47, 0.34)',
-      background: 'rgba(181, 83, 47, 0.14)',
+      border: '1px solid rgba(19, 79, 209, 0.34)',
+      background: 'rgba(19, 79, 209, 0.14)',
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
       padding: '7px 14px',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 800,
       cursor: 'pointer',
@@ -2770,7 +2770,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-disabled)',
       borderRadius: '999px',
       padding: '7px 14px',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 700,
       cursor: 'not-allowed',
@@ -2793,7 +2793,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
 
     joinClassFallbackText: {
       color: 'var(--vic-text-secondary)',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.4,
     },
 
@@ -2823,7 +2823,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       textAlign: 'left',
       border: '2px solid var(--vic-accent)',
       borderRadius: '10px',
-      background: 'rgba(181, 83, 47, 0.10)',
+      background: 'rgba(19, 79, 209, 0.10)',
       color: 'var(--vic-text-primary)',
       padding: '9px',
       cursor: 'pointer',
@@ -2835,7 +2835,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       alignItems: 'flex-start',
       gap: '6px',
       color: 'var(--vic-text-secondary)',
-      fontSize: '11px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 700,
     },
@@ -2854,7 +2854,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       padding: '8px 10px',
       boxSizing: 'border-box',
       outline: 'none',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
       minHeight: '34px',
     },
@@ -2868,17 +2868,17 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       padding: '8px 10px',
       boxSizing: 'border-box',
       outline: 'none',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
     },
 
     joinClassControlButton: {
-      border: '1px solid rgba(181, 83, 47, 0.34)',
-      background: 'rgba(181, 83, 47, 0.12)',
+      border: '1px solid rgba(19, 79, 209, 0.34)',
+      background: 'rgba(19, 79, 209, 0.12)',
       color: 'var(--vic-text-primary)',
       borderRadius: '10px',
       padding: '8px 11px',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 800,
       cursor: 'pointer',
@@ -2891,7 +2891,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-disabled)',
       borderRadius: '10px',
       padding: '8px 11px',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 800,
       cursor: 'not-allowed',
@@ -2899,19 +2899,19 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     joinClassStatusSuccess: {
-      fontSize: '11px',
+      fontSize: '13px',
       lineHeight: 1.25,
       color: '#166534',
     },
 
     joinClassStatusInfo: {
-      fontSize: '11px',
+      fontSize: '13px',
       lineHeight: 1.25,
       color: 'var(--vic-text-secondary)',
     },
 
     joinClassStatusError: {
-      fontSize: '11px',
+      fontSize: '13px',
       lineHeight: 1.25,
       color: '#b91c1c',
     },
@@ -2919,14 +2919,14 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     modeStatusPill: {
       alignSelf: 'flex-start',
       marginTop: '0',
-      fontSize: '10px',
+      fontSize: '13px',
       letterSpacing: '0.08em',
       textTransform: 'uppercase',
       color: 'var(--vic-primary)',
       fontWeight: 800,
       borderRadius: '999px',
-      border: '1px solid rgba(181, 83, 47, 0.28)',
-      background: 'rgba(181, 83, 47, 0.08)',
+      border: '1px solid rgba(19, 79, 209, 0.28)',
+      background: 'rgba(19, 79, 209, 0.08)',
       padding: '3px 8px',
       width: 'fit-content',
     },
@@ -2958,7 +2958,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       maxWidth: isMobile ? '94%' : '82%',
       borderRadius: '14px 14px 14px 6px',
       background: 'var(--vic-surface-muted)',
-      border: '1px solid #D8B7A7',
+      border: '1px solid #A7B6D8',
       padding: '12px 12px',
       boxShadow: '0 10px 22px rgba(15, 23, 42, 0.12)',
     },
@@ -2974,7 +2974,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     bubbleLabel: {
-      fontSize: '11px',
+      fontSize: '13px',
       fontWeight: 800,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
@@ -2983,7 +2983,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     bubbleLabelUser: {
-      fontSize: '11px',
+      fontSize: '13px',
       fontWeight: 800,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
@@ -3044,7 +3044,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     inputHint: {
-      fontSize: '12px',
+      fontSize: '13px',
       color: 'var(--vic-text-secondary)',
       lineHeight: 1.4,
       textAlign: 'right',
@@ -3078,7 +3078,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       padding: '6px 11px',
       boxSizing: 'border-box',
       outline: 'none',
-      fontSize: '13px',
+      fontSize: '14px',
       lineHeight: 1.3,
     },
 
@@ -3088,7 +3088,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
       padding: '6px 12px',
-      fontSize: '13px',
+      fontSize: '14px',
       fontWeight: 800,
       cursor: 'pointer',
       whiteSpace: 'nowrap',
@@ -3103,7 +3103,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
       color: 'var(--vic-text-primary)',
       borderRadius: '999px',
       padding: '6px 10px',
-      fontSize: '12px',
+      fontSize: '13px',
       lineHeight: 1.2,
       fontWeight: 700,
       cursor: 'pointer',
@@ -3146,7 +3146,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     numberLabel: {
-      fontSize: '12px',
+      fontSize: '13px',
       fontWeight: 600,
     },
 
@@ -3172,7 +3172,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     vocabExampleLabel: {
-      fontSize: '11px',
+      fontSize: '13px',
       fontWeight: 800,
       letterSpacing: '0.12em',
       textTransform: 'uppercase',
@@ -3181,7 +3181,7 @@ function buildStyles({ isMobile, isTablet, isCompact }) {
     },
 
     vocabExampleText: {
-      fontSize: '13px',
+      fontSize: '14px',
       lineHeight: 1.45,
       color: 'var(--vic-text-secondary)',
     },
