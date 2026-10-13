@@ -3,6 +3,7 @@ import { useState } from 'react'
 import PageShell, { PanelStyles } from '../../components/PageShell'
 import LessonSteps from '../../components/LessonSteps'
 import LessonPacket from '../../components/LessonPacket'
+import LessonCompanion from '../../components/LessonCompanion'
 import { useLesson } from '../../lib/use-lesson'
 import { stepHref } from '../../lib/lesson-steps.mjs'
 import { versionLevel } from '../../lib/levels.mjs'
@@ -47,6 +48,7 @@ export default function LessonPrint() {
     <p>Students’ copies only say “{sheet.versions.length > 1 ? 'Version 1, 2, 3' : 'Classroom version'}.” The answer key shows which version is for which group.</p>
     <div className="row"><button type="button" className="btn btn-primary" disabled={!!busy} onClick={() => download('worksheet')}>{busy === 'worksheet' ? 'Preparing…' : 'Download student worksheets'}</button><button type="button" className="btn btn-outline" disabled={!!busy} onClick={() => download('answer-key')}>{busy === 'answer-key' ? 'Preparing…' : 'Download answer keys'}</button></div>
    </section> : <section className="panel"><p className="label">Worksheets</p><h2>No worksheet yet</h2><p>Create one per level from the lesson’s Plan step.</p><a className="btn btn-outline" href={`${stepHref('plan', id)}#worksheet`}>Create worksheets</a></section>}
+   <section className="panel"><p className="label">Get ready</p><LessonCompanion lessonId={id} tools={['prep']} initialKind="prep" showPacket={false} compact /></section>
    <section className="panel"><LessonPacket lessonId={id} title={lesson.plan?.title || 'Lesson'} featured onPrinted={() => mark('print', true)} /></section>
    <div className="next"><a className="btn btn-primary" href={stepHref('teach', id)}>Next: send to students →</a></div>
   </>}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import TextSizeControl from './TextSizeControl'
+import { readLeader, readMode, saveMode, rememberLeader } from '../lib/view-mode'
 
 // One top bar for the whole site, in the Midnight Circuit look.
 // Who is signed in decides the menu: visitors, educators and students each see only their own places.
@@ -16,8 +17,15 @@ const EDUCATOR_NAV = [
  { href: '/classes', label: 'My Classes', match: ['/classes', '/askvic', '/teacher', '/assignlesson'] },
  { href: '/parentletters', label: 'Families', match: ['/parentletters'] },
 ]
+const SCHOOL_NAV = [
+ { href: '/school', label: 'Dashboard', match: ['/school'] },
+ { href: '/weeklyplans', label: 'Lesson plans', match: ['/weeklyplans'] },
+ { href: '/walkthroughs', label: 'Walkthroughs', match: ['/walkthroughs'] },
+ { href: '/assistantprincipal', label: 'Staff & deadlines', match: ['/assistantprincipal'] },
+]
+const SCHOOL_PATHS = ['/school', '/weeklyplans', '/walkthroughs', '/assistantprincipal', '/admin']
 const STUDENT_NAV = [
- { href: '/student', label: 'Today', match: ['/student', '/learn'] },
+ { href: '/learn', label: 'Today', match: ['/learn', '/student'] },
  { href: '/askvic', label: 'VIC', match: ['/askvic'] },
 ]
 
@@ -33,6 +41,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
  const [profile, setProfile] = useState(null)
  const [loggingOut, setLoggingOut] = useState(false)
  const [open, setOpen] = useState(false)
+ const [lead, setLead] = useState(null)
 
  useEffect(() => {
   let mounted = true
@@ -45,24 +54,29 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
    if (mounted) setProfile(data?.[0] || null)
   }
   load()
+  setLead(readLeader())
   const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => { setAuthUser(session?.user || null); if (!session?.user) setProfile(null) })
   return () => { mounted = false; listener?.subscription?.unsubscribe() }
  }, [])
 
  const name = useMemo(() => displayName(profile, authUser), [profile, authUser])
  const isStudent = profile?.role === 'student'
- const nav = !authUser ? VISITOR_NAV : isStudent ? STUDENT_NAV : EDUCATOR_NAV
+ const schoolSide = !!lead && SCHOOL_PATHS.some(p => currentPath === p || currentPath.startsWith(p + '/'))
+ const nav = !authUser ? VISITOR_NAV : isStudent ? STUDENT_NAV : schoolSide ? (lead.admin ? [...SCHOOL_NAV, { href: '/admin/accounts', label: 'People', match: ['/admin'] }] : SCHOOL_NAV) : EDUCATOR_NAV
+ const home = !authUser ? '/' : isStudent ? '/learn' : lead && readMode() !== 'teacher' ? '/school' : '/teach'
+ function switchTo(mode) { saveMode(mode); window.location.href = mode === 'teacher' ? '/teach' : '/school' }
 
  async function logout() {
   if (loggingOut) return
   setLoggingOut(true)
+  rememberLeader({})
   await supabase.auth.signOut()
   window.location.href = isStudent ? '/student-login' : '/login'
  }
 
  return (
   <header className="vicHeader">
-   <a className="brand" href={authUser ? (isStudent ? '/student' : '/teach') : '/'} aria-label="AskVic home">
+   <a className="brand" href={home} aria-label="AskVic home">
     <span className="mark" aria-hidden="true">V</span>
     <span className="word">AskVic</span>
    </a>
@@ -75,12 +89,13 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
    </nav>
    <div className="right">
     {statusLabel ? <span className={`status ${statusTone === 'thinking' ? 'thinking' : ''}`}><span className="dot" aria-hidden="true" />{statusLabel}</span> : null}
+    {authUser && !isStudent && lead && <button type="button" className="modeSwitch" onClick={() => switchTo(schoolSide ? 'teacher' : 'school')}>{schoolSide ? 'My teaching →' : 'School view →'}</button>}
     {authUser && <TextSizeControl tone="dark" />}
     {authUser ? <>
      <span className="who" title={name}>{name || 'Signed in'}</span>
      <button type="button" className="ghost" onClick={logout} disabled={loggingOut}>{loggingOut ? 'Logging out…' : 'Log out'}</button>
     </> : <>
-     <a className="ghost" href="/login">Educator log in</a>
+     <a className="ghost" href="/login">Teacher log in</a>
      <a className="ghost" href="/student-login">Student log in</a>
      <a className="cta" href="/signup">Sign up free</a>
     </>}
@@ -98,6 +113,8 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
     .who{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px;color:var(--vic-ink-muted)}
     .ghost,.cta{padding:9px 14px;border-radius:10px;font-size:15px;font-weight:700;text-decoration:none;cursor:pointer;white-space:nowrap}
     .ghost{border:1px solid var(--vic-ink-line);background:transparent;color:var(--vic-ink-text)}
+    .modeSwitch{padding:8px 13px;border-radius:10px;border:1px solid var(--vic-cyan);background:rgba(34,211,238,.12);color:var(--vic-cyan);font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap}
+    .modeSwitch:hover{background:rgba(34,211,238,.22)}
     .ghost:hover{background:var(--vic-ink-2)}
     .ghost:disabled{opacity:.6}
     .cta{background:var(--vic-primary);color:#fff;border:1px solid var(--vic-primary)}

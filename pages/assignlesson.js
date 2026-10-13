@@ -27,10 +27,10 @@ export default function AssignLessonPage(){
  })().catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)})
  return()=>{active=false}
  },[router.isReady,lessonId])
- return <main><Head><title>Assign a Lesson in VIC | Ask VIC</title></Head><VICHeader currentPath="/educator"/>
-  <nav className="backLinks" aria-label="Lesson navigation"><a href="/educator#my-lessons">← My Lessons</a>{validLessonId(lessonId)&&<a href={lessonLink(lessonId)}>Edit this lesson →</a>}</nav>
+ return <main><Head><title>Assign a Lesson in VIC | Ask VIC</title></Head><VICHeader currentPath="/lessons"/>
+  <nav className="backLinks" aria-label="Lesson navigation"><a href="/lessons">← My Lessons</a>{validLessonId(lessonId)&&<a href={lessonLink(lessonId)}>Edit this lesson →</a>}</nav>
   <header><p className="eyebrow">VIC CLASSROOM ASSIGNMENT</p><h1>Give your lesson to students</h1><p>Your standard and objectives are ready. Choose a class, review the goals, select students, then click <strong>Assign lesson</strong>. VIC adapts the teaching to each student’s saved support level.</p></header>
-  {loading?<p role="status">Opening your lesson…</p>:error?<p role="alert">{error} <a href="/educator#my-lessons">Return to My Lessons</a></p>:lesson&&<VICClassroomWorkspace assignmentMode prefillLesson={lesson}/>}
+  {loading?<p role="status">Opening your lesson…</p>:error?<p role="alert">{error} <a href="/lessons">Return to My Lessons</a></p>:lesson&&<VICClassroomWorkspace assignmentMode prefillLesson={lesson}/>}
   <style jsx>{`main{max-width:1240px;margin:auto;padding:24px;color:var(--vic-text-primary)}.backLinks{display:flex;gap:20px;flex-wrap:wrap;margin:24px 0}.backLinks a{color:var(--vic-primary);font-size:14px;font-weight:750;text-decoration:none}header{padding:8px 0 24px}.eyebrow{color:var(--vic-primary);font-size:13px;font-weight:800;letter-spacing:.1em}h1{font-size:36px;margin:10px 0;line-height:1.15}header>p:last-child{max-width:820px;color:var(--vic-text-secondary);font-size:15px;line-height:1.7}@media(max-width:700px){main{padding:16px}h1{font-size:29px}}`}</style>
  </main>
 }
