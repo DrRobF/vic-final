@@ -2,7 +2,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import PageShell, { PanelStyles } from '../components/PageShell'
 import { useAccount } from '../lib/use-account'
-import { listWeeks, openWeek } from '../lib/lesson-week-client'
+import { listWeeks, openWeek, deleteWeek } from '../lib/lesson-week-client'
 import { STEPS, stepDone, stepHref, nextStep, doneCount } from '../lib/lesson-steps.mjs'
 import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, mondayOf, weekDates, formatDay, gradeLabel, subjectLabel } from '../lib/lesson-week.mjs'
 
@@ -17,7 +17,7 @@ function todayIso() { const n = new Date(); return new Date(Date.UTC(n.getFullYe
 export default function MyWeek() {
  const router = useRouter()
  const { account, error: accountError } = useAccount({ next: '/teach' })
- const [weeks, setWeeks] = useState(null), [chosenId, setChosenId] = useState(''), [detail, setDetail] = useState(null), [error, setError] = useState(''), [loadingWeek, setLoadingWeek] = useState(false)
+ const [weeks, setWeeks] = useState(null), [chosenId, setChosenId] = useState(''), [detail, setDetail] = useState(null), [error, setError] = useState(''), [loadingWeek, setLoadingWeek] = useState(false), [confirmRemove, setConfirmRemove] = useState(false)
  const weekOf = useMemo(() => (typeof router.query.week === 'string' && mondayOf(router.query.week)) || defaultWeekOf(), [router.query.week])
 
  useEffect(() => {
@@ -36,6 +36,10 @@ export default function MyWeek() {
   return () => { active = false }
  }, [week?.id])
 
+ async function removeWeek() {
+  try { await deleteWeek(week.id); setConfirmRemove(false); setDetail(null); setChosenId(''); const d = await listWeeks(); setWeeks(d.weeks || []) }
+  catch (e) { setError(e.message) }
+ }
  function go(w) { router.push(`/teach?week=${w}`, undefined, { shallow: true }); setChosenId('') }
  const dates = weekDates(weekOf), today = todayIso()
  const days = detail?.week?.days || week?.days || []
@@ -71,6 +75,8 @@ export default function MyWeek() {
      <span><strong>{planned}</strong> of 5 days planned</span>
      <span><strong>{totalSteps}</strong> of {planned * 4 || 0} steps done</span>
      <span className={`badge ${status}`}>{WEEK_STATUS[status] || ''}</span>
+     {status === 'draft' && (confirmRemove ? <span className="rm"><strong>Remove this week plan? Its lessons stay in My Lessons.</strong><button type="button" className="btn del" onClick={removeWeek}>Yes, remove</button><button type="button" className="btn btn-outline" onClick={() => setConfirmRemove(false)}>Keep</button></span>
+      : <button type="button" className="trash" onClick={() => setConfirmRemove(true)}>Remove this week</button>)}
     </div>}
 
     <div className="days">
@@ -130,6 +136,10 @@ export default function MyWeek() {
    .badge{padding:5px 12px;border-radius:999px;font-size:14px;font-weight:800;background:var(--vic-surface-muted);color:var(--vic-text-secondary)}
    .badge.submitted{background:var(--vic-primary-soft);color:var(--vic-primary)}
    .badge.reviewed{background:var(--vic-success-soft);color:var(--vic-success)}
+   .trash{background:none;border:0;color:var(--vic-text-secondary);font-weight:700;font-size:15px;cursor:pointer;text-decoration:underline;margin-left:auto}
+   .trash:hover{color:var(--vic-danger)}
+   .rm{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-left:auto;color:var(--vic-danger)}
+   .del{background:var(--vic-danger);color:#fff}
    .days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
    .day{background:var(--vic-surface);border:1px solid var(--vic-border-soft);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px;min-height:190px}
    .day.today{border:2px solid var(--vic-cyan);box-shadow:0 0 0 4px rgba(34,211,238,.15)}
