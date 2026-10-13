@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import PageShell, { PanelStyles } from '../../components/PageShell'
 import LessonSteps from '../../components/LessonSteps'
 import VICClassroomWorkspace from '../../components/VICClassroomWorkspace'
+import StudentProgress from '../../components/StudentProgress'
 import { useLesson } from '../../lib/use-lesson'
 import { stepHref } from '../../lib/lesson-steps.mjs'
 import { supabase } from '../../lib/supabase'
@@ -11,7 +12,7 @@ import { supabase } from '../../lib/supabase'
 export default function LessonTeach() {
  const router = useRouter(), id = typeof router.query.id === 'string' ? router.query.id : ''
  const { lesson, home, error, markStep } = useLesson(id)
- const [vic, setVic] = useState(null), [vicError, setVicError] = useState(''), [classroom, setClassroom] = useState(null), [msg, setMsg] = useState(''), [err, setErr] = useState('')
+ const [vic, setVic] = useState(null), [vicError, setVicError] = useState(''), [classroom, setClassroom] = useState(null), [msg, setMsg] = useState(''), [err, setErr] = useState(''), [sentCount, setSentCount] = useState(0)
 
  useEffect(() => {
   if (!id) return
@@ -29,7 +30,7 @@ export default function LessonTeach() {
    if (!active) return
    if (!r.ok) setVicError(d.error || 'Could not prepare this lesson for VIC.')
    else if (!d.lesson?.vicText) setVicError(d.lesson?.vicError || 'Add a standard and learning objectives to this lesson first.')
-   else setVic({ title: d.lesson.title, text: d.lesson.vicText, key: id })
+   else setVic({ title: d.lesson.title, text: d.lesson.vicText, key: id, sourceId: id })
   })().catch(e => { if (active) setVicError(e.message) })
   return () => { active = false }
  }, [id])
@@ -42,13 +43,14 @@ export default function LessonTeach() {
    <LessonSteps lessonId={id} lesson={lesson} home={home} current="teach" onMark={mark} />
    {err && <p className="alert" role="alert">{err}</p>}{msg && <p className="notice" role="status">{msg}</p>}
    <div className="tracks">
-    <section className="panel track me"><p className="label">With me</p><h2>Teach it with your group</h2><p>Whole group or small group, with the printed packet and each level’s worksheet.</p><a className="btn btn-outline" href={stepHref('print', id)}>Open the printed materials</a></section>
+    <section className="panel track me"><p className="label">With me</p><h2>Teach it with your group</h2><p>Whole group or small group, with the printed packet. Students you send this lesson to also get their version of the worksheet on screen.</p><a className="btn btn-outline" href={stepHref('print', id)}>Open the printed materials</a></section>
     <section className="panel track vic"><p className="label vlabel">With VIC</p><h2>VIC teaches the same goals</h2><p>Pick students below. VIC teaches this lesson’s objectives one-on-one, from a new angle, at each student’s level: Support, On level or Enrichment.</p></section>
    </div>
    {classroom === false ? <section className="panel"><h2>VIC needs a school classroom</h2><p>Your account isn’t linked to a school classroom yet, so you can’t send lessons to students. Ask your school leader for a join code, or <a href="mailto:drrobfurman@gmail.com?subject=VIC%20classroom%20access">ask about classroom access</a>.</p></section>
     : vicError ? <p className="alert" role="alert">{vicError} <a href={stepHref('plan', id)}>Open the lesson</a></p>
-    : vic ? <section className="panel roster"><VICClassroomWorkspace assignmentMode prefillLesson={vic} onAssigned={n => { setMsg(`Sent to ${n} ${n === 1 ? 'student' : 'students'}. You can pick another group and send again.`); mark('teach', true) }} /></section>
+    : vic ? <section className="panel roster"><VICClassroomWorkspace assignmentMode prefillLesson={vic} onAssigned={n => { setMsg(`Sent to ${n} ${n === 1 ? 'student' : 'students'}. You can pick another group and send again.`); mark('teach', true); setSentCount(c => c + 1) }} /></section>
     : classroom && <p role="status">Getting your classes ready…</p>}
+   {classroom && <section className="panel"><p className="label">Student work</p><h2>Worksheets on screen</h2><StudentProgress lessonId={id} refreshKey={sentCount} /></section>}
    <div className="next"><a className="btn btn-primary" href={stepHref('follow', id)}>Next: follow up →</a></div>
   </>}
   <style jsx>{`

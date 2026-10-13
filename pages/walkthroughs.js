@@ -42,7 +42,7 @@ export default function Walkthroughs(){
  const pending=data?.suggestions||[]
  const byTeacher=pending.reduce((m,s)=>{(m[s.teacher]=m[s.teacher]||[]).push(s);return m},{})
 
- return <main aria-busy={!!busy}><Head><title>Walkthroughs | Ask VIC</title><meta name="description" content="Quick classroom walkthroughs with specific feedback for teachers, and Learning Path suggestions waiting for your yes or no."/></Head><VICHeader currentPath="/assistantprincipal"/>
+ return <main aria-busy={!!busy}><Head><title>Walkthroughs | Ask VIC</title><meta name="description" content="Quick classroom walkthroughs with specific feedback for teachers, and Learning Path suggestions waiting for your yes or no."/></Head><VICHeader currentPath="/walkthroughs"/>
   <div className="crumbs"><a href="/assistantprincipal">← School leadership workspace</a></div>
   <header className="hero"><p className="eyebrow">SCHOOL LEADERSHIP · WALKTHROUGHS</p><h1>Quick visits. Specific feedback. Real growth.</h1><p>A brief walkthrough to support instructional growth, not a formal evaluation. When you save one, VIC suggests Learning Paths for that teacher. They wait here for your yes or no.</p></header>
   {!ready?<p role="status">Opening walkthroughs…</p>:blocked?<section className="card"><h2>{blocked==='login'?'Please log in':'Walkthroughs are part of the school leadership workspace'}</h2><p className="muted">{blocked==='login'?'Log in with your school leader account.':blocked==='none'?'Set up your school and staff list in the leadership workspace first. Then come back here.':blocked}</p><a className="primary" href={blocked==='login'?'/login?next=/walkthroughs':'/assistantprincipal'}>{blocked==='login'?'Log in':'Open the leadership workspace'}</a></section>:<>

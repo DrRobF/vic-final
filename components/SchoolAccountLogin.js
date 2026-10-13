@@ -15,7 +15,7 @@ export default function SchoolAccountLogin({student=false}){
    const result=await supabase.from('users').select('role').eq('auth_user_id',data.user.id).order('id',{ascending:true}).limit(1)
    if(result.error)throw new Error('Could not check your school account. Please try again.')
    const profile=result.data?.[0]
-   if(studentProfile(profile)){await router.replace('/askvic');return}
+   if(studentProfile(profile)){await router.replace('/learn');return}
    if(schoolEducator(profile)){await router.replace(educatorDestination(router.query.next));return}
    throw new Error('No approved school profile was found. Please contact your school administrator.')
   }catch(e){setError(e.message)}finally{setBusy(false)}

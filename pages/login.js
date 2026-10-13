@@ -1,5 +1,2 @@
-import Head from 'next/head'
-import EducatorAuth from '../components/EducatorAuth'
-import SchoolAccountLogin from '../components/SchoolAccountLogin'
-import VICHeader from '../components/VICHeader'
-export default function Login(){return <><Head><title>Educator login | Ask VIC</title></Head><main className="shell"><VICHeader currentPath="/login"/><section><h1>One educator login.<br/>Your VIC tools together.</h1><p className="intro">Use the same account for Lesson Designer and your approved school VIC tools. No second signup when you switch.</p><EducatorAuth mode="login"/><details><summary>Use my school password instead</summary><SchoolAccountLogin/></details><p className="student">Student? <a href="/student-login">Open student login</a>.</p></section></main><style jsx>{`.shell{max-width:1100px;margin:auto;padding:24px}section{max-width:650px;margin:44px auto}h1{text-align:center;font-size:36px;line-height:1.15}.intro,.student{text-align:center;line-height:1.6;color:var(--vic-text-secondary)}details{margin:20px 0;background:var(--vic-surface);border:1px solid var(--vic-border);padding:24px;border-radius:16px}summary{font-weight:800;cursor:pointer}`}</style></>}
+import LoginDoor from '../components/LoginDoor'
+export default function Login() { return <LoginDoor kind="teacher" /> }

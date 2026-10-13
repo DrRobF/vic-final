@@ -56,7 +56,7 @@ export default function ParentLettersPage(){
   <div className="breadcrumbs"><a href="/teach">← My Week</a></div>
   <header className="pageHeader"><p className="eyebrow">FAMILY COMMUNICATION</p><h1>Family Letters</h1><p>Everything you send to families, in one place. Pick the kind of message, add what you want, and review it before anything goes out.</p></header>
   <nav className="modes" aria-label="Kind of family message">{MODES.map(m=><button key={m.key} type="button" aria-pressed={mode===m.key} onClick={()=>go(m.key)}><strong>{m.label}</strong><span>{m.hint}</span></button>)}</nav>
-  {loading?<p role="status">Opening Family Letters…</p>:error?<p role="alert">{error} <a href="/educator">Return to your dashboard</a></p>:
+  {loading?<p role="status">Opening Family Letters…</p>:error?<p role="alert">{error} <a href="/teach">Back to My Week</a></p>:
    mode==='quick'?<QuickParentEmail/>:
    mode==='class'?<ClassLetter initialLessonId={q('lesson')}/>:
    !account?.classroom?<div className="empty"><h2>Student letters use your VIC classroom roster</h2><p>Your account doesn’t have a VIC classroom yet. You can still write any parent email with <a href="/parentletters?mode=quick">Quick email from notes</a>.</p></div>:

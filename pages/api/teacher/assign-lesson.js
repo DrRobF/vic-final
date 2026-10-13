@@ -18,6 +18,7 @@ export default async function handler(req, res) {
   const classId = positiveInteger(req.body?.classId)
   const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
   const lessonText = typeof req.body?.lessonText === 'string' ? req.body.lessonText.trim() : ''
+  const sourceLessonId = typeof req.body?.sourceLessonId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.body.sourceLessonId) ? req.body.sourceLessonId : null
   const requestedStudents = Array.isArray(req.body?.students) ? req.body.students : []
   const students = requestedStudents
     .map((row) => ({ studentId: positiveInteger(row?.studentId), mode: row?.mode === 'core' ? 'on-level' : row?.mode }))
@@ -41,6 +42,12 @@ export default async function handler(req, res) {
   if (enrollmentError) return res.status(500).json({ error: 'Could not verify class enrollment.' })
   if (enrollments?.length !== studentIds.length) return res.status(400).json({ error: 'Every selected student must be enrolled in the selected class.' })
 
+  // Only link the teacher's own saved lesson, so students see that lesson's worksheets and nothing else.
+  let ownedSource = null
+  if (sourceLessonId && auth.user?.id) {
+    const { data: src } = await auth.admin.from('educator_lessons').select('id').eq('id', sourceLessonId).eq('user_id', auth.user.id).maybeSingle()
+    ownedSource = src?.id || null
+  }
   const { data: lesson, error: lessonError } = await auth.admin.from('lessons').insert({
     class_id: classId,
     teacher_id: auth.profile.id,
@@ -48,6 +55,7 @@ export default async function handler(req, res) {
     title,
     lesson_text: lessonText,
     is_active: true,
+    ...(ownedSource ? { source_lesson_id: ownedSource } : {}),
   }).select('id, class_id').single()
   if (lessonError || !lesson?.id || Number(lesson.class_id) !== classId) {
     return res.status(500).json({ error: 'The lesson could not be persisted for the selected class.' })
