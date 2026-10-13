@@ -52,13 +52,13 @@ export default function ParentLettersPage(){
  const focusStudentId=requestedClass&&String(chosenClass?.id)===String(requestedClass)&&/^\d+$/.test(String(requestedStudent))?Number(requestedStudent):null
  const go=(next,extra='')=>router.push(`/parentletters?mode=${next}${extra}`,undefined,{shallow:true})
 
- return <main><Head><title>Family Letters | Ask VIC</title><meta name="description" content="Write parent emails from quick notes, personalized student letters, and class updates in one place."/></Head><VICHeader currentPath="/educator"/>
-  <div className="breadcrumbs"><a href="/educator">← Educator Dashboard</a></div>
+ return <main><Head><title>Family Letters | Ask VIC</title><meta name="description" content="Write parent emails from quick notes, personalized student letters, and class updates in one place."/></Head><VICHeader currentPath="/parentletters"/>
+  <div className="breadcrumbs"><a href="/teach">← My Week</a></div>
   <header className="pageHeader"><p className="eyebrow">FAMILY COMMUNICATION</p><h1>Family Letters</h1><p>Everything you send to families, in one place. Pick the kind of message, add what you want, and review it before anything goes out.</p></header>
   <nav className="modes" aria-label="Kind of family message">{MODES.map(m=><button key={m.key} type="button" aria-pressed={mode===m.key} onClick={()=>go(m.key)}><strong>{m.label}</strong><span>{m.hint}</span></button>)}</nav>
   {loading?<p role="status">Opening Family Letters…</p>:error?<p role="alert">{error} <a href="/educator">Return to your dashboard</a></p>:
    mode==='quick'?<QuickParentEmail/>:
-   mode==='class'?<ClassLetter/>:
+   mode==='class'?<ClassLetter initialLessonId={q('lesson')}/>:
    !account?.classroom?<div className="empty"><h2>Student letters use your VIC classroom roster</h2><p>Your account doesn’t have a VIC classroom yet. You can still write any parent email with <a href="/parentletters?mode=quick">Quick email from notes</a>.</p></div>:
    classes.length===0?<div className="empty"><h2>Create a class to get started</h2><p>Student letters use the students in your VIC classroom roster.</p><a href="/educator#classrooms">Set up your classroom →</a></div>:<>
    <div className="classPicker"><label htmlFor="letter-class">Choose a class</label><select id="letter-class" value={chosenClass.id} onChange={event=>go('student',`&classId=${encodeURIComponent(event.target.value)}`)}>{classes.map(item=><option key={item.id} value={item.id}>{item.class_name}{item.grade_level?` · Grade ${item.grade_level}`:''}</option>)}</select><a href="/educator#classrooms">Manage roster →</a></div>

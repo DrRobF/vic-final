@@ -81,7 +81,7 @@ export default async function handler(req,res){
     res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.setHeader('Content-Disposition',`attachment; filename="${weekFileName(week)}"`)
     return res.status(200).send(buffer)
    }
-   const summaries=Object.fromEntries([...lessons].map(([id,d])=>[id,{title:d.plan?.title||'Untitled lesson',worksheet:!!d.worksheet,updatedAt:d.updatedAt}]))
+   const summaries=Object.fromEntries([...lessons].map(([id,d])=>[id,{title:d.plan?.title||'Untitled lesson',worksheet:!!d.worksheet,steps:d.steps||{},updatedAt:d.updatedAt}]))
    return res.json({week:publicWeek(row),lessons:summaries})
   }
 

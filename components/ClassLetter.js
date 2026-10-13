@@ -2,7 +2,7 @@ import {useEffect,useState} from 'react'
 import {supabase} from '../lib/supabase'
 
 // Whole-class letter: one standard message for every family, built from lessons, saved lesson updates, and a note.
-export default function ClassLetter(){
+export default function ClassLetter({initialLessonId}){
  const [data,setData]=useState(null),[lessonIds,setLessonIds]=useState([]),[note,setNote]=useState(''),[tasks,setTasks]=useState(null),[picked,setPicked]=useState([]),[marked,setMarked]=useState(false)
  const [letter,setLetter]=useState(null),[busy,setBusy]=useState(false),[message,setMessage]=useState(''),[error,setError]=useState('')
 
@@ -15,7 +15,7 @@ export default function ClassLetter(){
   return d
  }
  useEffect(()=>{let active=true
-  request().then(d=>{if(active)setData(d)}).catch(e=>{if(active)setError(e.message)})
+  request().then(d=>{if(active){setData(d);if(initialLessonId&&(d.lessons||[]).some(l=>l.id===initialLessonId))setLessonIds([initialLessonId])}}).catch(e=>{if(active)setError(e.message)})
   request(null,'/api/educator/assistant').then(d=>{if(!active)return;const list=(d.work||[]).find(w=>w.kind==='tasks')?.tasks||[];setTasks(list);setPicked(list.map((t,i)=>t.family&&!t.done?i:-1).filter(i=>i>=0))}).catch(()=>{if(active)setTasks([])})
   return()=>{active=false}},[])
  const updated=new Set((data?.familyUpdates||[]).map(u=>u.lessonId))

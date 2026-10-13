@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 import VICHeader from '../../components/VICHeader'
 import PlannerModeSwitch from '../../components/PlannerModeSwitch'
+import { groupName } from '../../lib/levels.mjs'
 import { supabase } from '../../lib/supabase'
 import { persistLesson } from '../../lib/lesson-library-client'
 import { lessonLink } from '../../lib/educator-lessons.mjs'
@@ -218,8 +219,8 @@ export default function WeekPlanner(){
    <label>Materials available (optional)<textarea rows="2" maxLength="1200" value={week.settings.materials} disabled={locked} onChange={e=>settings({materials:e.target.value})} placeholder="Paper, counters, no devices…"/></label>
    <label>Interests or context (optional)<textarea rows="2" maxLength="1000" value={week.settings.interests} disabled={locked} onChange={e=>settings({interests:e.target.value})} placeholder="Sports, animals, our community…"/></label>
   </div>
-  <label>Differentiation groups<select value={week.settings.groups.length} disabled={locked} onChange={e=>{const n=Number(e.target.value);settings({groups:Array.from({length:n},(_,i)=>week.settings.groups[i]||GROUP_DEFAULTS[i])})}}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n} {n===1?'group':'groups'}</option>)}</select></label>
-  {week.settings.groups.map((g,i)=><label key={i}>Group {i+1}<textarea rows="2" maxLength="500" value={g} disabled={locked} onChange={e=>settings({groups:week.settings.groups.map((v,n)=>n===i?e.target.value:v)})}/></label>)}
+  <label>Learning levels<select value={week.settings.groups.length} disabled={locked} onChange={e=>{const n=Number(e.target.value);settings({groups:Array.from({length:n},(_,i)=>week.settings.groups[i]||GROUP_DEFAULTS[i])})}}>{[1,2,3,4,5].map(n=><option key={n} value={n}>{n===3?'3 levels: Support, On level, Enrichment':`${n} ${n===1?'level (whole class)':'levels'}`}</option>)}</select></label>
+  {week.settings.groups.map((g,i)=><label key={i}>{groupName(g,i)} — what these students need<textarea rows="2" maxLength="500" value={g} disabled={locked} onChange={e=>settings({groups:week.settings.groups.map((v,n)=>n===i?e.target.value:v)})}/></label>)}
   <small>Describe needs generally. Leave out student names and records.</small>
   {!detail&&<><div className="wk-box"><label className="wk-check"><input type="checkbox" checked={week.settings.worksheet} disabled={locked} onChange={e=>settings({worksheet:e.target.checked})}/> Include a student worksheet and answer key for each day</label>{week.settings.worksheet&&<label>Questions per worksheet<select value={week.settings.worksheetCount} disabled={locked} onChange={e=>settings({worksheetCount:Number(e.target.value)})}>{[3,5,8,10].map(n=><option key={n} value={n}>{n} questions</option>)}</select></label>}<small>Lessons use your saved school format from the single-lesson planner ({format.sections.length} sections).</small></div>
 
@@ -227,7 +228,7 @@ export default function WeekPlanner(){
   <small className="wk-center">AI creates drafts. Review every lesson before you teach or send it.</small></>}
  </form>
 
- <section className="wk-panel">
+ <section className="wk-panel" id="send">
   <div className="wk-title"><span>5</span><h2>Download or send to administration</h2></div>
   {!allBuilt?<p className="wk-help">Finish every day first: build it with VIC, plan it in the detailed lesson planner, or mark it as no lesson ({builtCount} of {planned.length} ready). Then download the whole week as one Word document or send it.</p>:<>
    <p className="wk-help">One Word document: week at a glance, then each day’s lesson, worksheet and answer key. If you edit a lesson, the download and anything you send include your edits.</p>

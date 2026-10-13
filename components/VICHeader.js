@@ -11,10 +11,9 @@ const VISITOR_NAV = [
  { href: '/educatorassistant', label: 'Assistant' },
 ]
 const EDUCATOR_NAV = [
- { href: '/educator', label: 'My Dashboard', match: ['/educator', '/teach'] },
- { href: '/lessonplan', label: 'Lessons', match: ['/lessonplan', '/lesson'] },
- { href: '/lessonplan/week', label: 'My Week', match: ['/lessonplan/week'] },
- { href: '/askvic', label: 'VIC', match: ['/askvic', '/teacher', '/assignlesson'] },
+ { href: '/teach', label: 'My Week', match: ['/teach', '/educator', '/lessonplan/week'] },
+ { href: '/lessons', label: 'My Lessons', match: ['/lessons', '/lessonplan', '/lesson'] },
+ { href: '/classes', label: 'My Classes', match: ['/classes', '/askvic', '/teacher', '/assignlesson'] },
  { href: '/parentletters', label: 'Families', match: ['/parentletters'] },
 ]
 const STUDENT_NAV = [
@@ -26,7 +25,7 @@ function displayName(profile, user) { return profile?.name || profile?.email || 
 function isActive(item, currentPath) {
  const paths = item.match || [item.href]
  // The most specific match wins, so "/lessonplan/week" lights up My Week rather than Lessons.
- return paths.some(p => currentPath === p || (p !== '/' && currentPath.startsWith(p + '/') && !(item.href === '/lessonplan' && currentPath.startsWith('/lessonplan/week'))))
+ return paths.some(p => currentPath === p || (p !== '/' && currentPath.startsWith(p + '/') && !(item.href === '/lessons' && currentPath.startsWith('/lessonplan/week'))))
 }
 
 export default function VICHeader({ currentPath = '', statusLabel = '', statusTone = 'ready' }) {
@@ -63,7 +62,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
 
  return (
   <header className="vicHeader">
-   <a className="brand" href={authUser ? (isStudent ? '/student' : '/educator') : '/'} aria-label="AskVic home">
+   <a className="brand" href={authUser ? (isStudent ? '/student' : '/teach') : '/'} aria-label="AskVic home">
     <span className="mark" aria-hidden="true">V</span>
     <span className="word">AskVic</span>
    </a>
