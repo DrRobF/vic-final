@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import VICHeader from '../components/VICHeader'
 import { supabase } from '../lib/supabase'
 import { lessonOutputSections } from '../lib/lesson-designer.mjs'
+import { versionLabel } from '../lib/levels.mjs'
 import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, mondayOf, formatDay, weekLabel, gradeLabel, subjectLabel, weekFileName } from '../lib/lesson-week.mjs'
 
 async function api(query='',body){
@@ -63,7 +64,7 @@ export default function WeeklyPlans(){
    {current&&(current.off?<p className="wp-muted">No lesson planned for {formatDay(current.date)}.</p>:<article className="wp-lesson">
     <h3>{formatDay(current.date)} — {current.title}</h3>
     {lessonOutputSections(current.plan,current.input).map(s=><section key={s.key}><h4>{s.heading}</h4>{s.body.split('\n\n').map((p,n)=><p key={n}>{p}</p>)}</section>)}
-    {current.worksheet&&<section className="wp-worksheet"><h4>Student worksheet — {current.worksheet.title}</h4>{current.worksheet.versions.map((v,n)=><div key={n}><h5>{v.label}</h5><p>{v.directions}</p>{v.passage&&<p className="wp-passage">{v.passage}</p>}<ol>{v.questions.map((q,k)=><li key={k}><p>{q.prompt}</p><p className="wp-answer">Answer: {q.answer}</p></li>)}</ol></div>)}</section>}
+    {current.worksheet&&<section className="wp-worksheet"><h4>Student worksheet — {current.worksheet.title}</h4>{current.worksheet.versions.map((v,n)=><div key={n}><h5>{versionLabel(v,n,current.input?.groups)}</h5><p>{v.directions}</p>{v.passage&&<p className="wp-passage">{v.passage}</p>}<ol>{v.questions.map((q,k)=><li key={k}><p>{q.prompt}</p><p className="wp-answer">Answer: {q.answer}</p></li>)}</ol></div>)}</section>}
    </article>)}
    <form className="wp-review" onSubmit={review}><h3>Your review</h3><label>Feedback for {open.teacherName.split(' ')[0]} (optional)<textarea rows="4" maxLength="2000" value={comment} onChange={e=>setComment(e.target.value)} placeholder="What looks strong, and anything to adjust before teaching."/></label><label className="wp-check"><input type="checkbox" checked={notify} onChange={e=>setNotify(e.target.checked)}/> Email my feedback to the teacher</label><button className="wp-primary" disabled={!!busy}>{open.status==='reviewed'?'Update review':'Mark reviewed'}</button>{open.reviewedAt&&<small>Reviewed {when(open.reviewedAt)}{open.reviewerName?` by ${open.reviewerName}`:''}</small>}</form>
   </section>
