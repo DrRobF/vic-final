@@ -28,7 +28,11 @@ export default async function handler(req,res){
   if(req.body?.agree!==true)return res.status(400).json({error:'Please read and agree to what joining means.'})
   const {data:mine}=await db.from('ap_staff').select('id').eq('school_id',school.id).eq('auth_user_id',auth.user.id).eq('active',true).maybeSingle()
   if(mine)return res.json({joined:true,school:{name:school.name},already:true})
-  // Already on the staff list by email? Link that spot (no new seat used).
+  // Seats are counted only for staff who log in to AskVic. The staff list itself (for attendance, walkthroughs) is free.
+  const {count,error:countError}=await db.from('ap_staff').select('id',{count:'exact',head:true}).eq('school_id',school.id).eq('active',true).not('auth_user_id','is',null)
+  if(countError)throw countError
+  if((count||0)>=(school.seat_limit??50))return res.status(409).json({error:'Your school is full right now. Ask your school leader to free a seat or add you.'})
+  // Already on the staff list by email? Link that spot.
   const {data:listed}=email?await db.from('ap_staff').select('id').eq('school_id',school.id).eq('active',true).is('auth_user_id',null).ilike('email',email).limit(1):{data:[]}
   const now=new Date().toISOString()
   if(listed?.[0]){
@@ -36,9 +40,6 @@ export default async function handler(req,res){
    if(error)throw error
    return res.json({joined:true,school:{name:school.name}})
   }
-  const {count,error:countError}=await db.from('ap_staff').select('id',{count:'exact',head:true}).eq('school_id',school.id).eq('active',true)
-  if(countError)throw countError
-  if((count||0)>=(school.seat_limit??50))return res.status(409).json({error:'Your school is full right now. Ask your school leader to free a seat or add you.'})
   const {data:profile}=await db.from('users').select('name').eq('auth_user_id',auth.user.id).limit(1).maybeSingle()
   const name=String(profile?.name||auth.user.user_metadata?.full_name||email.split('@')[0]||'Teacher').slice(0,120)
   const {error}=await db.from('ap_staff').insert({school_id:school.id,display_name:name.length>=2?name:'Teacher',role:'teacher',assignment:'',email:email||null,auth_user_id:auth.user.id,joined_at:now})

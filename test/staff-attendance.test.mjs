@@ -69,3 +69,35 @@ test('a saved alias links a misspelled name to the right person', () => {
  const pic = staffPicture({ staff, attendance: [{ staff_key: 'dwn white', staff_name: 'Dwn White', day: '2026-10-14', clock_in: '07:00' }], absences: [], today: '2026-10-14', aliases: { 'dwn white': 'b' } })
  assert.equal(pic.people.find(p => p.id === 'b').today.kind, 'in')
 })
+
+test('a start time gives leeway: 7:24 is on time when on-time means 7:30, whatever the sheet says', () => {
+ const att = [{ staff_key: 'karen green', staff_name: 'Karen Green', day: '2026-10-14', clock_in: '07:24', status: 'Late', late_minutes: 9 },
+  { staff_key: 'dawn white', staff_name: 'Dawn White', day: '2026-10-14', clock_in: '07:41', status: 'Late', late_minutes: 26 }]
+ const pic = staffPicture({ staff, attendance: att, absences: [], today: '2026-10-14', settings: { onTime: '07:30' } })
+ const by = Object.fromEntries(pic.people.map(p => [p.name, p]))
+ assert.equal(by['Karen Green'].today.kind, 'in')
+ assert.equal(by['Dawn White'].today.kind, 'late'); assert.equal(by['Dawn White'].today.minutes, 11)
+})
+test('a personal schedule wins over the school time; hourly hours add up by week; odd rows are flagged', () => {
+ const gloria = { id: 'g', display_name: 'Gloria Finch', role: 'support', pay_type: 'hourly', shift_start: '07:30', shift_end: '15:30' }
+ const values = [['Date', 'Teacher', 'Clock In', 'Clock Out'],
+  ['2026-10-13', 'Gloria Finch', '2026-10-13 07:31:43', '2026-10-13 15:43:58'],
+  ['2026-10-14', 'Gloria Finch', '2026-10-14 07:20:00', '2026-10-14 15:00:00'],
+  ['2026-10-12', 'Gloria Finch', '2026-10-12 07:25:00', '2026-10-12 07:10:00']]
+ const { rows } = parseAttendance(values, { date: 'Date', name: 'Teacher', clockIn: 'Clock In', clockOut: 'Clock Out' })
+ assert.match(rows.find(r => r.day === '2026-10-12').flag, /Row 4: Clock-out is before clock-in/)
+ const pic = staffPicture({ staff: [gloria, staff[0]], attendance: rows, absences: [], today: '2026-10-15', settings: { onTime: '08:00' } })
+ const g = pic.people[0]
+ assert.equal(g.lateCount, 1, '7:31 is late for a 7:30 shift even though the school time is 8:00')
+ assert.equal(g.earlyCount, 1, 'left at 3:00 on a 3:30 shift')
+ assert.equal(g.hours.thisWeek, 15.87)
+ assert.equal(g.flags.length, 1)
+})
+test('sick and personal days used and left, from the absence form', () => {
+ const s = [{ id: 's', display_name: 'Sandra Morgan', role: 'teacher', pay_type: 'salaried', sick_days: 10, personal_days: 3 }]
+ const abs = [{ staff_key: 'sandra morgan', staff_name: 'Sandra Morgan', start_date: '2026-10-12', end_date: '2026-10-13', absence_type: 'Sick Day', portion: 'Whole Day' },
+  { staff_key: 'sandra morgan', staff_name: 'Sandra Morgan', start_date: '2026-10-09', end_date: '2026-10-09', absence_type: 'Personal Day', portion: 'Half Day PM' }]
+ const att = ['2026-10-09', '2026-10-12', '2026-10-13'].flatMap(d => [{ staff_key: 'x', staff_name: 'X', day: d, clock_in: '07:00' }, { staff_key: 'y', staff_name: 'Y', day: d, clock_in: '07:00' }])
+ const p = staffPicture({ staff: s, attendance: att, absences: abs, today: '2026-10-14' }).people[0]
+ assert.deepEqual([p.leave.sick, p.leave.sickLeft, p.leave.personal, p.leave.personalLeft], [2, 8, 0.5, 2.5])
+})

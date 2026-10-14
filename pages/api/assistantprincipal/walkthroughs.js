@@ -54,7 +54,7 @@ export default async function handler(req,res){
    let joinCode=schoolRow?.join_code
    for(let i=0;!joinCode&&i<5;i++){const code=makeJoinCode(schoolRow?.name);const {error:cErr}=await db.from('ap_schools').update({join_code:code}).eq('id',schoolId).is('join_code',null);if(!cErr)joinCode=code}
    return res.json({
-    school:{id:schoolId,name:schoolRow?.name||'',role:school.role,joinCode:joinCode||'',seatLimit:schoolRow?.seat_limit??50,seatsUsed:(staff||[]).length},
+    school:{id:schoolId,name:schoolRow?.name||'',role:school.role,joinCode:joinCode||'',seatLimit:schoolRow?.seat_limit??50,seatsUsed:(staff||[]).filter(s=>s.auth_user_id).length},
     me:{name:auth.profile?.name||auth.user.email||''},
     options:{lookFors:LOOK_FORS.map(({key,label})=>({key,label})),ratings:RATINGS,subjects:SUBJECTS,visitLengths:VISIT_LENGTHS,followUps:FOLLOW_UPS},
     staff:(staff||[]).filter(s=>s.role==='teacher'||s.role==='support'||s.role==='other').map(s=>({id:s.id,name:s.display_name,assignment:s.assignment||'',hasEmail:!!s.email,joined:!!s.auth_user_id})),
