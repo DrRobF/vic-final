@@ -8,7 +8,7 @@ import { supabase } from '../../lib/supabase'
 import { persistLesson } from '../../lib/lesson-library-client'
 import { lessonLink } from '../../lib/educator-lessons.mjs'
 import { DEFAULT_SECTIONS, GROUP_DEFAULTS } from '../../lib/lesson-designer.mjs'
-import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, weekDates, mondayOf, formatDay, weekLabel, gradeLabel, subjectLabel, emptyWeekDay, normalizeWeekSetup, dayLessonRequest, validEmail } from '../../lib/lesson-week.mjs'
+import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, weekDates, mondayOf, formatDay, weekLabel, weekPhrase, gradeLabel, subjectLabel, emptyWeekDay, normalizeWeekSetup, dayLessonRequest, validEmail } from '../../lib/lesson-week.mjs'
 
 const GRADES=['K','1','2','3','4','5','6','7','8']
 const FORMAT_KEY='vic-lesson-format-v1'
@@ -150,7 +150,7 @@ export default function WeekPlanner(){
   }catch(e){setError(e.message)}finally{setBusy('')}
  }
  function newWeek(){if(locked)return;setWeek(blankWeek());setLessons({});setProgress({});setStatus('draft');setWeekMeta(null);setPasteDays({});setNotice('');setError('');router.push('/lessonplan/week',undefined,{shallow:true})}
- async function removeWeek(w){if(!window.confirm(`Remove the ${weekLabel(w.weekOf).toLowerCase()} plan? Its lessons stay in My Lessons.`))return;try{await call('/api/lessonplan/weeks',{method:'POST',body:{action:'delete',id:w.id}});if(w.id===week.id)newWeek();loadHistory()}catch(e){setError(e.message)}}
+ async function removeWeek(w){if(!window.confirm(`Remove the ${weekPhrase(w.weekOf)} plan? Its lessons stay in My Lessons.`))return;try{await call('/api/lessonplan/weeks',{method:'POST',body:{action:'delete',id:w.id}});if(w.id===week.id)newWeek();loadHistory()}catch(e){setError(e.message)}}
 
  const stepLabel={lesson:'Designing the lesson…',worksheet:'Creating the worksheet and answer key…',saving:'Saving…',done:'Ready',error:'Not finished'}
  const stateChoice=['FL','PA'].includes(week.state)?week.state:'other',gradeChoice=GRADES.includes(week.grade)?week.grade:'other',subjectChoice=['math','reading'].includes(week.subject)?week.subject:'other'

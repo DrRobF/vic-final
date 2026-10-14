@@ -4,7 +4,7 @@ import VICHeader from '../components/VICHeader'
 import { supabase } from '../lib/supabase'
 import { lessonOutputSections } from '../lib/lesson-designer.mjs'
 import { versionLabel } from '../lib/levels.mjs'
-import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, mondayOf, formatDay, weekLabel, gradeLabel, subjectLabel, weekFileName } from '../lib/lesson-week.mjs'
+import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, mondayOf, formatDay, weekLabel, weekPhrase, gradeLabel, subjectLabel, weekFileName } from '../lib/lesson-week.mjs'
 
 async function api(query='',body){
  const {data:{session}}=await supabase.auth.getSession()
@@ -71,7 +71,7 @@ export default function WeeklyPlans(){
   :<>
    <section className="wp-panel wp-filters">{schools.length>1&&<label>School<select value={schoolId} onChange={e=>setSchoolId(e.target.value)}>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}<label>Week of<input type="date" value={weekOf} disabled={allRecent} onChange={e=>setWeekOf(mondayOf(e.target.value)||weekOf)}/></label><label className="wp-check"><input type="checkbox" checked={allRecent} onChange={e=>setAllRecent(e.target.checked)}/> Show all recent weeks</label></section>
    {!data?<p role="status">Loading…</p>:<>
-    {!allRecent&&<p className="wp-summary"><strong>{sentBy.size} of {data.teachers.length}</strong> teachers have sent plans for the {weekLabel(weekOf).toLowerCase()}.</p>}
+    {!allRecent&&<p className="wp-summary"><strong>{sentBy.size} of {data.teachers.length}</strong> teachers have sent plans for the {weekPhrase(weekOf)}.</p>}
     <section className="wp-panel"><h2>{allRecent?'Recent lesson plans':'Sent this week'}</h2>{!weeks.length?<p className="wp-muted">No lesson plans yet{allRecent?'':' for this week'}. Teachers send them from AskVic’s weekly planner (askvic.ai/lessonplan/week).</p>:<ul className="wp-list">{weeks.map(w=><li key={w.id}><div><strong>{w.teacherName}</strong><span>{allRecent?`${weekLabel(w.weekOf)} · `:''}{gradeLabel(w.grade)} · {subjectLabel(w.subject)} · sent {when(w.submittedAt)}{w.editedAfterSubmit?' · edited since':''}</span><span className="wp-codes">{w.days.map((d,i)=><em key={i} title={WEEKDAYS[i]}>{WEEKDAYS[i].slice(0,3)}: {d.off?'—':d.codes.join(', ')}</em>)}</span></div><span className={`wp-badge ${w.status}`}>{WEEK_STATUS[w.status]}</span><button type="button" className="wp-primary" onClick={()=>openPlan(w.id)}>Open</button></li>)}</ul>}</section>
     {!allRecent&&missing.length>0&&<section className="wp-panel"><h2>Not sent yet</h2><ul className="wp-missing">{missing.map(t=><li key={t.id}>{t.name}{!t.onAskVic&&<small> · not on AskVic yet — share your school’s join code</small>}</li>)}</ul></section>}
    </>}
