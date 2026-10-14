@@ -19,6 +19,7 @@ const EDUCATOR_NAV = [
 ]
 const SCHOOL_NAV = [
  { href: '/school', label: 'Dashboard', match: ['/school'] },
+ { href: '/school/attendance', label: 'Attendance', match: ['/school/attendance'] },
  { href: '/weeklyplans', label: 'Lesson plans', match: ['/weeklyplans'] },
  { href: '/walkthroughs', label: 'Walkthroughs', match: ['/walkthroughs'] },
  { href: '/assistantprincipal', label: 'Staff & deadlines', match: ['/assistantprincipal'] },
@@ -32,6 +33,7 @@ const STUDENT_NAV = [
 function displayName(profile, user) { return profile?.name || profile?.email || user?.email || '' }
 function isActive(item, currentPath) {
  const paths = item.match || [item.href]
+ if (item.href === '/school') return currentPath === '/school'
  // The most specific match wins, so "/lessonplan/week" lights up My Week rather than Lessons.
  return paths.some(p => currentPath === p || (p !== '/' && currentPath.startsWith(p + '/') && !(item.href === '/lessons' && currentPath.startsWith('/lessonplan/week'))))
 }

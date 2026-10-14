@@ -79,6 +79,7 @@ export default function SchoolDashboard() {
     <div className="grid">
      {account.leader && <a className="panel tile" href={`/weeklyplans${schoolId ? `?school=${schoolId}` : ''}`}><strong>Lesson plans</strong><span>Read the weeks teachers send, leave feedback, mark them reviewed.</span></a>}
      {account.leader && <a className="panel tile" href="/walkthroughs"><strong>Walkthroughs &amp; Learning Paths</strong><span>Record a visit from your phone or tablet, share feedback, assign short practice.</span></a>}
+     {account.leader && <a className="panel tile att" href="/school/attendance"><strong>Staff attendance</strong><span>Who’s here, late or absent today, read from your own check-in sheet.</span></a>}
      {account.leader && <a className="panel tile" href="/assistantprincipal"><strong>Staff &amp; deadlines</strong><span>Your staff list, what’s due each week, and the weekly brief.</span></a>}
      {account.manageAccounts && <a className="panel tile" href="/admin/accounts"><strong>Accounts &amp; passwords</strong><span>Create teacher and student logins, reset passwords.</span></a>}
      {account.manageAccounts && <a className="panel tile" href="/admin/classrooms"><strong>Classrooms</strong><span>Create classes for teachers and manage rosters.</span></a>}
@@ -113,6 +114,7 @@ export default function SchoolDashboard() {
    .tile strong{font-size:17px}
    .tile span{color:var(--vic-text-secondary);font-size:15px;line-height:1.5}
    .tile:hover{border-color:var(--vic-primary)}
+   .att{border:2px solid var(--vic-cyan)}
    .join{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
    .code{font-family:var(--font-mono);letter-spacing:.08em;font-size:28px}
    @media(max-width:860px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
