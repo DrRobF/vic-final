@@ -78,7 +78,7 @@ export default function SchoolDashboard() {
     <p className="label">School tools</p>
     <div className="grid">
      {account.leader && <a className="panel tile" href={`/weeklyplans${schoolId ? `?school=${schoolId}` : ''}`}><strong>Lesson plans</strong><span>Read the weeks teachers send, leave feedback, mark them reviewed.</span></a>}
-     {account.leader && <a className="panel tile" href="/walkthroughs"><strong>Walkthroughs &amp; Learning Paths</strong><span>Record a visit, share feedback, assign short practice.</span></a>}
+     {account.leader && <a className="panel tile" href="/walkthroughs"><strong>Walkthroughs &amp; Learning Paths</strong><span>Record a visit from your phone or tablet, share feedback, assign short practice.</span></a>}
      {account.leader && <a className="panel tile" href="/assistantprincipal"><strong>Staff &amp; deadlines</strong><span>Your staff list, what’s due each week, and the weekly brief.</span></a>}
      {account.manageAccounts && <a className="panel tile" href="/admin/accounts"><strong>Accounts &amp; passwords</strong><span>Create teacher and student logins, reset passwords.</span></a>}
      {account.manageAccounts && <a className="panel tile" href="/admin/classrooms"><strong>Classrooms</strong><span>Create classes for teachers and manage rosters.</span></a>}

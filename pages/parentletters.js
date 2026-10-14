@@ -52,7 +52,7 @@ export default function ParentLettersPage(){
  const focusStudentId=requestedClass&&String(chosenClass?.id)===String(requestedClass)&&/^\d+$/.test(String(requestedStudent))?Number(requestedStudent):null
  const go=(next,extra='')=>router.push(`/parentletters?mode=${next}${extra}`,undefined,{shallow:true})
 
- return <main><Head><title>Family Letters | Ask VIC</title><meta name="description" content="Write parent emails from quick notes, personalized student letters, and class updates in one place."/></Head><VICHeader currentPath="/parentletters"/>
+ return <main><Head><title>Family Letters | AskVic</title><meta name="description" content="Write parent emails from quick notes, personalized student letters, and class updates in one place."/></Head><VICHeader currentPath="/parentletters"/>
   <div className="breadcrumbs"><a href="/teach">← My Week</a></div>
   <header className="pageHeader"><p className="eyebrow">FAMILY COMMUNICATION</p><h1>Family Letters</h1><p>Everything you send to families, in one place. Pick the kind of message, add what you want, and review it before anything goes out.</p></header>
   <nav className="modes" aria-label="Kind of family message">{MODES.map(m=><button key={m.key} type="button" aria-pressed={mode===m.key} onClick={()=>go(m.key)}><strong>{m.label}</strong><span>{m.hint}</span></button>)}</nav>

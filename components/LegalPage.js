@@ -5,7 +5,7 @@ export const LEGAL_UPDATED='October 9, 2026'
 export const CONTACT_EMAIL='drrobfurman@gmail.com'
 
 export default function LegalPage({title,description,path,summary,children}){
- return <main className="legal"><Head><title>{`${title} | Ask VIC`}</title><meta name="description" content={description}/>{path&&<link rel="canonical" href={`https://www.askvic.ai${path}`}/>}</Head><VICHeader currentPath=""/>
+ return <main className="legal"><Head><title>{`${title} | AskVic`}</title><meta name="description" content={description}/>{path&&<link rel="canonical" href={`https://www.askvic.ai${path}`}/>}</Head><VICHeader currentPath=""/>
   <article>
    <p className="eyebrow">ASK VIC</p>
    <h1>{title}</h1>

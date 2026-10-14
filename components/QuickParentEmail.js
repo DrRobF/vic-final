@@ -29,6 +29,7 @@ export default function QuickParentEmail(){
    setMessage(d.unsaved?'Your email is ready. Copy it before you leave this page.':action==='generate'?'Your email is ready and saved privately. Add the name, review it, then send it from your school email.':'Your edits are saved.')
   }catch(e){setError(e.message)}finally{setBusy(false)}
  }
+ async function clearAll(){setBusy(true);setError('');setMessage('');try{await request({action:'clear',kind:'parent_email'});setNotes('');setDraft('');setDirty(false);setMessage('Cleared. Start a new email.')}catch(e){setError(e.message)}finally{setBusy(false)}}
  async function copy(){try{await navigator.clipboard.writeText(draft);setMessage('Copied. Paste it into your school email, add the name, and send.')}catch{setError('Copy is unavailable here. Select the text and copy it instead.')}}
 
  return <section className="quick" aria-busy={busy}>
@@ -47,7 +48,7 @@ export default function QuickParentEmail(){
    <label htmlFor="quick-draft">Your editable email</label>
    <textarea id="quick-draft" rows="16" disabled={busy} value={draft} onChange={e=>{setDraft(e.target.value);setDirty(true)}} maxLength="16000" placeholder="Your email will appear here."/>
    <div className="actions">
-    <button className="primary" type="button" disabled={!draft||busy} onClick={copy}>Copy email</button>
+    <button className="primary" type="button" disabled={!draft||busy} onClick={copy}>Copy email</button><button className="outline" type="button" disabled={busy||(!draft&&!notes)} onClick={clearAll}>Start fresh</button>
     <button className="outline" type="button" disabled={busy||!dirty||notes.trim().length<10||!draft} onClick={()=>run('save')}>Save my edits</button>
    </div>
    <small>Nothing is sent automatically. For a letter that includes VIC reports, lesson goals, or suggested comments, use <a href="/parentletters?mode=student">One student letter</a>.</small>

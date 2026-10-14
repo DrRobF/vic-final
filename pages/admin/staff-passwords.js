@@ -30,7 +30,7 @@ export default function StaffPasswords() {
     setDemoBusy(true); setError('')
     try { setDemoResult(await request('POST', true)) } catch (error) { setError(error.message) } finally { setDemoBusy(false) }
   }
-  return <main><Head><title>Staff password reset | Ask VIC</title></Head><section>
+  return <main><Head><title>Staff password reset | AskVic</title></Head><section>
     <h1>Staff first-login setup</h1>
     <p>Reset these six staff accounts to <strong>spa2026</strong>. Each teacher must choose a personal password before using VIC or the Lesson Plan Designer.</p>
     <p>Your account and student passwords stay unchanged.</p>
