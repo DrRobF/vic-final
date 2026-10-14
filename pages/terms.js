@@ -49,7 +49,7 @@ export default function Terms(){
   <h2>6. School accounts</h2>
   <ul>
    <li><strong>Who can set one up:</strong> a school leader who sets up a school workspace confirms they are authorized to do so for that school.</li>
-   <li><strong>Seats and codes:</strong> each school has a number of seats. Everyone on the staff list uses one, whether a leader added them or they joined with the school code. Leaders may change the code or remove staff at any time.</li>
+   <li><strong>Seats and codes:</strong> each school has a number of seats. A seat is used by each staff member who logs in to AskVic. People who are only on the staff list (for example, for attendance or walkthroughs) don’t use a seat. Leaders may change the code or remove staff at any time.</li>
    <li><strong>Teachers who join:</strong> a teacher who joins a school agrees that its leaders may see the information the join screen describes. That means walkthroughs, assigned Learning Paths, completion, and reflections, and never quiz scores or private work.</li>
    <li><strong>School data:</strong> schools control their own records, and we follow their instructions for them.</li>
   </ul>

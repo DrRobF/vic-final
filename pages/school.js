@@ -89,7 +89,7 @@ export default function SchoolDashboard() {
    </section>
 
    {school?.joinCode && <section className="panel join">
-    <div><p className="label">Join code</p><h2 className="code">{school.joinCode}</h2><p>Teachers enter this at askvic.ai/join so their lesson plans come to you. {school.seatsUsed} of {school.seatLimit} seats used.</p></div>
+    <div><p className="label">Join code</p><h2 className="code">{school.joinCode}</h2><p>Teachers enter this at askvic.ai/join so their lesson plans come to you. {school.seatsUsed} of {school.seatLimit} seats used by staff who log in. Everyone else on your staff list is free.</p></div>
     <button type="button" className="btn btn-volt" onClick={copyCode}>{copied ? '✓ Copied' : 'Copy code'}</button>
    </section>}
   </>}

@@ -109,10 +109,10 @@ export default function Walkthroughs(){
    </>}
 
    {tab==='staff'&&<>
-    <section className="card"><h2>Invite your staff</h2><p className="muted">Share this code or link. Teachers log in (or sign up free), enter the code, and they’re on your staff list. Anyone you already added with the same email is matched automatically and doesn’t use another seat.</p>
+    <section className="card"><h2>Invite your staff</h2><p className="muted">Share this code or link. Teachers log in (or sign up free), enter the code, and they’re on your staff list. Anyone you already added with the same email is matched automatically. Seats count only staff who log in; people who are only on your staff list are free.</p>
      <div className="codeBox"><div><small>School code</small><strong>{data.school.joinCode||'—'}</strong></div><button className="outline" type="button" onClick={()=>copyText(data.school.joinCode,'code')}>{copied==='code'?'Copied ✓':'Copy code'}</button><button className="outline" type="button" onClick={()=>copyText(joinLink,'link')}>{copied==='link'?'Copied ✓':'Copy join link'}</button></div>
      <p className="muted">Join link: <span className="mono">{joinLink}</span></p>
-     <div className="seats"><div className="bar"><span style={{width:`${Math.min(100,Math.round(100*data.school.seatsUsed/Math.max(1,data.school.seatLimit)))}%`}}/></div><p><strong>{data.school.seatsUsed}</strong> of <strong>{data.school.seatLimit}</strong> seats used. {data.school.seatsUsed>=data.school.seatLimit?'Your school is full. Remove someone or ask about a larger plan.':''}</p></div>
+     <div className="seats"><div className="bar"><span style={{width:`${Math.min(100,Math.round(100*data.school.seatsUsed/Math.max(1,data.school.seatLimit)))}%`}}/></div><p><strong>{data.school.seatsUsed}</strong> of <strong>{data.school.seatLimit}</strong> seats used by staff who log in. {data.school.seatsUsed>=data.school.seatLimit?'Your school is full. Remove someone or ask about a larger plan.':''}</p></div>
      <button className="textButton" type="button" onClick={newCode}>Make a new code (the old one stops working)</button>
     </section>
     <section className="card"><h2>Staff list</h2><p className="muted">Add, edit, or remove people in the <a href="/assistantprincipal">leadership workspace</a>. Walkthroughs work for everyone on the list. “Joined” means they’ve linked their AskVic account, so assigned Learning Paths reach them.</p>

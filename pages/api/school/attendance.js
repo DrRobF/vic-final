@@ -139,8 +139,6 @@ export default async function handler(req, res) {
    const name = clean(body.name, 120).replace(/\s+/g, ' ')
    const role = ['teacher', 'support', 'office', 'leader', 'other'].includes(body.role) ? body.role : 'teacher'
    if (name.length < 2) return res.status(400).json({ error: 'Enter the person’s name.' })
-   const [{ count }, [seat]] = await Promise.all([db.from('ap_staff').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('active', true), q(db.from('ap_schools').select('seat_limit').eq('id', schoolId).limit(1))])
-   if ((seat?.seat_limit ?? 50) - (count || 0) < 1) return res.status(409).json({ error: 'Your school has used all of its seats. Remove someone from the staff list or ask about a larger plan.' })
    const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: name, role, active: true, pay_type: body.payType === 'hourly' ? 'hourly' : 'salaried' }).select('id'))
    const key = nameKey(body.key || name)
    if (key && key !== nameKey(name)) for (const l of links) await q(db.from('ap_sheet_links').update({ aliases: { ...(l.aliases || {}), [key]: added.id } }).eq('id', l.id))
