@@ -1,6 +1,7 @@
 import { requirePrincipal, requireSchool } from '../../../lib/assistant-principal-auth'
 import { schoolClock } from '../../../lib/assistant-principal-rules.mjs'
 import { serviceEmail, spreadsheetId, sheetInfo, tabValues } from '../../../lib/google-sheets'
+import { defaultWeekOf } from '../../../lib/lesson-week.mjs'
 import { SECRET_HEADER, guessMapping, validateMapping, parseAttendance, parseAbsences, staffPicture, reminderDraft, nameKey } from '../../../lib/staff-attendance.mjs'
 
 export const config = { maxDuration: 45 }
@@ -26,7 +27,7 @@ async function syncLink(db, link) {
   const parsed = link.kind === 'attendance' ? parseAttendance(values, link.mapping) : parseAbsences(values, link.mapping)
   const table = link.kind === 'attendance' ? 'ap_attendance' : 'ap_absence_reports'
   const rows = link.kind === 'attendance'
-   ? parsed.rows.map(r => ({ school_id: link.school_id, staff_key: r.staffKey, staff_name: r.staffName, day: r.day, clock_in: r.clockIn, clock_out: r.clockOut, status: r.status, late_minutes: r.lateMinutes, early_minutes: r.earlyMinutes }))
+   ? parsed.rows.map(r => ({ school_id: link.school_id, staff_key: r.staffKey, staff_name: r.staffName, day: r.day, clock_in: r.clockIn, clock_out: r.clockOut, status: r.status, late_minutes: r.lateMinutes, early_minutes: r.earlyMinutes, flag: r.flag }))
    : parsed.rows.map(r => ({ school_id: link.school_id, staff_key: r.staffKey, staff_name: r.staffName, start_date: r.startDate, end_date: r.endDate, absence_type: r.type, portion: r.portion, coverage: r.coverage, problem: r.problem }))
   // The sheet is the source of truth: replace this school's copy only after a successful read.
   await q(db.from(table).delete().eq('school_id', link.school_id))
@@ -40,13 +41,18 @@ async function syncLink(db, link) {
 async function picture(db, schoolId, links, timeZone) {
  const clock = schoolClock(new Date(), timeZone || 'America/New_York'), from = yearStart(clock.date)
  const [staff, attendance, absences] = await Promise.all([
-  q(db.from('ap_staff').select('id,display_name,role,email,pay_type').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
-  links.some(l => l.kind === 'attendance') ? q(db.from('ap_attendance').select('staff_key,staff_name,day,clock_in,clock_out,status,late_minutes').eq('school_id', schoolId).gte('day', from).limit(20000)) : [],
+  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
+  links.some(l => l.kind === 'attendance') ? q(db.from('ap_attendance').select('staff_key,staff_name,day,clock_in,clock_out,status,late_minutes,flag').eq('school_id', schoolId).gte('day', from).limit(20000)) : [],
   links.some(l => l.kind === 'absences') ? q(db.from('ap_absence_reports').select('staff_key,staff_name,start_date,end_date,absence_type,portion,coverage,problem').eq('school_id', schoolId).limit(5000)) : [],
  ])
+ // Lesson plans for the week teachers are planning now (same week the School dashboard shows).
+ const weekOf = defaultWeekOf()
+ const plans = await q(db.from('lesson_weeks').select('staff_id,status').eq('school_id', schoolId).eq('week_of', weekOf).in('status', ['submitted', 'reviewed']))
+ const lessonPlans = {}
+ for (const w of plans) if (w.staff_id) lessonPlans[w.staff_id] = lessonPlans[w.staff_id] === 'reviewed' ? 'reviewed' : w.status
  const aliases = Object.assign({}, ...links.map(l => l.aliases || {}))
  const settings = links.find(l => l.kind === 'attendance')?.settings || {}
- return { staff, pic: staffPicture({ staff, attendance, absences, today: clock.date, nowTime: clock.time, settings, aliases }) }
+ return { staff, pic: { ...staffPicture({ staff, attendance, absences, today: clock.date, nowTime: clock.time, settings, aliases, lessonPlans }), weekOf } }
 }
 
 const publicLink = l => ({ kind: l.kind, spreadsheetId: l.spreadsheet_id, tab: l.tab, mapping: l.mapping, onTime: l.settings?.onTime || '', rows: l.settings?.rows ?? null, problems: l.settings?.problems || [], lastSyncedAt: l.last_synced_at, lastError: l.last_error })
@@ -118,6 +124,27 @@ export default async function handler(req, res) {
    if (!uuid(body.staffId) || !['salaried', 'hourly'].includes(body.payType)) return res.status(400).json({ error: 'Choose salaried or hourly.' })
    await q(db.from('ap_staff').update({ pay_type: body.payType }).eq('school_id', schoolId).eq('id', body.staffId))
    return res.json({ saved: true })
+  }
+  if (action === 'update_staff') {
+   if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
+   const time = v => v === '' || v == null ? null : /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : undefined
+   const days = v => v === '' || v == null ? null : Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 365 ? Number(v) : undefined
+   const patch = { shift_start: time(body.shiftStart), shift_end: time(body.shiftEnd), sick_days: days(body.sickDays), personal_days: days(body.personalDays) }
+   if (Object.values(patch).some(v => v === undefined)) return res.status(400).json({ error: 'Use times like 7:30 AM and a number of days.' })
+   if (['salaried', 'hourly'].includes(body.payType)) patch.pay_type = body.payType
+   await q(db.from('ap_staff').update(patch).eq('school_id', schoolId).eq('id', body.staffId))
+   return res.json({ saved: true })
+  }
+  if (action === 'add_staff') {
+   const name = clean(body.name, 120).replace(/\s+/g, ' ')
+   const role = ['teacher', 'support', 'office', 'leader', 'other'].includes(body.role) ? body.role : 'teacher'
+   if (name.length < 2) return res.status(400).json({ error: 'Enter the person’s name.' })
+   const [{ count }, [seat]] = await Promise.all([db.from('ap_staff').select('id', { count: 'exact', head: true }).eq('school_id', schoolId).eq('active', true), q(db.from('ap_schools').select('seat_limit').eq('id', schoolId).limit(1))])
+   if ((seat?.seat_limit ?? 50) - (count || 0) < 1) return res.status(409).json({ error: 'Your school has used all of its seats. Remove someone from the staff list or ask about a larger plan.' })
+   const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: name, role, active: true, pay_type: body.payType === 'hourly' ? 'hourly' : 'salaried' }).select('id'))
+   const key = nameKey(body.key || name)
+   if (key && key !== nameKey(name)) for (const l of links) await q(db.from('ap_sheet_links').update({ aliases: { ...(l.aliases || {}), [key]: added.id } }).eq('id', l.id))
+   return res.json({ added: true })
   }
   if (action === 'alias') {
    const key = nameKey(body.key)

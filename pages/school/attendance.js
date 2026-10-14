@@ -25,7 +25,7 @@ function TodayBadge({ t }) {
 
 // Staff attendance, read from the school's own Google Sheets. Leaders only.
 export default function StaffAttendance() {
- const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState(''), [data, setData] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(''), [connecting, setConnecting] = useState(''), [note, setNote] = useState(null), [msg, setMsg] = useState('')
+ const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState(''), [data, setData] = useState(null), [error, setError] = useState(''), [busy, setBusy] = useState(''), [connecting, setConnecting] = useState(''), [note, setNote] = useState(null), [msg, setMsg] = useState(''), [editing, setEditing] = useState('')
 
  useEffect(() => { api('GET').then(d => { setSchools(d.schools); setSchoolId(d.schools[0]?.id || '') }).catch(e => setError(e.message)) }, [])
  async function load(refresh = false) { if (!schoolId) return; setBusy(refresh ? 'Reading your sheets…' : ''); setError(''); try { setData(await api('GET', null, `?schoolId=${encodeURIComponent(schoolId)}${refresh ? '&refresh=1' : ''}`)) } catch (e) { setError(e.message) } finally { setBusy('') } }
@@ -77,25 +77,34 @@ export default function StaffAttendance() {
      </li>)}</ul>
     </section>}
 
+    {people.some(p => p.flags.length) && <section className="panel">
+     <p className="label">Check these rows in your check-in sheet</p>
+     <p>These look like mistakes. Fix them in the Google Sheet; VIC picks up the fix the next time it reads. They’re left out of hours until then.</p>
+     <ul className="flags">{people.filter(p => p.flags.length).map(p => <li key={p.id}><strong>{p.name}</strong><span>{p.flags.map(f => `${fmtDay(f.day)} · ${f.flag}`).join('  |  ')}</span></li>)}</ul>
+    </section>}
+
     <section className="panel tablewrap">
-     <p className="label">Everyone · school year so far ({data.schoolDays} school days)</p>
+     <p className="label">Everyone · school year so far ({data.schoolDays} school days){linked.attendance?.onTime ? ` · on time = in by ${fmtTime(linked.attendance.onTime)}` : ''}</p>
      <table>
-      <thead><tr><th>Name</th><th>Today</th><th>Late</th><th>Absences</th><th>Pay</th></tr></thead>
-      <tbody>{people.map(p => <tr key={p.id}>
-       <td className="nm">{p.name}{p.formProblems.length > 0 && <small title={p.formProblems.join('\n')}>Form has a date typo</small>}</td>
+      <thead><tr><th>Name</th><th>Today</th><th>Late</th><th>Absences</th><th>Days left / hours</th><th>Lesson plans</th><th /></tr></thead>
+      <tbody>{people.map(p => [<tr key={p.id}>
+       <td className="nm">{p.name}<small className="sub">{p.payType === 'hourly' ? 'Hourly' : 'Salaried'}{p.shiftStart ? ` · ${fmtTime(p.shiftStart)}–${fmtTime(p.shiftEnd)}` : ''}</small>{p.formProblems.length > 0 && <small className="typo" title={p.formProblems.join('\n')}>Form has a date typo</small>}</td>
        <td><TodayBadge t={p.today} /></td>
-       <td>{p.lateCount ? `${p.lateCount}×${p.lateMinutes ? ` · ${p.lateMinutes} min` : ''}` : '—'}</td>
+       <td>{p.lateCount ? `${p.lateCount}×${p.lateMinutes ? ` · ${p.lateMinutes} min` : ''}` : '—'}{p.earlyCount ? <small className="sub">Left early {p.earlyCount}×</small> : null}</td>
        <td>{p.absences ? <>{p.absences}{p.absences > p.absencesWithForm ? <span className="nf"> · {p.absences - p.absencesWithForm} no form</span> : ''}</> : '—'}</td>
-       <td><select aria-label={`Pay type for ${p.name}`} value={p.payType} onChange={e => act({ action: 'set_pay', staffId: p.id, payType: e.target.value })}><option value="salaried">Salaried</option><option value="hourly">Hourly</option></select></td>
-      </tr>)}</tbody>
+       <td>{p.payType === 'hourly' ? <span>{p.hours.thisWeek} h this week<small className="sub">{p.hours.lastWeek} h last week{p.missingOut.length ? ` · ${p.missingOut.length} missing clock-out` : ''}</small></span>
+        : <span>{p.leave.sickLeft != null ? <b className={p.leave.sickLeft <= 1 ? 'low' : ''}>{p.leave.sickLeft} sick left</b> : `${p.leave.sick} sick used`}<small className="sub">{p.leave.personalLeft != null ? `${p.leave.personalLeft} personal left` : `${p.leave.personal} personal used`}{p.leave.other ? ` · ${p.leave.other} other` : ''}</small></span>}</td>
+       <td>{p.lessonPlan == null ? '' : p.lessonPlan === 'reviewed' ? <span className="lp ok">✓ Reviewed</span> : p.lessonPlan === 'submitted' ? <span className="lp ok">✓ Sent</span> : <span className="lp no">Not yet</span>}</td>
+       <td><button type="button" className="linkbtn" onClick={() => setEditing(editing === p.id ? '' : p.id)}>{editing === p.id ? 'Close' : 'Edit'}</button></td>
+      </tr>, editing === p.id && <tr key={p.id + '-e'} className="editrow"><td colSpan={7}><StaffEdit person={p} onSave={patch => act({ action: 'update_staff', staffId: p.id, ...patch }, () => { setEditing(''); setMsg(`Saved ${p.name}.`) })} /></td></tr>])}</tbody>
      </table>
-     <small className="muted">Absences count school days with no check-in. A school day is any day most staff checked in, so holidays never count. Missing clock-outs only matter for hourly staff.</small>
+     <small className="muted">Absences count school days with no check-in (a school day is any day most staff checked in, so holidays never count). Days left come from the absence form: whole day = 1, half day or custom hours = ½. Missing clock-outs only matter for hourly staff.</small>
     </section>
 
     {data.unmatched.length > 0 && <section className="panel">
-     <p className="label">Names VIC couldn’t match</p>
-     <p>These names appear in your sheets but not on your staff list. Pick who each one is, once.</p>
-     <ul className="um">{data.unmatched.map(u => <li key={u.key}><span>{u.name}</span><select defaultValue="" onChange={e => e.target.value && act({ action: 'alias', key: u.key, staffId: e.target.value })}><option value="">Who is this?</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></li>)}</ul>
+     <p className="label">People in your sheets who aren’t on your staff list</p>
+     <p>Match each one to someone, or add them in one click.</p>
+     <ul className="um">{data.unmatched.map(u => <Unmatched key={u.key} u={u} people={people} act={act} />)}</ul>
     </section>}
    </>}
 
@@ -139,7 +148,7 @@ export default function StaffAttendance() {
    table{width:100%;border-collapse:collapse;font-size:15px;margin:6px 0 10px}
    th{text-align:left;font-family:var(--font-mono);font-size:13px;text-transform:uppercase;color:var(--vic-text-secondary);padding:8px;border-bottom:2px solid var(--vic-border)}
    td{padding:9px 8px;border-bottom:1px solid var(--vic-border-soft);vertical-align:middle}
-   .nm{font-weight:800}.nm small{display:block;font-weight:600;color:var(--vic-danger);font-size:12px}
+   .nm{font-weight:800}
    .nf{color:var(--vic-danger);font-weight:800}
    td select{padding:6px 8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit;font-size:14px}
    :global(.tb){display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;font-size:13px;white-space:nowrap}
@@ -148,9 +157,22 @@ export default function StaffAttendance() {
    :global(.tb.form){background:var(--lvl-support-soft);color:var(--lvl-support-ink)}
    :global(.tb.noform){background:var(--vic-danger-soft);color:#912018}
    :global(.tb.wait){background:var(--vic-surface-muted);color:var(--vic-text-secondary)}
-   .um{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:8px}
-   .um li{display:flex;gap:12px;align-items:center;flex-wrap:wrap}.um span{font-weight:800;min-width:180px}
-   .um select{padding:8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit}
+   .um{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:10px}
+   :global(.um li){display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--vic-border-soft)}
+   :global(.umh){min-width:220px;display:flex;flex-direction:column}:global(.umh span){font-weight:800}:global(.umh small){color:var(--vic-text-secondary)}
+   :global(.umadd){display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+   :global(.umadd select),:global(.umadd input){padding:8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit;font-size:15px}
+   .flags{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:6px}
+   .flags li{display:flex;gap:12px;flex-wrap:wrap}.flags strong{min-width:160px}.flags span{color:var(--vic-danger);font-size:14px}
+   .sub{display:block;font-weight:600;color:var(--vic-text-secondary);font-size:12px}
+   .typo{display:block;font-weight:600;color:var(--vic-danger);font-size:12px}
+   .low{color:var(--vic-danger)}
+   .lp{font-weight:800;font-size:13px}.lp.ok{color:var(--vic-success)}.lp.no{color:var(--vic-text-secondary)}
+   .editrow td{background:var(--vic-surface-muted)}
+   :global(.edit){display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}
+   :global(.edit label){display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:13px}
+   :global(.edit input),:global(.edit select){padding:7px 8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit;font-size:15px;width:140px}
+   :global(.edit small){flex-basis:100%;color:var(--vic-text-secondary)}
    .sheets{display:grid;grid-template-columns:1fr 1fr;gap:16px}
    .sheet{border:1px solid var(--vic-border-soft);border-radius:14px;padding:16px}
    .sheet h3{margin:0 0 6px}.ok{color:var(--vic-success)!important;font-weight:700}.bad{color:var(--vic-danger)!important;font-weight:700}
@@ -160,6 +182,37 @@ export default function StaffAttendance() {
    @media(max-width:860px){.stats{grid-template-columns:repeat(2,1fr)}.sheets{grid-template-columns:1fr}.att li{grid-template-columns:1fr}}
   `}</style>
  </PageShell>
+}
+
+function Unmatched({ u, people, act }) {
+ const [mode, setMode] = useState(''), [role, setRole] = useState('teacher'), [pay, setPay] = useState('hourly'), [name, setName] = useState(u.name.replace(/\b\w/g, c => c.toUpperCase()))
+ return <li>
+  <div className="umh"><span>{u.name}</span><small>{u.days ? `${u.days} check-ins` : ''}{u.days && u.sources.includes('absence form') ? ' · ' : ''}{u.sources.includes('absence form') ? 'on the absence form' : ''}</small></div>
+  {mode === 'add' ? <div className="umadd">
+   <input value={name} onChange={e => setName(e.target.value)} aria-label="Name" />
+   <select value={role} onChange={e => setRole(e.target.value)} aria-label="Role"><option value="teacher">Teacher</option><option value="support">Support / aide</option><option value="office">Office</option><option value="leader">Leader</option><option value="other">Other</option></select>
+   <select value={pay} onChange={e => setPay(e.target.value)} aria-label="Pay"><option value="hourly">Hourly</option><option value="salaried">Salaried</option></select>
+   <button type="button" className="btn btn-primary sm" onClick={() => act({ action: 'add_staff', name, role, payType: pay, key: u.key })}>Add</button>
+   <button type="button" className="linkbtn" onClick={() => setMode('')}>Cancel</button>
+  </div> : <div className="umadd">
+   <select defaultValue="" onChange={e => e.target.value && act({ action: 'alias', key: u.key, staffId: e.target.value })}><option value="">This is…</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+   <button type="button" className="btn btn-outline sm" onClick={() => setMode('add')}>+ Add as new staff</button>
+  </div>}
+ </li>
+}
+
+function StaffEdit({ person, onSave }) {
+ const [f, setF] = useState({ payType: person.payType, shiftStart: person.shiftStart, shiftEnd: person.shiftEnd, sickDays: person.sickDays ?? '', personalDays: person.personalDays ?? '' })
+ const set = (k, v) => setF({ ...f, [k]: v })
+ return <div className="edit">
+  <label>Pay<select value={f.payType} onChange={e => set('payType', e.target.value)}><option value="salaried">Salaried</option><option value="hourly">Hourly</option></select></label>
+  <label>Starts at<input type="time" value={f.shiftStart} onChange={e => set('shiftStart', e.target.value)} /></label>
+  <label>Ends at<input type="time" value={f.shiftEnd} onChange={e => set('shiftEnd', e.target.value)} /></label>
+  <label>Sick days a year<input type="number" min="0" step="0.5" value={f.sickDays} onChange={e => set('sickDays', e.target.value)} /></label>
+  <label>Personal days a year<input type="number" min="0" step="0.5" value={f.personalDays} onChange={e => set('personalDays', e.target.value)} /></label>
+  <button type="button" className="btn btn-primary sm" onClick={() => onSave(f)}>Save</button>
+  <small>Leave the start time blank to use the school’s on-time rule. Their own start time decides late; their end time decides left early.</small>
+ </div>
 }
 
 function Connect({ kind, schoolId, serviceEmail, existing, onDone, onCancel }) {
