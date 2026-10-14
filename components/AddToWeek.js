@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { WEEKDAYS, defaultWeekOf, mondayOf, weekDates, formatDay, weekLabel } from '../lib/lesson-week.mjs'
+import { WEEKDAYS, defaultWeekOf, mondayOf, weekDates, formatDay, weekLabel, weekPhrase } from '../lib/lesson-week.mjs'
 import { listWeeks, addLessonToWeek } from '../lib/lesson-week-client'
 
 // Which week and day hold this lesson, read from the teacher's saved weeks.
@@ -48,7 +48,7 @@ export default function AddToWeek({draft,targetDay,targetWeekOf,targetWeekId,ope
     <label>Week of<input type="date" value={weekOf} disabled={busy||disabled} onChange={e=>setWeekOf(mondayOf(e.target.value)||weekOf)}/></label>
     <label>Day<select value={day} disabled={busy||disabled} onChange={e=>{setDay(Number(e.target.value));setPicked(true)}}>{WEEKDAYS.map((_,i)=><option key={i} value={i}>{label(i)}</option>)}</select></label>
    </div>
-   <small>{match?`${match.days.filter(d=>d.off||d.lessonId).length} of 5 days ready in this week.`:loaded?`Starts your ${weekLabel(weekOf).toLowerCase()}. Add the other days whenever you’re ready.`:''}</small>
+   <small>{match?`${match.days.filter(d=>d.off||d.lessonId).length} of 5 days ready in this week.`:loaded?`Starts your ${weekPhrase(weekOf)}. Add the other days whenever you’re ready.`:''}</small>
    <div className="ld-actions"><button type="button" className="ld-primary" disabled={busy||disabled||!draft?.savedLessonId} onClick={()=>add()}>{busy?'Adding…':home?`Move to ${WEEKDAYS[day]}`:`Add to ${WEEKDAYS[day]}`}</button><button type="button" className="ld-text-button" onClick={()=>onToggle?.(false)}>Cancel</button></div>
    {error&&<p role="alert" className="ld-error">{error}</p>}
   </div>}

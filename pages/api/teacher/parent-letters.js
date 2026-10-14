@@ -17,7 +17,7 @@ export default async function handler(req,res){
   if(auth.profile.role!=='teacher')return res.status(403).json({error:'Only the class teacher can prepare parent letters.'})
   const classId=idNumber(req.method==='GET'?req.query.classId:req.body?.classId)
   if(!classId)return res.status(400).json({error:'Choose a class.'})
-  const {data:owned,error:classError}=await auth.admin.from('classes').select('id,class_name').eq('id',classId).eq('teacher_id',auth.profile.id).maybeSingle()
+  const {data:owned,error:classError}=await auth.admin.from('classes').select('id,class_name,grade_level').eq('id',classId).eq('teacher_id',auth.profile.id).maybeSingle()
   if(classError)throw classError
   if(!owned)return res.status(403).json({error:'This class is not assigned to your teacher account.'})
   const {data:enrollments,error:enrollError}=await auth.admin.from('enrollments').select('student_id').eq('class_id',classId)
@@ -26,8 +26,12 @@ export default async function handler(req,res){
   const {data:roster,error:rosterError}=ids.length?await auth.admin.from('users').select('id,name,parent_email').in('id',ids).order('name'):{data:[],error:null}
   if(rosterError)throw rosterError
   if(req.method==='GET'){
-   const {data:lessons,error:lessonsError}=await auth.admin.from('educator_lessons').select('id,title,subject,updated_at').eq('user_id',auth.user.id).order('updated_at',{ascending:false}).limit(100)
+   const {data:allLessons,error:lessonsError}=await auth.admin.from('educator_lessons').select('id,title,subject,grade,updated_at').eq('user_id',auth.user.id).order('updated_at',{ascending:false}).limit(100)
    if(lessonsError)throw lessonsError
+   // Show this class's grade first; if the class has no grade or no lessons match, show everything.
+   const classGrade=owned.grade_level==null||owned.grade_level===''?'':String(owned.grade_level)==='0'?'K':String(owned.grade_level)
+   const sameGrade=classGrade?(allLessons||[]).filter(l=>String(l.grade||'').toUpperCase()===classGrade.toUpperCase()):[]
+   const lessons=sameGrade.length?sameGrade:(allLessons||[])
    const {data:familyUpdates,error:familyError}=await auth.admin.from('educator_lesson_companions').select('lesson_id,draft,updated_at').eq('user_id',auth.user.id).eq('kind','family').neq('draft','').order('updated_at',{ascending:false}).limit(100)
    if(familyError)throw familyError
    const {data:drafts,error:draftError}=await auth.admin.from('parent_letter_drafts').select(columns).eq('teacher_auth_id',auth.user.id).eq('class_id',classId).order('created_at',{ascending:false}).limit(200)
@@ -42,7 +46,7 @@ export default async function handler(req,res){
    const {data:reports,error:reportError}=ids.length?await auth.admin.from('vic_learning_reports').select('student_id').eq('teacher_auth_id',auth.user.id).eq('class_id',classId).in('student_id',ids):{data:[],error:null}
    if(reportError)throw reportError
    const reported=new Set((reports||[]).map(r=>r.student_id))
-   const titles=new Map((lessons||[]).map(l=>[l.id,l.title]))
+   const titles=new Map((allLessons||[]).map(l=>[l.id,l.title]))
    return res.json({className:owned.class_name,students:(roster||[]).map(s=>({...s,hasVicActivity:active.has(s.id),hasVicReport:reported.has(s.id),draft:latest.get(s.id)||null,history:history.get(s.id)||[]})),lessons:lessons||[],familyUpdates:(familyUpdates||[]).filter(u=>titles.has(u.lesson_id)).map(u=>({lessonId:u.lesson_id,title:titles.get(u.lesson_id),updatedAt:u.updated_at})),statements:LETTER_STATEMENTS})
   }
   const studentId=idNumber(req.body?.studentId),student=(roster||[]).find(s=>s.id===studentId)
