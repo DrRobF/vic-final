@@ -16,5 +16,5 @@ export default function ConfirmLessonSignin(){
    setError(e.message)
   })
  },[])
- return <><Head><title>Opening your educator workspace | Ask VIC</title><meta name="referrer" content="no-referrer"/></Head><main style={{maxWidth:650,margin:'12vh auto',padding:32,textAlign:'center'}}><h1>{error?'Your login needs attention':'Opening your educator workspace…'}</h1>{error?<><p role="alert">{error}</p><p><a href="/login">Request a new login email</a></p><p>If you already used this link, <a href="/lessonplan">open Lesson Designer in that browser</a>.</p></>:<p role="status">Verifying your email and opening your educator workspace. Please keep this page open.</p>}</main></>
+ return <><Head><title>Opening your educator workspace | AskVic</title><meta name="referrer" content="no-referrer"/></Head><main style={{maxWidth:650,margin:'12vh auto',padding:32,textAlign:'center'}}><h1>{error?'Your login needs attention':'Opening your educator workspace…'}</h1>{error?<><p role="alert">{error}</p><p><a href="/login">Request a new login email</a></p><p>If you already used this link, <a href="/lessonplan">open Lesson Designer in that browser</a>.</p></>:<p role="status">Verifying your email and opening your educator workspace. Please keep this page open.</p>}</main></>
 }

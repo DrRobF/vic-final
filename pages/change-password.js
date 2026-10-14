@@ -33,7 +33,7 @@ export default function ChangePassword() {
     } catch (failure) { setError(failure.message) }
     finally { setBusy(false) }
   }
-  return <main><Head><title>Choose your password | Ask VIC</title></Head><section>
+  return <main><Head><title>Choose your password | AskVic</title></Head><section>
     <h1>Choose your own password</h1>
     <p>Your school gave you a temporary password. Set a personal password before using VIC or the Lesson Plan Designer.</p>
     <form onSubmit={submit}>

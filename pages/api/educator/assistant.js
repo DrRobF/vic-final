@@ -1,6 +1,6 @@
 import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
-import {assistantInput,assistantInstructions,assistantTasks} from '../../../lib/educator-assistant.mjs'
+import {ASSISTANT_TOOLS,assistantInput,assistantInstructions,assistantTasks} from '../../../lib/educator-assistant.mjs'
 export const config={api:{bodyParser:{sizeLimit:'64kb'}},maxDuration:60}
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')
@@ -14,6 +14,13 @@ export default async function handler(req,res){
    return res.json({work:data})
   }
   const body=req.body||{}
+  // Start fresh: remove the saved notes and draft for one tool.
+  if(body.action==='clear'){
+   if(!Object.hasOwn(ASSISTANT_TOOLS,body.kind||''))return res.status(400).json({error:'Choose an assistant tool.'})
+   const {error}=await auth.admin.from('educator_assistant_work').delete().eq('user_id',auth.user.id).eq('kind',body.kind)
+   if(error)return res.status(503).json({error:'Could not clear this draft. Please retry.'})
+   return res.json({cleared:true})
+  }
   let row={user_id:auth.user.id,updated_at:new Date().toISOString()}
   try{
    if(body.action==='tasks'){row={...row,kind:'tasks',notes:'',draft:'',tasks:assistantTasks(body.tasks)}}

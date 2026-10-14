@@ -51,7 +51,7 @@ export default function WeeklyPlans(){
  const missing=(data?.teachers||[]).filter(t=>!sentBy.has(t.id))
  const plan=open?.submission,current=plan?.days[day]
 
- return <main aria-busy={!!busy}><Head><title>Weekly Lesson Plans | Ask VIC</title><meta name="robots" content="noindex"/></Head><VICHeader currentPath="/weeklyplans"/>
+ return <main aria-busy={!!busy}><Head><title>Weekly Lesson Plans | AskVic</title><meta name="robots" content="noindex"/></Head><VICHeader currentPath="/weeklyplans"/>
  <div className="wp-shell">
   <div className="wp-crumbs"><a href="/assistantprincipal">← School leadership workspace</a></div>
   <header className="wp-hero"><p className="wp-eyebrow">SCHOOL LEADERSHIP · LESSON PLANS</p><h1>Every teacher’s week in one place.</h1><p>Teachers build their week in AskVic and send it here. Open any week to read each day’s lesson, worksheet and answer key, leave feedback and mark it reviewed.</p></header>

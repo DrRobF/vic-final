@@ -27,7 +27,7 @@ export default function AssignLessonPage(){
  })().catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setLoading(false)})
  return()=>{active=false}
  },[router.isReady,lessonId])
- return <main><Head><title>Assign a Lesson in VIC | Ask VIC</title></Head><VICHeader currentPath="/lessons"/>
+ return <main><Head><title>Assign a Lesson in VIC | AskVic</title></Head><VICHeader currentPath="/lessons"/>
   <nav className="backLinks" aria-label="Lesson navigation"><a href="/lessons">← My Lessons</a>{validLessonId(lessonId)&&<a href={lessonLink(lessonId)}>Edit this lesson →</a>}</nav>
   <header><p className="eyebrow">VIC CLASSROOM ASSIGNMENT</p><h1>Give your lesson to students</h1><p>Your standard and objectives are ready. Choose a class, review the goals, select students, then click <strong>Assign lesson</strong>. VIC adapts the teaching to each student’s saved support level.</p></header>
   {loading?<p role="status">Opening your lesson…</p>:error?<p role="alert">{error} <a href="/lessons">Return to My Lessons</a></p>:lesson&&<VICClassroomWorkspace assignmentMode prefillLesson={lesson}/>}

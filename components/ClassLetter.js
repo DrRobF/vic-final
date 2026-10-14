@@ -62,7 +62,7 @@ export default function ClassLetter({initialLessonId}){
     <input id="class-subject" value={letter.subject} maxLength="240" onChange={e=>setLetter({...letter,subject:e.target.value})}/>
     <label htmlFor="class-body">Letter to all families</label>
     <textarea id="class-body" rows="16" value={letter.body} maxLength="12000" onChange={e=>setLetter({...letter,body:e.target.value})}/>
-    <div className="actions"><button className="primary" type="button" onClick={copy}>Copy letter</button>{picked.length>0&&!marked&&<button className="outline" type="button" disabled={busy} onClick={markShared}>Mark these reminders as shared</button>}</div>
+    <div className="actions"><button className="primary" type="button" onClick={copy}>Copy letter</button><button className="outline" type="button" disabled={busy} onClick={()=>{setLetter(null);setLessonIds([]);setNote('');setPicked([]);setMarked(false);setError('');setMessage('Cleared. Start a new class letter.')}}>Start fresh</button>{picked.length>0&&!marked&&<button className="outline" type="button" disabled={busy} onClick={markShared}>Mark these reminders as shared</button>}</div>
     <small>Nothing is sent automatically. This letter stays here while the page is open, so copy it before you leave.</small>
    </>:<p className="empty">Your letter will appear here.</p>}
   </section>
