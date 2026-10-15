@@ -49,7 +49,8 @@ async function picture(db, schoolId, links, schoolRow) {
   links.some(l => l.kind === 'absences') ? q(db.from('ap_absence_reports').select('staff_key,staff_name,start_date,end_date,absence_type,portion,coverage,problem').eq('school_id', schoolId).limit(5000)) : [],
   q(db.from('ap_punches').select('staff_id,day,clock_in,clock_out,edited_at').eq('school_id', schoolId).gte('day', from).limit(20000)),
  ])
- const attendance = mergeAttendance(staff, punches, sheetRows, nameKey)
+ const aliasesAll = Object.assign({}, ...links.map(l => l.aliases || {}))
+ const attendance = mergeAttendance(staff, punches, sheetRows, nameKey, key => matchStaff(key, staff, aliasesAll))
  // Lesson plans for the week teachers are planning now (same week the School dashboard shows).
  const weekOf = defaultWeekOf()
  const plans = await q(db.from('lesson_weeks').select('staff_id,status').eq('school_id', schoolId).eq('week_of', weekOf).in('status', ['submitted', 'reviewed']))
@@ -240,6 +241,12 @@ export default async function handler(req, res) {
    const r = await fetch('https://api.resend.com/emails', { method: 'POST', headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' }, signal: AbortSignal.timeout(20000), body: JSON.stringify({ from: process.env.REPORTS_FROM_EMAIL, to: schoolRow.payroll_email, ...(auth.user.email ? { reply_to: auth.user.email } : {}), subject: `Payroll ${body.from} to ${body.to}`, text, attachments: [{ filename: `Payroll-${body.from}-to-${body.to}.csv`, content: Buffer.from(csv).toString('base64') }] }) })
    if (!r.ok) return res.status(502).json({ error: 'The email didn’t go through. Please try again.' })
    return res.json({ sent: true, to: schoolRow.payroll_email })
+  }
+  if (action === 'remove_staff') {
+   if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
+   // Kept on record (past attendance and payroll stay correct); they just leave the list and their code stops working.
+   await q(db.from('ap_staff').update({ active: false, code_hash: null }).eq('school_id', schoolId).eq('id', body.staffId))
+   return res.json({ removed: true })
   }
   if (action === 'update_staff') {
    if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })

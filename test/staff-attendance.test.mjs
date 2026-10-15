@@ -101,3 +101,11 @@ test('sick and personal days used and left, from the absence form', () => {
  const p = staffPicture({ staff: s, attendance: att, absences: abs, today: '2026-10-14' }).people[0]
  assert.deepEqual([p.leave.sick, p.leave.sickLeft, p.leave.personal, p.leave.personalLeft], [2, 8, 0.5, 2.5])
 })
+
+test('staff lists written "Last, First" match check-in names written "First Last"', () => {
+ assert.equal(nameKey('Anderson, Andeen'), 'andeen anderson')
+ assert.equal(nameKey('Dawkins,Dale'), 'dale dawkins')
+ const pic = staffPicture({ staff: [{ id: 'a', display_name: 'Anderson, Andeen', role: 'teacher' }, { id: 'b', display_name: 'Dawkins,Dale', role: 'teacher' }], attendance: [{ staff_key: 'andeen anderson', staff_name: 'Andeen Anderson', day: '2026-10-14', clock_in: '06:44' }, { staff_key: 'dale dawkins', staff_name: 'Dale Dawkins', day: '2026-10-14', clock_in: '07:24' }], absences: [], today: '2026-10-14' })
+ assert.deepEqual(pic.unmatched, [])
+ assert.equal(pic.people[0].today.kind, 'in')
+})

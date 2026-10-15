@@ -175,6 +175,7 @@ export default function StaffAttendance() {
    :global(.edit label){display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:13px}
    :global(.edit input),:global(.edit select){padding:7px 8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit;font-size:15px;width:140px}
    :global(.edit small){flex-basis:100%;color:var(--vic-text-secondary)}
+   :global(.edit .rm){background:none;border:0;color:var(--vic-danger);text-decoration:underline;cursor:pointer;font-weight:700;padding:8px 0}
    .sheets{display:grid;grid-template-columns:1fr 1fr;gap:16px}
    .sheet{border:1px solid var(--vic-border-soft);border-radius:14px;padding:16px}
    .sheet h3{margin:0 0 6px}.ok{color:var(--vic-success)!important;font-weight:700}.bad{color:var(--vic-danger)!important;font-weight:700}
@@ -265,6 +266,7 @@ function StaffEdit({ person, onSave, act }) {
   <button type="button" className="btn btn-primary sm" onClick={() => onSave(f)}>Save</button>
   <label>Check-in code {person.hasCode ? '✓ set' : '(none yet)'}<input inputMode="numeric" autoComplete="off" value={code} placeholder={person.hasCode ? 'New code' : '4–6 digits'} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
   <button type="button" className="btn btn-outline sm" disabled={code.length < 4} onClick={() => act({ action: 'set_code', staffId: person.id, code }, () => setCode(''))}>Save code</button>
+  <button type="button" className="rm" onClick={() => { if (window.confirm(`Remove ${person.name} from your staff list? Their past attendance stays on record; their check-in code stops working.`)) act({ action: 'remove_staff', staffId: person.id }) }}>Remove from staff list</button>
   <small>Leave the start time blank to use the school’s on-time rule. Their own start time decides late; their end time decides left early.</small>
  </div>
 }
