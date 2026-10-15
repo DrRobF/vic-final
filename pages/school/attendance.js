@@ -42,8 +42,8 @@ export default function StaffAttendance() {
   <PanelStyles />
   <a className="back" href="/school">← School dashboard</a>
   <header className="top">
-   <div><p className="label">Staff attendance</p><h1>Who’s here today</h1>{data && <p className="muted">{fmtDay(data.today)} · read from your Google Sheets{links[0]?.lastSyncedAt ? ` · updated ${new Date(Math.max(...links.map(l => Date.parse(l.lastSyncedAt || 0)))).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</p>}</div>
-   {links.length > 0 && <button type="button" className="btn btn-outline" disabled={!!busy} onClick={() => load(true)}>{busy === 'Reading your sheets…' ? busy : 'Read sheets now'}</button>}
+   <div><p className="label">Staff attendance</p><h1>Who’s here today</h1>{data && <p className="muted">{fmtDay(data.today)} · {data.punchCount ? 'from the AskVic kiosk and your sheets' : 'read from your Google Sheets'}{links[0]?.lastSyncedAt ? ` · updated ${new Date(Math.max(...links.map(l => Date.parse(l.lastSyncedAt || 0)))).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}` : ''}</p>}</div>
+   <div className="row">{data && <a className="btn btn-primary" href={`/school/payroll?school=${schoolId}`}>Payroll report</a>}{links.length > 0 && <button type="button" className="btn btn-outline" disabled={!!busy} onClick={() => load(true)}>{busy === 'Reading your sheets…' ? busy : 'Read sheets now'}</button>}</div>
   </header>
   {schools && schools.length > 1 && <label className="pick">School <select value={schoolId} onChange={e => setSchoolId(e.target.value)}>{schools.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}
   {error && <p className="alert" role="alert">{error}</p>}{msg && <p className="notice" role="status">{msg}</p>}
@@ -96,7 +96,7 @@ export default function StaffAttendance() {
         : <span>{p.leave.sickLeft != null ? <b className={p.leave.sickLeft <= 1 ? 'low' : ''}>{p.leave.sickLeft} sick left</b> : `${p.leave.sick} sick used`}<small className="sub">{p.leave.personalLeft != null ? `${p.leave.personalLeft} personal left` : `${p.leave.personal} personal used`}{p.leave.other ? ` · ${p.leave.other} other` : ''}</small></span>}</td>
        <td>{p.lessonPlan == null ? '' : p.lessonPlan === 'reviewed' ? <span className="lp ok">✓ Reviewed</span> : p.lessonPlan === 'submitted' ? <span className="lp ok">✓ Sent</span> : <span className="lp no">Not yet</span>}</td>
        <td><button type="button" className="linkbtn" onClick={() => setEditing(editing === p.id ? '' : p.id)}>{editing === p.id ? 'Close' : 'Edit'}</button></td>
-      </tr>, editing === p.id && <tr key={p.id + '-e'} className="editrow"><td colSpan={7}><StaffEdit person={p} onSave={patch => act({ action: 'update_staff', staffId: p.id, ...patch }, () => { setEditing(''); setMsg(`Saved ${p.name}.`) })} /></td></tr>])}</tbody>
+      </tr>, editing === p.id && <tr key={p.id + '-e'} className="editrow"><td colSpan={7}><StaffEdit person={p} act={act} onSave={patch => act({ action: 'update_staff', staffId: p.id, ...patch }, () => { setEditing(''); setMsg(`Saved ${p.name}.`) })} /></td></tr>])}</tbody>
      </table>
      <small className="muted">Absences count school days with no check-in (a school day is any day most staff checked in, so holidays never count). Days left come from the absence form: whole day = 1, half day or custom hours = ½. Missing clock-outs only matter for hourly staff.</small>
     </section>
@@ -107,6 +107,8 @@ export default function StaffAttendance() {
      <ul className="um">{data.unmatched.map(u => <Unmatched key={u.key} u={u} people={people} act={act} />)}</ul>
     </section>}
    </>}
+
+   <KioskPanel data={data} schoolId={schoolId} act={act} setMsg={setMsg} setError={setError} />
 
    <section className="panel">
     <p className="label">Your sheets</p>
@@ -184,6 +186,55 @@ export default function StaffAttendance() {
  </PageShell>
 }
 
+function KioskPanel({ data, schoolId, act, setMsg, setError }) {
+ const sch = data.school
+ const [times, setTimes] = useState({ dayStart: sch.dayStart, dayEnd: sch.dayEnd }), [ann, setAnn] = useState(data.announcements), [busy, setBusy] = useState('')
+ const noCode = data.people.filter(p => !p.hasCode).length
+ async function setUp() {
+  setBusy('kiosk')
+  await act({ action: 'kiosk_register', label: 'Office computer' }, d => { try { localStorage.setItem('askvic-kiosk-token', d.token) } catch {} ; window.location.href = '/kiosk' })
+  setBusy('')
+ }
+ async function importCodes() { setBusy('codes'); await act({ action: 'import_codes' }, d => setMsg(`Codes brought over for ${d.set} people.${d.missing.length ? ` Not matched yet: ${d.missing.join(', ')}. Add them to your staff list, then import again.` : ''}`)); setBusy('') }
+ async function importHistory() { setBusy('history'); await act({ action: 'import_history' }, d => setMsg(`Copied ${d.imported} days of check-ins into AskVic. Your sheet wasn’t changed.`)); setBusy('') }
+ return <section className="panel kiosk">
+  <p className="label">AskVic check-in kiosk</p>
+  <h2>Staff check in at the office computer</h2>
+  <p>The kiosk replaces your old check-in page. Staff use the same codes. Check-ins go straight into AskVic, so no spreadsheet is needed.</p>
+  <ol className="ksteps">
+   <li><strong>School hours.</strong> Anyone without their own schedule is late after the start time.
+    <span className="kinline"><label>Start<input type="time" value={times.dayStart} onChange={e => setTimes({ ...times, dayStart: e.target.value })} /></label><label>End<input type="time" value={times.dayEnd} onChange={e => setTimes({ ...times, dayEnd: e.target.value })} /></label><button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'school_settings', ...times, payPeriodStart: sch.payPeriodStart, payrollEmail: sch.payrollEmail }, () => setMsg('School hours saved.'))}>Save</button></span></li>
+   <li><strong>Staff codes.</strong> {noCode ? `${noCode} people don’t have a code yet.` : 'Everyone has a code.'} Bring codes over from your sheet’s Teacher Codes tab, or set one per person with Edit.
+    <span className="kinline"><button type="button" className="btn btn-outline sm" disabled={!!busy || !data.links.some(l => l.kind === 'attendance')} onClick={importCodes}>{busy === 'codes' ? 'Importing…' : 'Import codes from my sheet'}</button></span></li>
+   <li><strong>Your history.</strong> {data.punchCount ? `${data.punchCount} days are already in AskVic.` : 'Copy this year’s check-ins from your sheet into AskVic once, so totals stay right after you switch.'}
+    <span className="kinline"><button type="button" className="btn btn-outline sm" disabled={!!busy || !data.links.some(l => l.kind === 'attendance')} onClick={importHistory}>{busy === 'history' ? 'Copying…' : 'Copy history from my sheet'}</button></span></li>
+   <li><strong>Turn on the kiosk.</strong> Do this <em>on the office computer</em>, logged in as you. This computer switches to the check-in screen; press F11 for full screen.
+    <span className="kinline"><button type="button" className="btn btn-primary sm" disabled={!!busy} onClick={setUp}>{busy === 'kiosk' ? 'Setting up…' : 'Set up this computer as the kiosk'}</button></span>
+    {data.kiosks.length > 0 && <ul className="klist">{data.kiosks.map(k => <li key={k.id}>{k.label} · set up {new Date(k.created_at).toLocaleDateString()}{k.last_seen_at ? ` · last used ${new Date(k.last_seen_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : ''} <button type="button" className="linkbtn" onClick={() => act({ action: 'kiosk_revoke', kioskId: k.id })}>Turn off</button></li>)}</ul>}</li>
+  </ol>
+  <div className="annEdit">
+   <p className="label">Today’s announcements on the kiosk</p>
+   <label>Morning<textarea rows={2} maxLength={1000} value={ann.morning} onChange={e => setAnn({ ...ann, morning: e.target.value })} /></label>
+   <label>Afternoon<textarea rows={2} maxLength={1000} value={ann.afternoon} onChange={e => setAnn({ ...ann, afternoon: e.target.value })} /></label>
+   <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'announcements', ...ann }, () => setMsg('Announcements posted to the kiosk.'))}>Post</button>
+  </div>
+  <style jsx>{`
+   .kiosk h2{margin:0 0 6px}
+   .ksteps{margin:14px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:14px}
+   .ksteps li{line-height:1.5}
+   .kinline{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px}
+   .kinline label{display:flex;flex-direction:column;font-weight:800;font-size:13px;gap:4px}
+   .kinline input{padding:7px 8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit}
+   .klist{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--vic-text-secondary)}
+   .linkbtn{background:none;border:0;color:var(--vic-text-secondary);text-decoration:underline;cursor:pointer;font-weight:700}
+   .annEdit{margin-top:18px;padding-top:14px;border-top:1px solid var(--vic-border-soft);display:flex;flex-direction:column;gap:8px}
+   .annEdit label{display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:14px}
+   .annEdit textarea{padding:9px;border-radius:9px;border:1px solid var(--vic-field-border);font:inherit;font-size:15px}
+   .annEdit button{align-self:flex-start}
+  `}</style>
+ </section>
+}
+
 function Unmatched({ u, people, act }) {
  const [mode, setMode] = useState(''), [role, setRole] = useState('teacher'), [pay, setPay] = useState('hourly'), [name, setName] = useState(u.name.replace(/\b\w/g, c => c.toUpperCase()))
  return <li>
@@ -201,7 +252,8 @@ function Unmatched({ u, people, act }) {
  </li>
 }
 
-function StaffEdit({ person, onSave }) {
+function StaffEdit({ person, onSave, act }) {
+ const [code, setCode] = useState('')
  const [f, setF] = useState({ payType: person.payType, shiftStart: person.shiftStart, shiftEnd: person.shiftEnd, sickDays: person.sickDays ?? '', personalDays: person.personalDays ?? '' })
  const set = (k, v) => setF({ ...f, [k]: v })
  return <div className="edit">
@@ -211,6 +263,8 @@ function StaffEdit({ person, onSave }) {
   <label>Sick days a year<input type="number" min="0" step="0.5" value={f.sickDays} onChange={e => set('sickDays', e.target.value)} /></label>
   <label>Personal days a year<input type="number" min="0" step="0.5" value={f.personalDays} onChange={e => set('personalDays', e.target.value)} /></label>
   <button type="button" className="btn btn-primary sm" onClick={() => onSave(f)}>Save</button>
+  <label>Check-in code {person.hasCode ? '✓ set' : '(none yet)'}<input inputMode="numeric" autoComplete="off" value={code} placeholder={person.hasCode ? 'New code' : '4–6 digits'} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
+  <button type="button" className="btn btn-outline sm" disabled={code.length < 4} onClick={() => act({ action: 'set_code', staffId: person.id, code }, () => setCode(''))}>Save code</button>
   <small>Leave the start time blank to use the school’s on-time rule. Their own start time decides late; their end time decides left early.</small>
  </div>
 }
