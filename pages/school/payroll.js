@@ -39,7 +39,7 @@ export default function Payroll() {
    if (!id) { setError('Set up your school first on Staff & deadlines.'); return }
    setSchoolId(id)
    const d = await api('GET', null, `?schoolId=${encodeURIComponent(id)}`)
-   setSchool(d.school); setSettings({ paySchedule: d.school.paySchedule, payPeriodStart: d.school.payPeriodStart, payrollEmail: d.school.payrollEmail })
+   setSchool(d.school); setSettings({ maxDailyHours: d.school.maxDailyHours ?? '', paySchedule: d.school.paySchedule, payPeriodStart: d.school.payPeriodStart, payrollEmail: d.school.payrollEmail })
    setPeriod(periodFor(today(), d.school.payPeriodStart, d.school.paySchedule))
   })().catch(e => setError(e.message))
  }, [])
@@ -55,6 +55,7 @@ export default function Payroll() {
  }
  async function email() { setBusy('email'); setError(''); setMsg(''); try { const d = await api('POST', { schoolId, action: 'payroll_email', ...period }); setMsg(`Sent to ${d.to}.`) } catch (e) { setError(e.message) } finally { setBusy('') } }
  async function saveSettings() { setError(''); try { await api('POST', { schoolId, action: 'school_settings', dayStart: school.dayStart, dayEnd: school.dayEnd, ...settings }); setSchool({ ...school, ...settings }); setPeriod(periodFor(today(), settings.payPeriodStart, settings.paySchedule)); setMsg('Payroll settings saved.') } catch (e) { setError(e.message) } }
+ async function approve(staffId, day, approved) { setError(''); try { await api('POST', { schoolId, action: 'approve_extra', staffId, day, approved }); setMsg(approved ? 'Extra time approved for payroll.' : 'Approval removed.'); await load() } catch (e) { setError(e.message) } }
  async function saveEdit() { setBusy('edit'); setError(''); try { const { adding, ...edit } = editing; await api('POST', { schoolId, action: 'edit_punch', ...edit }); setEditing(null); setMsg('Time corrected. The original is kept with the record.'); await load() } catch (e) { setError(e.message) } finally { setBusy('') } }
 
  const hourly = report?.report.filter(p => p.payType === 'hourly') || [], salaried = report?.report.filter(p => p.payType !== 'hourly') || []
@@ -84,7 +85,7 @@ export default function Payroll() {
     <p className="label">Hourly staff</p>
     {!hourly.length && <p>No one is marked hourly. Set pay type with Edit on the Staff attendance page.</p>}
     {hourly.map(p => <div key={p.id} className="person">
-     <div className="ph"><h2>{p.name}</h2><strong className="tot">{p.totalHours} hours</strong>{left(p.id).paidLeft != null && <span className="muted">{left(p.id).paidLeft} paid days left</span>}{p.issues > 0 && <span className="warn">{p.issues} day{p.issues === 1 ? '' : 's'} need a look</span>}</div>
+     <div className="ph"><h2>{p.name}</h2><strong className="tot">{p.totalHours} hours paid</strong>{p.totalWorked > p.totalHours && <span className="muted">({p.totalWorked} worked{p.maxHours ? `, max ${p.maxHours} a day` : ''})</span>}{left(p.id).paidLeft != null && <span className="muted">{left(p.id).paidLeft} paid days left</span>}{p.issues > 0 && <span className="warn">{p.issues} day{p.issues === 1 ? '' : 's'} need a look</span>}</div>
      <table>
       <thead><tr><th>Day</th><th>In</th><th>Out</th><th>Hours</th><th>Note</th><th className="noprint" /></tr></thead>
       <tbody>{p.rows.map(r => editing?.staffId === p.id && editing.day === r.day ? <tr key={r.day} className="ed"><td>{fmtDay(r.day)}</td>
@@ -92,7 +93,7 @@ export default function Payroll() {
        <td><input type="time" value={editing.clockOut} onChange={e => setEditing({ ...editing, clockOut: e.target.value })} /></td>
        <td colSpan={2}><input className="why" placeholder="Reason (kept with the record)" value={editing.note} onChange={e => setEditing({ ...editing, note: e.target.value })} /></td>
        <td><button type="button" className="btn btn-primary sm" disabled={busy === 'edit'} onClick={saveEdit}>Save</button> <button type="button" className="linkbtn" onClick={() => setEditing(null)}>Cancel</button></td></tr>
-       : <tr key={r.day}><td>{fmtDay(r.day)}</td><td>{fmt12(r.in)}</td><td>{fmt12(r.out)}</td><td>{r.in ? r.hours : ''}</td>
+       : <tr key={r.day}><td>{fmtDay(r.day)}</td><td>{fmt12(r.in)}</td><td>{fmt12(r.out)}</td><td>{r.in ? r.hours : ''}{r.over > 0 && <small className="over">worked {r.worked} · {r.over} h {r.approved ? 'extra approved' : 'over max'}<button type="button" className="linkbtn noprint" onClick={() => approve(p.id, r.day, !r.approved)}>{r.approved ? 'Undo' : 'Approve extra'}</button></small>}</td>
         <td className="note">{[r.absence, r.flag, r.edited ? 'Corrected' : ''].filter(Boolean).join(' · ')}</td>
         <td className="noprint">{!r.absence && <button type="button" className="linkbtn" onClick={() => setEditing({ staffId: p.id, day: r.day, clockIn: r.in, clockOut: r.out, note: '' })}>Fix</button>}</td></tr>)}
        {editing?.staffId === p.id && editing.adding && <tr className="ed"><td><input type="date" min={period.from} max={period.to} value={editing.day} onChange={e => setEditing({ ...editing, day: e.target.value })} /></td>
@@ -119,6 +120,7 @@ export default function Payroll() {
     <div className="row">
      <label className="f">Pay periods<select value={settings.paySchedule || 'biweekly'} onChange={e => setSettings({ ...settings, paySchedule: e.target.value })}><option value="semimonthly">Twice a month (1st–15th and 16th–end)</option><option value="biweekly">Every two weeks</option></select></label>
      {settings.paySchedule !== 'semimonthly' && <label className="f">A pay period starts on<input type="date" value={settings.payPeriodStart || ''} onChange={e => setSettings({ ...settings, payPeriodStart: e.target.value })} /></label>}
+     <label className="f">Max paid hours a day (everyone)<input type="number" min="0" max="24" step="0.25" value={settings.maxDailyHours ?? ''} placeholder="8" onChange={e => setSettings({ ...settings, maxDailyHours: e.target.value })} /></label>
      <label className="f">Business manager’s email<input type="email" value={settings.payrollEmail || ''} placeholder="business@school.org" onChange={e => setSettings({ ...settings, payrollEmail: e.target.value })} /></label>
      <button type="button" className="btn btn-outline" onClick={saveSettings}>Save</button>
     </div>
@@ -139,6 +141,8 @@ export default function Payroll() {
    th{text-align:left;font-family:var(--font-mono);font-size:12px;text-transform:uppercase;color:var(--vic-text-secondary);padding:6px 8px;border-bottom:2px solid var(--vic-border)}
    td{padding:7px 8px;border-bottom:1px solid var(--vic-border-soft)}
    .note{color:var(--vic-text-secondary);font-size:14px}
+   .over{display:block;color:var(--vic-danger);font-size:12px;font-weight:700}
+   .over .linkbtn{margin-left:6px;font-size:12px}
    .nm{font-weight:800}
    .ed td{background:var(--vic-surface-muted)}
    .ed input{padding:6px;border-radius:7px;border:1px solid var(--vic-border);font:inherit}

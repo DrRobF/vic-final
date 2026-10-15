@@ -35,7 +35,19 @@ test('kiosk punches win over sheet rows for the same day; payroll adds hours and
  assert.equal(p.rows.find(r => r.day === '2026-10-13').edited, true)
  assert.equal(p.absences['Sick Day'], 1)
  const csv = payrollCsv([p], '2026-10-12', '2026-10-16', 'Saint Peter’s')
- assert.match(csv, /Gloria Finch,hourly,2026-10-13,7:28 AM,3:34 PM,8.1,Corrected/)
- assert.match(csv, /TOTAL,,,16.3/)
+ assert.match(csv, /Gloria Finch,hourly,2026-10-13,7:28 AM,3:34 PM,8.1,8.1,Corrected/)
+ assert.match(csv, /TOTAL,,,16.3,16.3/)
  assert.equal(fmt12('15:04'), '3:04 PM')
+})
+
+test('paid hours stop at the daily maximum unless extra time is approved', () => {
+ const att = new Map([['m', new Map([
+  ['2026-10-13', { clock_in: '10:00', clock_out: '13:45' }],
+  ['2026-10-14', { clock_in: '10:00', clock_out: '13:30', approved: true }],
+  ['2026-10-15', { clock_in: '10:00', clock_out: '12:30' }],
+ ])]])
+ const [m] = payrollReport({ people: [{ id: 'm', name: 'Mary Pennamon', payType: 'hourly', maxHours: 3 }], attendanceByStaff: att, absencesByStaff: new Map(), from: '2026-10-13', to: '2026-10-15' })
+ assert.deepEqual(m.rows.map(r => [r.worked, r.hours, r.over]), [[3.75, 3, 0.75], [3.5, 3.5, 0.5], [2.5, 2.5, 0]])
+ assert.equal(m.totalHours, 9); assert.equal(m.totalWorked, 9.75)
+ assert.match(payrollCsv([m], 'a', 'b', 'S'), /0.75 h over max, not paid/)
 })

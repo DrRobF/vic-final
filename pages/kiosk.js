@@ -9,7 +9,7 @@ const fmt12 = t => { if (!t) return ''; const [h, m] = t.split(':').map(Number);
 // The office check-in screen. Full screen, big keys, works with a keyboard or a touch screen.
 export default function Kiosk() {
  const [token, setToken] = useState(null), [info, setInfo] = useState(null), [notKiosk, setNotKiosk] = useState(false)
- const [code, setCode] = useState(''), [msg, setMsg] = useState(null), [busy, setBusy] = useState(false), [now, setNow] = useState(new Date()), [queued, setQueued] = useState(0)
+ const [setupCode, setSetupCode] = useState(''), [setupErr, setSetupErr] = useState(''), [code, setCode] = useState(''), [msg, setMsg] = useState(null), [busy, setBusy] = useState(false), [now, setNow] = useState(new Date()), [queued, setQueued] = useState(0)
  const input = useRef(null), clearTimer = useRef(null)
 
  useEffect(() => { const t = read(TOKEN_KEY); setToken(t || ''); if (!t) setNotKiosk(true) }, [])
@@ -55,6 +55,15 @@ export default function Kiosk() {
    show({ ok: true, text: 'Saved. The internet is down, so your check-in will send as soon as it’s back.' })
   } finally { setBusy(false); input.current?.focus() }
  }
+ async function claim(e) {
+  e.preventDefault(); setSetupErr('')
+  try {
+   const r = await fetch('/api/kiosk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'claim', setupCode }) })
+   const d = await r.json().catch(() => ({}))
+   if (!r.ok || !d.token) { setSetupErr(d.error || 'That code didn’t work.'); return }
+   write(TOKEN_KEY, d.token); setToken(d.token); setNotKiosk(false); loadInfo(d.token)
+  } catch { setSetupErr('No internet connection. Try again in a moment.') }
+ }
  const press = k => { if (k === 'clear') setCode(''); else if (k === 'back') setCode(c => c.slice(0, -1)); else setCode(c => (c + k).slice(0, 6)); input.current?.focus() }
 
  const timeNow = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }), dateNow = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' })
@@ -64,8 +73,10 @@ export default function Kiosk() {
   <Head><title>{info?.school ? `${info.school} · Check in` : 'Check in'}</title><meta name="robots" content="noindex" /></Head>
   {notKiosk ? <main className="setup">
    <h1>This computer isn’t set up as the check-in kiosk</h1>
-   <p>A school leader can turn it on: log in to AskVic on this computer, open <strong>Staff attendance</strong>, and click <strong>Set up this computer as the kiosk</strong>.</p>
-   <a href="/school-login?next=/school/attendance">School leader log in</a>
+   <p>Have a setup code from your principal? Type it here.</p>
+   <form onSubmit={claim} className="claim"><input value={setupCode} onChange={e => setSetupCode(e.target.value.toUpperCase())} placeholder="ABCD-1234" maxLength={9} autoFocus aria-label="Setup code" /><button type="submit" disabled={setupCode.replace(/[^A-Z0-9]/g, '').length !== 8}>Turn on kiosk</button></form>
+   {setupErr && <p className="err" role="alert">{setupErr}</p>}
+   <p className="small">School leaders: make a code on <strong>Staff attendance → AskVic check-in kiosk → Set up another computer</strong>, or <a href="/school-login?next=/school/attendance">log in here</a>.</p>
   </main> : <main>
    <header>
     <div className="brand"><span className="mark">{(info?.school || 'S').split(/\s+/).filter(w => /^[A-Z]/.test(w)).slice(0, 3).map(w => w[0]).join('') || 'S'}</span><div><p className="eyebrow">{info?.school || ' '}</p><h1>Staff check-in</h1></div></div>
@@ -132,7 +143,13 @@ export default function Kiosk() {
    .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
    .setup{max-width:640px;padding-top:12vh}
    .setup p{font-size:20px;line-height:1.6;color:var(--vic-ink-muted)}
-   .setup a{color:var(--vic-cyan);font-weight:800;font-size:18px}
+   .setup a{color:var(--vic-cyan);font-weight:800}
+   .claim{display:flex;gap:12px;flex-wrap:wrap;margin:16px 0}
+   .claim input{flex:1;min-width:220px;text-align:center;font-size:34px;letter-spacing:.15em;padding:12px;border-radius:14px;border:2px solid var(--vic-cyan);background:var(--vic-ink);color:#fff;font-family:var(--font-mono);text-transform:uppercase}
+   .claim button{padding:0 26px;border-radius:14px;border:0;background:var(--vic-cyan);color:#06202A;font-weight:800;font-size:20px;cursor:pointer}
+   .claim button:disabled{opacity:.45}
+   .err{color:#FCA5A5!important;font-weight:700}
+   .small{font-size:16px!important}
    @media(max-width:900px){.card{grid-template-columns:1fr}.annGrid{grid-template-columns:1fr}.clock{text-align:left}}
   `}</style>
  </div>

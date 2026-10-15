@@ -124,3 +124,8 @@ test('flexible staff are never late or absent; part-timers only count on their w
  assert.equal(b.absences, 1, 'missed Wednesday only; Tuesday is not her day')
  assert.equal(b.today.kind, 'absent_no_form')
 })
+
+test('reminders greet "Last, First" names by first name', () => {
+ assert.match(reminderDraft({ name: 'Green, Karen', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
+ assert.match(reminderDraft({ name: 'Karen Green', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
+})
