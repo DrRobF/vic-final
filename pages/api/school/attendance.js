@@ -293,7 +293,7 @@ export default async function handler(req, res) {
   if (action === 'alias') {
    const key = nameKey(body.key)
    if (!key || !links.length) return res.status(400).json({ error: 'Choose a name to match.' })
-   if (body.staffId && !uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
+   if (body.staffId && body.staffId !== 'ignore' && !uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
    for (const l of links) {
     const aliases = { ...(l.aliases || {}) }
     if (body.staffId) aliases[key] = body.staffId; else delete aliases[key]

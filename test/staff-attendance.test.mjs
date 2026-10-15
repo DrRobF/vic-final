@@ -129,3 +129,8 @@ test('reminders greet "Last, First" names by first name', () => {
  assert.match(reminderDraft({ name: 'Green, Karen', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
  assert.match(reminderDraft({ name: 'Karen Green', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
 })
+
+test('a name marked "ignore" disappears from the unmatched list', () => {
+ const pic = staffPicture({ staff, attendance: [{ staff_key: 'savion banuchi', staff_name: 'Savion Banuchi', day: '2026-10-14', clock_in: '07:00' }], absences: [], today: '2026-10-14', aliases: { 'savion banuchi': 'ignore' } })
+ assert.deepEqual(pic.unmatched, [])
+})

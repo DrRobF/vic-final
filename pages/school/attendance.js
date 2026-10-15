@@ -259,7 +259,7 @@ function Unmatched({ u, people, act }) {
    <button type="button" className="btn btn-primary sm" onClick={() => act({ action: 'add_staff', name, role, payType: pay, key: u.key })}>Add</button>
    <button type="button" className="linkbtn" onClick={() => setMode('')}>Cancel</button>
   </div> : <div className="umadd">
-   <select defaultValue="" onChange={e => e.target.value && act({ action: 'alias', key: u.key, staffId: e.target.value })}><option value="">This is…</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
+   <select defaultValue="" onChange={e => e.target.value && act({ action: 'alias', key: u.key, staffId: e.target.value })}><option value="">This is…</option><option value="ignore">Not staff — ignore this name</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
    <button type="button" className="btn btn-outline sm" onClick={() => setMode('add')}>+ Add as new staff</button>
   </div>}
  </li>
