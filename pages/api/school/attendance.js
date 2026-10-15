@@ -44,12 +44,13 @@ async function syncLink(db, link) {
 async function picture(db, schoolId, links, schoolRow) {
  const clock = schoolClock(new Date(), schoolRow?.time_zone || 'America/New_York'), from = yearStart(clock.date)
  const [staff, sheetRows, absences, punches] = await Promise.all([
-  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
+  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash,flexible,work_days').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
   links.some(l => l.kind === 'attendance') ? q(db.from('ap_attendance').select('staff_key,staff_name,day,clock_in,clock_out,status,late_minutes,flag').eq('school_id', schoolId).gte('day', from).limit(20000)) : [],
   links.some(l => l.kind === 'absences') ? q(db.from('ap_absence_reports').select('staff_key,staff_name,start_date,end_date,absence_type,portion,coverage,problem').eq('school_id', schoolId).limit(5000)) : [],
   q(db.from('ap_punches').select('staff_id,day,clock_in,clock_out,edited_at').eq('school_id', schoolId).gte('day', from).limit(20000)),
  ])
- const attendance = mergeAttendance(staff, punches, sheetRows, nameKey)
+ const aliasesAll = Object.assign({}, ...links.map(l => l.aliases || {}))
+ const attendance = mergeAttendance(staff, punches, sheetRows, nameKey, key => matchStaff(key, staff, aliasesAll))
  // Lesson plans for the week teachers are planning now (same week the School dashboard shows).
  const weekOf = defaultWeekOf()
  const plans = await q(db.from('lesson_weeks').select('staff_id,status').eq('school_id', schoolId).eq('week_of', weekOf).in('status', ['submitted', 'reviewed']))
@@ -79,7 +80,7 @@ export default async function handler(req, res) {
   }
   const school = await requireSchool(auth, schoolId)
   if (school.error) return res.status(school.status).json({ error: school.error })
-  const [schoolRow] = await q(db.from('ap_schools').select('name,time_zone,day_start,day_end,pay_period_start,payroll_email').eq('id', schoolId).limit(1))
+  const [schoolRow] = await q(db.from('ap_schools').select('name,time_zone,day_start,day_end,pay_period_start,payroll_email,pay_schedule').eq('id', schoolId).limit(1))
   let links = await q(db.from('ap_sheet_links').select('*').eq('school_id', schoolId))
 
   if (req.method === 'GET') {
@@ -90,7 +91,7 @@ export default async function handler(req, res) {
     q(db.from('ap_kiosks').select('id,label,created_at,last_seen_at').eq('school_id', schoolId).eq('revoked', false).order('created_at')),
     q(db.from('ap_announcements').select('morning,afternoon').eq('school_id', schoolId).eq('day', clock.date).limit(1)),
    ])
-   return res.json({ school: { id: schoolId, name: schoolRow?.name || '', dayStart: schoolRow?.day_start || '', dayEnd: schoolRow?.day_end || '', payPeriodStart: schoolRow?.pay_period_start || '', payrollEmail: schoolRow?.payroll_email || '' }, serviceEmail: serviceEmail(), links: links.map(publicLink), kiosks, announcements: { morning: ann?.morning || '', afternoon: ann?.afternoon || '' }, punchCount: punches.length, ...pic })
+   return res.json({ school: { id: schoolId, name: schoolRow?.name || '', dayStart: schoolRow?.day_start || '', dayEnd: schoolRow?.day_end || '', payPeriodStart: schoolRow?.pay_period_start || '', payrollEmail: schoolRow?.payroll_email || '', paySchedule: schoolRow?.pay_schedule || 'biweekly' }, serviceEmail: serviceEmail(), links: links.map(publicLink), kiosks, announcements: { morning: ann?.morning || '', afternoon: ann?.afternoon || '' }, punchCount: punches.length, ...pic })
   }
 
   const action = body.action
@@ -140,7 +141,7 @@ export default async function handler(req, res) {
   const time = v => v === '' || v == null ? null : /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : undefined
   const isDay = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
   if (action === 'school_settings') {
-   const patch = { day_start: time(body.dayStart), day_end: time(body.dayEnd), pay_period_start: isDay(body.payPeriodStart) ? body.payPeriodStart : null, payroll_email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.payrollEmail || '') ? body.payrollEmail.trim().toLowerCase() : null }
+   const patch = { day_start: time(body.dayStart), day_end: time(body.dayEnd), pay_period_start: isDay(body.payPeriodStart) ? body.payPeriodStart : null, payroll_email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.payrollEmail || '') ? body.payrollEmail.trim().toLowerCase() : null, ...(['biweekly', 'semimonthly'].includes(body.paySchedule) ? { pay_schedule: body.paySchedule } : {}) }
    if (patch.day_start === undefined || patch.day_end === undefined) return res.status(400).json({ error: 'Use times like 7:30 AM.' })
    await q(db.from('ap_schools').update(patch).eq('id', schoolId))
    return res.json({ saved: true })
@@ -231,7 +232,7 @@ export default async function handler(req, res) {
    for (const a of attendance) { const id = idOf.get(a.staff_key) || matchStaff(a.staff_key, staff, aliases)?.id; if (!id) continue; if (!attBy.has(id)) attBy.set(id, new Map()); attBy.get(id).set(a.day, a) }
    for (const a of absences) { const id = matchStaff(a.staff_key, staff, aliases)?.id; if (!id) continue; if (!absBy.has(id)) absBy.set(id, []); absBy.get(id).push({ startDate: a.start_date, endDate: a.end_date, type: a.absence_type, portion: a.portion }) }
    const report = payrollReport({ people: pic.people, attendanceByStaff: attBy, absencesByStaff: absBy, from: body.from, to: body.to })
-   if (action === 'payroll') return res.json({ school: schoolRow?.name || '', from: body.from, to: body.to, report, people: pic.people.map(p => ({ id: p.id, sickLeft: p.leave.sickLeft, personalLeft: p.leave.personalLeft })) })
+   if (action === 'payroll') return res.json({ school: schoolRow?.name || '', from: body.from, to: body.to, report, people: pic.people.map(p => ({ id: p.id, paidLeft: p.leave.paidLeft })) })
    if (!schoolRow?.payroll_email) return res.status(400).json({ error: 'Add the business manager’s email in payroll settings first.' })
    if (!process.env.RESEND_API_KEY || !process.env.REPORTS_FROM_EMAIL) return res.status(503).json({ error: 'Email sending isn’t set up on this server yet.' })
    const csv = payrollCsv(report, body.from, body.to, schoolRow?.name || 'School')
@@ -241,13 +242,21 @@ export default async function handler(req, res) {
    if (!r.ok) return res.status(502).json({ error: 'The email didn’t go through. Please try again.' })
    return res.json({ sent: true, to: schoolRow.payroll_email })
   }
+  if (action === 'remove_staff') {
+   if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
+   // Kept on record (past attendance and payroll stay correct); they just leave the list and their code stops working.
+   await q(db.from('ap_staff').update({ active: false, code_hash: null }).eq('school_id', schoolId).eq('id', body.staffId))
+   return res.json({ removed: true })
+  }
   if (action === 'update_staff') {
    if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
    const time = v => v === '' || v == null ? null : /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : undefined
    const days = v => v === '' || v == null ? null : Number.isFinite(Number(v)) && Number(v) >= 0 && Number(v) <= 365 ? Number(v) : undefined
-   const patch = { shift_start: time(body.shiftStart), shift_end: time(body.shiftEnd), sick_days: days(body.sickDays), personal_days: days(body.personalDays) }
+   const patch = { shift_start: time(body.shiftStart), shift_end: time(body.shiftEnd), sick_days: days(body.sickDays) }
    if (Object.values(patch).some(v => v === undefined)) return res.status(400).json({ error: 'Use times like 7:30 AM and a number of days.' })
    if (['salaried', 'hourly'].includes(body.payType)) patch.pay_type = body.payType
+   if (typeof body.flexible === 'boolean') patch.flexible = body.flexible
+   if (Array.isArray(body.workDays)) { const d = [...new Set(body.workDays.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))].sort(); patch.work_days = d.length && d.length < 5 ? d : null }
    await q(db.from('ap_staff').update(patch).eq('school_id', schoolId).eq('id', body.staffId))
    return res.json({ saved: true })
   }

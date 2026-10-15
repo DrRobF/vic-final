@@ -99,5 +99,28 @@ test('sick and personal days used and left, from the absence form', () => {
   { staff_key: 'sandra morgan', staff_name: 'Sandra Morgan', start_date: '2026-10-09', end_date: '2026-10-09', absence_type: 'Personal Day', portion: 'Half Day PM' }]
  const att = ['2026-10-09', '2026-10-12', '2026-10-13'].flatMap(d => [{ staff_key: 'x', staff_name: 'X', day: d, clock_in: '07:00' }, { staff_key: 'y', staff_name: 'Y', day: d, clock_in: '07:00' }])
  const p = staffPicture({ staff: s, attendance: att, absences: abs, today: '2026-10-14' }).people[0]
- assert.deepEqual([p.leave.sick, p.leave.sickLeft, p.leave.personal, p.leave.personalLeft], [2, 8, 0.5, 2.5])
+ assert.deepEqual([p.leave.sick, p.leave.personal, p.leave.paidUsed, p.leave.paidLeft], [2, 0.5, 2.5, 7.5], 'one pool of 10 paid days: sick and personal both count')
+})
+
+test('staff lists written "Last, First" match check-in names written "First Last"', () => {
+ assert.equal(nameKey('Anderson, Andeen'), 'andeen anderson')
+ assert.equal(nameKey('Dawkins,Dale'), 'dale dawkins')
+ const pic = staffPicture({ staff: [{ id: 'a', display_name: 'Anderson, Andeen', role: 'teacher' }, { id: 'b', display_name: 'Dawkins,Dale', role: 'teacher' }], attendance: [{ staff_key: 'andeen anderson', staff_name: 'Andeen Anderson', day: '2026-10-14', clock_in: '06:44' }, { staff_key: 'dale dawkins', staff_name: 'Dale Dawkins', day: '2026-10-14', clock_in: '07:24' }], absences: [], today: '2026-10-14' })
+ assert.deepEqual(pic.unmatched, [])
+ assert.equal(pic.people[0].today.kind, 'in')
+})
+
+test('flexible staff are never late or absent; part-timers only count on their work days', () => {
+ const days = ['2026-10-12', '2026-10-13', '2026-10-14'] // Mon Tue Wed
+ const others = days.flatMap(d => [{ staff_key: 'x', staff_name: 'X', day: d, clock_in: '07:00' }, { staff_key: 'y', staff_name: 'Y', day: d, clock_in: '07:00' }])
+ const staff2 = [
+  { id: 'm', display_name: 'Mary Pennamon', pay_type: 'hourly', flexible: true },
+  { id: 'b', display_name: 'Barbara Andrews', pay_type: 'hourly', work_days: [1, 3] },
+ ]
+ const att = [...others, { staff_key: 'mary pennamon', staff_name: 'Mary Pennamon', day: '2026-10-13', clock_in: '10:15', clock_out: '16:00' }, { staff_key: 'barbara andrews', staff_name: 'Barbara Andrews', day: '2026-10-12', clock_in: '09:00' }]
+ const pic = staffPicture({ staff: staff2, attendance: att, absences: [], today: '2026-10-14', settings: { onTime: '07:30' } })
+ const [m, b] = pic.people
+ assert.equal(m.lateCount, 0); assert.equal(m.absences, 0); assert.equal(m.today.kind, 'off')
+ assert.equal(b.absences, 1, 'missed Wednesday only; Tuesday is not her day')
+ assert.equal(b.today.kind, 'absent_no_form')
 })
