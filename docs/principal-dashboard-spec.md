@@ -119,13 +119,28 @@ would need an import. Student academics must stay optional, never required.
   paid unless extra time is approved.
 - 10 paid days off per person; payroll runs the 1st and 16th.
 
-## Build order
+## Build order — all five done (Oct 15, 2026)
 
-1. Staff profile fields + person-detail API (done: migration
-   20261015150000_staff_profile_fields, actions `person` / `save_profile`,
-   per-person history, `days_left` reminder draft)
-2. Dashboard: grid, Needs-you strip, growth strip, privacy mode
-3. Slide-out panel: details, quick actions, edit, onboarding checklist
-4. Absences: one-click classify, planned absences, teacher day-off requests,
-   unpaid days in payroll, alert at zero
-5. Setup hub + simpler nav
+1. Staff profile fields + person-detail API — migration
+   20261015150000_staff_profile_fields; actions `person` / `save_profile`;
+   per-person history; `days_left` reminder draft.
+2. Dashboard (pages/school.js) — tile grid, Needs-you, staff growth, privacy
+   toggle, refresh every minute, deep link `/school?staff=ID&tab=...`.
+3. Slide-out panel (components/StaffPanel.js) — overview, attendance, growth,
+   profile and setup tabs; add a new staff member; onboarding checklist.
+4. Absences — migration 20261015160000_staff_day_marks (`ap_day_marks`);
+   actions `mark_day` and `plan_absence`; unpaid days in payroll and CSV;
+   teacher day-off requests in migration 20261015170000_day_off_requests
+   (`ap_day_requests`), /api/educator/day-off, components/DayOffCard.js on
+   /teach, and `decide_request` with Approve / Decline on the dashboard.
+5. Setup hub (pages/school/setup.js) + nav cut to
+   Dashboard · Walkthroughs · Lesson plans · Payroll · ⚙ Setup.
+
+Tile state names in code are `here` / `late` / `missing` / `told` / `waiting`
+/ `off` (lib/staff-ui.mjs `tileState`).
+
+## Still open
+
+- Student academics (section 9) — Rob will say how he wants this.
+- A business manager login of their own for payroll.
+- Replacing the old saintpetersacademy.org kiosk page with a "we've moved" note.

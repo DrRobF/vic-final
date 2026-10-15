@@ -5,13 +5,22 @@ import { useAccount } from '../lib/use-account'
 import { saveMode } from '../lib/view-mode'
 import { supabase } from '../lib/supabase'
 import { defaultWeekOf } from '../lib/lesson-week.mjs'
-import { displayName, byLastName, tileState, fmtDay, plural } from '../lib/staff-ui.mjs'
+import { displayName, byLastName, tileState, fmtDay, plural, MARK_OPTIONS } from '../lib/staff-ui.mjs'
+
+const MARK_LABEL = Object.fromEntries(MARK_OPTIONS)
 
 async function api(path) {
  const { data: { session } } = await supabase.auth.getSession()
  const r = await fetch(path, { headers: { Authorization: `Bearer ${session?.access_token}` } })
  const d = await r.json().catch(() => ({}))
  if (!r.ok) throw new Error(d.error || 'Could not load your school.')
+ return d
+}
+async function post(body) {
+ const { data: { session } } = await supabase.auth.getSession()
+ const r = await fetch('/api/school/attendance', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify(body) })
+ const d = await r.json().catch(() => ({}))
+ if (!r.ok) throw new Error(d.error || 'That didn’t go through.')
  return d
 }
 const greeting = () => { const h = new Date().getHours(); return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening' }
@@ -23,7 +32,7 @@ const LEGEND = [['here', '✓', 'Here'], ['late', '⏰', 'Late'], ['missing', '!
 export default function SchoolDashboard() {
  const { account, error: accountError } = useAccount({ next: '/school' })
  const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState(''), [att, setAtt] = useState(null), [walks, setWalks] = useState(null), [plans, setPlans] = useState(null), [error, setError] = useState('')
- const [open, setOpen] = useState(null), [privacy, setPrivacy] = useState(false), [updated, setUpdated] = useState(null)
+ const [open, setOpen] = useState(null), [privacy, setPrivacy] = useState(false), [updated, setUpdated] = useState(null), [deciding, setDeciding] = useState(0)
  const weekOf = defaultWeekOf()
 
  useEffect(() => { try { setPrivacy(localStorage.getItem('askvic-privacy') === '1') } catch {} }, [])
@@ -64,6 +73,7 @@ export default function SchoolDashboard() {
   for (const p of people) for (const x of p.planned || []) if (x.day === tomorrow) needs.push({ key: `t${p.id}`, icon: '✉', text: <><b>{displayName(p.name)}</b> is out {fmtDay(tomorrow, { weekday: 'long' })} ({x.label}){x.needsSub ? ' · needs a sub' : ''}</>, open: p.id, tab: 'attendance' })
   for (const p of people.filter(p => p.today.kind === 'absent_form' && p.today.needsSub)) needs.push({ key: `s${p.id}`, icon: '✉', text: <><b>{displayName(p.name)}</b> is out today and needs a sub</>, open: p.id })
   if (!privacy) for (const p of people.filter(p => p.leave?.paidLeft != null && p.leave.paidLeft <= 1)) needs.push({ key: `d${p.id}`, icon: '◔', text: p.leave.paidLeft <= 0 ? <><b>{displayName(p.name)}</b> is out of paid days. More absences are unpaid{p.leave.unpaid ? ` (${plural(p.leave.unpaid, 'unpaid day')} so far)` : ''}.</> : <><b>{displayName(p.name)}</b> has 1 paid day left</>, open: p.id })
+  for (const r of att.requests || []) needs.push({ key: `q${r.id}`, icon: '✉', text: <><b>{displayName(r.name)}</b> asked for {fmtDay(r.day)} off ({MARK_LABEL[r.kind] || r.kind}){r.needsSub ? ' · needs a sub' : ''}</>, href: '#day-off-requests' })
   const outs = people.filter(p => p.missingOut?.length)
   if (outs.length) needs.push({ key: 'outs', icon: '⏱', text: <>{plural(outs.length, 'hourly person')} missing a clock-out (payroll)</>, href: '/school/payroll' })
   if (att.unmatched?.length) needs.push({ key: 'unm', icon: '?', text: <>{plural(att.unmatched.length, 'name')} on your check-in sheet don’t match anyone</>, href: '/school/attendance#unmatched' })
@@ -81,6 +91,13 @@ export default function SchoolDashboard() {
  const stats = walks?.walkStats || {}
  const notVisited = people.filter(p => p.role === 'teacher' && (!stats[p.id]?.last || Date.now() - Date.parse(stats[p.id].last) > 30 * 864e5))
  const sentIds = new Set((plans?.weeks || []).map(w => w.staffId).filter(Boolean)), teachers = plans?.teachers || []
+
+ // A teacher's day-off request only changes anything once the principal says yes.
+ async function decide(id, decision) {
+  setDeciding(id); setError('')
+  try { await post({ schoolId, action: 'decide_request', requestId: id, decision }); await loadAtt() }
+  catch (e) { setError(e.message) } finally { setDeciding(0) }
+ }
 
  function teach() { saveMode('teacher'); window.location.href = '/teach' }
 
@@ -108,6 +125,23 @@ export default function SchoolDashboard() {
        <ul>{needs.slice(0, 6).map(n => <li key={n.key}><span className="ni" aria-hidden="true">{n.icon}</span>{n.href ? <a href={n.href}>{n.text}</a> : <button className="linkish" onClick={() => setOpen({ id: n.open, tab: n.tab || 'overview' })}>{n.text}</button>}</li>)}</ul>}
       {needs.length > 6 && <p className="muted small">and {needs.length - 6} more</p>}
      </section>
+
+     {!!att?.requests?.length && <section className="panel asks" id="day-off-requests" aria-label="Day-off requests">
+      <div className="shead"><h2>Day-off requests <span className="count">{att.requests.length}</span></h2></div>
+      <p className="muted small">Approving puts the day on their record and lines it up for payroll. Declining leaves everything as it is.</p>
+      <ul>{att.requests.map(r => <li key={r.id}>
+       <span className="ask">
+        <b><button className="linkish" onClick={() => setOpen({ id: r.staffId, tab: 'attendance' })}>{displayName(r.name)}</button></b>
+        {' · '}{fmtDay(r.day)}{r.endDay && r.endDay !== r.day ? ` – ${fmtDay(r.endDay)}` : ''}
+        {' · '}{MARK_LABEL[r.kind] || r.kind}{r.needsSub ? ' · needs a sub' : ''}
+        {r.note && <em> — {r.note}</em>}
+       </span>
+       <span className="askbtns">
+        <button type="button" className="btn btn-primary sm" disabled={deciding === r.id} onClick={() => decide(r.id, 'approved')}>{deciding === r.id ? '…' : 'Approve'}</button>
+        <button type="button" className="btn btn-outline sm" disabled={deciding === r.id} onClick={() => decide(r.id, 'declined')}>Decline</button>
+       </span>
+      </li>)}</ul>
+     </section>}
 
      <section aria-label="Staff today">
       <div className="shead">
@@ -168,6 +202,11 @@ export default function SchoolDashboard() {
    .calm{margin:0;font-weight:800;color:var(--vic-text-secondary)}
    .linkish{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:var(--vic-border);text-underline-offset:3px}
    .linkish:hover{text-decoration-color:var(--vic-primary)}
+   .asks ul{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+   .asks li{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;border-radius:11px;background:var(--vic-surface-muted);font-size:16px}
+   .asks em{font-style:normal;color:var(--vic-text-secondary)}
+   .askbtns{display:flex;gap:8px}
+   .asks :global(.sm){min-height:38px;padding:7px 14px;font-size:15px}
    .tally{margin:0;color:var(--vic-text-secondary)}
    .tally b{color:var(--vic-text-primary)}
    .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 12px;padding:0;font-size:14px;color:var(--vic-text-secondary)}

@@ -61,7 +61,9 @@ test('the staff picture: today, absences with and without a form, late, missing 
  assert.equal(by['Sandra Morgan'].absences, 3)
  assert.deepEqual(by['Sandra Morgan'].noFormDays, [])
  assert.equal(by['Julie Murphy'].today.kind, 'absent_no_form')
- assert.deepEqual(by['Julie Murphy'].noFormDays, ['2026-10-13', '2026-10-14'])
+ // Today's no-show shows on the board straight away, but only counts as a day once the day is over
+ // (they may still walk in late), so it isn't in the counted list yet.
+ assert.deepEqual(by['Julie Murphy'].noFormDays, ['2026-10-13'])
  assert.deepEqual(pic.unmatched.map(u => u.name), ['Mystery Person'])
  assert.match(reminderDraft(by['Julie Murphy'], 'X', 'no_form').body, /Tuesday, October 13/)
 })
@@ -121,7 +123,7 @@ test('flexible staff are never late or absent; part-timers only count on their w
  const pic = staffPicture({ staff: staff2, attendance: att, absences: [], today: '2026-10-14', settings: { onTime: '07:30' } })
  const [m, b] = pic.people
  assert.equal(m.lateCount, 0); assert.equal(m.absences, 0); assert.equal(m.today.kind, 'off')
- assert.equal(b.absences, 1, 'missed Wednesday only; Tuesday is not her day')
+ assert.equal(b.absences, 0, 'Tuesday is not her day, and today is not counted until the day is over')
  assert.equal(b.today.kind, 'absent_no_form')
 })
 
