@@ -139,6 +139,21 @@ would need an import. Student academics must stay optional, never required.
 Tile state names in code are `here` / `late` / `missing` / `told` / `waiting`
 / `off` (lib/staff-ui.mjs `tileState`).
 
+## Added after the first merge (Oct 15)
+
+- **Tile order is the principal's.** "Change the order" turns the board into
+  ↑ / ↓ controls (keyboard and phone friendly, no dragging), with a
+  "Teachers first" shortcut. Saved per person in `ap_staff.board_order`;
+  anyone new falls in by last name until moved.
+- **"Was here (forgot to check in)"** was already one of the day options in the
+  panel's Attendance tab — it clears the absence and the lateness for that day.
+- **Where the day-off count starts.** AskVic can only count days it has
+  check-ins for (at Saint Peter's that is 2026-09-30 onward). Setup now has
+  "Start counting from" (`ap_schools.leave_from`, blank = July 1), and each
+  person has "Already used before AskVic" (`ap_staff.leave_used_before`) so a
+  balance carried over from paper is right. The panel shows "since <date>
+  · +N before" under the absence count, so a surprising number explains itself.
+
 ## Still open
 
 - Student academics (section 9) — Rob will say how he wants this.

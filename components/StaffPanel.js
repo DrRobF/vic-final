@@ -38,7 +38,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
  const pool = p?.sickDays, left = p?.leave?.paidLeft
 
  function startEdit() { setEdit({ ...prof }) }
- function startWork() { setWork({ payType: p.payType, flexible: !!p.flexible, shiftStart: p.shiftStart, shiftEnd: p.shiftEnd, workDays: p.workDays || [], maxHours: p.maxHours ?? '', sickDays: pool ?? '' }) }
+ function startWork() { setWork({ payType: p.payType, flexible: !!p.flexible, shiftStart: p.shiftStart, shiftEnd: p.shiftEnd, workDays: p.workDays || [], maxHours: p.maxHours ?? '', sickDays: pool ?? '', usedBefore: p.leave?.carried ? String(p.leave.carried) : '' }) }
 
  const addNew = e => { e.preventDefault(); run('Adding…', async () => { const r = await school(schoolId, { action: 'add_staff', ...fresh }); onChanged?.(); onOpen?.(r.id, 'profile') }) }
  const saveProfile = e => { e.preventDefault(); run('Saving…', async () => { await school(schoolId, { action: 'save_profile', staffId, ...edit }); setEdit(null) }, 'Saved.') }
@@ -93,7 +93,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
     {tab === 'overview' && <>
      <div className="sp-stats">
       <div className="sp-stat"><span>Paid days off</span>{hide ? <strong>••</strong> : pool == null ? <strong>Not set</strong> : <><strong>{left} <small>of {pool} left</small></strong><div className="bar" aria-hidden="true"><i style={{ width: `${Math.max(0, Math.min(100, (left / (pool || 1)) * 100))}%` }} /></div></>}{!hide && p.leave.unpaid > 0 && <em className="unpaid">{plural(p.leave.unpaid, 'unpaid day')}</em>}</div>
-      <div className="sp-stat"><span>Absences this year</span><strong>{p.absences}</strong>{!hide && p.leave.unexplained > 0 && <em>{p.leave.unexplained} with no reason</em>}</div>
+      <div className="sp-stat"><span>Absences counted</span><strong>{p.absences}</strong><em>since {fmtDay(p.countFrom)}{p.leave?.carried ? ` · +${p.leave.carried} before` : ''}</em>{!hide && p.leave.unexplained > 0 && <em>{p.leave.unexplained} with no reason</em>}</div>
       <div className="sp-stat"><span>Late this year</span><strong>{p.lateCount}</strong>{p.lateCount > 0 && <em>{p.lateMinutes} min total</em>}</div>
       {p.hours && <div className="sp-stat"><span>Hours this week</span><strong>{p.hours.thisWeek}</strong><em>last week {p.hours.lastWeek}</em></div>}
      </div>
@@ -190,7 +190,9 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
       <label className="check"><input type="checkbox" checked={work.flexible} onChange={e => setWork({ ...work, flexible: e.target.checked })} /> Flexible hours (never marked late or absent)</label>
       {!work.flexible && <><div className="sp-two"><label>Starts<input type="time" value={work.shiftStart} onChange={e => setWork({ ...work, shiftStart: e.target.value })} /></label><label>Ends<input type="time" value={work.shiftEnd} onChange={e => setWork({ ...work, shiftEnd: e.target.value })} /></label></div>
        <fieldset className="sp-daysel"><legend>Works on <small>(leave all off for every weekday)</small></legend>{DAYS.map(([n, l]) => <label key={n} className="check"><input type="checkbox" checked={work.workDays.includes(n)} onChange={e => setWork({ ...work, workDays: e.target.checked ? [...work.workDays, n] : work.workDays.filter(x => x !== n) })} />{l}</label>)}</fieldset></>}
-      <label>Paid days off a year<input inputMode="decimal" value={work.sickDays} onChange={e => setWork({ ...work, sickDays: e.target.value })} /></label>
+      <div className="sp-two"><label>Paid days off a year<input inputMode="decimal" value={work.sickDays} onChange={e => setWork({ ...work, sickDays: e.target.value })} /></label>
+       <label>Already used before AskVic <small>(days)</small><input inputMode="decimal" value={work.usedBefore} onChange={e => setWork({ ...work, usedBefore: e.target.value })} placeholder="0" /></label></div>
+      <p className="muted small">AskVic counts days off from the date set in Setup. If this person had already taken paid days before then, type how many so the balance is right.</p>
       <div className="sp-row"><button className="btn btn-primary" disabled={!!busy}>Save</button><button type="button" className="btn btn-outline" onClick={() => setWork(null)}>Cancel</button></div>
      </form>}
 
