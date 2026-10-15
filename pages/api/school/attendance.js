@@ -2,7 +2,7 @@ import { requirePrincipal, requireSchool } from '../../../lib/assistant-principa
 import { schoolClock } from '../../../lib/assistant-principal-rules.mjs'
 import { serviceEmail, spreadsheetId, sheetInfo, tabValues } from '../../../lib/google-sheets'
 import { defaultWeekOf } from '../../../lib/lesson-week.mjs'
-import { codeHash, validCode, newToken, tokenHash } from '../../../lib/kiosk.mjs'
+import { codeHash, validCode, newToken, tokenHash, newSetupCode, normalizeSetupCode } from '../../../lib/kiosk.mjs'
 import { mergeAttendance, payrollReport, payrollCsv } from '../../../lib/payroll.mjs'
 import { codeSecret } from '../kiosk'
 import { SECRET_HEADER, guessMapping, validateMapping, parseAttendance, parseAbsences, staffPicture, reminderDraft, nameKey, matchStaff } from '../../../lib/staff-attendance.mjs'
@@ -44,10 +44,10 @@ async function syncLink(db, link) {
 async function picture(db, schoolId, links, schoolRow) {
  const clock = schoolClock(new Date(), schoolRow?.time_zone || 'America/New_York'), from = yearStart(clock.date)
  const [staff, sheetRows, absences, punches] = await Promise.all([
-  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash,flexible,work_days').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
+  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash,flexible,work_days,max_daily_hours').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
   links.some(l => l.kind === 'attendance') ? q(db.from('ap_attendance').select('staff_key,staff_name,day,clock_in,clock_out,status,late_minutes,flag').eq('school_id', schoolId).gte('day', from).limit(20000)) : [],
   links.some(l => l.kind === 'absences') ? q(db.from('ap_absence_reports').select('staff_key,staff_name,start_date,end_date,absence_type,portion,coverage,problem').eq('school_id', schoolId).limit(5000)) : [],
-  q(db.from('ap_punches').select('staff_id,day,clock_in,clock_out,edited_at').eq('school_id', schoolId).gte('day', from).limit(20000)),
+  q(db.from('ap_punches').select('staff_id,day,clock_in,clock_out,edited_at,extra_approved').eq('school_id', schoolId).gte('day', from).limit(20000)),
  ])
  const aliasesAll = Object.assign({}, ...links.map(l => l.aliases || {}))
  const attendance = mergeAttendance(staff, punches, sheetRows, nameKey, key => matchStaff(key, staff, aliasesAll))
@@ -60,7 +60,7 @@ async function picture(db, schoolId, links, schoolRow) {
  const linkSettings = links.find(l => l.kind === 'attendance')?.settings || {}
  const settings = { ...linkSettings, onTime: schoolRow?.day_start || linkSettings.onTime || '', dayEnd: schoolRow?.day_end || '' }
  const pic = staffPicture({ staff, attendance, absences, today: clock.date, nowTime: clock.time, settings, aliases, lessonPlans })
- pic.people = pic.people.map(p => ({ ...p, hasCode: !!staff.find(s => s.id === p.id)?.code_hash }))
+ pic.people = pic.people.map(p => { const st = staff.find(s => s.id === p.id); return { ...p, hasCode: !!st?.code_hash, ownMaxHours: st?.max_daily_hours ?? null, maxHours: st?.max_daily_hours ?? schoolRow?.max_daily_hours ?? null } })
  return { staff, attendance, absences, aliases, punches, clock, pic: { ...pic, weekOf } }
 }
 
@@ -80,7 +80,7 @@ export default async function handler(req, res) {
   }
   const school = await requireSchool(auth, schoolId)
   if (school.error) return res.status(school.status).json({ error: school.error })
-  const [schoolRow] = await q(db.from('ap_schools').select('name,time_zone,day_start,day_end,pay_period_start,payroll_email,pay_schedule').eq('id', schoolId).limit(1))
+  const [schoolRow] = await q(db.from('ap_schools').select('name,time_zone,day_start,day_end,pay_period_start,payroll_email,pay_schedule,max_daily_hours').eq('id', schoolId).limit(1))
   let links = await q(db.from('ap_sheet_links').select('*').eq('school_id', schoolId))
 
   if (req.method === 'GET') {
@@ -88,10 +88,10 @@ export default async function handler(req, res) {
    if (stale.length) { await Promise.all(stale.map(l => syncLink(db, l))); links = await q(db.from('ap_sheet_links').select('*').eq('school_id', schoolId)) }
    const { pic, punches, clock } = await picture(db, schoolId, links, schoolRow)
    const [kiosks, [ann]] = await Promise.all([
-    q(db.from('ap_kiosks').select('id,label,created_at,last_seen_at').eq('school_id', schoolId).eq('revoked', false).order('created_at')),
+    q(db.from('ap_kiosks').select('id,label,created_at,last_seen_at,claimed_at,setup_expires_at').eq('school_id', schoolId).eq('revoked', false).order('created_at')),
     q(db.from('ap_announcements').select('morning,afternoon').eq('school_id', schoolId).eq('day', clock.date).limit(1)),
    ])
-   return res.json({ school: { id: schoolId, name: schoolRow?.name || '', dayStart: schoolRow?.day_start || '', dayEnd: schoolRow?.day_end || '', payPeriodStart: schoolRow?.pay_period_start || '', payrollEmail: schoolRow?.payroll_email || '', paySchedule: schoolRow?.pay_schedule || 'biweekly' }, serviceEmail: serviceEmail(), links: links.map(publicLink), kiosks, announcements: { morning: ann?.morning || '', afternoon: ann?.afternoon || '' }, punchCount: punches.length, ...pic })
+   return res.json({ school: { id: schoolId, name: schoolRow?.name || '', dayStart: schoolRow?.day_start || '', dayEnd: schoolRow?.day_end || '', payPeriodStart: schoolRow?.pay_period_start || '', payrollEmail: schoolRow?.payroll_email || '', paySchedule: schoolRow?.pay_schedule || 'biweekly', maxDailyHours: schoolRow?.max_daily_hours ?? '' }, serviceEmail: serviceEmail(), links: links.map(publicLink), kiosks: kiosks.filter(k => k.claimed_at || (k.setup_expires_at && Date.parse(k.setup_expires_at) > Date.now())).map(k => ({ ...k, pending: !k.claimed_at })), announcements: { morning: ann?.morning || '', afternoon: ann?.afternoon || '' }, punchCount: punches.length, ...pic })
   }
 
   const action = body.action
@@ -141,15 +141,20 @@ export default async function handler(req, res) {
   const time = v => v === '' || v == null ? null : /^([01]\d|2[0-3]):[0-5]\d$/.test(v) ? v : undefined
   const isDay = v => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)
   if (action === 'school_settings') {
-   const patch = { day_start: time(body.dayStart), day_end: time(body.dayEnd), pay_period_start: isDay(body.payPeriodStart) ? body.payPeriodStart : null, payroll_email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.payrollEmail || '') ? body.payrollEmail.trim().toLowerCase() : null, ...(['biweekly', 'semimonthly'].includes(body.paySchedule) ? { pay_schedule: body.paySchedule } : {}) }
+   const patch = { day_start: time(body.dayStart), day_end: time(body.dayEnd), pay_period_start: isDay(body.payPeriodStart) ? body.payPeriodStart : null, payroll_email: /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(body.payrollEmail || '') ? body.payrollEmail.trim().toLowerCase() : null, ...(['biweekly', 'semimonthly'].includes(body.paySchedule) ? { pay_schedule: body.paySchedule } : {}), ...('maxDailyHours' in body ? { max_daily_hours: Number(body.maxDailyHours) > 0 && Number(body.maxDailyHours) <= 24 ? Number(body.maxDailyHours) : null } : {}) }
    if (patch.day_start === undefined || patch.day_end === undefined) return res.status(400).json({ error: 'Use times like 7:30 AM.' })
    await q(db.from('ap_schools').update(patch).eq('id', schoolId))
    return res.json({ saved: true })
   }
   if (action === 'kiosk_register') {
    const token = newToken()
-   await q(db.from('ap_kiosks').insert({ school_id: schoolId, token_hash: tokenHash(token), label: clean(body.label, 60) || 'Office computer', created_by: auth.user.id }))
+   await q(db.from('ap_kiosks').insert({ school_id: schoolId, token_hash: tokenHash(token), label: clean(body.label, 60) || 'Office computer', created_by: auth.user.id, claimed_at: new Date().toISOString() }))
    return res.json({ token })
+  }
+  if (action === 'kiosk_invite') {
+   const code = newSetupCode(), expires = new Date(Date.now() + 2 * 3600 * 1000).toISOString()
+   await q(db.from('ap_kiosks').insert({ school_id: schoolId, token_hash: tokenHash(newToken()), label: clean(body.label, 60) || 'Second kiosk', created_by: auth.user.id, setup_code_hash: tokenHash(`setup:${normalizeSetupCode(code)}`), setup_expires_at: expires }))
+   return res.json({ code, expires })
   }
   if (action === 'kiosk_revoke') {
    if (!uuid(body.kioskId)) return res.status(400).json({ error: 'Choose a kiosk.' })
@@ -225,6 +230,21 @@ export default async function handler(req, res) {
    else await q(db.from('ap_punches').insert({ ...row, source: 'manual' }))
    return res.json({ saved: true })
   }
+  if (action === 'approve_extra') {
+   if (!uuid(body.staffId) || !isDay(body.day)) return res.status(400).json({ error: 'Choose a person and day.' })
+   const { attendance, staff } = await picture(db, schoolId, links, schoolRow)
+   const person = staff.find(s => s.id === body.staffId)
+   if (!person) return res.status(404).json({ error: 'That person isn’t on your staff list.' })
+   const [existing] = await q(db.from('ap_punches').select('id').eq('school_id', schoolId).eq('staff_id', person.id).eq('day', body.day).limit(1))
+   const patch = { extra_approved: body.approved === true, approved_by: body.approved === true ? auth.user.id : null }
+   if (existing) await q(db.from('ap_punches').update(patch).eq('id', existing.id))
+   else {
+    const row = attendance.find(a => a.staff_key === nameKey(person.display_name) && a.day === body.day)
+    if (!row?.clock_in) return res.status(400).json({ error: 'There’s no check-in on that day.' })
+    await q(db.from('ap_punches').insert({ school_id: schoolId, staff_id: person.id, day: body.day, clock_in: row.clock_in, clock_out: row.clock_out || null, source: 'import', ...patch }))
+   }
+   return res.json({ saved: true })
+  }
   if (action === 'payroll' || action === 'payroll_email') {
    if (!isDay(body.from) || !isDay(body.to) || body.to < body.from) return res.status(400).json({ error: 'Choose the pay period dates.' })
    const { attendance, absences, aliases, staff, pic } = await picture(db, schoolId, links, schoolRow)
@@ -256,6 +276,7 @@ export default async function handler(req, res) {
    if (Object.values(patch).some(v => v === undefined)) return res.status(400).json({ error: 'Use times like 7:30 AM and a number of days.' })
    if (['salaried', 'hourly'].includes(body.payType)) patch.pay_type = body.payType
    if (typeof body.flexible === 'boolean') patch.flexible = body.flexible
+   if ('maxHours' in body) patch.max_daily_hours = Number(body.maxHours) > 0 && Number(body.maxHours) <= 24 ? Number(body.maxHours) : null
    if (Array.isArray(body.workDays)) { const d = [...new Set(body.workDays.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))].sort(); patch.work_days = d.length && d.length < 5 ? d : null }
    await q(db.from('ap_staff').update(patch).eq('school_id', schoolId).eq('id', body.staffId))
    return res.json({ saved: true })

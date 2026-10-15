@@ -197,7 +197,7 @@ export default function StaffAttendance() {
 
 function KioskPanel({ data, schoolId, act, setMsg, setError }) {
  const sch = data.school
- const [times, setTimes] = useState({ dayStart: sch.dayStart, dayEnd: sch.dayEnd }), [ann, setAnn] = useState(data.announcements), [busy, setBusy] = useState('')
+ const [times, setTimes] = useState({ dayStart: sch.dayStart, dayEnd: sch.dayEnd }), [ann, setAnn] = useState(data.announcements), [busy, setBusy] = useState(''), [invite, setInvite] = useState(null)
  const noCode = data.people.filter(p => !p.hasCode).length
  async function setUp() {
   setBusy('kiosk')
@@ -218,8 +218,9 @@ function KioskPanel({ data, schoolId, act, setMsg, setError }) {
    <li><strong>Your history.</strong> {data.punchCount ? `${data.punchCount} days are already in AskVic.` : 'Copy this year’s check-ins from your sheet into AskVic once, so totals stay right after you switch.'}
     <span className="kinline"><button type="button" className="btn btn-outline sm" disabled={!!busy || !data.links.some(l => l.kind === 'attendance')} onClick={importHistory}>{busy === 'history' ? 'Copying…' : 'Copy history from my sheet'}</button></span></li>
    <li><strong>Turn on the kiosk.</strong> Do this <em>on the office computer</em>, logged in as you. This computer switches to the check-in screen; press F11 for full screen.
-    <span className="kinline"><button type="button" className="btn btn-primary sm" disabled={!!busy} onClick={setUp}>{busy === 'kiosk' ? 'Setting up…' : 'Set up this computer as the kiosk'}</button></span>
-    {data.kiosks.length > 0 && <ul className="klist">{data.kiosks.map(k => <li key={k.id}>{k.label} · set up {new Date(k.created_at).toLocaleDateString()}{k.last_seen_at ? ` · last used ${new Date(k.last_seen_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : ''} <button type="button" className="linkbtn" onClick={() => act({ action: 'kiosk_revoke', kioskId: k.id })}>Turn off</button></li>)}</ul>}</li>
+    <span className="kinline"><button type="button" className="btn btn-primary sm" disabled={!!busy} onClick={setUp}>{busy === 'kiosk' ? 'Setting up…' : 'Set up this computer as the kiosk'}</button><button type="button" className="btn btn-outline sm" disabled={!!busy} onClick={() => act({ action: 'kiosk_invite', label: 'Second kiosk' }, d => setInvite(d))}>Set up another computer (code)</button></span>
+    {invite && <div className="invite"><p>On the other computer, open <strong>askvic.ai/kiosk</strong> and type:</p><strong className="icode">{invite.code}</strong><p className="muted">Works once, until {new Date(invite.expires).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}. No login needed there.</p></div>}
+    {data.kiosks.length > 0 && <ul className="klist">{data.kiosks.map(k => <li key={k.id}>{k.label}{k.pending ? ' · waiting for its setup code' : ''} · made {new Date(k.created_at).toLocaleDateString()}{k.last_seen_at ? ` · last used ${new Date(k.last_seen_at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}` : ''} <button type="button" className="linkbtn" onClick={() => act({ action: 'kiosk_revoke', kioskId: k.id })}>Turn off</button></li>)}</ul>}</li>
   </ol>
   <div className="annEdit">
    <p className="label">Today’s announcements on the kiosk</p>
@@ -234,6 +235,9 @@ function KioskPanel({ data, schoolId, act, setMsg, setError }) {
    .kinline{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:8px}
    .kinline label{display:flex;flex-direction:column;font-weight:800;font-size:13px;gap:4px}
    .kinline input{padding:7px 8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit}
+   .invite{margin-top:10px;padding:14px;border-radius:12px;background:var(--vic-ink);color:#fff}
+   .invite p{margin:0;color:var(--vic-ink-muted)}
+   .icode{display:block;font-family:var(--font-mono);font-size:34px;letter-spacing:.12em;color:var(--vic-volt);margin:6px 0}
    .klist{margin:8px 0 0;padding-left:18px;font-size:14px;color:var(--vic-text-secondary)}
    .linkbtn{background:none;border:0;color:var(--vic-text-secondary);text-decoration:underline;cursor:pointer;font-weight:700}
    .annEdit{margin-top:18px;padding-top:14px;border-top:1px solid var(--vic-border-soft);display:flex;flex-direction:column;gap:8px}
@@ -263,7 +267,7 @@ function Unmatched({ u, people, act }) {
 
 function StaffEdit({ person, onSave, act }) {
  const [code, setCode] = useState('')
- const [f, setF] = useState({ flexible: person.flexible, workDays: person.workDays?.length ? person.workDays : [1, 2, 3, 4, 5], payType: person.payType, shiftStart: person.shiftStart, shiftEnd: person.shiftEnd, sickDays: person.sickDays ?? '', personalDays: person.personalDays ?? '' })
+ const [f, setF] = useState({ flexible: person.flexible, workDays: person.workDays?.length ? person.workDays : [1, 2, 3, 4, 5], payType: person.payType, shiftStart: person.shiftStart, shiftEnd: person.shiftEnd, sickDays: person.sickDays ?? '', maxHours: person.ownMaxHours ?? '', personalDays: person.personalDays ?? '' })
  const set = (k, v) => setF({ ...f, [k]: v })
  return <div className="edit">
   <label>Pay<select value={f.payType} onChange={e => set('payType', e.target.value)}><option value="salaried">Salaried</option><option value="hourly">Hourly</option></select></label>
@@ -271,6 +275,7 @@ function StaffEdit({ person, onSave, act }) {
   <fieldset className="wd"><legend>Works on</legend>{[[1, 'M'], [2, 'T'], [3, 'W'], [4, 'Th'], [5, 'F']].map(([d, l]) => <label key={d} className={f.workDays.includes(d) ? 'on' : ''}><input type="checkbox" checked={f.workDays.includes(d)} onChange={e => set('workDays', e.target.checked ? [...f.workDays, d].sort() : f.workDays.filter(x => x !== d))} />{l}</label>)}</fieldset>
   <label>Starts at<input type="time" value={f.shiftStart} onChange={e => set('shiftStart', e.target.value)} /></label>
   <label>Ends at<input type="time" value={f.shiftEnd} onChange={e => set('shiftEnd', e.target.value)} /></label>
+  <label>Max paid hours a day<input type="number" min="0" max="24" step="0.25" value={f.maxHours} placeholder={person.maxHours ? `School: ${person.maxHours}` : 'No limit'} onChange={e => set('maxHours', e.target.value)} /></label>
   <label>Paid days off a year<input type="number" min="0" step="0.5" value={f.sickDays} onChange={e => set('sickDays', e.target.value)} /></label>
   <button type="button" className="btn btn-primary sm" onClick={() => onSave(f)}>Save</button>
   <label>Check-in code {person.hasCode ? '✓ set' : '(none yet)'}<input inputMode="numeric" autoComplete="off" value={code} placeholder={person.hasCode ? 'New code' : '4–6 digits'} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
