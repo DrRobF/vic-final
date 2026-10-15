@@ -119,7 +119,18 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
     </>}
 
     {tab === 'attendance' && <>
-     <div className="sp-row"><button className="btn btn-outline" onClick={() => setPlan(plan ? null : { from: '', to: '', kind: 'personal', needsSub: false, note: '' })}>{plan ? 'Cancel' : '+ Plan an absence'}</button>{p.payType === 'hourly' && <a className="btn btn-outline" href="/school/payroll">Fix clock-in times</a>}</div>
+     <div className="sp-row">
+      <button className="btn btn-outline" onClick={() => { setPlan(plan ? null : { from: '', to: '', kind: 'personal', needsSub: false, note: '' }); setFixDay(null) }}>{plan ? 'Cancel' : '+ Plan an absence'}</button>
+      <button className="btn btn-outline" onClick={() => { setFixDay(fixDay ? null : { day: '', in: '', out: '', note: '' }); setPlan(null) }}>{fixDay ? 'Cancel' : '✎ Fix a day'}</button>
+     </div>
+     {fixDay && <form className="sp-box" onSubmit={saveFix}>
+      <h3 className="fixh">{fixDay.day ? `Set the times for ${fmtDay(fixDay.day)}` : 'Which day are we fixing?'}</h3>
+      <label>Day<input type="date" required value={fixDay.day} onChange={e => setFixDay({ ...fixDay, day: e.target.value })} /></label>
+      <div className="sp-two"><label>Came in at<input type="time" required value={fixDay.in} onChange={e => setFixDay({ ...fixDay, in: e.target.value })} /></label><label>Left at <small>(optional)</small><input type="time" value={fixDay.out} onChange={e => setFixDay({ ...fixDay, out: e.target.value })} /></label></div>
+      <label>Why <small>(kept with the record)</small><input required minLength={3} value={fixDay.note} onChange={e => setFixDay({ ...fixDay, note: e.target.value })} placeholder="Forgot to check in; was here from 7:30" /></label>
+      <div className="sp-row"><button className="btn btn-primary" disabled={!!busy}>Save these times</button><button type="button" className="btn btn-outline" onClick={() => setFixDay(null)}>Cancel</button></div>
+      <p className="muted small">Any day works — one that's already passed, today, or one coming up. The time that was there before, your reason and your name all stay on the record.</p>
+     </form>}
      {plan && <form className="sp-box" onSubmit={savePlan}>
       <div className="sp-two"><label>From<input type="date" required value={plan.from} onChange={e => setPlan({ ...plan, from: e.target.value })} /></label><label>To <small>(optional)</small><input type="date" value={plan.to} onChange={e => setPlan({ ...plan, to: e.target.value })} /></label></div>
       <label>What kind<select value={plan.kind} onChange={e => setPlan({ ...plan, kind: e.target.value })}>{MARK_OPTIONS.filter(([k]) => k !== 'present').map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
@@ -140,12 +151,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
         <option value="">{h.source === 'you' ? 'Undo my change' : 'Change…'}</option>
         {MARK_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
        </select> : <select aria-label={`Change ${fmtDay(h.day)}`} value={h.marked || ''} onChange={e => mark(h.day, e.target.value)} disabled={!!busy}><option value="">{h.marked ? 'Undo my change' : 'Change…'}</option><option value="half">Half day</option><option value="pd">PD / school business</option><option value="excused">Excused (late doesn’t count)</option></select>}
-       <span className="fixrow"><button type="button" className="link" disabled={!!busy} onClick={() => setFixDay(fixDay?.day === h.day ? null : { day: h.day, in: (h.in || '').slice(0, 5), out: (h.out || '').slice(0, 5), note: '' })}>{fixDay?.day === h.day ? 'Close' : h.in ? 'Fix the times' : 'Add times'}</button></span>
-       {fixDay?.day === h.day && <form className="fixbox" onSubmit={saveFix}>
-        <div className="sp-two"><label>In<input type="time" required value={fixDay.in} onChange={e => setFixDay({ ...fixDay, in: e.target.value })} /></label><label>Out <small>(optional)</small><input type="time" value={fixDay.out} onChange={e => setFixDay({ ...fixDay, out: e.target.value })} /></label></div>
-        <label>Why <small>(kept with the record)</small><input required minLength={3} value={fixDay.note} onChange={e => setFixDay({ ...fixDay, note: e.target.value })} placeholder="Forgot to check in; arrived 7:30" /></label>
-        <div className="sp-row"><button className="btn btn-primary" disabled={!!busy}>Save times</button><button type="button" className="btn btn-outline" onClick={() => setFixDay(null)}>Cancel</button></div>
-       </form>}
+       <button type="button" className="fixbtn" disabled={!!busy} onClick={() => { setPlan(null); setFixDay({ day: h.day, in: (h.in || '').slice(0, 5), out: (h.out || '').slice(0, 5), note: '' }); document.querySelector('aside.sp')?.scrollTo({ top: 0, behavior: 'smooth' }) }}>{h.in ? 'Fix times' : 'Add times'}</button>
       </li>)}</ul>}
      <p className="muted small">No check-in on a school day counts as absent and uses a paid day. Change any day with the menu. After the paid days run out, more absences are unpaid and show that way on payroll.</p>
     </>}
@@ -250,12 +256,13 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
    .sp-list{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;line-height:1.5}
    .sp-actions{display:flex;flex-wrap:wrap;gap:8px}
    .sp-days{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
-   .sp-days li{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center;font-size:15px}
+   .sp-days li{display:grid;grid-template-columns:96px 1fr auto auto;gap:8px;align-items:center;font-size:15px}
    .sp-days .d{font-weight:800}
    .sp-days .k{padding:5px 10px;border-radius:8px;font-weight:700}
-   .sp-days .fixrow{grid-column:2/-1;margin-top:-4px}
-   .sp-days .fixrow .link{padding:0;font-size:14px}
-   .sp-days .fixbox{grid-column:1/-1;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:var(--vic-primary-soft);border:1px solid var(--vic-primary)}
+   .fixbtn{min-height:38px;padding:6px 12px;border-radius:9px;border:1px solid var(--vic-border);background:var(--vic-surface);font:inherit;font-size:14px;font-weight:800;cursor:pointer;color:var(--vic-text-primary);white-space:nowrap}
+   .fixbtn:hover{border-color:var(--vic-primary)}
+   .fixbtn:disabled{opacity:.5;cursor:not-allowed}
+   .fixh{margin:0}
    .sp-days select{min-height:38px;padding:6px 8px;font-size:14px;max-width:150px}
    .sp-check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
    .sp-check li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
@@ -273,7 +280,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
    .danger{color:var(--vic-danger)}
    .sp-danger{margin-top:28px;padding-top:14px;border-top:1px solid var(--vic-border-soft)}
    .small{font-size:14px}
-   @media(max-width:520px){.sp-two{grid-template-columns:1fr}.sp-days li{grid-template-columns:80px 1fr}.sp-days select{grid-column:1/-1;max-width:none}.sp-dl{grid-template-columns:1fr}}
+   @media(max-width:520px){.sp-two{grid-template-columns:1fr}.sp-days li{grid-template-columns:80px 1fr}.sp-days select{grid-column:1/-1;max-width:none}.fixbtn{grid-column:1/-1}.sp-dl{grid-template-columns:1fr}}
   `}</style>
  </div>
 }
