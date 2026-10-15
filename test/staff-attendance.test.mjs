@@ -61,7 +61,9 @@ test('the staff picture: today, absences with and without a form, late, missing 
  assert.equal(by['Sandra Morgan'].absences, 3)
  assert.deepEqual(by['Sandra Morgan'].noFormDays, [])
  assert.equal(by['Julie Murphy'].today.kind, 'absent_no_form')
- assert.deepEqual(by['Julie Murphy'].noFormDays, ['2026-10-13', '2026-10-14'])
+ // Today's no-show shows on the board straight away, but only counts as a day once the day is over
+ // (they may still walk in late), so it isn't in the counted list yet.
+ assert.deepEqual(by['Julie Murphy'].noFormDays, ['2026-10-13'])
  assert.deepEqual(pic.unmatched.map(u => u.name), ['Mystery Person'])
  assert.match(reminderDraft(by['Julie Murphy'], 'X', 'no_form').body, /Tuesday, October 13/)
 })
@@ -121,11 +123,36 @@ test('flexible staff are never late or absent; part-timers only count on their w
  const pic = staffPicture({ staff: staff2, attendance: att, absences: [], today: '2026-10-14', settings: { onTime: '07:30' } })
  const [m, b] = pic.people
  assert.equal(m.lateCount, 0); assert.equal(m.absences, 0); assert.equal(m.today.kind, 'off')
- assert.equal(b.absences, 1, 'missed Wednesday only; Tuesday is not her day')
+ assert.equal(b.absences, 0, 'Tuesday is not her day, and today is not counted until the day is over')
  assert.equal(b.today.kind, 'absent_no_form')
 })
 
 test('reminders greet "Last, First" names by first name', () => {
  assert.match(reminderDraft({ name: 'Green, Karen', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
  assert.match(reminderDraft({ name: 'Karen Green', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
+})
+
+test('no check-in on a school day uses a paid day; leader marks change it; past the pool is unpaid', () => {
+ const days = ['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-12']
+ const others = days.flatMap(d => [{ staff_key: 'x', staff_name: 'X', day: d, clock_in: '07:00' }, { staff_key: 'y', staff_name: 'Y', day: d, clock_in: '07:00' }])
+ const staff = [{ id: 't', display_name: 'Tia Lane', role: 'teacher', sick_days: 2 }]
+ const marks = [{ staff_id: 't', day: '2026-10-07', kind: 'pd' }, { staff_id: 't', day: '2026-10-08', kind: 'present' }]
+ const p = staffPicture({ staff, attendance: others, absences: [], marks, today: '2026-10-13', nowTime: '06:00', settings: { onTime: '07:30', historyFor: 't' } }).people[0]
+ // 10/06 absent (paid), 10/07 PD (free), 10/08 was here, 10/09 absent (paid, pool now empty), 10/12 absent → unpaid
+ assert.deepEqual(p.leaveDays.map(l => [l.day, l.kind, l.paid, l.unpaid]), [['2026-10-06', 'absent', 1, 0], ['2026-10-07', 'pd', 0, 0], ['2026-10-08', 'present', 0, 0], ['2026-10-09', 'absent', 1, 0], ['2026-10-12', 'absent', 0, 1]])
+ assert.deepEqual([p.leave.paidUsed, p.leave.paidLeft, p.leave.unpaid, p.absences], [2, 0, 1, 3])
+ assert.equal(p.today.kind, 'waiting', 'before their start time they are not due yet')
+ assert.ok(p.history.some(h => h.day === '2026-10-08' && h.kind === 'present'))
+})
+
+test('a planned absence shows ahead of time and covers the day itself', () => {
+ const staff = [{ id: 't', display_name: 'Tia Lane', role: 'teacher', sick_days: 10 }, { id: 'u', display_name: 'Uma Ray', role: 'teacher' }, { id: 'v', display_name: 'Vic Day', role: 'teacher' }]
+ const marks = [{ staff_id: 't', day: '2026-10-14', kind: 'personal', needs_sub: true }, { staff_id: 't', day: '2026-10-20', kind: 'sick' }]
+ const att = [{ staff_key: 'uma ray', staff_name: 'Uma Ray', day: '2026-10-14', clock_in: '07:10' }, { staff_key: 'vic day', staff_name: 'Vic Day', day: '2026-10-14', clock_in: '07:12' }]
+ const p = staffPicture({ staff, attendance: att, absences: [], marks, today: '2026-10-14', nowTime: '08:00', settings: { onTime: '07:30' } }).people.find(x => x.id === 't')
+ assert.equal(p.today.kind, 'absent_form')
+ assert.equal(p.today.type, 'Personal')
+ assert.equal(p.today.needsSub, true)
+ assert.deepEqual(p.planned.map(x => x.day), ['2026-10-20'])
+ assert.equal(p.leave.paidUsed, 1)
 })

@@ -63,7 +63,7 @@ export default function Payroll() {
 
  return <PageShell title="Payroll" currentPath="/school/attendance">
   <PanelStyles />
-  <a className="back noprint" href="/school/attendance">← Staff attendance</a>
+  <a className="back noprint" href="/school">← Dashboard</a>
   <header className="top">
    <div><p className="label">Payroll</p><h1>{school?.name || 'Payroll'}</h1>{period && <p className="muted">{fmtDay(period.from)} – {fmtDay(period.to)}</p>}</div>
    {period && <div className="row noprint">
@@ -110,8 +110,8 @@ export default function Payroll() {
    <section className="panel">
     <p className="label">Salaried staff</p>
     <table>
-     <thead><tr><th>Name</th><th>Days worked</th><th>Absences this period</th><th>Paid days left</th></tr></thead>
-     <tbody>{salaried.map(p => <tr key={p.id}><td className="nm">{p.name}</td><td>{p.daysWorked}</td><td>{Object.entries(p.absences).map(([k, n]) => `${n} ${k}`).join(', ') || '—'}</td><td>{left(p.id).paidLeft ?? '—'}</td></tr>)}</tbody>
+     <thead><tr><th>Name</th><th>Days worked</th><th>Paid days off</th><th>Unpaid days</th><th>Days off this period</th><th>Paid days left</th></tr></thead>
+     <tbody>{salaried.map(p => <tr key={p.id}><td className="nm">{p.name}</td><td>{p.daysWorked}</td><td>{p.paidDaysOff || '—'}</td><td>{p.unpaidDays ? <strong className="unpaid">{p.unpaidDays} unpaid</strong> : '—'}</td><td className="small">{p.rows.filter(r => r.absence).map(r => `${new Date(`${r.day}T12:00:00Z`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })}: ${r.absence}`).join(' · ') || '—'}</td><td>{left(p.id).paidLeft ?? '—'}{left(p.id).paidLeft === 0 && <span className="unpaid"> · out of paid days</span>}</td></tr>)}</tbody>
     </table>
    </section>
 
@@ -128,6 +128,8 @@ export default function Payroll() {
    </section>}
   </>}
   <style jsx>{`
+   .unpaid{color:#b45309;font-weight:800}
+   .small{font-size:14px;color:var(--vic-text-secondary)}
    .back{font-weight:800;text-decoration:none}
    .top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
    h1{margin:0 0 4px;font-size:clamp(28px,3.2vw,40px)}

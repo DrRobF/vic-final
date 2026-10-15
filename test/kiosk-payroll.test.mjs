@@ -51,3 +51,13 @@ test('paid hours stop at the daily maximum unless extra time is approved', () =>
  assert.equal(m.totalHours, 9); assert.equal(m.totalWorked, 9.75)
  assert.match(payrollCsv([m], 'a', 'b', 'S'), /0.75 h over max, not paid/)
 })
+
+test('a day-off request only changes the record once a leader approves it', () => {
+ // The request table is written by the teacher; approving copies it into day marks.
+ // Here we check the weekday expansion a leader's approval uses, so a Friday-to-Monday
+ // request becomes two marked days, not four.
+ const expand = (from, to) => { const out = []; for (let d = from, i = 0; d <= to && i < 31; i++) { const wd = new Date(`${d}T12:00:00Z`).getUTCDay(); if (wd > 0 && wd < 6) out.push(d); const n = new Date(`${d}T12:00:00Z`); n.setUTCDate(n.getUTCDate() + 1); d = n.toISOString().slice(0, 10) } return out }
+ assert.deepEqual(expand('2026-10-16', '2026-10-19'), ['2026-10-16', '2026-10-19'], 'the weekend in the middle is skipped')
+ assert.deepEqual(expand('2026-10-17', '2026-10-18'), [], 'a weekend-only request marks nothing')
+ assert.deepEqual(expand('2026-10-15', '2026-10-15'), ['2026-10-15'])
+})

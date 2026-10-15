@@ -5,7 +5,7 @@ import { defaultWeekOf } from '../../../lib/lesson-week.mjs'
 import { codeHash, validCode, newToken, tokenHash, newSetupCode, normalizeSetupCode } from '../../../lib/kiosk.mjs'
 import { mergeAttendance, payrollReport, payrollCsv } from '../../../lib/payroll.mjs'
 import { codeSecret } from '../kiosk'
-import { SECRET_HEADER, guessMapping, validateMapping, parseAttendance, parseAbsences, staffPicture, reminderDraft, nameKey, matchStaff } from '../../../lib/staff-attendance.mjs'
+import { SECRET_HEADER, guessMapping, validateMapping, parseAttendance, parseAbsences, staffPicture, reminderDraft, nameKey, matchStaff, MARK_KINDS } from '../../../lib/staff-attendance.mjs'
 
 export const config = { maxDuration: 45 }
 const KINDS = ['attendance', 'absences']
@@ -41,13 +41,14 @@ async function syncLink(db, link) {
  }
 }
 
-async function picture(db, schoolId, links, schoolRow) {
+async function picture(db, schoolId, links, schoolRow, historyFor = null) {
  const clock = schoolClock(new Date(), schoolRow?.time_zone || 'America/New_York'), from = yearStart(clock.date)
- const [staff, sheetRows, absences, punches] = await Promise.all([
-  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash,flexible,work_days,max_daily_hours').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
+ const [staff, sheetRows, absences, punches, marks] = await Promise.all([
+  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash,flexible,work_days,max_daily_hours,start_date').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
   links.some(l => l.kind === 'attendance') ? q(db.from('ap_attendance').select('staff_key,staff_name,day,clock_in,clock_out,status,late_minutes,flag').eq('school_id', schoolId).gte('day', from).limit(20000)) : [],
   links.some(l => l.kind === 'absences') ? q(db.from('ap_absence_reports').select('staff_key,staff_name,start_date,end_date,absence_type,portion,coverage,problem').eq('school_id', schoolId).limit(5000)) : [],
   q(db.from('ap_punches').select('staff_id,day,clock_in,clock_out,edited_at,extra_approved').eq('school_id', schoolId).gte('day', from).limit(20000)),
+  q(db.from('ap_day_marks').select('staff_id,day,kind,note,needs_sub').eq('school_id', schoolId).gte('day', from).limit(20000)),
  ])
  const aliasesAll = Object.assign({}, ...links.map(l => l.aliases || {}))
  const attendance = mergeAttendance(staff, punches, sheetRows, nameKey, key => matchStaff(key, staff, aliasesAll))
@@ -58,8 +59,8 @@ async function picture(db, schoolId, links, schoolRow) {
  for (const w of plans) if (w.staff_id) lessonPlans[w.staff_id] = lessonPlans[w.staff_id] === 'reviewed' ? 'reviewed' : w.status
  const aliases = Object.assign({}, ...links.map(l => l.aliases || {}))
  const linkSettings = links.find(l => l.kind === 'attendance')?.settings || {}
- const settings = { ...linkSettings, onTime: schoolRow?.day_start || linkSettings.onTime || '', dayEnd: schoolRow?.day_end || '' }
- const pic = staffPicture({ staff, attendance, absences, today: clock.date, nowTime: clock.time, settings, aliases, lessonPlans })
+ const settings = { ...linkSettings, onTime: schoolRow?.day_start || linkSettings.onTime || '', dayEnd: schoolRow?.day_end || '', historyFor }
+ const pic = staffPicture({ staff, attendance, absences, marks, today: clock.date, nowTime: clock.time, settings, aliases, lessonPlans })
  pic.people = pic.people.map(p => { const st = staff.find(s => s.id === p.id); return { ...p, hasCode: !!st?.code_hash, ownMaxHours: st?.max_daily_hours ?? null, maxHours: st?.max_daily_hours ?? schoolRow?.max_daily_hours ?? null } })
  return { staff, attendance, absences, aliases, punches, clock, pic: { ...pic, weekOf } }
 }
@@ -87,11 +88,14 @@ export default async function handler(req, res) {
    const stale = links.filter(l => req.query.refresh === '1' || !l.last_synced_at || Date.now() - Date.parse(l.last_synced_at) > STALE_MS)
    if (stale.length) { await Promise.all(stale.map(l => syncLink(db, l))); links = await q(db.from('ap_sheet_links').select('*').eq('school_id', schoolId)) }
    const { pic, punches, clock } = await picture(db, schoolId, links, schoolRow)
-   const [kiosks, [ann]] = await Promise.all([
+   const [kiosks, [ann], reqs] = await Promise.all([
     q(db.from('ap_kiosks').select('id,label,created_at,last_seen_at,claimed_at,setup_expires_at').eq('school_id', schoolId).eq('revoked', false).order('created_at')),
     q(db.from('ap_announcements').select('morning,afternoon').eq('school_id', schoolId).eq('day', clock.date).limit(1)),
+    q(db.from('ap_day_requests').select('id,staff_id,day,end_day,kind,note,needs_sub,created_at').eq('school_id', schoolId).eq('status', 'pending').gte('day', clock.date).order('day').limit(100)),
    ])
-   return res.json({ school: { id: schoolId, name: schoolRow?.name || '', dayStart: schoolRow?.day_start || '', dayEnd: schoolRow?.day_end || '', payPeriodStart: schoolRow?.pay_period_start || '', payrollEmail: schoolRow?.payroll_email || '', paySchedule: schoolRow?.pay_schedule || 'biweekly', maxDailyHours: schoolRow?.max_daily_hours ?? '' }, serviceEmail: serviceEmail(), links: links.map(publicLink), kiosks: kiosks.filter(k => k.claimed_at || (k.setup_expires_at && Date.parse(k.setup_expires_at) > Date.now())).map(k => ({ ...k, pending: !k.claimed_at })), announcements: { morning: ann?.morning || '', afternoon: ann?.afternoon || '' }, punchCount: punches.length, ...pic })
+   const nameById = new Map(pic.people.map(p => [p.id, p.name]))
+   const requests = reqs.filter(r => nameById.has(r.staff_id)).map(r => ({ id: r.id, staffId: r.staff_id, name: nameById.get(r.staff_id), day: r.day, endDay: r.end_day || '', kind: r.kind, note: r.note || '', needsSub: !!r.needs_sub }))
+   return res.json({ school: { id: schoolId, name: schoolRow?.name || '', dayStart: schoolRow?.day_start || '', dayEnd: schoolRow?.day_end || '', payPeriodStart: schoolRow?.pay_period_start || '', payrollEmail: schoolRow?.payroll_email || '', paySchedule: schoolRow?.pay_schedule || 'biweekly', maxDailyHours: schoolRow?.max_daily_hours ?? '' }, serviceEmail: serviceEmail(), links: links.map(publicLink), kiosks: kiosks.filter(k => k.claimed_at || (k.setup_expires_at && Date.parse(k.setup_expires_at) > Date.now())).map(k => ({ ...k, pending: !k.claimed_at })), announcements: { morning: ann?.morning || '', afternoon: ann?.afternoon || '' }, punchCount: punches.length, requests, ...pic })
   }
 
   const action = body.action
@@ -262,6 +266,102 @@ export default async function handler(req, res) {
    if (!r.ok) return res.status(502).json({ error: 'The email didn’t go through. Please try again.' })
    return res.json({ sent: true, to: schoolRow.payroll_email })
   }
+  if (action === 'person') {
+   if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
+   const { absences, aliases, staff, pic, clock } = await picture(db, schoolId, links, schoolRow, body.staffId)
+   const p = pic.people.find(x => x.id === body.staffId)
+   const [row] = await q(db.from('ap_staff').select('id,display_name,role,assignment,email,phone,start_date,emergency_name,emergency_phone,notes,auth_user_id,code_hash,pay_type,shift_start,shift_end,flexible,sick_days').eq('school_id', schoolId).eq('id', body.staffId).eq('active', true).limit(1))
+   if (!p || !row) return res.status(404).json({ error: 'That person isn’t on your staff list.' })
+   const email = (row.email || '').trim().toLowerCase()
+   const [walks, assigns, reminders, profiles] = await Promise.all([
+    q(db.from('ap_walkthroughs').select('id,subject,strength,next_step,created_at,feedback_sent_at').eq('school_id', schoolId).eq('staff_id', row.id).order('created_at', { ascending: false }).limit(50)),
+    q(db.from('ap_path_assignments').select('id,topic,due_date,learning_path_id,created_at').eq('school_id', schoolId).eq('staff_id', row.id).order('created_at', { ascending: false }).limit(30)),
+    q(db.from('ap_reminders').select('subject,sent_at').eq('school_id', schoolId).eq('staff_id', row.id).order('sent_at', { ascending: false }).limit(5)),
+    email ? q(db.from('users').select('id,auth_user_id,role').eq('email', email).limit(1)) : [],
+   ])
+   const pathIds = assigns.map(a => a.learning_path_id).filter(Boolean)
+   const paths = pathIds.length ? await q(db.from('educator_learning_paths').select('id,status,completed_at').in('id', pathIds)) : []
+   const profile = profiles[0] || null
+   const classes = profile ? await q(db.from('classes').select('class_name').eq('teacher_id', profile.id).limit(20)) : []
+   const teacher = row.role === 'teacher'
+   const upcoming = absences.filter(a => a.start_date > clock.date && matchStaff(a.staff_key, staff, aliases)?.id === row.id).map(a => ({ start: a.start_date, end: a.end_date, type: a.absence_type || 'Absent', portion: a.portion || '' })).slice(0, 10)
+   const checklist = [
+    { key: 'email', label: 'Email on file', done: !!email, fix: 'edit' },
+    { key: 'phone', label: 'Phone and emergency contact', done: !!(row.phone && row.emergency_phone), fix: 'edit', optional: true },
+    { key: 'code', label: 'Check-in code', done: !!row.code_hash, fix: 'code' },
+    { key: 'days', label: 'Paid days off set', done: row.sick_days != null, fix: 'work' },
+    { key: 'login', label: 'AskVic login', done: !!(profile?.auth_user_id || row.auth_user_id), fix: 'login', optional: !teacher },
+    { key: 'linked', label: 'Joined your school (lesson plans come to you)', done: !!row.auth_user_id, fix: 'join', optional: !teacher },
+    { key: 'class', label: 'Class set up', done: classes.length > 0, fix: 'class', optional: !teacher },
+   ]
+   return res.json({
+    person: p,
+    profile: { name: row.display_name, role: row.role, assignment: row.assignment || '', email: row.email || '', phone: row.phone || '', startDate: row.start_date || '', emergencyName: row.emergency_name || '', emergencyPhone: row.emergency_phone || '', notes: row.notes || '' },
+    checklist, classes: classes.map(c => c.class_name), upcoming,
+    walks: walks.map(w => ({ id: w.id, subject: w.subject, strength: w.strength, nextStep: w.next_step, at: w.created_at, emailed: !!w.feedback_sent_at })),
+    paths: assigns.map(a => { const lp = paths.find(x => x.id === a.learning_path_id); return { id: a.id, topic: a.topic, due: a.due_date, status: lp ? (lp.status === 'completed' ? 'done' : 'started') : 'not started', at: a.created_at } }),
+    reminders,
+   })
+  }
+  if (action === 'save_profile') {
+   if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
+   const name = clean(body.name, 120).replace(/\s+/g, ' '), email = clean(body.email, 254).toLowerCase()
+   if (name.length < 2) return res.status(400).json({ error: 'Enter the person’s name.' })
+   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'That email doesn’t look right.' })
+   if (body.startDate && !isDay(body.startDate)) return res.status(400).json({ error: 'Choose a start date.' })
+   const patch = { display_name: name, email: email || null, assignment: clean(body.assignment, 120), phone: clean(body.phone, 40) || null, start_date: body.startDate || null, emergency_name: clean(body.emergencyName, 120) || null, emergency_phone: clean(body.emergencyPhone, 40) || null, notes: clean(body.notes, 2000) || null }
+   if (['teacher', 'support', 'office', 'leader', 'other'].includes(body.role)) patch.role = body.role
+   await q(db.from('ap_staff').update(patch).eq('school_id', schoolId).eq('id', body.staffId))
+   return res.json({ saved: true })
+  }
+  if (action === 'mark_day') {
+   // Change what a day was: sick, personal, half, PD, excused, unpaid, or "was here". kind '' clears it.
+   if (!uuid(body.staffId) || !isDay(body.day)) return res.status(400).json({ error: 'Choose a person and a day.' })
+   const [member] = await q(db.from('ap_staff').select('id').eq('school_id', schoolId).eq('id', body.staffId).limit(1))
+   if (!member) return res.status(404).json({ error: 'That person isn’t on your staff list.' })
+   if (!body.kind) { await q(db.from('ap_day_marks').delete().eq('school_id', schoolId).eq('staff_id', member.id).eq('day', body.day)); return res.json({ saved: true }) }
+   if (!MARK_KINDS.includes(body.kind)) return res.status(400).json({ error: 'Choose what kind of day it was.' })
+   await q(db.from('ap_day_marks').upsert({ school_id: schoolId, staff_id: member.id, day: body.day, kind: body.kind, note: clean(body.note, 300), needs_sub: body.needsSub === true, created_by: auth.user.id, created_at: new Date().toISOString() }, { onConflict: 'school_id,staff_id,day' }))
+   return res.json({ saved: true })
+  }
+  if (action === 'plan_absence') {
+   // A heads-up for days ahead (weekdays only).
+   if (!uuid(body.staffId) || !isDay(body.from)) return res.status(400).json({ error: 'Choose a person and a date.' })
+   const to = isDay(body.to) && body.to >= body.from ? body.to : body.from
+   if (!MARK_KINDS.includes(body.kind) || body.kind === 'present') return res.status(400).json({ error: 'Choose what kind of absence it is.' })
+   const [member] = await q(db.from('ap_staff').select('id').eq('school_id', schoolId).eq('id', body.staffId).limit(1))
+   if (!member) return res.status(404).json({ error: 'That person isn’t on your staff list.' })
+   const rows = []
+   for (let d = body.from, i = 0; d <= to && i < 31; i++) {
+    const wd = new Date(`${d}T12:00:00Z`).getUTCDay()
+    if (wd > 0 && wd < 6) rows.push({ school_id: schoolId, staff_id: member.id, day: d, kind: body.kind, note: clean(body.note, 300), needs_sub: body.needsSub === true, created_by: auth.user.id })
+    const n = new Date(`${d}T12:00:00Z`); n.setUTCDate(n.getUTCDate() + 1); d = n.toISOString().slice(0, 10)
+   }
+   if (!rows.length) return res.status(400).json({ error: 'Those dates are all on a weekend.' })
+   await q(db.from('ap_day_marks').upsert(rows, { onConflict: 'school_id,staff_id,day' }))
+   return res.json({ saved: true, days: rows.length })
+  }
+  if (action === 'decide_request') {
+   // Approving writes the day marks, so a teacher's request never changes attendance until a leader says yes.
+   const id = Number(body.requestId)
+   if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Choose a request.' })
+   if (!['approved', 'declined'].includes(body.decision)) return res.status(400).json({ error: 'Approve or decline it.' })
+   const [r] = await q(db.from('ap_day_requests').select('id,staff_id,day,end_day,kind,note,needs_sub,status').eq('school_id', schoolId).eq('id', id).limit(1))
+   if (!r) return res.status(404).json({ error: 'That request is no longer there.' })
+   if (r.status !== 'pending') return res.status(409).json({ error: 'That request was already answered.' })
+   if (body.decision === 'approved') {
+    const to = r.end_day && r.end_day >= r.day ? r.end_day : r.day
+    const rows = []
+    for (let d = r.day, i = 0; d <= to && i < 31; i++) {
+     const wd = new Date(`${d}T12:00:00Z`).getUTCDay()
+     if (wd > 0 && wd < 6) rows.push({ school_id: schoolId, staff_id: r.staff_id, day: d, kind: r.kind, note: r.note || '', needs_sub: r.needs_sub, created_by: auth.user.id })
+     const n = new Date(`${d}T12:00:00Z`); n.setUTCDate(n.getUTCDate() + 1); d = n.toISOString().slice(0, 10)
+    }
+    if (rows.length) await q(db.from('ap_day_marks').upsert(rows, { onConflict: 'school_id,staff_id,day' }))
+   }
+   await q(db.from('ap_day_requests').update({ status: body.decision, decided_by: auth.user.id, decided_at: new Date().toISOString(), decline_note: body.decision === 'declined' ? clean(body.note, 300) : '' }).eq('school_id', schoolId).eq('id', id).eq('status', 'pending'))
+   return res.json({ saved: true })
+  }
   if (action === 'remove_staff') {
    if (!uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
    // Kept on record (past attendance and payroll stay correct); they just leave the list and their code stops working.
@@ -285,10 +385,12 @@ export default async function handler(req, res) {
    const name = clean(body.name, 120).replace(/\s+/g, ' ')
    const role = ['teacher', 'support', 'office', 'leader', 'other'].includes(body.role) ? body.role : 'teacher'
    if (name.length < 2) return res.status(400).json({ error: 'Enter the person’s name.' })
-   const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: name, role, active: true, pay_type: body.payType === 'hourly' ? 'hourly' : 'salaried' }).select('id'))
+   const email = clean(body.email, 254).toLowerCase()
+   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'That email doesn’t look right.' })
+   const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: name, role, email: email || null, active: true, pay_type: body.payType === 'hourly' ? 'hourly' : 'salaried', sick_days: Number.isFinite(Number(body.sickDays)) && body.sickDays !== '' && body.sickDays != null ? Number(body.sickDays) : null }).select('id'))
    const key = nameKey(body.key || name)
    if (key && key !== nameKey(name)) for (const l of links) await q(db.from('ap_sheet_links').update({ aliases: { ...(l.aliases || {}), [key]: added.id } }).eq('id', l.id))
-   return res.json({ added: true })
+   return res.json({ added: true, id: added.id })
   }
   if (action === 'alias') {
    const key = nameKey(body.key)
@@ -305,7 +407,7 @@ export default async function handler(req, res) {
    const { staff, pic } = await picture(db, schoolId, links, schoolRow)
    const person = pic.people.find(p => p.id === body.staffId), member = staff.find(s => s.id === body.staffId)
    if (!person) return res.status(404).json({ error: 'That staff member isn’t on your list.' })
-   if (action === 'draft') return res.json({ draft: reminderDraft(person, schoolRow?.name, body.topic === 'missing_out' ? 'missing_out' : 'no_form'), to: member.email || '' })
+   if (action === 'draft') return res.json({ draft: reminderDraft(person, schoolRow?.name, ['missing_out', 'days_left'].includes(body.topic) ? body.topic : 'no_form'), to: member.email || '' })
    const subject = clean(body.subject, 200), text = clean(body.body, 4000)
    if (!subject || text.length < 10) return res.status(400).json({ error: 'Add a subject and a message.' })
    if (!member.email) return res.status(400).json({ error: `Add an email for ${member.display_name} on Staff & deadlines first.` })

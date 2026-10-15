@@ -19,7 +19,7 @@ function TodayBadge({ t }) {
  if (t.kind === 'in') return <span className="tb in">✓ In {fmtTime(t.time)}</span>
  if (t.kind === 'late') return <span className="tb late">Late {fmtTime(t.time)}{t.minutes ? ` · ${t.minutes} min` : ''}</span>
  if (t.kind === 'absent_form') return <span className="tb form">Absent · {t.type || 'form on file'}{t.portion && !/whole/i.test(t.portion) ? ` (${t.portion})` : ''}</span>
- if (t.kind === 'absent_no_form') return <span className="tb noform">Absent · no form</span>
+ if (t.kind === 'absent_no_form') return <span className="tb noform">Absent · no reason</span>
  if (t.kind === 'off') return <span className="tb wait">Not scheduled</span>
  return <span className="tb wait">Not in yet</span>
 }
@@ -57,7 +57,7 @@ export default function StaffAttendance() {
      <div className="stat"><strong>{data.summary.in}</strong><span>In on time</span></div>
      <div className="stat"><strong className="warn">{data.summary.late}</strong><span>Late</span></div>
      <div className="stat"><strong>{data.summary.absentForm}</strong><span>Absent, form on file</span></div>
-     <div className="stat"><strong className="bad">{data.summary.absentNoForm}</strong><span>Absent, no form</span></div>
+     <div className="stat"><strong className="bad">{data.summary.absentNoForm}</strong><span>Absent, no reason given</span></div>
      <div className="stat"><strong>{data.summary.waiting}</strong><span>{data.todayIsSchoolDay ? 'Not in yet' : 'No check-ins yet today'}</span></div>
     </div>
 
@@ -73,8 +73,8 @@ export default function StaffAttendance() {
      <p className="label">Needs your attention</p>
      <ul className="att">{attention.map(p => <li key={p.id}>
       <strong>{p.name}</strong>
-      <span className="why">{[p.noFormDays.length ? `No absence form: ${p.noFormDays.slice(-3).map(fmtDay).join(', ')}` : '', p.missingOut.length ? `Forgot to clock out (hourly): ${p.missingOut.slice(-3).map(fmtDay).join(', ')}` : ''].filter(Boolean).join(' · ')}</span>
-      <span className="acts">{p.noFormDays.length > 0 && <button type="button" className="btn btn-outline sm" onClick={() => draft(p, 'no_form')}>Draft a note</button>}{p.missingOut.length > 0 && <button type="button" className="btn btn-outline sm" onClick={() => draft(p, 'missing_out')}>Draft clock-out note</button>}</span>
+      <span className="why">{[p.noFormDays.length ? `Absent, no reason given: ${p.noFormDays.slice(-3).map(fmtDay).join(', ')} (each uses a paid day)` : '', p.missingOut.length ? `Forgot to clock out (hourly): ${p.missingOut.slice(-3).map(fmtDay).join(', ')}` : ''].filter(Boolean).join(' · ')}</span>
+      <span className="acts">{p.noFormDays.length > 0 && <a className="btn btn-outline sm" href={`/school?staff=${p.id}&tab=attendance`}>Mark the reason</a>}{p.missingOut.length > 0 && <button type="button" className="btn btn-outline sm" onClick={() => draft(p, 'missing_out')}>Draft clock-out note</button>}</span>
      </li>)}</ul>
     </section>}
 
@@ -89,10 +89,10 @@ export default function StaffAttendance() {
      <table>
       <thead><tr><th>Name</th><th>Today</th><th>Late</th><th>Absences</th><th>Days left / hours</th><th>Lesson plans</th><th /></tr></thead>
       <tbody>{people.map(p => [<tr key={p.id}>
-       <td className="nm">{p.name}<small className="sub">{p.payType === 'hourly' ? 'Hourly' : 'Salaried'}{p.flexible ? ' · Flexible hours' : p.shiftStart ? ` · ${fmtTime(p.shiftStart)}–${fmtTime(p.shiftEnd)}` : ''}{p.workDays?.length ? ` · ${p.workDays.map(d => ['Su', 'M', 'T', 'W', 'Th', 'F', 'Sa'][d]).join(' ')}` : ''}</small>{p.formProblems.length > 0 && <small className="typo" title={p.formProblems.join('\n')}>Form has a date typo</small>}</td>
+       <td className="nm"><a href={`/school?staff=${p.id}`}>{p.name}</a><small className="sub">{p.payType === 'hourly' ? 'Hourly' : 'Salaried'}{p.flexible ? ' · Flexible hours' : p.shiftStart ? ` · ${fmtTime(p.shiftStart)}–${fmtTime(p.shiftEnd)}` : ''}{p.workDays?.length ? ` · ${p.workDays.map(d => ['Su', 'M', 'T', 'W', 'Th', 'F', 'Sa'][d]).join(' ')}` : ''}</small>{p.formProblems.length > 0 && <small className="typo" title={p.formProblems.join('\n')}>Form has a date typo</small>}</td>
        <td><TodayBadge t={p.today} /></td>
        <td>{p.lateCount ? `${p.lateCount}×${p.lateMinutes ? ` · ${p.lateMinutes} min` : ''}` : '—'}{p.earlyCount ? <small className="sub">Left early {p.earlyCount}×</small> : null}</td>
-       <td>{p.absences ? <>{p.absences}{p.absences > p.absencesWithForm ? <span className="nf"> · {p.absences - p.absencesWithForm} no form</span> : ''}</> : '—'}</td>
+       <td>{p.absences ? <>{p.absences}{p.absences > p.absencesWithForm ? <span className="nf"> · {p.absences - p.absencesWithForm} no reason</span> : ''}</> : '—'}</td>
        <td>{p.payType === 'hourly' ? <span>{p.hours.thisWeek} h this week<small className="sub">{p.hours.lastWeek} h last week{p.missingOut.length ? ` · ${p.missingOut.length} missing clock-out` : ''}{p.leave.paidLeft != null ? ` · ${p.leave.paidLeft} paid days left` : ''}</small></span>
         : <span>{p.leave.paidLeft != null ? <b className={p.leave.paidLeft <= 1 ? 'low' : ''}>{p.leave.paidLeft} paid days left</b> : `${p.leave.paidUsed} paid days used`}<small className="sub">{p.leave.sick} sick · {p.leave.personal} personal{p.leave.other ? ` · ${p.leave.other} other` : ''}</small></span>}</td>
        <td>{p.lessonPlan == null ? '' : p.lessonPlan === 'reviewed' ? <span className="lp ok">✓ Reviewed</span> : p.lessonPlan === 'submitted' ? <span className="lp ok">✓ Sent</span> : <span className="lp no">Not yet</span>}</td>
@@ -102,7 +102,7 @@ export default function StaffAttendance() {
      <small className="muted">Absences count school days with no check-in (a school day is any day most staff checked in, so holidays never count). Paid days left: sick and personal days from the absence form both count (whole day = 1, half day or custom hours = ½). Missing clock-outs only matter for hourly staff.</small>
     </section>
 
-    {data.unmatched.length > 0 && <section className="panel">
+    {data.unmatched.length > 0 && <section className="panel" id="unmatched">
      <p className="label">People in your sheets who aren’t on your staff list</p>
      <p>Match each one to someone, or add them in one click.</p>
      <ul className="um">{data.unmatched.map(u => <Unmatched key={u.key} u={u} people={people} act={act} />)}</ul>

@@ -1,6 +1,7 @@
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import PageShell, { PanelStyles } from '../components/PageShell'
+import DayOffCard from '../components/DayOffCard'
 import { useAccount } from '../lib/use-account'
 import { listWeeks, openWeek, deleteWeek } from '../lib/lesson-week-client'
 import { STEPS, stepDone, stepHref, nextStep, doneCount } from '../lib/lesson-steps.mjs'
@@ -110,6 +111,8 @@ export default function MyWeek() {
      <a className="btn btn-primary" href={`/lessonplan/week?id=${week.id}#send`}>{status === 'draft' ? 'Review and send' : 'Open week plan'}</a>
     </section>}
    </>}
+
+   <DayOffCard />
 
    <section className="more">
     <p className="label">More for you</p>

@@ -38,12 +38,17 @@ export default async function handler(req,res){
   const staffById=new Map((staff||[]).map(s=>[s.id,s]))
 
   if(req.method==='GET'){
-   const [{data:walks,error:wErr},{data:suggestions,error:sErr},{data:assignments,error:aErr},{data:schoolRow}]=await Promise.all([
+   const now=new Date(),yearStart=`${now.getUTCMonth()>=6?now.getUTCFullYear():now.getUTCFullYear()-1}-07-01`
+   const [{data:walks,error:wErr},{data:suggestions,error:sErr},{data:assignments,error:aErr},{data:schoolRow},{data:allWalks}]=await Promise.all([
     db.from('ap_walkthroughs').select('id,staff_id,teacher_name,observer_name,subject,visit_length,ratings,strength,next_step,follow_up,shared_feedback,private_notes,feedback_sent_at,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(60),
     db.from('ap_path_suggestions').select('id,staff_id,walkthrough_id,topic,reason,created_at').eq('school_id',schoolId).eq('status','pending').order('created_at',{ascending:false}).limit(100),
     db.from('ap_path_assignments').select('id,staff_id,topic,note,due_date,source,learning_path_id,created_at').eq('school_id',schoolId).order('created_at',{ascending:false}).limit(200),
     db.from('ap_schools').select('name,join_code,seat_limit').eq('id',schoolId).maybeSingle(),
+    db.from('ap_walkthroughs').select('staff_id,created_at').eq('school_id',schoolId).gte('created_at',yearStart).limit(5000),
    ])
+   // This school year, per teacher: how many walkthroughs and the most recent one.
+   const walkStats={}
+   for(const w of allWalks||[]){if(!w.staff_id)continue;const s=walkStats[w.staff_id]||(walkStats[w.staff_id]={count:0,last:null});s.count++;if(!s.last||w.created_at>s.last)s.last=w.created_at}
    if(wErr||sErr||aErr)throw wErr||sErr||aErr
    // Principals see completion and the teacher's reflection only. Quiz scores are never selected.
    const pathIds=(assignments||[]).map(a=>a.learning_path_id).filter(Boolean)
@@ -58,6 +63,7 @@ export default async function handler(req,res){
     me:{name:auth.profile?.name||auth.user.email||''},
     options:{lookFors:LOOK_FORS.map(({key,label})=>({key,label})),ratings:RATINGS,subjects:SUBJECTS,visitLengths:VISIT_LENGTHS,followUps:FOLLOW_UPS},
     staff:(staff||[]).filter(s=>s.role==='teacher'||s.role==='support'||s.role==='other').map(s=>({id:s.id,name:s.display_name,assignment:s.assignment||'',hasEmail:!!s.email,joined:!!s.auth_user_id})),
+    walkStats,
     walkthroughs:(walks||[]).map(w=>({...w,teacher:w.staff_id?name(w.staff_id):w.teacher_name,listed:!!w.staff_id})),
     suggestions:(suggestions||[]).map(s=>({...s,teacher:name(s.staff_id)})),
     assignments:(assignments||[]).map(a=>{const p=a.learning_path_id&&pathById.get(a.learning_path_id);return {...a,teacher:name(a.staff_id),status:p?(p.status==='completed'?'completed':'started'):'not started',completedAt:p?.completed_at||null,reflection:p?.status==='completed'?p.reflection:''}}),
