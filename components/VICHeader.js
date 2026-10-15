@@ -19,10 +19,10 @@ const EDUCATOR_NAV = [
 ]
 const SCHOOL_NAV = [
  { href: '/school', label: 'Dashboard', match: ['/school'] },
- { href: '/school/attendance', label: 'Attendance', match: ['/school/attendance'] },
- { href: '/weeklyplans', label: 'Lesson plans', match: ['/weeklyplans'] },
  { href: '/walkthroughs', label: 'Walkthroughs', match: ['/walkthroughs'] },
- { href: '/assistantprincipal', label: 'Staff & deadlines', match: ['/assistantprincipal'] },
+ { href: '/weeklyplans', label: 'Lesson plans', match: ['/weeklyplans'] },
+ { href: '/school/payroll', label: 'Payroll', match: ['/school/payroll'] },
+ { href: '/school/setup', label: '⚙ Setup', match: ['/school/setup', '/school/attendance', '/assistantprincipal', '/admin'] },
 ]
 const SCHOOL_PATHS = ['/school', '/weeklyplans', '/walkthroughs', '/assistantprincipal', '/admin']
 const STUDENT_NAV = [
@@ -64,7 +64,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
  const name = useMemo(() => displayName(profile, authUser), [profile, authUser])
  const isStudent = profile?.role === 'student'
  const schoolSide = !!lead && SCHOOL_PATHS.some(p => currentPath === p || currentPath.startsWith(p + '/'))
- const nav = !authUser ? VISITOR_NAV : isStudent ? STUDENT_NAV : schoolSide ? (lead.admin ? [...SCHOOL_NAV, { href: '/admin/accounts', label: 'People', match: ['/admin'] }] : SCHOOL_NAV) : EDUCATOR_NAV
+ const nav = !authUser ? VISITOR_NAV : isStudent ? STUDENT_NAV : schoolSide ? SCHOOL_NAV : EDUCATOR_NAV
  const home = !authUser ? '/' : isStudent ? '/learn' : lead && readMode() !== 'teacher' ? '/school' : '/teach'
  function switchTo(mode) { saveMode(mode); window.location.href = mode === 'teacher' ? '/teach' : '/school' }
 

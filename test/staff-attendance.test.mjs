@@ -129,3 +129,28 @@ test('reminders greet "Last, First" names by first name', () => {
  assert.match(reminderDraft({ name: 'Green, Karen', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
  assert.match(reminderDraft({ name: 'Karen Green', noFormDays: [], missingOut: [] }, 'X', 'no_form').body, /^Hi Karen,/)
 })
+
+test('no check-in on a school day uses a paid day; leader marks change it; past the pool is unpaid', () => {
+ const days = ['2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-12']
+ const others = days.flatMap(d => [{ staff_key: 'x', staff_name: 'X', day: d, clock_in: '07:00' }, { staff_key: 'y', staff_name: 'Y', day: d, clock_in: '07:00' }])
+ const staff = [{ id: 't', display_name: 'Tia Lane', role: 'teacher', sick_days: 2 }]
+ const marks = [{ staff_id: 't', day: '2026-10-07', kind: 'pd' }, { staff_id: 't', day: '2026-10-08', kind: 'present' }]
+ const p = staffPicture({ staff, attendance: others, absences: [], marks, today: '2026-10-13', nowTime: '06:00', settings: { onTime: '07:30', historyFor: 't' } }).people[0]
+ // 10/06 absent (paid), 10/07 PD (free), 10/08 was here, 10/09 absent (paid, pool now empty), 10/12 absent → unpaid
+ assert.deepEqual(p.leaveDays.map(l => [l.day, l.kind, l.paid, l.unpaid]), [['2026-10-06', 'absent', 1, 0], ['2026-10-07', 'pd', 0, 0], ['2026-10-08', 'present', 0, 0], ['2026-10-09', 'absent', 1, 0], ['2026-10-12', 'absent', 0, 1]])
+ assert.deepEqual([p.leave.paidUsed, p.leave.paidLeft, p.leave.unpaid, p.absences], [2, 0, 1, 3])
+ assert.equal(p.today.kind, 'waiting', 'before their start time they are not due yet')
+ assert.ok(p.history.some(h => h.day === '2026-10-08' && h.kind === 'present'))
+})
+
+test('a planned absence shows ahead of time and covers the day itself', () => {
+ const staff = [{ id: 't', display_name: 'Tia Lane', role: 'teacher', sick_days: 10 }, { id: 'u', display_name: 'Uma Ray', role: 'teacher' }, { id: 'v', display_name: 'Vic Day', role: 'teacher' }]
+ const marks = [{ staff_id: 't', day: '2026-10-14', kind: 'personal', needs_sub: true }, { staff_id: 't', day: '2026-10-20', kind: 'sick' }]
+ const att = [{ staff_key: 'uma ray', staff_name: 'Uma Ray', day: '2026-10-14', clock_in: '07:10' }, { staff_key: 'vic day', staff_name: 'Vic Day', day: '2026-10-14', clock_in: '07:12' }]
+ const p = staffPicture({ staff, attendance: att, absences: [], marks, today: '2026-10-14', nowTime: '08:00', settings: { onTime: '07:30' } }).people.find(x => x.id === 't')
+ assert.equal(p.today.kind, 'absent_form')
+ assert.equal(p.today.type, 'Personal')
+ assert.equal(p.today.needsSub, true)
+ assert.deepEqual(p.planned.map(x => x.day), ['2026-10-20'])
+ assert.equal(p.leave.paidUsed, 1)
+})
