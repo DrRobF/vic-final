@@ -44,7 +44,7 @@ async function syncLink(db, link) {
 async function picture(db, schoolId, links, schoolRow) {
  const clock = schoolClock(new Date(), schoolRow?.time_zone || 'America/New_York'), from = yearStart(clock.date)
  const [staff, sheetRows, absences, punches] = await Promise.all([
-  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
+  q(db.from('ap_staff').select('id,display_name,role,email,pay_type,shift_start,shift_end,sick_days,personal_days,code_hash,flexible,work_days').eq('school_id', schoolId).eq('active', true).order('display_name').limit(500)),
   links.some(l => l.kind === 'attendance') ? q(db.from('ap_attendance').select('staff_key,staff_name,day,clock_in,clock_out,status,late_minutes,flag').eq('school_id', schoolId).gte('day', from).limit(20000)) : [],
   links.some(l => l.kind === 'absences') ? q(db.from('ap_absence_reports').select('staff_key,staff_name,start_date,end_date,absence_type,portion,coverage,problem').eq('school_id', schoolId).limit(5000)) : [],
   q(db.from('ap_punches').select('staff_id,day,clock_in,clock_out,edited_at').eq('school_id', schoolId).gte('day', from).limit(20000)),
@@ -255,6 +255,8 @@ export default async function handler(req, res) {
    const patch = { shift_start: time(body.shiftStart), shift_end: time(body.shiftEnd), sick_days: days(body.sickDays) }
    if (Object.values(patch).some(v => v === undefined)) return res.status(400).json({ error: 'Use times like 7:30 AM and a number of days.' })
    if (['salaried', 'hourly'].includes(body.payType)) patch.pay_type = body.payType
+   if (typeof body.flexible === 'boolean') patch.flexible = body.flexible
+   if (Array.isArray(body.workDays)) { const d = [...new Set(body.workDays.map(Number).filter(n => Number.isInteger(n) && n >= 0 && n <= 6))].sort(); patch.work_days = d.length && d.length < 5 ? d : null }
    await q(db.from('ap_staff').update(patch).eq('school_id', schoolId).eq('id', body.staffId))
    return res.json({ saved: true })
   }

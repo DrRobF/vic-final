@@ -109,3 +109,18 @@ test('staff lists written "Last, First" match check-in names written "First Last
  assert.deepEqual(pic.unmatched, [])
  assert.equal(pic.people[0].today.kind, 'in')
 })
+
+test('flexible staff are never late or absent; part-timers only count on their work days', () => {
+ const days = ['2026-10-12', '2026-10-13', '2026-10-14'] // Mon Tue Wed
+ const others = days.flatMap(d => [{ staff_key: 'x', staff_name: 'X', day: d, clock_in: '07:00' }, { staff_key: 'y', staff_name: 'Y', day: d, clock_in: '07:00' }])
+ const staff2 = [
+  { id: 'm', display_name: 'Mary Pennamon', pay_type: 'hourly', flexible: true },
+  { id: 'b', display_name: 'Barbara Andrews', pay_type: 'hourly', work_days: [1, 3] },
+ ]
+ const att = [...others, { staff_key: 'mary pennamon', staff_name: 'Mary Pennamon', day: '2026-10-13', clock_in: '10:15', clock_out: '16:00' }, { staff_key: 'barbara andrews', staff_name: 'Barbara Andrews', day: '2026-10-12', clock_in: '09:00' }]
+ const pic = staffPicture({ staff: staff2, attendance: att, absences: [], today: '2026-10-14', settings: { onTime: '07:30' } })
+ const [m, b] = pic.people
+ assert.equal(m.lateCount, 0); assert.equal(m.absences, 0); assert.equal(m.today.kind, 'off')
+ assert.equal(b.absences, 1, 'missed Wednesday only; Tuesday is not her day')
+ assert.equal(b.today.kind, 'absent_no_form')
+})

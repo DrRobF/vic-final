@@ -20,6 +20,7 @@ function TodayBadge({ t }) {
  if (t.kind === 'late') return <span className="tb late">Late {fmtTime(t.time)}{t.minutes ? ` · ${t.minutes} min` : ''}</span>
  if (t.kind === 'absent_form') return <span className="tb form">Absent · {t.type || 'form on file'}{t.portion && !/whole/i.test(t.portion) ? ` (${t.portion})` : ''}</span>
  if (t.kind === 'absent_no_form') return <span className="tb noform">Absent · no form</span>
+ if (t.kind === 'off') return <span className="tb wait">Not scheduled</span>
  return <span className="tb wait">Not in yet</span>
 }
 
@@ -88,7 +89,7 @@ export default function StaffAttendance() {
      <table>
       <thead><tr><th>Name</th><th>Today</th><th>Late</th><th>Absences</th><th>Days left / hours</th><th>Lesson plans</th><th /></tr></thead>
       <tbody>{people.map(p => [<tr key={p.id}>
-       <td className="nm">{p.name}<small className="sub">{p.payType === 'hourly' ? 'Hourly' : 'Salaried'}{p.shiftStart ? ` · ${fmtTime(p.shiftStart)}–${fmtTime(p.shiftEnd)}` : ''}</small>{p.formProblems.length > 0 && <small className="typo" title={p.formProblems.join('\n')}>Form has a date typo</small>}</td>
+       <td className="nm">{p.name}<small className="sub">{p.payType === 'hourly' ? 'Hourly' : 'Salaried'}{p.flexible ? ' · Flexible hours' : p.shiftStart ? ` · ${fmtTime(p.shiftStart)}–${fmtTime(p.shiftEnd)}` : ''}{p.workDays?.length ? ` · ${p.workDays.map(d => ['Su', 'M', 'T', 'W', 'Th', 'F', 'Sa'][d]).join(' ')}` : ''}</small>{p.formProblems.length > 0 && <small className="typo" title={p.formProblems.join('\n')}>Form has a date typo</small>}</td>
        <td><TodayBadge t={p.today} /></td>
        <td>{p.lateCount ? `${p.lateCount}×${p.lateMinutes ? ` · ${p.lateMinutes} min` : ''}` : '—'}{p.earlyCount ? <small className="sub">Left early {p.earlyCount}×</small> : null}</td>
        <td>{p.absences ? <>{p.absences}{p.absences > p.absencesWithForm ? <span className="nf"> · {p.absences - p.absencesWithForm} no form</span> : ''}</> : '—'}</td>
@@ -175,6 +176,13 @@ export default function StaffAttendance() {
    :global(.edit label){display:flex;flex-direction:column;gap:4px;font-weight:800;font-size:13px}
    :global(.edit input),:global(.edit select){padding:7px 8px;border-radius:8px;border:1px solid var(--vic-border);font:inherit;font-size:15px;width:140px}
    :global(.edit small){flex-basis:100%;color:var(--vic-text-secondary)}
+   :global(.edit .chk){flex-direction:row;align-items:center;gap:6px}
+   :global(.edit .chk input){width:auto}
+   :global(.edit .wd){border:0;padding:0;margin:0;display:flex;gap:4px;align-items:flex-end}
+   :global(.edit .wd legend){font-weight:800;font-size:13px;margin-bottom:4px}
+   :global(.edit .wd label){display:inline-flex;padding:7px 10px;border-radius:8px;border:1px solid var(--vic-border);cursor:pointer;font-size:14px}
+   :global(.edit .wd label.on){background:var(--vic-ink);color:#fff;border-color:var(--vic-ink)}
+   :global(.edit .wd input){position:absolute;opacity:0;width:1px;height:1px}
    :global(.edit .rm){background:none;border:0;color:var(--vic-danger);text-decoration:underline;cursor:pointer;font-weight:700;padding:8px 0}
    .sheets{display:grid;grid-template-columns:1fr 1fr;gap:16px}
    .sheet{border:1px solid var(--vic-border-soft);border-radius:14px;padding:16px}
@@ -255,10 +263,12 @@ function Unmatched({ u, people, act }) {
 
 function StaffEdit({ person, onSave, act }) {
  const [code, setCode] = useState('')
- const [f, setF] = useState({ payType: person.payType, shiftStart: person.shiftStart, shiftEnd: person.shiftEnd, sickDays: person.sickDays ?? '', personalDays: person.personalDays ?? '' })
+ const [f, setF] = useState({ flexible: person.flexible, workDays: person.workDays?.length ? person.workDays : [1, 2, 3, 4, 5], payType: person.payType, shiftStart: person.shiftStart, shiftEnd: person.shiftEnd, sickDays: person.sickDays ?? '', personalDays: person.personalDays ?? '' })
  const set = (k, v) => setF({ ...f, [k]: v })
  return <div className="edit">
   <label>Pay<select value={f.payType} onChange={e => set('payType', e.target.value)}><option value="salaried">Salaried</option><option value="hourly">Hourly</option></select></label>
+  <label className="chk"><input type="checkbox" checked={f.flexible} onChange={e => set('flexible', e.target.checked)} />Flexible hours</label>
+  <fieldset className="wd"><legend>Works on</legend>{[[1, 'M'], [2, 'T'], [3, 'W'], [4, 'Th'], [5, 'F']].map(([d, l]) => <label key={d} className={f.workDays.includes(d) ? 'on' : ''}><input type="checkbox" checked={f.workDays.includes(d)} onChange={e => set('workDays', e.target.checked ? [...f.workDays, d].sort() : f.workDays.filter(x => x !== d))} />{l}</label>)}</fieldset>
   <label>Starts at<input type="time" value={f.shiftStart} onChange={e => set('shiftStart', e.target.value)} /></label>
   <label>Ends at<input type="time" value={f.shiftEnd} onChange={e => set('shiftEnd', e.target.value)} /></label>
   <label>Paid days off a year<input type="number" min="0" step="0.5" value={f.sickDays} onChange={e => set('sickDays', e.target.value)} /></label>
@@ -266,7 +276,7 @@ function StaffEdit({ person, onSave, act }) {
   <label>Check-in code {person.hasCode ? '✓ set' : '(none yet)'}<input inputMode="numeric" autoComplete="off" value={code} placeholder={person.hasCode ? 'New code' : '4–6 digits'} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
   <button type="button" className="btn btn-outline sm" disabled={code.length < 4} onClick={() => act({ action: 'set_code', staffId: person.id, code }, () => setCode(''))}>Save code</button>
   <button type="button" className="rm" onClick={() => { if (window.confirm(`Remove ${person.name} from your staff list? Their past attendance stays on record; their check-in code stops working.`)) act({ action: 'remove_staff', staffId: person.id }) }}>Remove from staff list</button>
-  <small>Leave the start time blank to use the school’s on-time rule. Their own start time decides late; their end time decides left early.</small>
+  <small>Flexible hours: AskVic just counts their hours, with no late or absent flags. Works on: absences only count on those days. Leave the start time blank to use the school’s on-time rule.</small>
  </div>
 }
 
