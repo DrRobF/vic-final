@@ -61,3 +61,24 @@ test('a day-off request only changes the record once a leader approves it', () =
  assert.deepEqual(expand('2026-10-17', '2026-10-18'), [], 'a weekend-only request marks nothing')
  assert.deepEqual(expand('2026-10-15', '2026-10-15'), ['2026-10-15'])
 })
+
+test('days off count from the school’s start date, and days used before it carry in', async () => {
+ const { staffPicture } = await import('../lib/staff-attendance.mjs')
+ const staff = [{ id: 'a', display_name: 'Dawn White', role: 'support', pay_type: 'salaried', sick_days: 10, leave_used_before: 3 },
+  { id: 'b', display_name: 'Karen Green', role: 'teacher', pay_type: 'salaried', sick_days: 10 },
+  { id: 'c', display_name: 'Sandra Morgan', role: 'teacher', pay_type: 'salaried', sick_days: 10 }]
+ // Karen and Sandra are in every day (so each day counts as a school day);
+ // Dawn misses 2026-10-13 and 2026-10-14.
+ const att = ['2026-10-12', '2026-10-13', '2026-10-14'].flatMap(day => [{ staff_key: 'karen green', day, clock_in: '07:20' }, { staff_key: 'sandra morgan', day, clock_in: '07:20' }])
+  .concat([{ staff_key: 'dawn white', day: '2026-10-12', clock_in: '07:20' }])
+ const pic = staffPicture({ staff, attendance: att, absences: [], today: '2026-10-15', settings: { onTime: '07:30' } })
+ const dawn = pic.people.find(p => p.id === 'a')
+ assert.equal(dawn.leave.carried, 3, 'days used before AskVic are carried in')
+ assert.equal(dawn.leave.paidUsed, 5, '3 carried in plus the 2 days missed')
+ assert.equal(dawn.leave.paidLeft, 5)
+ // Start the count after those misses and only the carry-in is left.
+ const later = staffPicture({ staff, attendance: att, absences: [], today: '2026-10-15', settings: { onTime: '07:30', leaveFrom: '2026-10-14' } })
+ const dawnLater = later.people.find(p => p.id === 'a')
+ assert.equal(dawnLater.leave.paidUsed, 4, 'only 2026-10-14 is counted now')
+ assert.equal(dawnLater.countFrom, '2026-10-14')
+})

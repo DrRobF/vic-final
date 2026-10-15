@@ -32,7 +32,7 @@ const LEGEND = [['here', '✓', 'Here'], ['late', '⏰', 'Late'], ['missing', '!
 export default function SchoolDashboard() {
  const { account, error: accountError } = useAccount({ next: '/school' })
  const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState(''), [att, setAtt] = useState(null), [walks, setWalks] = useState(null), [plans, setPlans] = useState(null), [error, setError] = useState('')
- const [open, setOpen] = useState(null), [privacy, setPrivacy] = useState(false), [updated, setUpdated] = useState(null), [deciding, setDeciding] = useState(0)
+ const [open, setOpen] = useState(null), [privacy, setPrivacy] = useState(false), [updated, setUpdated] = useState(null), [deciding, setDeciding] = useState(0), [order, setOrder] = useState(null), [saving, setSaving] = useState(false)
  const weekOf = defaultWeekOf()
 
  useEffect(() => { try { setPrivacy(localStorage.getItem('askvic-privacy') === '1') } catch {} }, [])
@@ -60,7 +60,9 @@ export default function SchoolDashboard() {
  // Open a person straight from a link (e.g. /school?staff=ID).
  useEffect(() => { const q = new URLSearchParams(window.location.search), s = q.get('staff'); if (s) setOpen({ id: s, tab: ['overview', 'attendance', 'growth', 'profile'].includes(q.get('tab')) ? q.get('tab') : 'overview' }) }, [])
 
- const people = (att?.people || []).slice().sort(byLastName)
+ // Tiles sit in the order the principal saved (board_order); anyone new falls in by last name.
+ const byBoard = (a, b) => (a.boardOrder ?? 9e8) - (b.boardOrder ?? 9e8) || byLastName(a, b)
+ const people = order ?? (att?.people || []).slice().sort(byBoard)
  const schoolName = att?.school?.name || schools?.find(s => s.id === schoolId)?.name || 'Your school'
  const today = att?.today
  const count = k => people.filter(p => tileState(p).cls === k).length
@@ -91,6 +93,16 @@ export default function SchoolDashboard() {
  const stats = walks?.walkStats || {}
  const notVisited = people.filter(p => p.role === 'teacher' && (!stats[p.id]?.last || Date.now() - Date.parse(stats[p.id].last) > 30 * 864e5))
  const sentIds = new Set((plans?.weeks || []).map(w => w.staffId).filter(Boolean)), teachers = plans?.teachers || []
+
+ // Reordering: ↑ and ↓ rather than dragging, so it works with a keyboard and on a phone.
+ function move(i, step) {
+  setOrder(list => { const next = [...(list || [])]; const j = i + step; if (j < 0 || j >= next.length) return next;[next[i], next[j]] = [next[j], next[i]]; return next })
+ }
+ async function saveOrder() {
+  setSaving(true); setError('')
+  try { await post({ schoolId, action: 'board_order', order: order.map(p => p.id) }); setOrder(null); await loadAtt() }
+  catch (e) { setError(e.message) } finally { setSaving(false) }
+ }
 
  // A teacher's day-off request only changes anything once the principal says yes.
  async function decide(id, decision) {
@@ -146,20 +158,34 @@ export default function SchoolDashboard() {
      <section aria-label="Staff today">
       <div className="shead">
        <h2>Staff today</h2>
-       {att && <p className="tally"><b>{count('here')}</b> here · <b>{count('late')}</b> late · <b>{count('missing')}</b> no check-in · <b>{count('told')}</b> out · <b>{count('waiting')}</b> not due yet</p>}
+       {att && !order && <button type="button" className="btn btn-outline sm" onClick={() => setOrder(people.slice())}>Change the order</button>}
+       {order && <span className="askbtns">
+        <button type="button" className="btn btn-primary sm" disabled={saving} onClick={saveOrder}>{saving ? 'Saving…' : 'Save this order'}</button>
+        <button type="button" className="btn btn-outline sm" disabled={saving} onClick={() => setOrder(people.slice().sort((a, b) => (a.role === 'teacher' ? 0 : 1) - (b.role === 'teacher' ? 0 : 1) || byLastName(a, b)))}>Teachers first</button>
+        <button type="button" className="btn btn-outline sm" disabled={saving} onClick={() => setOrder(null)}>Cancel</button>
+       </span>}
+       {att && !order && <p className="tally"><b>{count('here')}</b> here · <b>{count('late')}</b> late · <b>{count('missing')}</b> no check-in · <b>{count('told')}</b> out · <b>{count('waiting')}</b> not due yet</p>}
       </div>
       <ul className="legend" aria-label="What the tiles mean">{LEGEND.map(([c, i, l]) => <li key={c}><span className={`chip ${c}`} aria-hidden="true">{i}</span>{l}</li>)}</ul>
       {!att ? <p className="muted">Loading your staff…</p> : !people.length ? <p className="muted">No staff yet. <button className="linkish" onClick={() => setOpen({ id: 'new' })}>Add your first staff member</button></p> :
-       <ul className="grid">{people.map(p => { const s = tileState(p); return <li key={p.id}>
+       <ul className="grid">{people.map((p, i) => { const s = tileState(p); return <li key={p.id}>
+        {order ? <div className={`tile ${s.cls} reorder`}>
+         <span className="nm">{displayName(p.name)}</span>
+         <span className="arrows">
+          <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`Move ${displayName(p.name)} earlier`}>↑</button>
+          <button type="button" onClick={() => move(i, 1)} disabled={i === people.length - 1} aria-label={`Move ${displayName(p.name)} later`}>↓</button>
+         </span>
+        </div> :
         <button className={`tile ${s.cls}`} onClick={() => setOpen({ id: p.id, tab: 'overview' })} aria-label={`${displayName(p.name)}: ${s.word}, ${s.text}. Open details.`}>
          <span className="ic" aria-hidden="true">{s.icon}</span>
          <span className="nm">{displayName(p.name)}</span>
          <span className="st">{s.text}</span>
          {!privacy && p.leave?.paidLeft != null && <span className="dl">{p.leave.paidLeft} days left</span>}
-        </button></li> })}
-        <li><button className="tile add" onClick={() => setOpen({ id: 'new' })}><span className="ic" aria-hidden="true">+</span><span className="nm">Add staff</span></button></li>
+        </button>}</li> })}
+        {!order && <li><button className="tile add" onClick={() => setOpen({ id: 'new' })}><span className="ic" aria-hidden="true">+</span><span className="nm">Add staff</span></button></li>}
        </ul>}
-      {updated && <p className="muted small">Updates every minute · last {updated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} <button className="linkish" onClick={loadAtt}>Refresh now</button></p>}
+      {order && <p className="muted small">Move people with the arrows, then save. New staff go in by last name until you move them.</p>}
+      {!order && updated && <p className="muted small">Updates every minute · last {updated.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} <button className="linkish" onClick={loadAtt}>Refresh now</button></p>}
      </section>
 
      <section className="panel growth" aria-label="Staff growth">
@@ -207,6 +233,10 @@ export default function SchoolDashboard() {
    .asks em{font-style:normal;color:var(--vic-text-secondary)}
    .askbtns{display:flex;gap:8px}
    .asks :global(.sm){min-height:38px;padding:7px 14px;font-size:15px}
+   .reorder{display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:default}
+   .arrows{display:flex;gap:4px;flex:none}
+   .arrows button{width:34px;height:34px;border-radius:8px;border:1px solid var(--vic-border);background:var(--vic-surface);font-size:15px;font-weight:900;cursor:pointer;color:var(--vic-text-primary)}
+   .arrows button:disabled{opacity:.35;cursor:not-allowed}
    .tally{margin:0;color:var(--vic-text-secondary)}
    .tally b{color:var(--vic-text-primary)}
    .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 12px;padding:0;font-size:14px;color:var(--vic-text-secondary)}
