@@ -159,10 +159,13 @@ Tile state names in code are `here` / `late` / `missing` / `told` / `waiting`
 - **Today's no-show now gets a row in Day by day straight away**, labelled
   "No check-in yet today", so "Was here (forgot to check in)" is reachable the
   moment he notices. It still costs no paid day until the day is over.
-- **"Fix the times" / "Add times" on every day** in the panel, so a check-in at
-  the wrong time (someone clocking in on the way out, reading as 492 min late)
-  can be corrected without going to Payroll. Uses `edit_punch`, so the original
-  time and the reason stay on record.
+- **Fixing a day's times, any day.** The Attendance tab has a **✎ Fix a day**
+  button that takes any date — already passed, today, or coming up — plus the
+  in and out time and a reason. Every row in Day by day also has a plain
+  **Fix times** / **Add times** button that fills that form in and scrolls to
+  it. Both use `edit_punch`, so the previous time, the reason and who changed
+  it stay on record. The date picker matters because a day with no check-in on
+  a day that wasn't a school day never appears in the list at all.
 
 ## Still open
 
