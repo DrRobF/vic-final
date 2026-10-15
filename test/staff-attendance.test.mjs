@@ -156,3 +156,24 @@ test('a planned absence shows ahead of time and covers the day itself', () => {
  assert.deepEqual(p.planned.map(x => x.day), ['2026-10-20'])
  assert.equal(p.leave.paidUsed, 1)
 })
+
+test('a no-show today gets a row right away so a leader can say "was here"', () => {
+ const staff = [{ id: 'a', display_name: 'Dawkins,Dale', role: 'leader', pay_type: 'salaried', sick_days: 10 },
+  { id: 'b', display_name: 'Green, Karen', role: 'teacher', pay_type: 'salaried', sick_days: 10 },
+  { id: 'c', display_name: 'Morgan, Sandra', role: 'teacher', pay_type: 'salaried', sick_days: 10 }]
+ // Dale was in yesterday; today he hasn't checked in.
+ const att = ['2026-10-14', '2026-10-15'].flatMap(day => [{ staff_key: 'karen green', day, clock_in: '07:20' }, { staff_key: 'sandra morgan', day, clock_in: '07:21' }])
+  .concat([{ staff_key: 'dale dawkins', day: '2026-10-14', clock_in: '07:19' }])
+ const pic = staffPicture({ staff, attendance: att, absences: [], today: '2026-10-15', nowTime: '14:07', settings: { onTime: '07:30', historyFor: 'a' } })
+ const dale = pic.people.find(p => p.id === 'a')
+ assert.equal(dale.today.kind, 'absent_no_form')
+ assert.equal(dale.history[0].day, '2026-10-15', 'today is the first row')
+ assert.equal(dale.history[0].today, true)
+ assert.equal(dale.history[0].paid, 0, 'today costs no paid day until the day is over')
+ // Marking "was here" turns the tile back to Here and leaves the day free.
+ const fixed = staffPicture({ staff, attendance: att, absences: [], marks: [{ staff_id: 'a', day: '2026-10-15', kind: 'present' }], today: '2026-10-15', nowTime: '14:07', settings: { onTime: '07:30', historyFor: 'a' } })
+ const daleFixed = fixed.people.find(p => p.id === 'a')
+ assert.equal(daleFixed.today.kind, 'in')
+ assert.equal(daleFixed.today.marked, true)
+ assert.equal(daleFixed.leave.paidUsed, 0)
+})

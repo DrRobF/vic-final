@@ -154,6 +154,16 @@ Tile state names in code are `here` / `late` / `missing` / `told` / `waiting`
   balance carried over from paper is right. The panel shows "since <date>
   · +N before" under the absence count, so a surprising number explains itself.
 
+## Fixes from Rob using it (Oct 15, afternoon)
+
+- **Today's no-show now gets a row in Day by day straight away**, labelled
+  "No check-in yet today", so "Was here (forgot to check in)" is reachable the
+  moment he notices. It still costs no paid day until the day is over.
+- **"Fix the times" / "Add times" on every day** in the panel, so a check-in at
+  the wrong time (someone clocking in on the way out, reading as 492 min late)
+  can be corrected without going to Payroll. Uses `edit_punch`, so the original
+  time and the reason stay on record.
+
 ## Still open
 
 - Student academics (section 9) — Rob will say how he wants this.

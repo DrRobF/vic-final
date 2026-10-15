@@ -17,14 +17,14 @@ const TABS = [['overview', 'Overview'], ['attendance', 'Attendance'], ['growth',
 export default function StaffPanel({ schoolId, staffId, startTab = 'overview', privacy, canManageAccounts, joinCode, onClose, onChanged, onOpen }) {
  const isNew = staffId === 'new'
  const [data, setData] = useState(null), [tab, setTab] = useState(startTab), [busy, setBusy] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [reveal, setReveal] = useState(false)
- const [draft, setDraft] = useState(null), [plan, setPlan] = useState(null), [edit, setEdit] = useState(null), [work, setWork] = useState(null), [code, setCode] = useState(''), [fresh, setFresh] = useState({ name: '', email: '', role: 'teacher', payType: 'salaried', sickDays: '10' })
+ const [draft, setDraft] = useState(null), [plan, setPlan] = useState(null), [edit, setEdit] = useState(null), [work, setWork] = useState(null), [code, setCode] = useState(''), [fixDay, setFixDay] = useState(null), [fresh, setFresh] = useState({ name: '', email: '', role: 'teacher', payType: 'salaried', sickDays: '10' })
  const hide = privacy && !reveal
 
  async function load() {
   if (isNew) return
   try { setData(await school(schoolId, { action: 'person', staffId })) } catch (e) { setError(e.message) }
  }
- useEffect(() => { setData(null); setTab(startTab); setDraft(null); setPlan(null); setEdit(null); setWork(null); setNotice(''); setError(''); setReveal(false); load() }, [staffId])
+ useEffect(() => { setData(null); setTab(startTab); setDraft(null); setPlan(null); setEdit(null); setWork(null); setFixDay(null); setNotice(''); setError(''); setReveal(false); load() }, [staffId])
  useEffect(() => { const k = e => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
 
  async function run(label, fn, done) {
@@ -45,6 +45,8 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
  const saveWork = e => { e.preventDefault(); run('Saving…', async () => { await school(schoolId, { action: 'update_staff', staffId, ...work, workDays: work.workDays }); setWork(null) }, 'Saved.') }
  const saveCode = e => { e.preventDefault(); run('Saving code…', async () => { await school(schoolId, { action: 'set_code', staffId, code }); setCode('') }, code ? `Check-in code saved. Tell ${firstName(name)} their code is ${code}.` : 'Code removed.') }
  const mark = (day, kind) => run('Saving…', () => school(schoolId, { action: 'mark_day', staffId, day, kind }), 'Day updated.')
+ // Set the real in/out times for a day (works whether or not they checked in). The original stays on record.
+ const saveFix = e => { e.preventDefault(); run('Saving…', async () => { await school(schoolId, { action: 'edit_punch', staffId, day: fixDay.day, clockIn: fixDay.in, clockOut: fixDay.out, note: fixDay.note }); setFixDay(null) }, 'Times saved. The original is kept on record.') }
  const savePlan = e => { e.preventDefault(); run('Saving…', async () => { await school(schoolId, { action: 'plan_absence', staffId, ...plan }); setPlan(null) }, 'Planned absence saved. It’ll show on your dashboard that day.') }
  const getDraft = topic => run('Writing a draft…', async () => { const r = await school(schoolId, { action: 'draft', staffId, topic }); setDraft({ ...r.draft, to: r.to }) })
  const send = () => run('Sending…', async () => { await school(schoolId, { action: 'send', staffId, subject: draft.subject, body: draft.body }); setDraft(null) }, `Sent to ${draft?.to}.`)
@@ -131,13 +133,19 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
       <ul className="sp-days">{p.history.map(h => <li key={h.day}>
        <span className="d">{fmtDay(h.day)}</span>
        <span className={`k ${h.kind === 'in' ? 'here' : h.kind === 'late' ? 'late' : h.kind === 'absent' ? 'missing' : h.kind === 'present' ? 'here' : 'told'}`}>
-        {h.in ? <>{h.kind === 'late' ? '⏰' : '✓'} {fmt12(h.in)}{h.out ? `–${fmt12(h.out)}` : ''}{h.late ? ` · ${h.late} min late` : ''}{h.label ? ` · ${h.label}` : ''}</> : <>{h.kind === 'absent' ? '!' : h.kind === 'present' ? '✓' : '✉'} {h.kind === 'absent' ? 'Absent, no reason' : h.label}</>}
+        {h.in ? <>{h.kind === 'late' ? '⏰' : '✓'} {fmt12(h.in)}{h.out ? `–${fmt12(h.out)}` : ''}{h.late ? ` · ${h.late} min late` : ''}{h.label ? ` · ${h.label}` : ''}</> : <>{h.kind === 'absent' ? '!' : h.kind === 'present' ? '✓' : '✉'} {h.kind === 'absent' ? (h.today ? 'No check-in yet today' : 'Absent, no reason') : h.label}</>}
         {(h.paid > 0 || h.unpaid > 0) && <small> · {h.unpaid ? (h.paid ? `${h.paid} paid, ${h.unpaid} unpaid` : 'unpaid') : `${h.paid} paid day`}</small>}
        </span>
        {!h.in || h.kind === 'half' ? <select aria-label={`Change ${fmtDay(h.day)}`} value={h.source === 'you' ? h.kind : ''} onChange={e => mark(h.day, e.target.value)} disabled={!!busy}>
         <option value="">{h.source === 'you' ? 'Undo my change' : 'Change…'}</option>
         {MARK_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
        </select> : <select aria-label={`Change ${fmtDay(h.day)}`} value={h.marked || ''} onChange={e => mark(h.day, e.target.value)} disabled={!!busy}><option value="">{h.marked ? 'Undo my change' : 'Change…'}</option><option value="half">Half day</option><option value="pd">PD / school business</option><option value="excused">Excused (late doesn’t count)</option></select>}
+       <span className="fixrow"><button type="button" className="link" disabled={!!busy} onClick={() => setFixDay(fixDay?.day === h.day ? null : { day: h.day, in: (h.in || '').slice(0, 5), out: (h.out || '').slice(0, 5), note: '' })}>{fixDay?.day === h.day ? 'Close' : h.in ? 'Fix the times' : 'Add times'}</button></span>
+       {fixDay?.day === h.day && <form className="fixbox" onSubmit={saveFix}>
+        <div className="sp-two"><label>In<input type="time" required value={fixDay.in} onChange={e => setFixDay({ ...fixDay, in: e.target.value })} /></label><label>Out <small>(optional)</small><input type="time" value={fixDay.out} onChange={e => setFixDay({ ...fixDay, out: e.target.value })} /></label></div>
+        <label>Why <small>(kept with the record)</small><input required minLength={3} value={fixDay.note} onChange={e => setFixDay({ ...fixDay, note: e.target.value })} placeholder="Forgot to check in; arrived 7:30" /></label>
+        <div className="sp-row"><button className="btn btn-primary" disabled={!!busy}>Save times</button><button type="button" className="btn btn-outline" onClick={() => setFixDay(null)}>Cancel</button></div>
+       </form>}
       </li>)}</ul>}
      <p className="muted small">No check-in on a school day counts as absent and uses a paid day. Change any day with the menu. After the paid days run out, more absences are unpaid and show that way on payroll.</p>
     </>}
@@ -245,6 +253,9 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
    .sp-days li{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:center;font-size:15px}
    .sp-days .d{font-weight:800}
    .sp-days .k{padding:5px 10px;border-radius:8px;font-weight:700}
+   .sp-days .fixrow{grid-column:2/-1;margin-top:-4px}
+   .sp-days .fixrow .link{padding:0;font-size:14px}
+   .sp-days .fixbox{grid-column:1/-1;display:flex;flex-direction:column;gap:10px;padding:12px;border-radius:12px;background:var(--vic-primary-soft);border:1px solid var(--vic-primary)}
    .sp-days select{min-height:38px;padding:6px 8px;font-size:14px;max-width:150px}
    .sp-check{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
    .sp-check li{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
