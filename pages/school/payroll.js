@@ -16,8 +16,10 @@ const addDays = (day, n) => { const d = new Date(`${day}T12:00:00Z`); d.setUTCDa
 const fmtDay = d => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })
 const today = () => { const n = new Date(); return iso(new Date(Date.UTC(n.getFullYear(), n.getMonth(), n.getDate(), 12))) }
 
-// The two-week period containing a day, counted from any known period start.
-function periodFor(day, anchor) {
+const monthEnd = day => { const [y, m] = day.split('-').map(Number); return iso(new Date(Date.UTC(y, m, 0, 12))) }
+// The pay period containing a day: twice a month (1st–15th, 16th–end) or every two weeks from a known start.
+function periodFor(day, anchor, schedule) {
+ if (schedule === 'semimonthly') { const ym = day.slice(0, 8); return Number(day.slice(8)) <= 15 ? { from: `${ym}01`, to: `${ym}15` } : { from: `${ym}16`, to: monthEnd(day) } }
  if (!anchor) return { from: addDays(day, -13), to: day }
  const diff = Math.round((Date.parse(`${day}T12:00:00Z`) - Date.parse(`${anchor}T12:00:00Z`)) / 864e5)
  const from = addDays(anchor, Math.floor(diff / 14) * 14)
@@ -37,22 +39,22 @@ export default function Payroll() {
    if (!id) { setError('Set up your school first on Staff & deadlines.'); return }
    setSchoolId(id)
    const d = await api('GET', null, `?schoolId=${encodeURIComponent(id)}`)
-   setSchool(d.school); setSettings({ payPeriodStart: d.school.payPeriodStart, payrollEmail: d.school.payrollEmail })
-   setPeriod(periodFor(today(), d.school.payPeriodStart))
+   setSchool(d.school); setSettings({ paySchedule: d.school.paySchedule, payPeriodStart: d.school.payPeriodStart, payrollEmail: d.school.payrollEmail })
+   setPeriod(periodFor(today(), d.school.payPeriodStart, d.school.paySchedule))
   })().catch(e => setError(e.message))
  }, [])
 
  async function load() { if (!period || !schoolId) return; setError(''); try { setReport(await api('POST', { schoolId, action: 'payroll', ...period })) } catch (e) { setError(e.message) } }
  useEffect(() => { load() }, [period?.from, period?.to, schoolId])
 
- const move = n => setPeriod(p => ({ from: addDays(p.from, 14 * n), to: addDays(p.to, 14 * n) }))
+ const move = n => setPeriod(p => school?.paySchedule === 'semimonthly' ? periodFor(n < 0 ? addDays(p.from, -1) : addDays(p.to, 1), null, 'semimonthly') : { from: addDays(p.from, 14 * n), to: addDays(p.to, 14 * n) })
  function download() {
   const csv = payrollCsv(report.report, report.from, report.to, report.school)
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })), a = document.createElement('a')
   a.href = url; a.download = `Payroll-${report.from}-to-${report.to}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000)
  }
  async function email() { setBusy('email'); setError(''); setMsg(''); try { const d = await api('POST', { schoolId, action: 'payroll_email', ...period }); setMsg(`Sent to ${d.to}.`) } catch (e) { setError(e.message) } finally { setBusy('') } }
- async function saveSettings() { setError(''); try { await api('POST', { schoolId, action: 'school_settings', dayStart: school.dayStart, dayEnd: school.dayEnd, ...settings }); setSchool({ ...school, ...settings }); setPeriod(periodFor(today(), settings.payPeriodStart)); setMsg('Payroll settings saved.') } catch (e) { setError(e.message) } }
+ async function saveSettings() { setError(''); try { await api('POST', { schoolId, action: 'school_settings', dayStart: school.dayStart, dayEnd: school.dayEnd, ...settings }); setSchool({ ...school, ...settings }); setPeriod(periodFor(today(), settings.payPeriodStart, settings.paySchedule)); setMsg('Payroll settings saved.') } catch (e) { setError(e.message) } }
  async function saveEdit() { setBusy('edit'); setError(''); try { const { adding, ...edit } = editing; await api('POST', { schoolId, action: 'edit_punch', ...edit }); setEditing(null); setMsg('Time corrected. The original is kept with the record.'); await load() } catch (e) { setError(e.message) } finally { setBusy('') } }
 
  const hourly = report?.report.filter(p => p.payType === 'hourly') || [], salaried = report?.report.filter(p => p.payType !== 'hourly') || []
@@ -82,7 +84,7 @@ export default function Payroll() {
     <p className="label">Hourly staff</p>
     {!hourly.length && <p>No one is marked hourly. Set pay type with Edit on the Staff attendance page.</p>}
     {hourly.map(p => <div key={p.id} className="person">
-     <div className="ph"><h2>{p.name}</h2><strong className="tot">{p.totalHours} hours</strong>{p.issues > 0 && <span className="warn">{p.issues} day{p.issues === 1 ? '' : 's'} need a look</span>}</div>
+     <div className="ph"><h2>{p.name}</h2><strong className="tot">{p.totalHours} hours</strong>{left(p.id).paidLeft != null && <span className="muted">{left(p.id).paidLeft} paid days left</span>}{p.issues > 0 && <span className="warn">{p.issues} day{p.issues === 1 ? '' : 's'} need a look</span>}</div>
      <table>
       <thead><tr><th>Day</th><th>In</th><th>Out</th><th>Hours</th><th>Note</th><th className="noprint" /></tr></thead>
       <tbody>{p.rows.map(r => editing?.staffId === p.id && editing.day === r.day ? <tr key={r.day} className="ed"><td>{fmtDay(r.day)}</td>
@@ -107,19 +109,20 @@ export default function Payroll() {
    <section className="panel">
     <p className="label">Salaried staff</p>
     <table>
-     <thead><tr><th>Name</th><th>Days worked</th><th>Absences this period</th><th>Sick days left</th><th>Personal days left</th></tr></thead>
-     <tbody>{salaried.map(p => <tr key={p.id}><td className="nm">{p.name}</td><td>{p.daysWorked}</td><td>{Object.entries(p.absences).map(([k, n]) => `${n} ${k}`).join(', ') || '—'}</td><td>{left(p.id).sickLeft ?? '—'}</td><td>{left(p.id).personalLeft ?? '—'}</td></tr>)}</tbody>
+     <thead><tr><th>Name</th><th>Days worked</th><th>Absences this period</th><th>Paid days left</th></tr></thead>
+     <tbody>{salaried.map(p => <tr key={p.id}><td className="nm">{p.name}</td><td>{p.daysWorked}</td><td>{Object.entries(p.absences).map(([k, n]) => `${n} ${k}`).join(', ') || '—'}</td><td>{left(p.id).paidLeft ?? '—'}</td></tr>)}</tbody>
     </table>
    </section>
 
    {settings && <section className="panel noprint">
     <p className="label">Payroll settings</p>
     <div className="row">
-     <label className="f">A pay period starts on<input type="date" value={settings.payPeriodStart || ''} onChange={e => setSettings({ ...settings, payPeriodStart: e.target.value })} /></label>
+     <label className="f">Pay periods<select value={settings.paySchedule || 'biweekly'} onChange={e => setSettings({ ...settings, paySchedule: e.target.value })}><option value="semimonthly">Twice a month (1st–15th and 16th–end)</option><option value="biweekly">Every two weeks</option></select></label>
+     {settings.paySchedule !== 'semimonthly' && <label className="f">A pay period starts on<input type="date" value={settings.payPeriodStart || ''} onChange={e => setSettings({ ...settings, payPeriodStart: e.target.value })} /></label>}
      <label className="f">Business manager’s email<input type="email" value={settings.payrollEmail || ''} placeholder="business@school.org" onChange={e => setSettings({ ...settings, payrollEmail: e.target.value })} /></label>
      <button type="button" className="btn btn-outline" onClick={saveSettings}>Save</button>
     </div>
-    <small className="muted">Pick the first day of any pay period. AskVic counts two-week periods from there.</small>
+    <small className="muted">For every two weeks, pick the first day of any pay period; AskVic counts from there.</small>
    </section>}
   </>}
   <style jsx>{`

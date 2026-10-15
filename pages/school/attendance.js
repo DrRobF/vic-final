@@ -92,13 +92,13 @@ export default function StaffAttendance() {
        <td><TodayBadge t={p.today} /></td>
        <td>{p.lateCount ? `${p.lateCount}×${p.lateMinutes ? ` · ${p.lateMinutes} min` : ''}` : '—'}{p.earlyCount ? <small className="sub">Left early {p.earlyCount}×</small> : null}</td>
        <td>{p.absences ? <>{p.absences}{p.absences > p.absencesWithForm ? <span className="nf"> · {p.absences - p.absencesWithForm} no form</span> : ''}</> : '—'}</td>
-       <td>{p.payType === 'hourly' ? <span>{p.hours.thisWeek} h this week<small className="sub">{p.hours.lastWeek} h last week{p.missingOut.length ? ` · ${p.missingOut.length} missing clock-out` : ''}</small></span>
-        : <span>{p.leave.sickLeft != null ? <b className={p.leave.sickLeft <= 1 ? 'low' : ''}>{p.leave.sickLeft} sick left</b> : `${p.leave.sick} sick used`}<small className="sub">{p.leave.personalLeft != null ? `${p.leave.personalLeft} personal left` : `${p.leave.personal} personal used`}{p.leave.other ? ` · ${p.leave.other} other` : ''}</small></span>}</td>
+       <td>{p.payType === 'hourly' ? <span>{p.hours.thisWeek} h this week<small className="sub">{p.hours.lastWeek} h last week{p.missingOut.length ? ` · ${p.missingOut.length} missing clock-out` : ''}{p.leave.paidLeft != null ? ` · ${p.leave.paidLeft} paid days left` : ''}</small></span>
+        : <span>{p.leave.paidLeft != null ? <b className={p.leave.paidLeft <= 1 ? 'low' : ''}>{p.leave.paidLeft} paid days left</b> : `${p.leave.paidUsed} paid days used`}<small className="sub">{p.leave.sick} sick · {p.leave.personal} personal{p.leave.other ? ` · ${p.leave.other} other` : ''}</small></span>}</td>
        <td>{p.lessonPlan == null ? '' : p.lessonPlan === 'reviewed' ? <span className="lp ok">✓ Reviewed</span> : p.lessonPlan === 'submitted' ? <span className="lp ok">✓ Sent</span> : <span className="lp no">Not yet</span>}</td>
        <td><button type="button" className="linkbtn" onClick={() => setEditing(editing === p.id ? '' : p.id)}>{editing === p.id ? 'Close' : 'Edit'}</button></td>
       </tr>, editing === p.id && <tr key={p.id + '-e'} className="editrow"><td colSpan={7}><StaffEdit person={p} act={act} onSave={patch => act({ action: 'update_staff', staffId: p.id, ...patch }, () => { setEditing(''); setMsg(`Saved ${p.name}.`) })} /></td></tr>])}</tbody>
      </table>
-     <small className="muted">Absences count school days with no check-in (a school day is any day most staff checked in, so holidays never count). Days left come from the absence form: whole day = 1, half day or custom hours = ½. Missing clock-outs only matter for hourly staff.</small>
+     <small className="muted">Absences count school days with no check-in (a school day is any day most staff checked in, so holidays never count). Paid days left: sick and personal days from the absence form both count (whole day = 1, half day or custom hours = ½). Missing clock-outs only matter for hourly staff.</small>
     </section>
 
     {data.unmatched.length > 0 && <section className="panel">
@@ -261,8 +261,7 @@ function StaffEdit({ person, onSave, act }) {
   <label>Pay<select value={f.payType} onChange={e => set('payType', e.target.value)}><option value="salaried">Salaried</option><option value="hourly">Hourly</option></select></label>
   <label>Starts at<input type="time" value={f.shiftStart} onChange={e => set('shiftStart', e.target.value)} /></label>
   <label>Ends at<input type="time" value={f.shiftEnd} onChange={e => set('shiftEnd', e.target.value)} /></label>
-  <label>Sick days a year<input type="number" min="0" step="0.5" value={f.sickDays} onChange={e => set('sickDays', e.target.value)} /></label>
-  <label>Personal days a year<input type="number" min="0" step="0.5" value={f.personalDays} onChange={e => set('personalDays', e.target.value)} /></label>
+  <label>Paid days off a year<input type="number" min="0" step="0.5" value={f.sickDays} onChange={e => set('sickDays', e.target.value)} /></label>
   <button type="button" className="btn btn-primary sm" onClick={() => onSave(f)}>Save</button>
   <label>Check-in code {person.hasCode ? '✓ set' : '(none yet)'}<input inputMode="numeric" autoComplete="off" value={code} placeholder={person.hasCode ? 'New code' : '4–6 digits'} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
   <button type="button" className="btn btn-outline sm" disabled={code.length < 4} onClick={() => act({ action: 'set_code', staffId: person.id, code }, () => setCode(''))}>Save code</button>

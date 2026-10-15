@@ -99,7 +99,7 @@ test('sick and personal days used and left, from the absence form', () => {
   { staff_key: 'sandra morgan', staff_name: 'Sandra Morgan', start_date: '2026-10-09', end_date: '2026-10-09', absence_type: 'Personal Day', portion: 'Half Day PM' }]
  const att = ['2026-10-09', '2026-10-12', '2026-10-13'].flatMap(d => [{ staff_key: 'x', staff_name: 'X', day: d, clock_in: '07:00' }, { staff_key: 'y', staff_name: 'Y', day: d, clock_in: '07:00' }])
  const p = staffPicture({ staff: s, attendance: att, absences: abs, today: '2026-10-14' }).people[0]
- assert.deepEqual([p.leave.sick, p.leave.sickLeft, p.leave.personal, p.leave.personalLeft], [2, 8, 0.5, 2.5])
+ assert.deepEqual([p.leave.sick, p.leave.personal, p.leave.paidUsed, p.leave.paidLeft], [2, 0.5, 2.5, 7.5], 'one pool of 10 paid days: sick and personal both count')
 })
 
 test('staff lists written "Last, First" match check-in names written "First Last"', () => {
