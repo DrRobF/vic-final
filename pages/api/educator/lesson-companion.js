@@ -1,4 +1,5 @@
 import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
+import {respond} from '../../../lib/openai.mjs'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
 import {validLessonId} from '../../../lib/educator-lessons.mjs'
 import {planAsText} from '../../../lib/lesson-designer.mjs'
@@ -53,8 +54,7 @@ export default async function handler(req,res){
      try{
       if(!draft){
        const lessonText=planAsText(lesson.draft.plan,lesson.draft.input).slice(0,18000)
-       const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},signal:AbortSignal.timeout(45000),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:1800,instructions:companionInstructions(input.kind),input:`Saved lesson:\n${lessonText}\n\nTeacher notes:\n${input.notes||'(none)'}`})})
-       const result=await response.json().catch(()=>null)
+       const {response:response,data:result}=await respond('lessonCompanion',{store:false,max_output_tokens:1800,instructions:companionInstructions(input.kind),input:`Saved lesson:\n${lessonText}\n\nTeacher notes:\n${input.notes||'(none)'}`},{signal:AbortSignal.timeout(45000)})
        if(response.ok&&result?.status!=='incomplete')draft=result?.output_text||(result?.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text).join('\n')
       }
      }catch{}

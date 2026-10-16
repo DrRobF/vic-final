@@ -1,4 +1,5 @@
 import {requirePrincipal,requireSchool} from '../../../lib/assistant-principal-auth'
+import {respond} from '../../../lib/openai.mjs'
 import {makeJoinCode,LOOK_FORS,RATINGS,SUBJECTS,VISIT_LENGTHS,FOLLOW_UPS,walkthroughInput,lookForSuggestions,NEXT_STEP_TOPIC_INSTRUCTIONS,cleanTopic,combineSuggestions,teacherFeedbackEmail} from '../../../lib/walkthrough.mjs'
 export const config={api:{bodyParser:{sizeLimit:'64kb'}},maxDuration:30}
 
@@ -9,8 +10,7 @@ const validDate=d=>!d||(/^\d{4}-\d{2}-\d{2}$/.test(d)&&!Number.isNaN(Date.parse(
 async function topicFromNextStep(nextStep){
  if(!process.env.OPENAI_API_KEY)return ''
  try{
-  const r=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},signal:AbortSignal.timeout(12000),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:60,instructions:NEXT_STEP_TOPIC_INSTRUCTIONS,input:nextStep})})
-  const d=await r.json().catch(()=>null)
+  const {response:r,data:d}=await respond('walkthroughTopic',{store:false,max_output_tokens:60,instructions:NEXT_STEP_TOPIC_INSTRUCTIONS,input:nextStep},{signal:AbortSignal.timeout(12000)})
   const out=d?.output_text||(d?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join(' ')
   return r.ok?cleanTopic(out):''
  }catch{return ''}

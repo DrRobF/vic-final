@@ -1,4 +1,5 @@
 import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
+import {modelFor} from '../../../lib/models.mjs'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
 import {pathInput,PATH_SCHEMA,PATH_INSTRUCTIONS,RESOURCE_INSTRUCTIONS,cleanPath,publicPath,scoreQuiz,parseResourceList,citedResources,mergeResources,verifyResources} from '../../../lib/learning-path.mjs'
 export const config={api:{bodyParser:{sizeLimit:'32kb'}},maxDuration:60}
@@ -53,7 +54,7 @@ export default async function handler(req,res){
    let input;try{input=pathInput(body)}catch(e){return res.status(400).json({error:e.message})}
    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'Learning Paths are temporarily unavailable.'})
    if(!await claimLessonRequest(auth)){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling many requests. Please try again shortly.'})}
-   const {ok,result}=await openai({model:'gpt-4.1-mini',max_output_tokens:3500,instructions:PATH_INSTRUCTIONS,input:JSON.stringify({topic:input.topic,teachingContext:input.context||'not given'}),text:{format:{type:'json_schema',name:'learning_path',strict:true,schema:PATH_SCHEMA}}})
+   const {ok,result}=await openai({model:modelFor('learningPath'),max_output_tokens:3500,instructions:PATH_INSTRUCTIONS,input:JSON.stringify({topic:input.topic,teachingContext:input.context||'not given'}),text:{format:{type:'json_schema',name:'learning_path',strict:true,schema:PATH_SCHEMA}}})
    if(!ok)return res.status(502).json({error:'VIC could not build this path. Please try again.'})
    let path;try{path=cleanPath(JSON.parse(outputText(result)))}catch(e){return res.status(502).json({error:e.message||'VIC could not build this path. Please try again.'})}
    const {data,error}=await table().insert({user_id:auth.user.id,topic:input.topic,context:input.context,path,minutes:0,...(assignment?{assignment_id:assignment.id}:{})}).select('*').single()
@@ -71,7 +72,7 @@ export default async function handler(req,res){
    const input=`Topic: ${row.topic}\nTeaching context: ${row.context||'K-12'}\nSuggested searches: ${(row.path?.searchQueries||[]).join(' | ')}`
    let found=[],stage='search'
    for(const tool of ['web_search','web_search_preview']){
-    const {ok,result}=await openai({model:'gpt-4.1-mini',max_output_tokens:2500,tools:[{type:tool}],instructions:RESOURCE_INSTRUCTIONS,input})
+    const {ok,result}=await openai({model:modelFor('learningPath'),max_output_tokens:2500,tools:[{type:tool}],instructions:RESOURCE_INSTRUCTIONS,input})
     if(!ok){console.warn('learning-paths search failed',tool,result?.error?.message||result?.status);continue}
     // Use the JSON list the model returns, plus any pages it actually cited from search results.
     found=mergeResources(parseResourceList(outputText(result)),citedResources(result))
