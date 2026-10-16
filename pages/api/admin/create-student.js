@@ -1,4 +1,4 @@
-import {randomBytes} from 'node:crypto'
+import {kidPassword} from '../../../lib/kid-password.mjs'
 import {requireApprovedProfile} from '../../../lib/server-auth'
 import {ADMIN_EMAIL} from '../../../lib/roster-import'
 import {canManageAccounts} from '../../../lib/educator-account.mjs'
@@ -17,7 +17,8 @@ export default async function handler(req,res){
   if(existing.error)throw existing.error
   if(existing.data.length)return res.status(409).json({error:'That username already has an account. Find the existing student and add them to a class, or choose a different username.'})
   if(input.classIds.length){const found=await auth.admin.from('classes').select('id').in('id',input.classIds);if(found.error)throw found.error;if(found.data.length!==input.classIds.length)return res.status(400).json({error:'A selected classroom no longer exists. Refresh and choose again.'})}
-  const password=randomBytes(12).toString('base64url')
+  // Two easy words and two digits, like happy-tiger-47, so a young student can type it.
+  const password=kidPassword()
   const made=await auth.admin.auth.admin.createUser({email:input.email,password,email_confirm:true,user_metadata:{name:input.name},app_metadata:{student_created_by:auth.user.id,student_created_at:new Date().toISOString()}})
   if(made.error){if(/already|registered|exists/i.test(made.error.message))return res.status(409).json({error:'That login already exists. Use an existing account or a different username.'});throw made.error}
   if(!made.data?.user?.id)throw new Error('No authentication account returned.')
