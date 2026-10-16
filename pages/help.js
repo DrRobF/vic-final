@@ -79,7 +79,7 @@ const START = [
  {
   who: 'Teachers', steps: [
    ['Log in', 'at askvic.ai with the Teacher log in button.'],
-   ['Join your school', 'at askvic.ai/join with the code from your principal. Your name can appear on the staff list before you join. Until you join, your lesson plans cannot reach your principal.'],
+   ['Join your school.', 'Right after you log in, My Week shows a “Join your school” card. If your principal added your email, it is one click. Otherwise type the code from your principal. Until you join, your lesson plans cannot reach your principal.'],
    ['Open My Week', 'and set the grade, subject, and a standard or topic for each day. Mark days with no lesson as “no lesson.”'],
    ['Build my week,', 'then read and edit each day. VIC writes the draft; you are still the teacher.'],
    ['Send it.', 'When every day is finished, “Send to administration” appears at the bottom of My Week.'],
@@ -107,8 +107,8 @@ const START = [
 ]
 
 const STUCK = [
- ['I can’t find the button to send my lesson plans to my principal.', 'The send button is only on My Week (askvic.ai/lessonplan/week), not on a single lesson. It appears at the bottom after every day is finished. A day with no lesson still counts if you mark it “no lesson.” If it still is not there, you have not joined your school yet: go to askvic.ai/join and enter your school’s code.'],
- ['My name is on the staff list, but my principal says I haven’t joined.', 'Being on the list and joining are different. Your principal added your name; joining connects your account. Go to askvic.ai/join and enter the school code once.'],
+ ['I can’t find the button to send my lesson plans to my principal.', 'The send button is only on My Week (askvic.ai/lessonplan/week), not on a single lesson. It appears at the bottom after every day is finished. A day with no lesson still counts if you mark it “no lesson.” If it still is not there, you have not joined your school yet: use the “Join your school” card at the top of My Week, or go to askvic.ai/join.'],
+ ['My name is on the staff list, but my principal says I haven’t joined.', 'Being on the list and joining are different. Your principal added your name; joining connects your account. Open My Week: if your principal used the same email you log in with, a card offers one-click join. If not, type the school code in that card, or go to askvic.ai/join.'],
  ['I got “The activity sequence was incomplete.”', 'VIC now retries automatically when this happens, so it should be rare. If you still see it, pick at least one activity in the customize panel and build again. Your previous draft is still saved.'],
  ['A student can’t log in.', 'Students log in at askvic.ai/student-login, not the teacher page. Check the username on their card. Passwords are all lowercase, like happy-tiger-47. A school leader can reset any student password in Setup → Teachers & students.'],
  ['VIC is talking about a different topic than my lesson.', 'The student is probably in My Own Work. Have them switch to Teacher Lesson at the top of their screen. VIC teaches the assigned lesson only in Teacher Lesson, and only after you have assigned one to their class.'],

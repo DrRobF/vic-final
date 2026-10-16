@@ -12,16 +12,37 @@ export default async function handler(req,res){
   const auth=await requireLessonEducator(req)
   if(auth.error)return res.status(auth.status).json({error:auth.error})
   const db=auth.admin,email=String(auth.user.email||'').toLowerCase()
+  // ilike treats % and _ as wildcards; escape them so an email only ever matches itself.
+  const emailPattern=email.replace(/[\\%_]/g,m=>`\\${m}`)
 
   if(req.method==='GET'&&!req.query.code){
    const {data,error}=await db.from('ap_staff').select('id,joined_at,ap_schools(name)').eq('auth_user_id',auth.user.id).eq('active',true)
    if(error)throw error
-   return res.json({schools:(data||[]).map(s=>({staffId:s.id,name:s.ap_schools?.name||'',joinedAt:s.joined_at})),consent:JOIN_CONSENT})
+   const joined=new Set((data||[]).map(s=>s.ap_schools?.name).filter(Boolean))
+   // Schools whose leader already put this teacher's sign-in email on the staff list: they can join without a code.
+   const {data:listed,error:listError}=email?await db.from('ap_staff').select('school_id,ap_schools(id,name)').eq('active',true).is('auth_user_id',null).ilike('email',emailPattern).limit(10):{data:[]}
+   if(listError)throw listError
+   const invites=[...new Map((listed||[]).filter(r=>r.ap_schools&&!joined.has(r.ap_schools.name)).map(r=>[r.ap_schools.id,{schoolId:r.ap_schools.id,name:r.ap_schools.name}])).values()]
+   return res.json({schools:(data||[]).map(s=>({staffId:s.id,name:s.ap_schools?.name||'',joinedAt:s.joined_at})),invites,consent:JOIN_CONSENT})
   }
-  const code=normalizeJoinCode(req.method==='GET'?req.query.code:req.body?.code)
-  if(!/^[A-Z0-9]{3,6}-\d{4}$/.test(code))return res.status(400).json({error:'Enter the code from your school leader, like SPA-4821.'})
-  const {data:school,error:schoolError}=await db.from('ap_schools').select('id,name,seat_limit').eq('join_code',code).maybeSingle()
-  if(schoolError)throw schoolError
+  // Join by code, or by invite when the leader already listed this teacher's email (no code needed).
+  const inviteId=req.method==='POST'&&req.body?.schoolId!=null?Number(req.body.schoolId):null
+  let school
+  if(inviteId!=null){
+   if(!Number.isSafeInteger(inviteId)||inviteId<=0||!email)return res.status(400).json({error:'Choose your school again.'})
+   const {data:row,error:rowError}=await db.from('ap_staff').select('id').eq('school_id',inviteId).eq('active',true).is('auth_user_id',null).ilike('email',emailPattern).limit(1)
+   if(rowError)throw rowError
+   if(!row?.[0])return res.status(404).json({error:'Your school hasn’t added this email to its staff. Enter the school code instead.'})
+   const {data,error:schoolError}=await db.from('ap_schools').select('id,name,seat_limit').eq('id',inviteId).maybeSingle()
+   if(schoolError)throw schoolError
+   school=data
+  }else{
+   const code=normalizeJoinCode(req.method==='GET'?req.query.code:req.body?.code)
+   if(!/^[A-Z0-9]{3,6}-\d{4}$/.test(code))return res.status(400).json({error:'Enter the code from your school leader, like SPA-4821.'})
+   const {data,error:schoolError}=await db.from('ap_schools').select('id,name,seat_limit').eq('join_code',code).maybeSingle()
+   if(schoolError)throw schoolError
+   school=data
+  }
   if(!school)return res.status(404).json({error:'That code didn’t match a school. Check it with your school leader.'})
   if(req.method==='GET')return res.json({school:{name:school.name},consent:JOIN_CONSENT})
 
@@ -33,7 +54,7 @@ export default async function handler(req,res){
   if(countError)throw countError
   if((count||0)>=(school.seat_limit??50))return res.status(409).json({error:'Your school is full right now. Ask your school leader to free a seat or add you.'})
   // Already on the staff list by email? Link that spot.
-  const {data:listed}=email?await db.from('ap_staff').select('id').eq('school_id',school.id).eq('active',true).is('auth_user_id',null).ilike('email',email).limit(1):{data:[]}
+  const {data:listed}=email?await db.from('ap_staff').select('id').eq('school_id',school.id).eq('active',true).is('auth_user_id',null).ilike('email',emailPattern).limit(1):{data:[]}
   const now=new Date().toISOString()
   if(listed?.[0]){
    const {error}=await db.from('ap_staff').update({auth_user_id:auth.user.id,joined_at:now}).eq('id',listed[0].id)
