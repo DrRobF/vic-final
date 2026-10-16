@@ -92,6 +92,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
    <div className="right">
     {statusLabel ? <span className={`status ${statusTone === 'thinking' ? 'thinking' : ''}`}><span className="dot" aria-hidden="true" />{statusLabel}</span> : null}
     {authUser && !isStudent && lead && <button type="button" className="modeSwitch" onClick={() => switchTo(schoolSide ? 'teacher' : 'school')}>{schoolSide ? 'My teaching →' : 'School view →'}</button>}
+    <a className={currentPath === '/help' ? 'helpLink on' : 'helpLink'} href="/help" aria-current={currentPath === '/help' ? 'page' : undefined}>Help</a>
     {authUser && <TextSizeControl tone="dark" />}
     {authUser ? <>
      <span className="who" title={name}>{name || 'Signed in'}</span>
@@ -118,6 +119,9 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
     .modeSwitch{padding:8px 13px;border-radius:10px;border:1px solid var(--vic-cyan);background:rgba(34,211,238,.12);color:var(--vic-cyan);font-weight:800;font-size:14px;cursor:pointer;white-space:nowrap}
     .modeSwitch:hover{background:rgba(34,211,238,.22)}
     .ghost:hover{background:var(--vic-ink-2)}
+    .helpLink{padding:9px 13px;border-radius:10px;color:var(--vic-ink-text);text-decoration:none;font-weight:700;font-size:15px;white-space:nowrap}
+    .helpLink:hover{background:var(--vic-ink-2)}
+    .helpLink.on{background:var(--vic-primary);color:#fff}
     .ghost:disabled{opacity:.6}
     .cta{background:var(--vic-primary);color:#fff;border:1px solid var(--vic-primary)}
     .cta:hover{background:var(--vic-primary-hover)}
