@@ -15,7 +15,7 @@ async function api(body,query=''){
 export default function Join(){
  const [ready,setReady]=useState(false),[session,setSession]=useState(null),[code,setCode]=useState(''),[school,setSchool]=useState(null),[consent,setConsent]=useState(''),[agree,setAgree]=useState(false)
  const [mine,setMine]=useState([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[done,setDone]=useState('')
- useEffect(()=>{const c=new URLSearchParams(window.location.search).get('code');if(c)setCode(c.toUpperCase());supabase.auth.getSession().then(({data})=>{setSession(data.session);setReady(true);if(data.session)api().then(d=>{setMine(d.schools);setConsent(d.consent)}).catch(()=>{})})},[])
+ useEffect(()=>{const c=new URLSearchParams(window.location.search).get('code');if(c)setCode(c.toUpperCase());supabase.auth.getSession().then(({data})=>{setSession(data.session);setReady(true);if(data.session)api().then(d=>{setMine(d.schools);setConsent(d.consent)}).catch(()=>{});if(data.session&&c)api(null,`?code=${encodeURIComponent(c.toUpperCase())}`).then(d=>{setSchool(d.school);setConsent(d.consent)}).catch(err=>setError(err.message))})},[])
  async function check(e){e.preventDefault();setBusy(true);setError('');setSchool(null);try{const d=await api(null,`?code=${encodeURIComponent(code)}`);setSchool(d.school);setConsent(d.consent)}catch(err){setError(err.message)}finally{setBusy(false)}}
  async function join(){setBusy(true);setError('');try{const d=await api({code,agree});setDone(d.already?`You’re already part of ${d.school.name}.`:`You’ve joined ${d.school.name}.`);const m=await api();setMine(m.schools)}catch(err){setError(err.message)}finally{setBusy(false)}}
  const next=`/join${code?`?code=${encodeURIComponent(code)}`:''}`

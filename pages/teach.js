@@ -2,6 +2,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import PageShell, { PanelStyles } from '../components/PageShell'
 import DayOffCard from '../components/DayOffCard'
+import JoinSchoolCard from '../components/JoinSchoolCard'
 import { useAccount } from '../lib/use-account'
 import { listWeeks, openWeek, deleteWeek } from '../lib/lesson-week-client'
 import { STEPS, stepDone, stepHref, nextStep, doneCount } from '../lib/lesson-steps.mjs'
@@ -52,6 +53,7 @@ export default function MyWeek() {
  return <PageShell title="My Week" currentPath="/teach">
   <PanelStyles />
   {accountError ? <p className="alert" role="alert">{accountError} <a href="/login">Log in</a></p> : !account ? <p role="status">Opening your week…</p> : <>
+   <JoinSchoolCard />
    <header className="top">
     <div>
      <p className="label">My week</p>
