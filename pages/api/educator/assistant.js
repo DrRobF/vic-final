@@ -1,4 +1,5 @@
 import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
+import {respond} from '../../../lib/openai.mjs'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
 import {ASSISTANT_TOOLS,assistantInput,assistantInstructions,assistantTasks} from '../../../lib/educator-assistant.mjs'
 export const config={api:{bodyParser:{sizeLimit:'64kb'}},maxDuration:60}
@@ -29,8 +30,7 @@ export default async function handler(req,res){
   if(body.action==='generate'){
    if(!process.env.OPENAI_API_KEY)return res.status(503).json({error:'Drafting is temporarily unavailable. Your saved work is still available.'})
    if(!await claimLessonRequest(auth)){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling many requests. Please try again shortly.'})}
-   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${process.env.OPENAI_API_KEY}`},signal:AbortSignal.timeout(45000),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:1800,instructions:assistantInstructions(row.kind),input:row.notes})})
-   const result=await response.json().catch(()=>null)
+   const {response:response,data:result}=await respond('educatorAssistant',{store:false,max_output_tokens:1800,instructions:assistantInstructions(row.kind),input:row.notes},{signal:AbortSignal.timeout(45000)})
    if(!response.ok||result?.status==='incomplete')return res.status(502).json({error:'VIC could not finish this draft. Your previous saved draft has been kept.'})
    const text=result?.output_text||(result?.output||[]).flatMap(item=>item.content||[]).filter(item=>item.type==='output_text').map(item=>item.text).join('\n')
    if(!text)return res.status(502).json({error:'VIC returned no draft. Your previous saved work has been kept.'})

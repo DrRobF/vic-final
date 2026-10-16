@@ -36,7 +36,7 @@ function load(file,values){const source=readFileSync(new URL(file,import.meta.ur
 const res=()=>({setHeader(){},status(code){this.code=code;return this},json(data){this.data=data;return this}})
 test('Section endpoint returns only a proposal and never makes an unauthorized provider call',async()=>{
  let calls=0
- const deps={requireLessonEducator:async()=>({user:{id:'teacher'}}),claimLessonRequest:async()=>true,normalizeLessonInput:x=>x,validateLessonPlan:x=>x,sectionRewriteRequest,sectionRewriteSchema,sectionRewriteInstructions,fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify({body:'New task',reviewNote:'Review alignment.'})})}}}
+ const deps={requireLessonEducator:async()=>({user:{id:'teacher'}}),claimLessonRequest:async()=>true,modelFor:()=>'test-model',normalizeLessonInput:x=>x,validateLessonPlan:x=>x,sectionRewriteRequest,sectionRewriteSchema,sectionRewriteInstructions,fetch:async()=>{calls++;return {ok:true,json:async()=>({output_text:JSON.stringify({body:'New task',reviewNote:'Review alignment.'})})}}}
  const run=load('../pages/api/lessonplan/section.js',deps),response=res()
  await run({method:'POST',body:{input,plan:draft.plan,sectionKey:'section_0',directions:'Use a demonstration.'}},response)
  assert.equal(response.data.body,'New task');assert.equal(response.data.plan,undefined);assert.equal(calls,1)
@@ -44,7 +44,7 @@ test('Section endpoint returns only a proposal and never makes an unauthorized p
  await denied({method:'POST',body:{}},r);assert.equal(r.code,401);assert.equal(calls,1)
 })
 test('Provider failure leaves the selected section unchanged',async()=>{
- const run=load('../pages/api/lessonplan/section.js',{requireLessonEducator:async()=>({user:{id:'teacher'}}),claimLessonRequest:async()=>true,normalizeLessonInput:x=>x,validateLessonPlan:x=>x,sectionRewriteRequest,sectionRewriteSchema,sectionRewriteInstructions,fetch:async()=>({ok:false,json:async()=>({})})}),r=res()
+ const run=load('../pages/api/lessonplan/section.js',{requireLessonEducator:async()=>({user:{id:'teacher'}}),claimLessonRequest:async()=>true,modelFor:()=>'test-model',normalizeLessonInput:x=>x,validateLessonPlan:x=>x,sectionRewriteRequest,sectionRewriteSchema,sectionRewriteInstructions,fetch:async()=>({ok:false,json:async()=>({})})}),r=res()
  await run({method:'POST',body:{input,plan:draft.plan,sectionKey:'section_0',directions:'Try another task'}},r)
  assert.equal(r.code,502);assert.equal(draft.plan.sections[0].body,'Original assessment')
 })

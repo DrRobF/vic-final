@@ -1,4 +1,5 @@
 import { claimLessonRequest } from '../../../lib/lesson-rate-limit'
+import {modelFor} from '../../../lib/models.mjs'
 import { lessonFailure } from '../../../lib/lesson-behavior.mjs'
 import catalogue from '../../../data/lesson-standards.json'
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
@@ -22,7 +23,7 @@ export default async function handler(req,res) {
   if(!await claimLessonRequest(auth,{userLimit})){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling a lot of requests. Please try again later. Your saved lesson is still available.'})}
   const deadline=Date.now()+150000
   async function requestDraft(retryNote=''){
-   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:(worksheet?worksheetInstructions():buildLessonInstructions())+retryNote,input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:lessonGenerationInput(input)),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
+   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:modelFor('lessonPlan'),store:false,max_output_tokens:10000,instructions:(worksheet?worksheetInstructions():buildLessonInstructions())+retryNote,input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:lessonGenerationInput(input)),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
    const data=await response.json().catch(()=>null)
    if(!response.ok){console.error('Lesson provider failed',{status:response.status});return null}
    const output=data?.output_text || (data?.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('')

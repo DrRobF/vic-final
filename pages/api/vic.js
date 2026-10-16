@@ -5,6 +5,7 @@ import {
   selectActiveEnrollment,
   TEACHER_DIRECTED,
 } from '../../lib/ask-vic-context.mjs'
+import { respond, outputText } from '../../lib/openai.mjs'
 
 export const config = { api: { bodyParser: { sizeLimit: '8mb' } } }
 
@@ -115,23 +116,16 @@ export default async function handler(req, res) {
       }
     }
 
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-      body: JSON.stringify({
-        model: 'gpt-4.1-mini',
-        prompt: { id: 'pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b' },
-        input,
-      }),
+    const { response, data, model } = await respond('vicChat', {
+      prompt: { id: 'pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b' },
+      input,
     })
-
-    const data = await response.json().catch(() => null)
     if (!response.ok) {
-      console.error('VIC provider request failed.', { status: response.status, mode })
+      console.error('VIC provider request failed.', { status: response.status, mode, model })
       return res.status(502).json({ error: 'VIC could not respond right now. Please try again.' })
     }
 
-    const reply = data?.output_text || data?.output?.[0]?.content?.[0]?.text
+    const reply = outputText(data)
     if (!reply) return res.status(502).json({ error: 'VIC returned an empty response. Please try again.' })
     if (activityAssignment && input.at(-1)?.role === 'user') {
       try {

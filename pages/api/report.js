@@ -1,4 +1,5 @@
 import { requireApprovedProfile } from '../../lib/server-auth'
+import { respond, outputText as readOutput } from '../../lib/openai.mjs'
 
 export default async function handler(req, res) {
 
@@ -86,14 +87,7 @@ export default async function handler(req, res) {
     .join('\n')
 
   try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4.1-mini',
+    const { response, data } = await respond('learningReport', {
         input: [
           {
             role: 'system',
@@ -129,10 +123,7 @@ Transcript:
 ${transcriptText}`,
           },
         ],
-      }),
     })
-
-    const data = await response.json()
 
     if (!response.ok) {
       return res.status(response.status).json({
@@ -140,10 +131,7 @@ ${transcriptText}`,
       })
     }
 
-    const outputText =
-      data.output_text ||
-      data.output?.[0]?.content?.[0]?.text ||
-      ''
+    const outputText = readOutput(data)
 
     const jsonMatch = outputText.match(/\{[\s\S]*\}/)
     const rawJson = jsonMatch ? jsonMatch[0] : outputText

@@ -1,4 +1,5 @@
 import {requireLessonEducator} from '../../../lib/lesson-designer-auth'
+import {modelFor} from '../../../lib/models.mjs'
 import {claimLessonRequest} from '../../../lib/lesson-rate-limit'
 import {lessonTargets} from '../../../lib/lesson-companion.mjs'
 import {classLetterInputs,CLASS_LETTER_INSTRUCTIONS,fallbackClassLetter} from '../../../lib/class-letter.mjs'
@@ -29,7 +30,7 @@ export default async function handler(req,res){
   let letter=fallbackClassLetter({lessons,updates,note:inputs.note,reminders:inputs.reminders})
   if(process.env.OPENAI_API_KEY&&await claimLessonRequest(auth)){
    const input=JSON.stringify({lessons:lessons.map(l=>({title:l.title,objectives:l.objectives,standards:l.standards})),lessonUpdates:updates,reminders:inputs.reminders,teacherNote:inputs.note})
-   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(45000),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:1500,text:{format:{type:'json_schema',name:'class_letter',strict:true,schema:{type:'object',additionalProperties:false,required:['subject','body'],properties:{subject:{type:'string'},body:{type:'string'}}}}},instructions:CLASS_LETTER_INSTRUCTIONS,input})})
+   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(45000),body:JSON.stringify({model:modelFor('classLetter'),store:false,max_output_tokens:1500,text:{format:{type:'json_schema',name:'class_letter',strict:true,schema:{type:'object',additionalProperties:false,required:['subject','body'],properties:{subject:{type:'string'},body:{type:'string'}}}}},instructions:CLASS_LETTER_INSTRUCTIONS,input})})
    const result=await response.json().catch(()=>null)
    const output=result?.output_text||(result?.output||[]).flatMap(x=>x.content||[]).filter(x=>x.type==='output_text').map(x=>x.text).join('\n')
    if(response.ok&&result?.status!=='incomplete'&&output){try{const parsed=JSON.parse(output);if(parsed.subject?.trim()&&parsed.body?.trim())letter=parsed}catch{}}
