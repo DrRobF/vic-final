@@ -7,6 +7,9 @@ import {
 } from '../../lib/ask-vic-context.mjs'
 import { respond, outputText } from '../../lib/openai.mjs'
 import { VIC_BRAIN } from '../../lib/vic-brain.mjs'
+import { detectSafety } from '../../lib/vic-safety.mjs'
+import { extractVisual } from '../../lib/vic-visuals.mjs'
+import { raiseSafetyAlert } from '../../lib/vic-safety-notify.js'
 
 export const config = { api: { bodyParser: { sizeLimit: '8mb' } } }
 
@@ -131,8 +134,22 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: 'VIC could not respond right now. Please try again.' })
     }
 
-    const reply = outputText(data)
-    if (!reply) return res.status(502).json({ error: 'VIC returned an empty response. Please try again.' })
+    const rawReply = outputText(data)
+    if (!rawReply) return res.status(502).json({ error: 'VIC returned an empty response. Please try again.' })
+
+    // Student safety: VIC's own flag or the keyword backstop tells the teacher. The flag line is
+    // removed before the student sees the reply. Awaited so the alert is not lost when the
+    // serverless function ends after responding.
+    const studentText = safeMessages.at(-1)?.role === 'user' ? safeMessages.at(-1).content : ''
+    const safety = detectSafety({ studentText, reply: rawReply })
+    // VIC may end a reply with one [[VIC_VISUAL: ...]] tag; it is checked, removed and drawn by the page.
+    // A safety reply never carries a visual.
+    const shown = extractVisual(safety.reply)
+    const visual = safety.category ? null : shown.visual
+    const reply = shown.text || 'Thank you for telling me. That matters, and you did the right thing. I’m going to let your teacher know so a grown-up can help. Please tell a trusted adult today, like your teacher, school counselor, or someone in your family. If you are in danger right now, go to an adult or call 911. You can also call or text 988 any time.'
+    if (safety.category) {
+      await raiseSafetyAlert({ admin: auth.admin, student: auth.profile, classId: activityAssignment?.class_id ?? Number(activeClassId), category: safety.category, source: safety.source, studentText, vicReply: reply })
+    }
     if (activityAssignment && input.at(-1)?.role === 'user') {
       try {
         const table=activityAssignment.assignment_id?'vic_activity_snapshots':'vic_open_work_snapshots'
@@ -146,7 +163,7 @@ export default async function handler(req, res) {
         if(saveError)throw saveError
       }catch(saveError){console.error('Could not save VIC activity',{name:saveError?.name})}
     }
-    return res.status(200).json({ reply })
+    return res.status(200).json({ reply, visual })
   } catch (error) {
     console.error('VIC request failed.', { name: error?.name, mode })
     return res.status(500).json({ error: 'VIC could not load this learning session. Please try again.' })

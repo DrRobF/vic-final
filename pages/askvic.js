@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
-import VICLogo from '../components/VICLogo'
+import VICVisual, { VICText } from '../components/VICVisual'
 import { lessonFromAssignment, pickLatestAssignment } from '../lib/assignment-resolution'
 import { messagesForModeSwitch } from '../lib/ask-vic-context.mjs'
 
@@ -14,20 +14,17 @@ const INITIAL_MESSAGES = [
     role: 'assistant',
     text:
       'Let’s start learning 👇\n\nTry something like:\n• "Help me understand fractions"\n• "Give me a reading passage"\n\nType what you want help with, and VIC will help you get started.',
-    visual: { type: 'idle', title: 'Visual Support' },
   },
 ]
 
 const ASSIGNED_LESSON_READY_MESSAGE = (lessonTitle) => ({
   role: 'assistant',
   text: `Your teacher assigned "${lessonTitle || 'a lesson'}." Send any message when you're ready to begin.`,
-  visual: { type: 'tip', title: 'Assigned lesson ready' },
 })
 
 const ASSIGNED_LESSON_UNAVAILABLE_MESSAGE = {
   role: 'assistant',
   text: 'Your teacher assigned a lesson, but the lesson details are unavailable right now.',
-  visual: { type: 'tip', title: 'Assigned lesson unavailable' },
 }
 
 function getEntryModeMeta({ hasAssignedLesson, hasUserMessages, sessionMode }) {
@@ -702,7 +699,8 @@ export default function AskVIC() {
         throw new Error(data?.error || 'VIC could not respond right now.')
       }
       const finalReply = data.reply || 'No reply'
-      const visual = inferVisualFromConversation(outgoing, finalReply)
+      // VIC chooses the picture; the server has already checked it.
+      const visual = data.visual || null
 
       setMessages([
         ...nextMessages,
@@ -1241,12 +1239,10 @@ ${context}`
                             : styles.userBubbleText
                         }
                       >
-                        {msg.text}
+                        {msg.role === 'assistant' ? <VICText text={msg.text} /> : msg.text}
                       </p>
 
-                      {msg.role === 'assistant' && msg.visual ? (
-                        <VisualCardRenderer visual={msg.visual} styles={styles} />
-                      ) : null}
+                      {msg.role === 'assistant' && msg.visual ? <VICVisual visual={msg.visual} /> : null}
                     </div>
                   ))}
                 </div>
@@ -1300,232 +1296,6 @@ ${context}`
       </div>
     </div>
   )
-}
-
-function VisualCardRenderer({ visual, styles }) {
-  if (!visual || !visual.type) return null
-
-  if (visual.type === 'idle') {
-    return (
-      <div style={styles.visualIdleCard}>
-        <div style={styles.visualIdleGlow} />
-        <div style={styles.visualIdleInner}>
-          <VICLogo size={62} variant="card" alt="VIC logo" />
-          <div style={styles.visualIdleTextWrap}>
-            <div style={styles.visualIdleTitle}>Visual support will appear here</div>
-            <div style={styles.visualIdleText}>
-              Diagrams, models, and step visuals show up only when they help.
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (visual.type === 'fraction') {
-    const numerator = Math.max(0, Number(visual.numerator) || 0)
-    const denominator = Math.max(1, Number(visual.denominator) || 1)
-
-    return (
-      <div style={styles.visualCard}>
-        <div style={styles.visualHeaderRow}>
-          <div style={styles.visualTitle}>{visual.title || 'Fraction model'}</div>
-          <div style={styles.visualBadge}>
-            {numerator}/{denominator}
-          </div>
-        </div>
-
-        <div style={styles.fractionBarWrap}>
-          {Array.from({ length: denominator }).map((_, index) => (
-            <div
-              key={index}
-              style={{
-                ...styles.fractionPiece,
-                background:
-                  index < numerator
-                    ? 'linear-gradient(135deg, rgba(19, 79, 209,1) 0%, rgba(23, 89, 233,1) 100%)'
-                    : 'var(--vic-border)',
-              }}
-            />
-          ))}
-        </div>
-
-        <div style={styles.visualDescription}>
-          {numerator} out of {denominator} equal parts are shaded.
-        </div>
-      </div>
-    )
-  }
-
-  if (visual.type === 'numberline') {
-    const start = Number.isFinite(visual.start) ? visual.start : 0
-    const end = Number.isFinite(visual.end) ? visual.end : 10
-    const highlight = Number.isFinite(visual.highlight) ? visual.highlight : start
-    const values = []
-
-    for (let i = start; i <= end; i += 1) {
-      values.push(i)
-    }
-
-    return (
-      <div style={styles.visualCard}>
-        <div style={styles.visualHeaderRow}>
-          <div style={styles.visualTitle}>{visual.title || 'Number line'}</div>
-          <div style={styles.visualBadge}>Math visual</div>
-        </div>
-
-        <div style={styles.numberLineWrap}>
-          <div style={styles.numberLineBase} />
-          <div style={styles.numberLineRow}>
-            {values.map((value) => {
-              const isHighlight = value === highlight
-
-              return (
-                <div key={value} style={styles.numberTickWrap}>
-                  <div
-                    style={{
-                      ...styles.numberDot,
-                      background: isHighlight ? 'var(--vic-primary)' : 'var(--vic-disabled)',
-                      boxShadow: isHighlight ? '0 0 0 5px rgba(19, 79, 209,0.18)' : 'none',
-                    }}
-                  />
-                  <div
-                    style={{
-                      ...styles.numberLabel,
-                      color: isHighlight ? 'var(--vic-primary)' : 'var(--vic-text-secondary)',
-                      fontWeight: isHighlight ? 700 : 600,
-                    }}
-                  >
-                    {value}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <div style={styles.visualDescription}>The highlighted point shows {highlight}.</div>
-      </div>
-    )
-  }
-
-  if (visual.type === 'vocab') {
-    return (
-      <div style={styles.visualCard}>
-        <div style={styles.visualHeaderRow}>
-          <div style={styles.visualTitle}>{visual.title || 'Vocabulary card'}</div>
-          <div style={styles.visualBadge}>ELA support</div>
-        </div>
-
-        <div style={styles.vocabWord}>{visual.word || 'Vocabulary'}</div>
-        <div style={styles.vocabDefinition}>{visual.definition || ''}</div>
-
-        {visual.example ? (
-          <div style={styles.vocabExampleBox}>
-            <div style={styles.vocabExampleLabel}>Example</div>
-            <div style={styles.vocabExampleText}>{visual.example}</div>
-          </div>
-        ) : null}
-      </div>
-    )
-  }
-
-  if (visual.type === 'tip') {
-    return (
-      <div style={styles.visualCard}>
-        <div style={styles.visualHeaderRow}>
-          <div style={styles.visualTitle}>{visual.title || 'Quick tip'}</div>
-          <div style={styles.visualBadge}>Support</div>
-        </div>
-        <div style={styles.visualDescription}>{visual.body || ''}</div>
-      </div>
-    )
-  }
-
-  return null
-}
-
-function inferVisualFromConversation(userText, assistantText) {
-  const combined = `${userText} ${assistantText}`.toLowerCase()
-
-  const fractionMatch =
-    combined.match(/(\d+)\s*\/\s*(\d+)/) ||
-    combined.match(/(\d+)\s+out of\s+(\d+)/)
-
-  if (
-    fractionMatch &&
-    !combined.includes('grade 10') &&
-    !combined.includes('chapter') &&
-    !combined.includes('page')
-  ) {
-    const numerator = Number(fractionMatch[1])
-    const denominator = Number(fractionMatch[2])
-
-    if (denominator > 0 && denominator <= 12 && numerator <= denominator) {
-      return {
-        type: 'fraction',
-        title: 'Fraction model',
-        numerator,
-        denominator,
-      }
-    }
-  }
-
-  const numberMatch =
-    combined.match(/\bnumber line\b/) ||
-    combined.match(/\bcount\b/) ||
-    combined.match(/\binteger\b/) ||
-    combined.match(/\bnegative\b/)
-
-  if (numberMatch) {
-    const highlightMatch = assistantText.match(/-?\d+/)
-    const highlight = highlightMatch ? Number(highlightMatch[0]) : 3
-    const start = Math.min(highlight - 3, 0)
-    const end = Math.max(highlight + 3, 6)
-
-    return {
-      type: 'numberline',
-      title: 'Number line',
-      start,
-      end,
-      highlight,
-    }
-  }
-
-  if (
-    combined.includes('vocabulary') ||
-    combined.includes('define') ||
-    combined.includes('definition') ||
-    combined.includes('meaning of')
-  ) {
-    const vocab = extractVocabularyCard(assistantText)
-    if (vocab) return vocab
-  }
-
-  return {
-    type: 'idle',
-    title: 'Visual Support',
-  }
-}
-
-function extractVocabularyCard(text) {
-  if (!text) return null
-
-  const pattern = /([A-Za-z][A-Za-z\s-]{1,30})\s+(means|is)\s+([^.!?]{8,180})/i
-  const match = text.match(pattern)
-
-  if (!match) return null
-
-  const word = match[1].trim()
-  const definition = match[3].trim()
-
-  return {
-    type: 'vocab',
-    title: 'Vocabulary',
-    word,
-    definition,
-    example: 'Try using the word in your own sentence.',
-  }
 }
 
 function buildStyles({ isMobile, isTablet, isCompact }) {
