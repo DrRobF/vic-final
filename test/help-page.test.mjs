@@ -32,3 +32,8 @@ test('help points only to pages that exist', () => {
     assert.ok([`../pages/${file}.js`, `../pages/${file}/index.js`].some(f => { try { readFileSync(new URL(f, import.meta.url)); return true } catch { return false } }), route)
   }
 })
+
+test('help opens without signing in, so a link someone texts you works', () => {
+  const gate = readFileSync(new URL('../components/PasswordGate.js', import.meta.url), 'utf8')
+  assert.match(gate, /PUBLIC_ROUTES=new Set\(\[[^\]]*'\/help'/)
+})
