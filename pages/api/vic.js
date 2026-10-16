@@ -6,6 +6,7 @@ import {
   TEACHER_DIRECTED,
 } from '../../lib/ask-vic-context.mjs'
 import { respond, outputText } from '../../lib/openai.mjs'
+import { VIC_BRAIN } from '../../lib/vic-brain.mjs'
 
 export const config = { api: { bodyParser: { sizeLimit: '8mb' } } }
 
@@ -116,9 +117,14 @@ export default async function handler(req, res) {
       }
     }
 
+    // VIC's teaching brain ships with the code (lib/vic-brain.mjs). It used to be a hosted prompt in
+    // the OpenAI dashboard. store:false keeps children's conversations out of OpenAI's stored logs,
+    // matching every other AI call in this app.
     const { response, data, model } = await respond('vicChat', {
-      prompt: { id: 'pmpt_69c52eb12f388194824e58a741a7c6cb0becb3343e16f10b' },
+      instructions: VIC_BRAIN,
       input,
+      store: false,
+      max_output_tokens: 4000,
     })
     if (!response.ok) {
       console.error('VIC provider request failed.', { status: response.status, mode, model })
