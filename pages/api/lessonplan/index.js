@@ -21,8 +21,8 @@ export default async function handler(req,res) {
   if(isUuid(req.body?.weekId)){const {data:week}=await auth.admin.from('lesson_weeks').select('id').eq('id',req.body.weekId).eq('user_id',auth.user.id).maybeSingle();if(week)userLimit=WEEK_USER_REQUEST_LIMIT}
   if(!await claimLessonRequest(auth,{userLimit})){res.setHeader('Retry-After','600');return res.status(429).json({error:'VIC is handling a lot of requests. Please try again later. Your saved lesson is still available.'})}
   const deadline=Date.now()+150000
-  async function requestDraft(){
-   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:worksheet?worksheetInstructions():buildLessonInstructions(),input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:lessonGenerationInput(input)),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
+  async function requestDraft(retryNote=''){
+   const response=await fetch('https://api.openai.com/v1/responses',{method:'POST',headers:{Authorization:`Bearer ${process.env.OPENAI_API_KEY}`,'Content-Type':'application/json'},signal:AbortSignal.timeout(Math.max(1,deadline-Date.now())),body:JSON.stringify({model:'gpt-4.1-mini',store:false,max_output_tokens:10000,instructions:(worksheet?worksheetInstructions():buildLessonInstructions())+retryNote,input:JSON.stringify(worksheet?{lesson,lessonText:planAsText(lesson,input),input,settings}:lessonGenerationInput(input)),text:{format:{type:'json_schema',name:worksheet?'student_worksheet':'lesson_plan',strict:true,schema:worksheet?worksheetSchema(settings):lessonSchema(input.sections,input.standards,input)}}})})
    const data=await response.json().catch(()=>null)
    if(!response.ok){console.error('Lesson provider failed',{status:response.status});return null}
    const output=data?.output_text || (data?.output||[]).flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('')
@@ -33,8 +33,16 @@ export default async function handler(req,res) {
   let {data,output}=result
   if(worksheet){try{const sheet=validateWorksheet(materializeWorksheet(JSON.parse(output),settings));const source=lesson.displayEdits?.kit_sourceMaterial??lesson.teachingKit?.sourceMaterial;if(input.subject==='reading'&&source){for(const version of sheet.versions)version.passage=source;validateWorksheet(sheet)}return res.status(200).json({worksheet:sheet,createdAt:new Date().toISOString()})}catch(error){console.error('Worksheet validation failed',{status:data?.status,reason:error.message});return res.status(502).json({error:'The worksheet was incomplete. Try fewer questions or one classroom version.'})}}
   let plan
+  // One quality check failure is usually a bad roll, not a bad request: retry once, telling the model exactly what was wrong.
   try{plan=validateLessonPlan(materializeLessonPlan(JSON.parse(output),input),input,true)}
-  catch(error){const failure=lessonFailure(error,data);console.error('Lesson draft validation failed',{status:data?.status,code:failure.code,reason:error.message});return res.status(502).json(failure)}
+  catch(firstError){
+   console.warn('Lesson draft validation failed, retrying once',{status:data?.status,reason:firstError.message})
+   const retry=Date.now()<deadline-20000?await requestDraft(`\nRETRY: your previous draft was rejected by the quality check with this exact reason: "${firstError.message}" Fix that specific problem and return a complete lesson that satisfies every rule above.`):null
+   if(retry){data=retry.data;output=retry.output}
+   if(!retry){const failure=lessonFailure(firstError,data);console.error('Lesson draft validation failed, no time to retry',{code:failure.code,reason:firstError.message});return res.status(502).json(failure)}
+   try{plan=validateLessonPlan(materializeLessonPlan(JSON.parse(output),input),input,true)}
+   catch(error){const failure=lessonFailure(error,data);console.error('Lesson draft validation failed after retry',{status:data?.status,code:failure.code,first:firstError.message,reason:error.message});return res.status(502).json(failure)}
+  }
   console.info('Lesson generation completed',{durationMs:Date.now()-(deadline-150000),outputTokens:data?.usage?.output_tokens,sections:input.sections.length,sessions:input.sessions})
   return res.status(200).json({plan,input,createdAt:new Date().toISOString()})
  } catch(error) {
