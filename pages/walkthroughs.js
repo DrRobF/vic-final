@@ -45,7 +45,7 @@ export default function Walkthroughs(){
  const newCode=()=>{if(!window.confirm('Make a new code? The old code will stop working.'))return;run('Making a new code…',async()=>{await api({action:'newCode',schoolId});await load();setNotice('New code ready. Share it with your staff.')})}
  const submit=e=>{e.preventDefault();run('Saving the walkthrough…',async()=>{const r=await api({action:'submit',schoolId,...form,staffId:other?'':form.staffId,teacherName:other?form.teacherName:''});setForm(blank);setLastId(r.id);await load();setNotice(`Walkthrough saved.${r.emailed?' The teacher’s feedback email is on its way.':''}${r.emailNote?' '+r.emailNote:''}${r.suggestions?` VIC suggested ${r.suggestions} learning path${r.suggestions>1?'s':''}. Review ${r.suggestions>1?'them':'it'} in Suggested paths.`:''}`);window.scrollTo({top:0,behavior:'smooth'})})}
  const decide=(s,decision)=>run(decision==='assign'?'Assigning…':'Saving…',async()=>{await api({action:'decide',schoolId,suggestionId:s.id,decision,topic:edits[s.id]?.topic??s.topic,dueDate:edits[s.id]?.dueDate||null,note:edits[s.id]?.note||''});await load();setNotice(decision==='assign'?`Assigned to ${s.teacher}. It’s waiting in their Learning Paths.`:'Dismissed.')})
- const assignManual=e=>{e.preventDefault();run('Assigning…',async()=>{await api({action:'assign',schoolId,...manual,dueDate:manual.dueDate||null});setManual({staffId:'',topic:'',note:'',dueDate:''});await load();setNotice('Assigned. It’s waiting in their Learning Paths.')})}
+ const assignManual=e=>{e.preventDefault();const all=manual.staffId==='all';if(all&&!window.confirm(`Assign “${manual.topic.trim()}” to all ${data.staff.length} people on your staff list?`))return;run('Assigning…',async()=>{const d=await api({action:'assign',schoolId,...manual,dueDate:manual.dueDate||null});setManual({staffId:'',topic:'',note:'',dueDate:''});await load();setNotice(all?`Assigned to all ${d.count} staff.${d.joined<d.count?` ${d.joined} have joined AskVic and will see it now; the rest will see it as soon as they join.`:' It’s waiting in everyone’s Learning Paths.'}`:'Assigned. It’s waiting in their Learning Paths.')})}
  const unassign=a=>{if(!window.confirm(`Remove “${a.topic}” for ${a.teacher}?`))return;run('Removing…',async()=>{await api({action:'unassign',schoolId,assignmentId:a.id});await load()})}
 
  const o=data?.options
@@ -100,10 +100,10 @@ export default function Walkthroughs(){
       {a.status==='not started'&&<button className="textButton" onClick={()=>unassign(a)}>Remove</button>}</li>)}</ul>}
     </section>
     <form className="card" onSubmit={assignManual}><h2>Assign a path directly</h2><div className="row3">
-     <label>Teacher<select required value={manual.staffId} onChange={e=>setManual({...manual,staffId:e.target.value})}><option value="">Choose</option>{data.staff.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+     <label>Teacher<select required value={manual.staffId} onChange={e=>setManual({...manual,staffId:e.target.value})}><option value="">Choose</option>{data.staff.length>1&&<option value="all">⭐ Everyone on my staff ({data.staff.length})</option>}{data.staff.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
      <label className="span2">Topic<input required minLength="3" maxLength="200" value={manual.topic} onChange={e=>setManual({...manual,topic:e.target.value})} placeholder="e.g. Smooth classroom transitions"/></label></div>
      <div className="suggRow"><label>Due (optional)<input type="date" value={manual.dueDate} onChange={e=>setManual({...manual,dueDate:e.target.value})}/></label><label className="grow">Note to teacher (optional)<input value={manual.note} maxLength="600" onChange={e=>setManual({...manual,note:e.target.value})}/></label></div>
-     <button className="primary" disabled={!!busy}>Assign path</button>
+     <button className="primary" disabled={!!busy}>{manual.staffId==='all'?'Assign to everyone':'Assign path'}</button>
      <small className="muted">Teachers see assigned paths in their Learning Paths when they sign in with the email on your staff list.</small>
     </form>
    </>}

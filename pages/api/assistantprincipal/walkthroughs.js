@@ -123,6 +123,18 @@ export default async function handler(req,res){
     for(let i=0;i<5;i++){const code=makeJoinCode(row?.name);const {error}=await db.from('ap_schools').update({join_code:code}).eq('id',schoolId);if(!error)return res.json({joinCode:code})}
     return res.status(503).json({error:'Could not make a new code. Please try again.'})
    }
+   if(action==='assign'&&body.staffId==='all'){
+    // One Learning Path for the whole staff (a PD day, a school-wide focus). Same people as the Teacher dropdown.
+    const everyone=(staff||[]).filter(s=>s.role==='teacher'||s.role==='support'||s.role==='other')
+    if(!everyone.length)return res.status(400).json({error:'Add people to your staff list first.'})
+    const t=String(body.topic||'').trim();if(t.length<3||t.length>200)return res.status(400).json({error:'Write a topic of 3–200 characters.'})
+    if(!validDate(body.dueDate))return res.status(400).json({error:'Choose a valid due date.'})
+    const n=String(body.note||'').trim().slice(0,600)
+    const rows=everyone.map(s=>({school_id:schoolId,staff_id:s.id,staff_email:String(s.email||'').toLowerCase(),topic:t,note:n,due_date:body.dueDate||null,source:'manual',suggestion_id:null,assigned_by:auth.user.id}))
+    const {error}=await db.from('ap_path_assignments').insert(rows)
+    if(error)throw error
+    return res.json({ok:true,count:rows.length,joined:everyone.filter(s=>s.auth_user_id).length})
+   }
    if(action==='assign'){await assign({staffId:body.staffId,topic:body.topic,note:body.note,dueDate:body.dueDate});return res.json({ok:true})}
    if(action==='unassign'){
     if(!UUID.test(String(body.assignmentId||'')))return res.status(400).json({error:'Choose an assignment.'})
