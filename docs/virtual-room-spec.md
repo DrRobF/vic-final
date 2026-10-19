@@ -1,4 +1,4 @@
-# The Virtual Room — agreed design (Oct 18, 2026)
+# The Virtual Room — agreed design (Oct 18, amended Oct 19, 2026)
 
 Decided with Dr. Rob Furman, principal of Saint Peter's Academy (grades 3–5).
 This is the agreed plan. Build against it; don't redesign it without asking him.
@@ -18,9 +18,63 @@ facilitator of discussion, emotion and discipline. AskVic already has the hard
 part — a teaching brain, standards, a lesson designer, and reporting back to the
 human. What it doesn't have is a room to teach in.
 
-This is that room.
+This is that room — and, more importantly, the thing that decides which room.
 
-### Why it's an ELA product, not a social studies product
+## 0. The venue chooser — this IS the product
+
+A teacher says: *"teach Johnny standard 2.3."*
+
+VIC reasons about three things, then picks a place:
+
+- what the concept actually is
+- who this child is — what they care about, where they are
+- which room on the shelf lets that concept be **physically present**
+
+The classroom becomes that place and VIC teaches there.
+
+Johnny lives for soccer, so area happens on a pitch, measuring the penalty box —
+a real rectangle with real dimensions. The child at the next desk gets two rocks
+on Mars and the distance between them. Same standard, same hour, different
+worlds.
+
+**The intelligence is not in the room. It is in choosing the room.** That is the
+engine. Everything else in this document is plumbing for it.
+
+This is explicitly *not* a content library. We are not building lessons in
+places; we are building the thing that reasons about how to teach and where it
+will land hardest.
+
+### The rule that keeps it honest
+
+**VIC may only choose a venue where the thing being taught physically exists in
+that venue.**
+
+- Area → the penalty box. The rectangle is really there.
+- Measurement → two Mars rocks. The distance is really there.
+- Long division → not a soccer pitch. Nothing on a pitch is long division.
+
+If the concept cannot be found in the place, VIC picks a different place or
+teaches it plainly. This is the mantra enforced by the engine rather than by
+anyone's discipline at 10pm.
+
+### Variety takes care of itself
+
+Decided Oct 19: **no "stretch" dial.** The standard constrains the venue, so a
+year of standards produces a year of varied places on its own — social studies
+and science standards mostly will not fit a pitch. Watch one thing only: a lot
+of grade 3–5 *math* fits a soccer pitch, so a soccer-mad child could end up
+living there for math specifically. Observe that before building anything to
+counter it.
+
+### Whole-group discussion still works
+
+The standard is shared even when the venue isn't. The human teacher asks
+"Johnny, how did you find area on a pitch? Maria, how did you do it on Mars?"
+Several representations of one concept is stronger teaching than everyone having
+done the identical thing. The personalisation makes the group discussion richer,
+not thinner.
+
+### ELA standards are one strong wrapper — not the product
 
 Social studies has no budget. ELA has budget and panic. But the wrapper isn't a
 dodge — it's better practice than what most schools do:
@@ -32,8 +86,11 @@ career on the same finding. Schools that cut social studies to buy more
 comprehension drilling ended up drilling comprehension on passages with nothing
 in them to comprehend.
 
-So: teach rich historical content, assess it against ELA standards. The content
-is the reading instruction.
+So where a room carries rich content, assessing it against ELA standards is a
+strong play: the content *is* the reading instruction, and ELA is where the
+budget and the panic live. But it is one wrapper among several, not the
+product's definition. A kitchen teaching fractions is not an ELA lesson and
+doesn't need to be.
 
 **Don't promise reading test gains in year one.** Background knowledge pays off
 over years. Promise what can actually move fast: writing quality, use of
@@ -123,9 +180,11 @@ spoken account (see below) — an 8-year-old's thinking is bottlenecked by typin
 speed, not by ideas. But recognition is weaker on children's voices and useless
 in a room of twenty talking at once, so always fall back to typing.
 
-## 5. The lesson that only a room can teach
+## 5. One lesson pattern: the eyewitness sequence
 
-The eyewitness sequence. This is the heart of it.
+One good pattern among many — worth writing down because it shows what a room
+buys you that a worksheet cannot. It is not the product and not the only shape
+a lesson takes.
 
 1. The student **witnesses** an event — a chariot race, a Senate vote.
 2. VIC asks what they saw. The student gives **their own account**, spoken or
@@ -180,29 +239,84 @@ writing program with a time machine attached.** "Virtual classroom" is a demo.
 "My kids finally have something to write about, and I'm not grading sixty drafts
 alone" is a purchase order.
 
-## 7. Why Rome is first
+## 7. The room shelf
 
-Not because it's the most marketable subject. Because it is the **cheapest
-subject that will ever be built**, and the room does real teaching work in it
-(scale, crowd, spectacle — things a map flattens).
+VIC's range is the shelf's range — she can only choose from rooms that exist.
+But the shelf does not need to be big. Roughly twenty rooms likely covers most
+of grades 3–5:
 
-Free, license-clean asset stack:
+> a soccer pitch · a basketball court · a kitchen · a grocery store ·
+> a construction site · a garden · a stage · a library · a newsroom ·
+> a workshop · a beach · a forest · a city street · Mars · the Moon ·
+> a school hallway · a cafeteria · a playground · a museum hall · ancient Rome
+
+That is a weekend of shooting plus a few downloads — not a content library. To a
+nine-year-old, VIC choosing well among twenty is indistinguishable from
+infinite, because the child never sees the shelf, only the choice. Then it grows
+from teachers rather than from Rob. That is the network effect, and it is how he
+avoids becoming a content factory.
+
+### The constraint that eliminates most of the internet
+
+A room needs the **image file**, because VIC has to stand in it under a prop
+manifest. Almost every beautiful "virtual tour" online is somebody's embedded
+viewer, not a file — Google's national parks, Google's and ESA's ISS tours, the
+museum tours. Link-only is useless here.
+
+After five hunts, two sources are verified:
+
+**NASA / JPL planetary surfaces.** A real full 360° panorama from Curiosity's
+position on Mars, stitched by JPL from 26 navcam frames, direct JPEG and TIFF
+download, credit NASA/JPL-Caltech. NASA content is generally not copyrighted and
+free for educational use. Rules: credit NASA, never use the NASA insignia or
+seal, and watch for third-party images — NASA marks those with the copyright
+holder's name.
+
+**Rob's phone.** Unlimited, free, legally his outright, no attribution, and
+re-shootable when a shot is bad. A lab is a lab. A newsroom is a table, a chair
+and a camera. This is where most of the shelf comes from, and the only source
+that scales without money.
+
+**A trap:** the prettier Mars panoramas circulating (the Mars360 / Perseverance
+stitches) are third-party work with **no stated license**, even though the source
+frames are NASA's. Raw JPL only.
+
+### Rome stays on the shelf
+
+It is a good room — scale, crowd and spectacle are exactly what a map flattens —
+and it was briefly the whole plan, so two corrections are recorded here:
+
+- **Chariot races were at the Circus Maximus, not the Colosseum.** The Colosseum
+  hosted gladiatorial games and beast hunts; its arena is far too small for a
+  chariot track. The Circus Maximus today is a public park with the original
+  track roughly six metres below the modern surface, so there is nothing there
+  to photograph.
+- **A photograph of the modern ruins does not show a child ancient Rome.** A Rome
+  room has to be built from public-domain reconstruction art, or deliberately as
+  a then-and-now pairing. Note also that gladiatorial content is a parent
+  conversation at grades 3–5; chariot racing is spectacle without the death.
+
+### Other free, license-clean sources
 
 - **The Met Open Access** — 492,000+ images under CC0, free REST API. Roman
   coins, busts, mosaics, armour. <https://www.metmuseum.org/openaccess>
 - **Smithsonian Open Access** — thousands of free 3D models; anything marked CC0
   is free to take and remix, any purpose. <https://3d.si.edu>
-- **Primary sources, all public domain and translated** — Juvenal (who coined
-  "bread and circuses," which is *exactly* this lesson), Suetonius, Tacitus,
-  Pliny. Project Gutenberg, Perseus, LacusCurtius.
-- **Panoramas** — Wikimedia Commons, freely licensed.
+- **Historical primary sources, public domain and translated** — Project
+  Gutenberg, Perseus, LacusCurtius. For a Rome room: Juvenal (who coined
+  "bread and circuses" — about the chariot races, not the Colosseum),
+  Suetonius, Tacitus, Pliny.
+- **Panoramas** — Wikimedia Commons has a 360°-equirectangular category of
+  roughly 540 freely-licensed files, but licences vary per image and the
+  collection skews to European churches and city squares. Worth a proper dig
+  when a specific room needs one; not yet verified as a dependable source.
 - **Code** — three.js / A-Frame / WebXR, `model-viewer`, browser speech. All
   free and open source.
 - **Hosting** — Vercel and Supabase, already paid for.
 
-Cash cost of lesson one: **zero.** Later rooms cost more; the Civil War costs
-more, climate costs a lot more. Rome has been out of copyright for two thousand
-years.
+**Cash cost of the first rooms: zero.** A phone-shot room is always free and
+always legally clean, which is why the shelf should lean on Rob's own camera and
+treat third-party panoramas as a bonus rather than a dependency.
 
 ## 8. Accessibility and clutter
 
@@ -245,22 +359,26 @@ ancient sources that contradict them — and the look on their face when they
 realise they were there and still got it wrong. Nobody buys software from a
 demo. They buy it from that child's face.
 
-**Week 1.** One room. Hardcoded, ugly, free panorama, five or six props in a
-manifest, VIC teaching with speaker buttons on everything. Grade 4 version only.
+**Week 1 — the shell.** One room rendering on screen, draggable, five or six
+props from a manifest, speaker buttons on everything. Use the NASA Mars
+panorama: the file exists and is verified, so there is zero asset friction and
+nothing to hunt.
 
-**Week 2.** The eyewitness sequence and two adapted sources — *and get it in
-front of one child before Friday.* Not the class. One kid, at lunch, on a
-laptop, while it's still broken. Six minutes of that teaches more than three
-more weeks of building.
+**Week 2 — the real experiment.** Re-skin that shell with a room Rob shot on his
+own phone. A hallway, the cafeteria, anything. **If swapping Mars for a school
+hallway takes one evening, there is an engine and a product. If it takes a week,
+there is a one-off.** Better to know that in week two than in month six. The
+first room proves nothing; the second room proves everything.
 
-**Week 3.** Fix what that child broke. Then three more children. Film one.
+**Week 3 — the chooser.** VIC takes a standard and a child and picks from a
+shelf of three rooms. Three is enough to see whether her reasoning holds up.
+What is being tested is the *choice*, not the scenery.
 
-**Week 4.** The grade 3 and grade 5 dials, which are cheap now that the room
-exists.
+**Week 4 — one lesson, one child, filmed.** End to end, in front of a real kid,
+while it is still rough.
 
-**Do not build the room-builder yet.** Build one room by hand, prove the lesson,
-then automate. If week 2 slips to week 5, something has gone wrong, and it is
-almost certainly that the room-builder got started early.
+**Do not build the room-builder yet.** Hand-build the first few rooms, prove the
+chooser reasons well, then automate making rooms.
 
 ## Standing rules carried over from AskVic
 
@@ -272,13 +390,15 @@ almost certainly that the room-builder got started early.
 
 ## Still open
 
-- **Each student in their own room, or everyone together?** Solo is an order of
-  magnitude cheaper — one shared synchronised space means networking, voice,
-  moderation and a child standing on the table. Solo is also arguably better
-  teaching: every child gets a private tutor at their own pace, and discussion
-  happens afterwards in the real room with the human, who now knows exactly who
-  to call on. That is Rob's own model — AI teaches, human facilitates. Current
-  recommendation: **build solo, keep the shared room as the dream and the
-  stage demo.**
-- Whether the 5–8 band gets its own rooms or just harder dials on the same ones.
-- Which room is second. The free-source constraint should probably pick it.
+- **How many rooms before the chooser feels intelligent rather than lucky?**
+  Three is enough to test the reasoning; twenty is the guess for real use. The
+  honest number comes out of watching children, not out of this document.
+- How teachers contribute rooms — who shoots, who checks the licence, who writes
+  the prop manifest. The manifest is the hard part to delegate.
+- Whether the 5–8 band gets its own rooms or just harder standards on the same
+  ones.
+- Decided and no longer open: **each child gets their own room.** One shared
+  synchronised space means networking, voice, moderation and a child standing on
+  the table. Solo is also better teaching — a private tutor at the child's own
+  pace — and discussion then happens in the real room with the human, who now
+  knows who to call on. AI teaches, human facilitates.
