@@ -4,6 +4,18 @@ import { useEffect, useRef, useState } from 'react'
 const TOKEN_KEY = 'askvic-kiosk-token', QUEUE_KEY = 'askvic-kiosk-queue'
 const read = k => { try { return localStorage.getItem(k) } catch { return null } }
 const write = (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v) } catch {} }
+// The kiosk pass lives in three places so a restart, a power blip, or a browser that clears storage over the weekend
+// doesn't knock the computer back to the setup screen: local storage, a long-life cookie, and the page address (#k=…).
+// Set the browser's start page to the address shown here and the kiosk comes back on its own every morning.
+const TOKEN_RE = /^[A-Za-z0-9_-]{30,100}$/
+const readCookie = () => { try { const m = document.cookie.match(/(?:^|; )askvic_kiosk=([^;]+)/); return m ? decodeURIComponent(m[1]) : null } catch { return null } }
+const readHash = () => { try { return new URLSearchParams(window.location.hash.slice(1)).get('k') } catch { return null } }
+function rememberToken(t) {
+ write(TOKEN_KEY, t)
+ try { document.cookie = t ? `askvic_kiosk=${encodeURIComponent(t)}; Max-Age=${400 * 86400}; Path=/kiosk; SameSite=Strict; Secure` : 'askvic_kiosk=; Max-Age=0; Path=/kiosk' } catch {}
+ try { window.history.replaceState(null, '', t ? `/kiosk#k=${t}` : '/kiosk') } catch {}
+}
+function findToken() { return [read(TOKEN_KEY), readCookie(), readHash()].find(t => t && TOKEN_RE.test(t)) || null }
 const fmt12 = t => { if (!t) return ''; const [h, m] = t.split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'}` }
 
 // The office check-in screen. Full screen, big keys, works with a keyboard or a touch screen.
@@ -12,7 +24,7 @@ export default function Kiosk() {
  const [setupCode, setSetupCode] = useState(''), [setupErr, setSetupErr] = useState(''), [code, setCode] = useState(''), [msg, setMsg] = useState(null), [busy, setBusy] = useState(false), [now, setNow] = useState(new Date()), [queued, setQueued] = useState(0)
  const input = useRef(null), clearTimer = useRef(null)
 
- useEffect(() => { const t = read(TOKEN_KEY); setToken(t || ''); if (!t) setNotKiosk(true) }, [])
+ useEffect(() => { const t = findToken(); if (t) rememberToken(t); setToken(t || ''); if (!t) setNotKiosk(true) }, [])
  useEffect(() => { const id = setInterval(() => setNow(new Date()), 15000); return () => clearInterval(id) }, [])
 
  async function loadInfo(t = token) {
@@ -61,7 +73,7 @@ export default function Kiosk() {
    const r = await fetch('/api/kiosk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'claim', setupCode }) })
    const d = await r.json().catch(() => ({}))
    if (!r.ok || !d.token) { setSetupErr(d.error || 'That code didn’t work.'); return }
-   write(TOKEN_KEY, d.token); setToken(d.token); setNotKiosk(false); loadInfo(d.token)
+   rememberToken(d.token); setToken(d.token); setNotKiosk(false); loadInfo(d.token)
   } catch { setSetupErr('No internet connection. Try again in a moment.') }
  }
  const press = k => { if (k === 'clear') setCode(''); else if (k === 'back') setCode(c => c.slice(0, -1)); else setCode(c => (c + k).slice(0, 6)); input.current?.focus() }
@@ -73,7 +85,7 @@ export default function Kiosk() {
   <Head><title>{info?.school ? `${info.school} · Check in` : 'Check in'}</title><meta name="robots" content="noindex" /></Head>
   {notKiosk ? <main className="setup">
    <h1>This computer isn’t set up as the check-in kiosk</h1>
-   <p>Have a setup code from your principal? Type it here.</p>
+   <p>Have a setup code from your principal? Type it here. After it turns on, make this page the browser’s start page so the kiosk comes back by itself after a restart.</p>
    <form onSubmit={claim} className="claim"><input value={setupCode} onChange={e => setSetupCode(e.target.value.toUpperCase())} placeholder="ABCD-1234" maxLength={9} autoFocus aria-label="Setup code" /><button type="submit" disabled={setupCode.replace(/[^A-Z0-9]/g, '').length !== 8}>Turn on kiosk</button></form>
    {setupErr && <p className="err" role="alert">{setupErr}</p>}
    <p className="small">School leaders: make a code on <strong>Staff attendance → AskVic check-in kiosk → Set up another computer</strong>, or <a href="/school-login?next=/school/attendance">log in here</a>.</p>
