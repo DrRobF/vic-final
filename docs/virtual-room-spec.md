@@ -423,6 +423,69 @@ and it was briefly the whole plan, so two corrections are recorded here:
 always legally clean, which is why the shelf should lean on Rob's own camera and
 treat third-party panoramas as a bonus rather than a dependency.
 
+## 7a. The room template — how new rooms get made
+
+A room is made from a template: a photo in, a prop manifest out. Teachers fill
+it in, and with permission a room can be offered to a shared community library.
+
+### Build it for Rob first, not for the community
+
+This is an **authoring tool before it is a social feature.** Rob needs twenty
+rooms and is going to make them, so the template is how *he* makes them — photo
+in, manifest drafted, corrected, room on the shelf. Faster than hand-writing
+twenty manifests in an editor.
+
+The community version is then just exposing a tool already in daily use, which
+is cheaper to build and much better designed, because all the annoying parts
+will have been found first.
+
+**When to build it:** around the fourth hand-written manifest, when the tedium
+becomes obvious. Not before the engine works, and not as a growth feature.
+
+### VIC drafts the manifest; the teacher corrects it
+
+A blank form produces useless manifests, and **the quality of the room library
+is the quality of the engine.**
+
+A manifest is not "label what is in the photo." It is "label what is in the
+photo *and say what each thing is good for teaching*." A teacher will write
+"a tree." What VIC needs is "a tree — trunk circumference for measurement, rings
+for data and time, branching for fractions, bark for descriptive writing." That
+is real pedagogical work on a photograph, at 9pm, in a form, unpaid. It will not
+happen.
+
+So: the teacher uploads the photo, **VIC looks at it and drafts the manifest** —
+props, positions, teaching uses — and the teacher corrects and adds.
+
+Authoring becomes reviewing. Arguing with a draft is easy; a blank field is
+hard. Same propose/dispose shape as the venue chooser in §0a, used twice.
+
+### Three rules for anything shared
+
+The moment uploads are hosted for other people, this is a platform with a
+platform's problems.
+
+1. **Teacher-shot only.** A panorama found on Google becomes Rob's copyright
+   problem, not the uploader's. The template asks point-blank whether they took
+   it; anything from elsewhere needs a source and a licence, and there needs to
+   be a takedown path.
+2. **Shared rooms must be empty of people.** No faces, no names, no student work
+   with names visible. A teacher photographs her classroom and the children are
+   in it; a hallway shows named work on the walls. That is the kind of thing that
+   ends a pilot. Checked on review, stated in the template.
+3. **Closed, then invite-only, then maybe open.** Moderation is real work and
+   there are 15–20 hours a week available. Start with Saint Peter's teachers and
+   Rob reviewing. Do not build a public library before there is a community to
+   put in it.
+
+### Credit, not cash
+
+Teachers share for recognition. "Room by Mrs. Alvarez, Saint Peter's Academy" on
+the room itself — free, genuinely motivating, and honest, since it is her work.
+
+Keep money out of it for a long time. Revenue share means contracts, tax forms
+and a dispute process, and then this is a marketplace rather than a school tool.
+
 ## 8. Accessibility and clutter
 
 - **Colorblind-safe, always.** Never color alone — fill plus symbol plus word.
@@ -516,8 +579,10 @@ learns nothing however good the instruction.
 - **How many rooms before the chooser feels intelligent rather than lucky?**
   Three is enough to test the reasoning; twenty is the guess for real use. The
   honest number comes out of watching children, not out of this document.
-- How teachers contribute rooms — who shoots, who checks the licence, who writes
-  the prop manifest. The manifest is the hard part to delegate.
+- Whether "shared rooms empty of people" is too blunt. A classroom with no
+  children in it is a strange artifact, and a room whose subject *is* people at
+  work — a kitchen, a construction site — may need a better answer than a
+  blanket ban. The rule stands until someone has a better one.
 - Whether the 5–8 band gets its own rooms or just harder standards on the same
   ones.
 - Decided and no longer open: **each child gets their own room.** One shared
