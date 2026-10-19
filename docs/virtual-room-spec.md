@@ -74,6 +74,111 @@ Several representations of one concept is stronger teaching than everyone having
 done the identical thing. The personalisation makes the group discussion richer,
 not thinner.
 
+## 0a. Who decides, and how the teacher signs off
+
+VIC proposes, the teacher disposes. She does the reasoning and makes the call,
+but nothing reaches a child until a human has had the chance to look. This is
+the same rule already standing in AskVic for emails — the principal approves
+every one, nothing sends itself. A venue choice is a pedagogical judgment and
+gets the same treatment until trust is earned.
+
+This lives inside the existing lesson flow, at the Plan step, where the teacher
+is already handing lessons to VIC.
+
+### The toggle
+
+**Let VIC decide** (the default) or **Teacher decides.**
+
+- **Teacher decides** — one dropdown sets the venue for the whole class, then
+  individual children can be overridden. The per-child dropdown lists *the rooms
+  where this standard physically fits* first (see §0's rule — it prunes the list
+  automatically, usually to a handful), with "all rooms" underneath for the
+  teacher who wants to be stubborn.
+- **Let VIC decide** — VIC picks for every child, then the teacher approves with
+  a single whole-class button, or changes one child or several from their own
+  dropdowns. Teaching does not start until she has signed off.
+
+### The approval screen must be a scan, not a form
+
+An approval nobody reads is worse than no approval: it adds a click and supplies
+false assurance. A teacher planning a week faces five lessons across 25 children
+— she will not read 125 justifications, and pretending otherwise builds
+friction without safety.
+
+So the task is **scanning for outliers**, not approving items. One screen, one
+row per child: venue name and a six-word reason. Ten seconds to read, tap
+whatever looks wrong.
+
+**VIC flags her own uncertainty.** "Confident on 23, unsure about 2." The
+teacher then looks at two. That turns 25 decisions into 2, and it is honest —
+VIC genuinely knows when a standard only barely fit a room.
+
+### Autonomy is earned, not assumed
+
+The default is **Let VIC decide**, because a default nobody changes decides the
+product, and teacher-decides-by-default means the engine never gets used.
+
+But every teacher starts in a mode where the reasoning is shown prominently.
+After roughly forty approved picks with no changes, VIC offers: *"you haven't
+changed a pick in a while — want me to go straight ahead on whole-class
+lessons?"* Front-load the scrutiny, then let it relax once it has been earned.
+
+### Log every override
+
+When a teacher changes a pick, record what VIC chose, what the teacher chose
+instead, the standard, and the child.
+
+Two things at once:
+
+- **The only feedback loop on the chooser.** Venue choice is taste and cannot be
+  unit tested, so overrides are the sole signal for whether VIC is reasoning
+  well. Without this, the differentiator is unmeasurable.
+- **A sales number.** "Teachers changed VIC's choice 4% of the time last month"
+  is the most persuasive line available if it's low, and a bug report found
+  before a customer finds it if it's high.
+
+### Build the chooser before the UI
+
+Sequence matters here. First make VIC pick and log her reasoning somewhere only
+Rob can see it. Read fifty picks. *Then* build the approval screens — once it's
+known whether her reasoning is worth showing a teacher at all.
+
+The whole UI above is roughly a week of evenings. It is the right week, but it
+must not land inside the same week as the chooser itself, or week 3 becomes
+week 6.
+
+## 0b. What gets stored, and when
+
+**Sunday produces decisions, not content.**
+
+A venue pick is one row — lesson, student, room, reason, confidence, who
+approved it and when. Roughly 250 bytes. One teacher's week of 5 lessons × 25
+children is about 30 KB; a 20-teacher school is about 600 KB a week, or on the
+order of 100,000 rows a year. Postgres does not notice this, and VIC holds
+nothing between picks — each reasoning pass is built, used and discarded.
+
+Pre-generating the actual *taught* lesson would be the mistake: children get
+sick, plans shift, and a four-day-old generated lesson is stale. The teaching is
+generated when the child sits down, so it can account for everything that
+happened since Sunday.
+
+### Batch the picks per lesson, not per child
+
+The real cost is reasoning calls, not storage. Done naively that is 125 calls
+for one teacher's week; batched into one call per lesson it is 5 — a 25×
+reduction.
+
+Batching is also better teaching. Seeing the whole roster at once, VIC can
+spread venues across a class, avoid putting everyone in the same room, or
+deliberately place two children in the same place so they can compare notes
+afterwards. Per-child calls make 25 blind decisions with no sense of the class.
+
+### Re-validate at teach time
+
+A pick approved on Sunday can be stale by Thursday. If the roster changed, VIC
+picks for the new child and flags it in the teacher's next view, rather than
+silently having no venue.
+
 ### ELA standards are one strong wrapper — not the product
 
 Social studies has no budget. ELA has budget and panic. But the wrapper isn't a
@@ -354,9 +459,8 @@ able to say it was clean from day one.
 ## Build order
 
 The real deliverable is **not software. It's footage.** A video of a real child
-witnessing the race, giving their own account, then getting blindsided by two
-ancient sources that contradict them — and the look on their face when they
-realise they were there and still got it wrong. Nobody buys software from a
+being taught something in a place that made them care about it — the moment they
+stop performing school and start actually working. Nobody buys software from a
 demo. They buy it from that child's face.
 
 **Week 1 — the shell.** One room rendering on screen, draggable, five or six
@@ -370,15 +474,34 @@ hallway takes one evening, there is an engine and a product. If it takes a week,
 there is a one-off.** Better to know that in week two than in month six. The
 first room proves nothing; the second room proves everything.
 
-**Week 3 — the chooser.** VIC takes a standard and a child and picks from a
-shelf of three rooms. Three is enough to see whether her reasoning holds up.
-What is being tested is the *choice*, not the scenery.
+**Week 3 — the chooser, with no UI at all.** VIC takes a standard and a child
+and picks from a shelf of three rooms, logging her choice and her reason where
+only Rob can see them. Three rooms is enough to judge the reasoning. What is
+being tested is the *choice*, not the scenery.
+
+Then read fifty picks before writing any interface. If VIC picks badly, that is
+a week of approval UI saved on a feature that needed rethinking first.
 
 **Week 4 — one lesson, one child, filmed.** End to end, in front of a real kid,
 while it is still rough.
 
+**Week 5 — the approval flow** (§0a), once the picks have earned an audience:
+the toggle, the whole-class button, the outlier-scan screen, the override log.
+
 **Do not build the room-builder yet.** Hand-build the first few rooms, prove the
 chooser reasons well, then automate making rooms.
+
+### What to measure, and it is not comprehension
+
+The venue does not make the mathematics clearer. It makes the child *willing to
+do* the mathematics. Venue is an engagement lever, not a comprehension lever.
+
+Measure engagement accordingly: time on task, whether they started without
+prompting, how far they got before quitting, whether they asked a question
+nobody required of them. Measuring comprehension alone will show nothing and
+lead to the wrong conclusion — and for a disengaged nine-year-old, engagement is
+not a side effect, it is the whole thing, because a child who will not start
+learns nothing however good the instruction.
 
 ## Standing rules carried over from AskVic
 
