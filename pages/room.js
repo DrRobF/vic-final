@@ -13,6 +13,10 @@ import { speak, stopSpeaking, speechReady, warmVoices } from '../lib/speak'
 
 const STEP = 90          // how far one arrow-key press turns, in pixels
 const DRAG_SLOP = 6      // movement under this counts as a click, not a drag
+const EDGE = 6           // keep markers this far (percent) from the top and bottom, so a
+                         // bubble sitting on the horizon is not clipped by the frame edge.
+                         // The manifest keeps the true position; only drawing is nudged.
+const inFrame = y => Math.max(EDGE, Math.min(100 - EDGE, Number(y) || 0))
 
 export default function Room() {
  const [roomId, setRoomId] = useState(DEFAULT_ROOM)
@@ -199,7 +203,7 @@ export default function Room() {
       key={`${copy}-${p.id}`}
       type="button"
       className={`prop${openProp === p.id ? ' on' : ''}`}
-      style={{ left: p.left, top: `${p.y}%` }}
+      style={{ left: p.left, top: `${inFrame(p.y)}%` }}
       tabIndex={copy === 0 ? 0 : -1}
       aria-hidden={copy === 1 || undefined}
       aria-expanded={openProp === p.id}
