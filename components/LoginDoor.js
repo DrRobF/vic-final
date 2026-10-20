@@ -27,7 +27,10 @@ export default function LoginDoor({ kind }) {
     <nav className="switch" aria-label="Choose your log in">{DOOR_LINKS.map(([k, href, label]) => <a key={k} href={href} aria-current={k === kind ? 'page' : undefined} className={k === kind ? 'on' : ''}>{label}</a>)}</nav>
    </section>
    <section className="card">
-    {kind === 'student' ? <SchoolAccountLogin student /> : <>
+    {kind === 'student' ? <>
+     <p className="tapfirst">On a classroom computer, <a href="/tap">tap your name instead</a> — no password needed.</p>
+     <SchoolAccountLogin student />
+    </> : <>
      <EducatorAuth mode="login" />
      <details><summary>Use my school password instead</summary><SchoolAccountLogin /></details>
     </>}
@@ -49,6 +52,7 @@ export default function LoginDoor({ kind }) {
    .switch a.on{background:#fff;color:var(--vic-ink)}
    .card{background:var(--vic-surface);color:var(--vic-text-primary);border-radius:20px;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
    .student .card{font-family:var(--font-read);font-size:20px}
+   .tapfirst{margin:0 0 18px;padding:14px 16px;border-radius:12px;background:var(--vic-vic-soft);color:var(--vic-ink);font-weight:700;line-height:1.5}
    details{margin-top:18px;padding-top:16px;border-top:1px solid var(--vic-border-soft)}
    summary{font-weight:800;cursor:pointer;margin-bottom:12px}
    @media(max-width:860px){main{grid-template-columns:1fr;gap:28px;padding:28px 16px 56px}.wrap{padding:10px 14px 0}}

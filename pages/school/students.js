@@ -27,6 +27,7 @@ export default function Students() {
  const [error, setError] = useState(''), [find, setFind] = useState(''), [only, setOnly] = useState('')
  const [busy, setBusy] = useState(0), [fresh, setFresh] = useState(null), [shut, setShut] = useState({})
  const [snagsOnly, setSnagsOnly] = useState(false)
+ const [sheet, setSheet] = useState(null)   // a whole group's new passwords, to print once
 
  useEffect(() => {
   api('/api/school/attendance', {}).then(d => {
@@ -54,6 +55,17 @@ export default function Students() {
   setBusy(s.id); setError(''); setFresh(null)
   try { setFresh(await api('/api/school/students', { schoolId, action: 'reset_password', studentId: s.id })) }
   catch (e) { setError(e.message) } finally { setBusy(0) }
+ }
+
+ // One touch for a whole year group. The teacher prints the sheet, cuts the cards up and
+ // tapes them inside desks -- the passwords live in her classroom, not in a lookup screen.
+ async function resetGroup(g) {
+  if (!window.confirm(`Give all ${g.students.length} children in ${g.grade} new passwords?\n\nEvery old password stops working straight away, so only do this when you can hand out the new ones. You will get a sheet to print.`)) return
+  setBusy(-1); setError(''); setFresh(null); setSheet(null)
+  try {
+   const r = await api('/api/school/students', { schoolId, action: 'reset_many', studentIds: g.students.map(s => s.id) })
+   setSheet({ grade: g.grade, cards: r.cards })
+  } catch (e) { setError(e.message) } finally { setBusy(0) }
  }
 
  function download() {
@@ -94,6 +106,27 @@ export default function Students() {
    {error && <p className="alert" role="alert">{error}</p>}
    {!rows && !error && <p role="status">Loading your students…</p>}
 
+   {sheet && <section className="sheet">
+    <div className="shead">
+     <div>
+      <h2>{sheet.grade} — new passwords</h2>
+      <p>Print this now. It is the only time these are shown, and the old ones have already stopped working.</p>
+     </div>
+     <div className="sbtns">
+      <button type="button" className="btn" onClick={() => window.print()}>Print</button>
+      <button type="button" className="btn tiny" onClick={() => setSheet(null)}>Close</button>
+     </div>
+    </div>
+    <div className="cards">{sheet.cards.map(c => <div key={c.id} className={`card${c.error ? ' bad' : ''}`}>
+     <p className="cname">{c.name || c.username}</p>
+     {c.error ? <p className="cerr">{c.error}</p> : <>
+      <p className="crow"><span>username</span><code>{c.username}</code></p>
+      <p className="crow"><span>password</span><code>{c.password}</code></p>
+     </>}
+    </div>)}</div>
+    <p className="snote">Sign in at <strong>askvic.ai</strong> → Student log in. Type the username, no @ sign.</p>
+   </section>}
+
    {fresh && <div className="fresh" role="status">
     <p><strong>{fresh.name || fresh.username} has a new password.</strong> Write it down now — this is the only time it is shown.</p>
     <p className="creds"><span>Username</span><code>{fresh.username}</code><span>Password</span><code>{fresh.password}</code></p>
@@ -115,6 +148,9 @@ export default function Students() {
       <span className="gnum">{g.students.length}</span>
       <span className="gcaret" aria-hidden="true">{shut[g.grade] ? '▸' : '▾'}</span>
      </button>
+     {!shut[g.grade] && <div className="gtools">
+      <button type="button" className="btn tiny" disabled={busy !== 0} onClick={() => resetGroup(g)}>New passwords for all {g.students.length} →  one printable sheet</button>
+     </div>}
      {!shut[g.grade] && <div className="tablewrap"><table>
       <thead><tr><th>Student</th><th>Username</th><th>Ready?</th><th>Classes</th><th><span className="sr">Password</span></th></tr></thead>
       <tbody>{g.students.map(s => <tr key={s.id}>
@@ -181,6 +217,27 @@ export default function Students() {
    .creds code{font-size:18px;font-weight:700}
    .alert{padding:14px 16px;border-radius:12px;background:var(--vic-danger-soft);color:#912018;font-weight:700}
    .note{margin-top:20px;color:var(--vic-text-secondary);line-height:1.6}
+   .gtools{padding:12px 18px;border-top:1px solid var(--vic-border-soft);background:var(--vic-surface)}
+   .sheet{margin:0 0 20px;padding:20px;border:3px solid var(--vic-success);border-radius:16px;background:var(--vic-surface)}
+   .shead{display:flex;gap:18px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+   .shead h2{margin:0 0 6px;font-size:24px}
+   .shead p{margin:0;color:var(--vic-text-secondary);line-height:1.6;max-width:56ch}
+   .sbtns{display:flex;gap:10px;flex:none}
+   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px;margin:18px 0 0}
+   .card{padding:14px 16px;border:2px dashed var(--vic-border);border-radius:12px}
+   .card.bad{border-color:var(--vic-danger)}
+   .cname{margin:0 0 8px;font-weight:800;font-size:18px}
+   .crow{display:flex;gap:8px;align-items:baseline;margin:4px 0;font-size:15px}
+   .crow span{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;color:var(--vic-text-secondary);min-width:68px}
+   .crow code{font-family:var(--font-mono);font-size:17px;font-weight:700}
+   .cerr{margin:0;color:var(--vic-danger);font-weight:700;font-size:15px}
+   .snote{margin:16px 0 0;color:var(--vic-text-secondary)}
+   @media print{
+    .wrap,.bar,.why,.snags,.count,.grade,.note,.sbtns,.fresh{display:none !important}
+    .sheet{border:0;padding:0;margin:0}
+    .cards{grid-template-columns:repeat(3,1fr)}
+    .card{border:1px dashed #999;break-inside:avoid}
+   }
   `}</style>
  </div>
 }

@@ -33,6 +33,35 @@ export default async function handler(req, res) {
   // So the only honest answer to "what is Johnny's password" is to set a new one and show
   // it once. Readable words a child can type, never a random string.
   if (req.method === 'POST') {
+   // A whole class at once. Nobody is clicking twenty-five buttons, and a teacher whose
+   // third graders forget their password daily needs one sheet she can print in August,
+   // not a reset flow she runs every morning.
+   if (req.body?.action === 'reset_many') {
+    const ids = Array.isArray(req.body?.studentIds) ? req.body.studentIds.map(Number) : []
+    if (!ids.length) return res.status(400).json({ error: 'Choose some students.' })
+    if (ids.length > 200) return res.status(400).json({ error: 'Up to 200 children at a time.' })
+    if (ids.some(n => !Number.isSafeInteger(n) || n <= 0)) return res.status(400).json({ error: 'Choose some students.' })
+
+    const { data: kids, error: kErr } = await db.from('users').select('id,name,email,role,auth_user_id').in('id', ids).eq('role', 'student')
+    if (kErr) throw kErr
+
+    const cards = []
+    for (const kid of kids || []) {
+     if (!kid.auth_user_id) { cards.push({ id: kid.id, name: kid.name || '', username: String(kid.email || '').split('@')[0], error: 'no login yet' }); continue }
+     const password = kidPassword()
+     const { data: existing } = await db.auth.admin.getUserById(kid.auth_user_id)
+     const done = await db.auth.admin.updateUserById(kid.auth_user_id, {
+      password,
+      app_metadata: { ...(existing?.user?.app_metadata || {}), must_change_password: false, password_reset_by: auth.user.id, password_reset_at: new Date().toISOString() },
+     })
+     if (done.error) cards.push({ id: kid.id, name: kid.name || '', username: String(kid.email || '').split('@')[0], error: 'could not be reset' })
+     else cards.push({ id: kid.id, name: kid.name || '', username: String(kid.email || '').split('@')[0], password })
+    }
+    // Sorted by name so the printed sheet matches a register.
+    cards.sort((a, b) => String(a.name).localeCompare(String(b.name)))
+    return res.json({ success: true, cards })
+   }
+
    if (req.body?.action !== 'reset_password') return res.status(400).json({ error: 'Unknown action.' })
    const id = Number(req.body?.studentId)
    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: 'Choose a student.' })

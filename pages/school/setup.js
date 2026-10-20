@@ -51,6 +51,7 @@ export default function SchoolSetup() {
    account?.manageAccounts && ['/admin/accounts', 'Logins & passwords', 'Create teacher and student logins, reset passwords.'],
   ]],
   ['Students & classes', [
+   ['/tap', 'Set up a classroom computer', 'Children tap their name instead of typing a password. Set it up once per computer.'],
    ['/school/students', 'Student logins', 'Every student and the username they sign in with. Downloadable.'],
    account?.manageAccounts && ['/admin/classrooms', 'Classrooms', 'Create classes for teachers and manage rosters.'],
    account?.manageAccounts && ['/admin/import-roster', 'Upload a roster', 'Add a whole class from a spreadsheet.'],
