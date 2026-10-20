@@ -15,11 +15,15 @@ from (values
  (86,'andeen.anderson@saintpetersacademy.org'),
  (177,'william.grimison@saintpetersacademy.org'),
  (178,'shontae.mack@saintpetersacademy.org'),
- (179,'amber.manuael@saintpetersacademy.org'),
+ (179,'amber.manuel@saintpetersacademy.org'),
  (1,'rob.furman@saintpetersacademy.org')
 ) as v(user_id, email)
 where exists (select 1 from public.users u where u.id = v.user_id)
 on conflict do nothing;
 
--- Still to come, once they have AskVic accounts: Gloria Finch, Dale Dawkins,
--- Ruth Jefferson, Barbara Andrews.
+-- Amber's surname is Manuel; the first school address issued read Manuael and has been
+-- corrected, so her profile name and staff name were fixed to match.
+--
+-- Ruth Jefferson and Dale Dawkins are being set up as school leaders with new school
+-- addresses only, so they need no alias. Gloria Finch and Barbara Andrews are not
+-- getting AskVic accounts.
