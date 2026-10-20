@@ -256,7 +256,7 @@ function Unmatched({ u, people, act }) {
    <input value={name} onChange={e => setName(e.target.value)} aria-label="Name" />
    <select value={role} onChange={e => setRole(e.target.value)} aria-label="Role"><option value="teacher">Teacher</option><option value="support">Support / aide</option><option value="office">Office</option><option value="leader">Leader</option><option value="other">Other</option></select>
    <select value={pay} onChange={e => setPay(e.target.value)} aria-label="Pay"><option value="hourly">Hourly</option><option value="salaried">Salaried</option></select>
-   <button type="button" className="btn btn-primary sm" onClick={() => act({ action: 'add_staff', name, role, payType: pay, key: u.key })}>Add</button>
+   <button type="button" className="btn btn-primary sm" onClick={() => act({ action: 'add_person', name, role, payType: pay, key: u.key })}>Add</button>
    <button type="button" className="linkbtn" onClick={() => setMode('')}>Cancel</button>
   </div> : <div className="umadd">
    <select defaultValue="" onChange={e => e.target.value && act({ action: 'alias', key: u.key, staffId: e.target.value })}><option value="">This is…</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>

@@ -48,7 +48,6 @@ export default function SchoolSetup() {
    ['/school?staff=new', '+ Add a staff member', 'One form, then a checklist for code, login and class.', true],
    ['/assistantprincipal', 'Staff list & weekly deadlines', 'Who’s on staff, what’s due each week, the weekly brief.'],
    account?.manageAccounts && ['/admin/accounts', 'Logins & passwords', 'Create teacher and student logins, reset passwords.'],
-   account?.manageAccounts && ['/admin/staff-setup', 'Add many staff logins at once', 'Paste a list of names and emails.'],
   ]],
   ['Students & classes', [
    account?.manageAccounts && ['/admin/classrooms', 'Classrooms', 'Create classes for teachers and manage rosters.'],

@@ -127,14 +127,9 @@ export default async function handler(req, res) {
       if (error) throw error
       importResult = data
     } else if (action === 'add_staff') {
-      const displayName = clean(body.displayName)
-      const role = clean(body.role, 20)
-      const assignment = clean(body.assignment)
-      const email = clean(body.email, 254).toLowerCase()
-      if (displayName.length < 2 || !roles.has(role) || (email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))) {
-        return res.status(400).json({ error: 'Enter a name, role, and optional valid email.' })
-      }
-      await rows(auth.admin.from('ap_staff').insert({ school_id: schoolId, display_name: displayName, role, assignment, email: email || null }).select('id'))
+      // Adding a person happens in one place: the dashboard's Setup. That form puts them
+      // on the board and, when asked, gives them a login and dashboard access together.
+      return res.status(410).json({ error: 'Add people from your dashboard, then Setup. That form does the whole job in one step.' })
     } else if (action === 'update_staff') {
       const displayName = clean(body.displayName)
       const role = clean(body.role, 20)
