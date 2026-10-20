@@ -52,11 +52,18 @@ export default async function handler(req, res) {
    return res.json({ success: true, name: student.name || '', username: String(student.email || '').split('@')[0], password })
   }
   const [{ data: students, error: sErr }, { data: classes, error: cErr }, { data: enrols, error: eErr }] = await Promise.all([
-   db.from('users').select('id,name,email,parent_email').eq('role', 'student').order('name').limit(2000),
+   db.from('users').select('id,name,email,parent_email,auth_user_id').eq('role', 'student').order('name').limit(2000),
    db.from('classes').select('id,class_name,class_code,teacher_id').limit(500),
    db.from('enrollments').select('student_id,class_id').limit(20000),
   ])
   if (sErr || cErr || eErr) throw sErr || cErr || eErr
+
+  // "Has work waiting" is the step that is actually missed: a child can have a login and
+  // a class and still open AskVic to an empty Today, because nobody assigned them
+  // anything. Assignments are per student, not per class, so this is the real answer.
+  const { data: work, error: wErr } = await db.from('assignments').select('student_id').limit(50000)
+  if (wErr) throw wErr
+  const hasWork = new Set((work || []).map(a => a.student_id))
 
   const { data: teachers } = await db.from('users').select('id,name').in('role', ['teacher', 'principal']).limit(1000)
   const teacherName = new Map((teachers || []).map(t => [t.id, t.name]))
@@ -70,13 +77,22 @@ export default async function handler(req, res) {
   }
 
   return res.json({
-   students: (students || []).map(s => ({
-    id: s.id,
-    name: s.name || '',
-    username: username(s.email),
-    parentEmail: s.parent_email || '',
-    classes: (byStudent.get(s.id) || []).map(c => ({ name: c.name, code: c.code, teacher: c.teacher })),
-   })),
+   students: (students || []).map(s => {
+    const classes = (byStudent.get(s.id) || []).map(c => ({ name: c.name, code: c.code, teacher: c.teacher }))
+    // Three things have to be true before a child can do anything in AskVic. Any one of
+    // them missing produces the same blank screen, which is why "it isn't working" was
+    // impossible to diagnose from the child's end.
+    const ready = { login: !!s.auth_user_id, inClass: classes.length > 0, hasWork: hasWork.has(s.id) }
+    return {
+     id: s.id,
+     name: s.name || '',
+     username: username(s.email),
+     parentEmail: s.parent_email || '',
+     classes,
+     ready,
+     allSet: ready.login && ready.inClass && ready.hasWork,
+    }
+   }),
   })
  } catch { return res.status(503).json({ error: 'Could not read your student list. Please try again.' }) }
 }

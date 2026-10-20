@@ -364,6 +364,11 @@ export default async function handler(req, res) {
    const profile = profiles[0] || null
    const classes = profile ? await q(db.from('classes').select('class_name').eq('teacher_id', profile.id).limit(20)) : []
    const teacher = row.role === 'teacher'
+   // Dashboard access is grantable when adding someone now, so the checklist has to show
+   // whether they actually have it -- otherwise the one permission that matters most is
+   // the only one you cannot see.
+   const leaderRow = row.auth_user_id ? await q(db.from('ap_memberships').select('role').eq('school_id', schoolId).eq('auth_user_id', row.auth_user_id).limit(1)) : []
+   const isLeader = !!leaderRow[0]
    const upcoming = absences.filter(a => a.start_date > clock.date && matchStaff(a.staff_key, staff, aliases)?.id === row.id).map(a => ({ start: a.start_date, end: a.end_date, type: a.absence_type || 'Absent', portion: a.portion || '' })).slice(0, 10)
    const checklist = [
     { key: 'email', label: 'Email on file', done: !!email, fix: 'edit' },
@@ -373,6 +378,9 @@ export default async function handler(req, res) {
     { key: 'login', label: 'AskVic login', done: !!(profile?.auth_user_id || row.auth_user_id), fix: 'login', optional: !teacher },
     { key: 'linked', label: 'Joined your school (lesson plans come to you)', done: !!row.auth_user_id, fix: 'join', optional: !teacher },
     { key: 'class', label: 'Class set up', done: classes.length > 0, fix: 'class', optional: !teacher },
+    // Always shown, never nagged about: most staff should NOT see the dashboard, so this
+    // is marked optional for everyone and is there to answer "can they see it?".
+    { key: 'leader', label: isLeader ? 'Can see the school dashboard' : 'School dashboard access', done: isLeader, fix: 'leader', optional: true },
    ]
    return res.json({
     person: p,

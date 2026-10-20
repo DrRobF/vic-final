@@ -26,6 +26,7 @@ export default function Students() {
  const [rows, setRows] = useState(null)
  const [error, setError] = useState(''), [find, setFind] = useState(''), [only, setOnly] = useState('')
  const [busy, setBusy] = useState(0), [fresh, setFresh] = useState(null), [shut, setShut] = useState({})
+ const [snagsOnly, setSnagsOnly] = useState(false)
 
  useEffect(() => {
   api('/api/school/attendance', {}).then(d => {
@@ -38,12 +39,15 @@ export default function Students() {
 
  const groups = useMemo(() => {
   const q = find.trim().toLowerCase()
-  const kept = (rows || []).filter(s => !q || s.name.toLowerCase().includes(q) || s.username.toLowerCase().includes(q))
+  const kept = (rows || []).filter(s =>
+   (!q || s.name.toLowerCase().includes(q) || s.username.toLowerCase().includes(q)) &&
+   (!snagsOnly || !s.allSet))
   return groupByGrade(kept).filter(g => !only || g.grade === only)
- }, [rows, find, only])
+ }, [rows, find, only, snagsOnly])
 
  const allGrades = useMemo(() => groupByGrade(rows || []).map(g => g.grade), [rows])
  const total = useMemo(() => groups.reduce((n, g) => n + g.students.length, 0), [groups])
+ const notReady = useMemo(() => (rows || []).filter(s => !s.allSet).length, [rows])
 
  async function reset(s) {
   if (!window.confirm(`Give ${s.name || s.username} a new password? Their old one stops working straight away.`)) return
@@ -72,6 +76,16 @@ export default function Students() {
    <p className="lede">By grade. Children sign in at <strong>askvic.ai</strong> with the username below and the password you gave them — no email address, no @ sign.</p>
 
    <details className="why">
+    <summary>What has to be true before a child can do anything</summary>
+    <p>Three things — and if any one is missing the child opens AskVic to the same empty screen, which is why “it isn’t working” is so hard to pin down.</p>
+    <ol>
+     <li><strong>A login</strong> — their username and password exist.</li>
+     <li><strong>A class</strong> — they are on a teacher’s roster.</li>
+     <li><strong>Work waiting</strong> — that teacher has actually assigned them a lesson. This is the one that gets missed: a child can have the first two and still see nothing.</li>
+    </ol>
+   </details>
+
+   <details className="why">
     <summary>Why can’t I see their passwords?</summary>
     <p>Nobody can, including us: only a scrambled version is stored, which is what stops anyone reading a child’s password out of the database. If a child forgets theirs, use <strong>New password</strong> beside their name — you get a fresh one on screen to hand them, like <code>happy-tiger-47</code>.</p>
     <p>When you upload a roster you choose the starting passwords yourself, so that spreadsheet is your own copy of them. Keep it somewhere safe.</p>
@@ -92,7 +106,8 @@ export default function Students() {
      <label>Grade<select value={only} onChange={e => setOnly(e.target.value)}><option value="">All grades</option>{allGrades.map(g => <option key={g} value={g}>{g}</option>)}</select></label>
      <button type="button" className="btn" onClick={download} disabled={!total}>Download as CSV</button>
     </div>
-    <p className="count">{total} {total === 1 ? 'student' : 'students'} in {groups.length} {groups.length === 1 ? 'group' : 'groups'}</p>
+    <label className="snags"><input type="checkbox" checked={snagsOnly} onChange={e => setSnagsOnly(e.target.checked)} /> Only show children who can’t do anything yet{notReady ? ` (${notReady})` : ''}</label>
+    <p className="count">{total} {total === 1 ? 'student' : 'students'} in {groups.length} {groups.length === 1 ? 'group' : 'groups'}{notReady ? ` · ${notReady} cannot do anything yet` : ' · everyone is set up'}</p>
 
     {groups.map(g => <section key={g.grade} className={`grade${g.grade === NO_CLASS || g.grade === NO_GRADE ? ' odd' : ''}`}>
      <button type="button" className="ghead" aria-expanded={!shut[g.grade]} onClick={() => setShut(v => ({ ...v, [g.grade]: !v[g.grade] }))}>
@@ -101,17 +116,20 @@ export default function Students() {
       <span className="gcaret" aria-hidden="true">{shut[g.grade] ? '▸' : '▾'}</span>
      </button>
      {!shut[g.grade] && <div className="tablewrap"><table>
-      <thead><tr><th>Student</th><th>Username</th><th>Classes</th><th><span className="sr">Password</span></th></tr></thead>
+      <thead><tr><th>Student</th><th>Username</th><th>Ready?</th><th>Classes</th><th><span className="sr">Password</span></th></tr></thead>
       <tbody>{g.students.map(s => <tr key={s.id}>
        <td>{s.name || <em>Unnamed</em>}</td>
        <td className="user">{s.username}</td>
+       <td className="rdy">{s.allSet
+        ? <span className="all">✓ Ready</span>
+        : <span className="miss">Needs {[!s.ready.login && 'a login', !s.ready.inClass && 'a class', !s.ready.hasWork && 'work assigned'].filter(Boolean).join(', ')}</span>}</td>
        <td className="cls">{s.classes.length ? s.classes.map(c => `${c.name}${c.teacher ? ` (${c.teacher})` : ''}`).join(', ') : <span className="none">Not in a class yet</span>}</td>
        <td><button type="button" className="btn tiny" disabled={busy === s.id} onClick={() => reset(s)}>{busy === s.id ? 'Working…' : 'New password'}</button></td>
       </tr>)}</tbody>
      </table></div>}
     </section>)}
 
-    {!total && <p className="none">Nobody matches that.</p>}
+    {!total && <p className="none">{snagsOnly ? 'Every child is set up. Nothing to fix.' : 'Nobody matches that.'}</p>}
     <p className="note">Adding a whole class at once is on <a href="/admin/import-roster">Upload a roster</a>. Classes and who is in them are on <a href="/admin/classrooms">Classrooms</a>.</p>
    </>}
   </main>
@@ -135,6 +153,13 @@ export default function Students() {
    .btn.tiny{min-height:40px;padding:9px 13px;font-size:14px;background:var(--vic-surface);color:var(--vic-text-primary);border:2px solid var(--vic-field-border)}
    .btn:disabled{opacity:.5;cursor:default}
    .count{color:var(--vic-text-secondary);margin:0 0 14px}
+   .snags{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin:0 0 12px;cursor:pointer}
+   .snags input{width:22px;height:22px}
+   .why ol{margin:12px 0 0;padding-left:24px;line-height:1.7;max-width:72ch}
+   .why li{margin:5px 0}
+   .rdy{white-space:nowrap;font-size:15px}
+   .rdy .all{color:var(--vic-success);font-weight:800}
+   .rdy .miss{color:var(--vic-warning);font-weight:700}
    .grade{margin:0 0 14px;background:var(--vic-surface);border:1px solid var(--vic-border-soft);border-radius:16px;overflow:hidden;box-shadow:var(--vic-shadow-soft)}
    .grade.odd{border-style:dashed}
    .ghead{display:flex;align-items:center;gap:12px;width:100%;padding:14px 18px;background:var(--vic-surface-muted);border:0;cursor:pointer;text-align:left;font:inherit}
