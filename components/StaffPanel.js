@@ -14,17 +14,17 @@ const DAYS = [[1, 'Mon'], [2, 'Tue'], [3, 'Wed'], [4, 'Thu'], [5, 'Fri']]
 const TABS = [['overview', 'Overview'], ['attendance', 'Attendance'], ['growth', 'Growth'], ['profile', 'Profile & setup']]
 
 // The slide-out panel for one staff member: everything about them in one place.
-export default function StaffPanel({ schoolId, staffId, startTab = 'overview', privacy, canManageAccounts, joinCode, onClose, onChanged, onOpen }) {
+export default function StaffPanel({ schoolId, staffId, startTab = 'overview', startNotice = '', privacy, canManageAccounts, joinCode, onClose, onChanged, onOpen }) {
  const isNew = staffId === 'new'
- const [data, setData] = useState(null), [tab, setTab] = useState(startTab), [busy, setBusy] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(''), [reveal, setReveal] = useState(false)
- const [draft, setDraft] = useState(null), [plan, setPlan] = useState(null), [edit, setEdit] = useState(null), [work, setWork] = useState(null), [code, setCode] = useState(''), [fixDay, setFixDay] = useState(null), [fresh, setFresh] = useState({ name: '', email: '', role: 'teacher', payType: 'salaried', sickDays: '10' })
+ const [data, setData] = useState(null), [tab, setTab] = useState(startTab), [busy, setBusy] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(startNotice), [reveal, setReveal] = useState(false)
+ const [draft, setDraft] = useState(null), [plan, setPlan] = useState(null), [edit, setEdit] = useState(null), [work, setWork] = useState(null), [code, setCode] = useState(''), [fixDay, setFixDay] = useState(null), [fresh, setFresh] = useState({ name: '', email: '', role: 'teacher', payType: 'salaried', sickDays: '10', wantsLogin: false, leader: false })
  const hide = privacy && !reveal
 
  async function load() {
   if (isNew) return
   try { setData(await school(schoolId, { action: 'person', staffId })) } catch (e) { setError(e.message) }
  }
- useEffect(() => { setData(null); setTab(startTab); setDraft(null); setPlan(null); setEdit(null); setWork(null); setFixDay(null); setNotice(''); setError(''); setReveal(false); load() }, [staffId])
+ useEffect(() => { setData(null); setTab(startTab); setDraft(null); setPlan(null); setEdit(null); setWork(null); setFixDay(null); setNotice(startNotice); setError(''); setReveal(false); load() }, [staffId])
  useEffect(() => { const k = e => { if (e.key === 'Escape') onClose() }; window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onClose])
 
  async function run(label, fn, done) {
@@ -40,7 +40,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
  function startEdit() { setEdit({ ...prof }) }
  function startWork() { setWork({ payType: p.payType, flexible: !!p.flexible, shiftStart: p.shiftStart, shiftEnd: p.shiftEnd, workDays: p.workDays || [], maxHours: p.maxHours ?? '', sickDays: pool ?? '', usedBefore: p.leave?.carried ? String(p.leave.carried) : '' }) }
 
- const addNew = e => { e.preventDefault(); run('Adding…', async () => { const r = await school(schoolId, { action: 'add_staff', ...fresh }); onChanged?.(); onOpen?.(r.id, 'profile') }) }
+ const addNew = e => { e.preventDefault(); run('Adding…', async () => { const r = await school(schoolId, { action: 'add_person', ...fresh }); onChanged?.(); onOpen?.(r.id, 'profile', r.message) }) }
  const saveProfile = e => { e.preventDefault(); run('Saving…', async () => { await school(schoolId, { action: 'save_profile', staffId, ...edit }); setEdit(null) }, 'Saved.') }
  const saveWork = e => { e.preventDefault(); run('Saving…', async () => { await school(schoolId, { action: 'update_staff', staffId, ...work, workDays: work.workDays }); setWork(null) }, 'Saved.') }
  const saveCode = e => { e.preventDefault(); run('Saving code…', async () => { await school(schoolId, { action: 'set_code', staffId, code }); setCode('') }, code ? `Check-in code saved. Tell ${firstName(name)} their code is ${code}.` : 'Code removed.') }
@@ -51,12 +51,12 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
  const getDraft = topic => run('Writing a draft…', async () => { const r = await school(schoolId, { action: 'draft', staffId, topic }); setDraft({ ...r.draft, to: r.to }) })
  const send = () => run('Sending…', async () => { await school(schoolId, { action: 'send', staffId, subject: draft.subject, body: draft.body }); setDraft(null) }, `Sent to ${draft?.to}.`)
  const remove = () => { if (!window.confirm(`Remove ${name} from your staff list? Their past attendance stays on record, and their check-in code stops working.`)) return; run('Removing…', async () => { await school(schoolId, { action: 'remove_staff', staffId }); onClose() }) }
- const createLogin = () => run('Creating login…', async () => {
-  const rows = [{ name, email: prof.email }]
-  const pre = await call('/api/admin/create-staff', { mode: 'preview', rows })
-  const done = await call('/api/admin/create-staff', { mode: 'apply', rows, confirmation: pre.confirmation })
-  if (!done.complete) throw new Error(done.results?.[0]?.error || 'The login wasn’t finished. Try again.')
- }, `Login created for ${prof?.email}. They sign in at askvic.ai with that email (a login link is emailed when they ask for it).`)
+ // Giving AskVic access to somebody already on the board runs the very same path as
+ // adding them, so there is no second way for the two records to drift apart.
+ const giveAccess = leader => run(leader ? 'Giving dashboard access…' : 'Creating login…', async () => {
+  const r = await school(schoolId, { action: 'add_person', name: prof.name || name, email: prof.email, role: prof.role || 'teacher', wantsLogin: true, leader })
+  setNotice(r.message || 'Done.')
+ })
 
  const fix = item => {
   if (item.fix === 'edit') { setTab('profile'); startEdit() }
@@ -82,13 +82,21 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
    {privacy && !isNew && <p className="sp-priv">{reveal ? 'Details showing.' : 'Privacy mode: days off, notes and contacts are hidden.'} <button className="link" onClick={() => setReveal(!reveal)}>{reveal ? 'Hide' : 'Show'}</button></p>}
 
    {isNew && <form className="sp-body" onSubmit={addNew}>
-    <p className="muted">Start with the basics. Next you’ll see a checklist for everything else (check-in code, login, class).</p>
+    <p className="muted">This is the only place you add someone. Everyone goes on the staff board; tick a box for anything else they need.</p>
     <label>Full name<input required value={fresh.name} onChange={e => setFresh({ ...fresh, name: e.target.value })} placeholder="Karen Green" /></label>
-    <label>Email <small>(for feedback and reminders)</small><input type="email" value={fresh.email} onChange={e => setFresh({ ...fresh, email: e.target.value })} /></label>
+    <label>Email <small>(needed for an AskVic login)</small><input type="email" value={fresh.email} onChange={e => setFresh({ ...fresh, email: e.target.value })} /></label>
     <label>Role<select value={fresh.role} onChange={e => setFresh({ ...fresh, role: e.target.value })}>{ROLES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
     <label>Pay<select value={fresh.payType} onChange={e => setFresh({ ...fresh, payType: e.target.value })}><option value="salaried">Salaried</option><option value="hourly">Hourly</option></select></label>
     <label>Paid days off a year<input inputMode="decimal" value={fresh.sickDays} onChange={e => setFresh({ ...fresh, sickDays: e.target.value })} /></label>
-    <div className="sp-row"><button className="btn btn-primary" disabled={!!busy}>Add and continue</button><button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button></div>
+
+    <fieldset className="sp-caps">
+     <legend>What can they do?</legend>
+     <p className="muted">Checking in at the front door needs nothing here — anyone on the board can do that once they have a code.</p>
+     <label className="sp-check"><input type="checkbox" checked={fresh.wantsLogin} onChange={e => setFresh({ ...fresh, wantsLogin: e.target.checked, leader: e.target.checked ? fresh.leader : false })} /><span><strong>Use AskVic</strong><small>Lesson plans, My Week, teaching with VIC. Needs their email.</small></span></label>
+     <label className="sp-check"><input type="checkbox" checked={fresh.leader} disabled={!fresh.wantsLogin} onChange={e => setFresh({ ...fresh, leader: e.target.checked })} /><span><strong>See the school dashboard</strong><small>Staff attendance, days off, pay type, and every teacher’s lesson plans and walkthroughs.</small></span></label>
+    </fieldset>
+
+    <div className="sp-row"><button className="btn btn-primary" disabled={!!busy}>Add {fresh.name.trim().split(' ')[0] || 'them'}</button><button type="button" className="btn btn-outline" onClick={onClose}>Cancel</button></div>
    </form>}
 
    {!isNew && p && <div className="sp-body">
@@ -170,7 +178,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
      <ul className="sp-check">{data.checklist.map(c => <li key={c.key} className={c.done ? 'done' : ''}>
       <span className="box" aria-hidden="true">{c.done ? '✓' : ''}</span>
       <span>{c.label}{!c.done && c.optional ? <small> (optional)</small> : ''}</span>
-      {!c.done && c.fix === 'login' && (canManageAccounts && prof.email && prof.role === 'teacher' ?<button className="link" onClick={createLogin} disabled={!!busy}>Create login</button> : <a className="link" href="/admin/accounts">{prof.email ? 'Set up' : 'Add email first'}</a>)}
+      {!c.done && c.fix === 'login' && (canManageAccounts && prof.email && prof.role === 'teacher' ?<button className="link" onClick={() => giveAccess(false)} disabled={!!busy}>Create login</button> : <a className="link" href="/admin/accounts">{prof.email ? 'Set up' : 'Add email first'}</a>)}
       {!c.done && c.fix === 'join' && <small className="hint">{joinCode ? `They go to askvic.ai/join and enter ${joinCode}` : 'Share your join code'}</small>}
       {!c.done && c.fix === 'class' && <a className="link" href="/admin/classrooms">Set up class</a>}
       {!c.done && ['edit', 'work', 'code'].includes(c.fix) && <button className="link" onClick={() => fix(c)}>Fix</button>}
@@ -244,6 +252,14 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', p
    .check{flex-direction:row;align-items:center;gap:8px}
    .check input{min-height:auto;width:20px;height:20px}
    .sp-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+   .sp-caps{margin:4px 0 0;padding:16px 18px;border:2px solid var(--vic-primary);border-radius:14px;background:var(--vic-primary-soft)}
+   .sp-caps legend{font-weight:800;padding:0 6px}
+   .sp-caps .muted{margin:0 0 10px;font-size:15px}
+   .sp-check{display:flex;align-items:flex-start;gap:12px;margin:12px 0;font-weight:400;cursor:pointer}
+   .sp-check input{width:22px;height:22px;margin-top:3px;flex:none}
+   .sp-check strong{display:block}
+   .sp-check small{display:block;color:var(--vic-text-secondary);line-height:1.5}
+   .sp-check input:disabled + span{opacity:.5}
    .sp-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
    .sp-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:6px}
    .sp-stat{border:1px solid var(--vic-border-soft);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:4px}

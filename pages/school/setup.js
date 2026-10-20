@@ -46,11 +46,12 @@ export default function SchoolSetup() {
  const groups = [
   ['People', [
    ['/school?staff=new', '+ Add a staff member', 'One form, then a checklist for code, login and class.', true],
+   ['/school/staff-upload', 'Upload a whole staff list', 'A CSV for a new school, or a batch of new hires. Nobody already on the board is duplicated.'],
    ['/assistantprincipal', 'Staff list & weekly deadlines', 'Who’s on staff, what’s due each week, the weekly brief.'],
    account?.manageAccounts && ['/admin/accounts', 'Logins & passwords', 'Create teacher and student logins, reset passwords.'],
-   account?.manageAccounts && ['/admin/staff-setup', 'Add many staff logins at once', 'Paste a list of names and emails.'],
   ]],
   ['Students & classes', [
+   ['/school/students', 'Student logins', 'Every student and the username they sign in with. Downloadable.'],
    account?.manageAccounts && ['/admin/classrooms', 'Classrooms', 'Create classes for teachers and manage rosters.'],
    account?.manageAccounts && ['/admin/import-roster', 'Upload a roster', 'Add a whole class from a spreadsheet.'],
   ]],

@@ -6,6 +6,86 @@ import { codeHash, validCode, newToken, tokenHash, newSetupCode, normalizeSetupC
 import { mergeAttendance, payrollReport, payrollCsv } from '../../../lib/payroll.mjs'
 import { codeSecret } from '../kiosk'
 import { SECRET_HEADER, guessMapping, validateMapping, parseAttendance, parseAbsences, staffPicture, reminderDraft, nameKey, matchStaff, MARK_KINDS } from '../../../lib/staff-attendance.mjs'
+import { personInput, findOnBoard, outcomeMessage, staffUploadRows } from '../../../lib/add-person.mjs'
+
+// Add one person to a school: a place on the board, optionally an AskVic login,
+// optionally the school dashboard. Both the single form and the CSV upload call this,
+// so there is exactly one implementation of what "add a person" means.
+async function addOnePerson(db, schoolId, links, actorAuthId, person) {
+ const onBoard = await q(db.from('ap_staff').select('id,display_name,email,active').eq('school_id', schoolId))
+ const existing = findOnBoard(onBoard, person)
+
+ let staffId, boardCreated = false
+ if (existing) {
+  staffId = existing.row.id
+  // Fill in an email we did not have: it is what ties this record to their login, and
+  // the gap is what let duplicates through before.
+  if (person.email && !existing.row.email) await q(db.from('ap_staff').update({ email: person.email }).eq('id', staffId))
+ } else {
+  const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: person.name, role: person.role, email: person.email || null, active: true, pay_type: person.payType, sick_days: person.sickDays }).select('id'))
+  staffId = added.id
+  boardCreated = true
+ }
+
+ // Teach the check-in sheet that this spelling is this person.
+ const sheetKey = nameKey(person.sheetKey || person.name)
+ if (sheetKey && sheetKey !== nameKey(person.name)) {
+  for (const l of links) await q(db.from('ap_sheet_links').update({ aliases: { ...(l.aliases || {}), [sheetKey]: staffId } }).eq('id', l.id))
+ }
+
+ let loginCreated = false, loginExisted = false, leaderGranted = false
+ if (person.wantsLogin) {
+  const found = await findLogin(db, person.email)
+  if (found.profile && !['teacher', 'principal'].includes(String(found.profile.role || '').toLowerCase())) {
+   const e = new Error('That email already belongs to a different kind of account. Use another address.')
+   e.code = 409
+   throw e
+  }
+  let authId = found.authId
+  if (!authId) {
+   const made = await db.auth.admin.createUser({ email: person.email, email_confirm: false, user_metadata: { name: person.name }, app_metadata: { staff_created_by: actorAuthId, staff_created_at: new Date().toISOString() } })
+   if (made.error || !made.data?.user?.id) {
+    const e = new Error('Could not create their login. Their board record is saved — try the login again.')
+    e.code = 503
+    throw e
+   }
+   authId = made.data.user.id
+   loginCreated = true
+  } else loginExisted = true
+
+  const patch = { name: person.name, email: person.email, role: 'teacher', auth_user_id: authId }
+  if (found.profile?.id) await q(db.from('users').update(patch).eq('id', found.profile.id))
+  else await q(db.from('users').insert(patch))
+
+  // Tie the board record to the login, so joining the school later finds this row
+  // instead of making a second one.
+  await q(db.from('ap_staff').update({ auth_user_id: authId, joined_at: new Date().toISOString() }).eq('id', staffId))
+
+  if (person.leader) {
+   await q(db.from('ap_memberships').upsert({ school_id: schoolId, auth_user_id: authId, role: 'admin' }, { onConflict: 'school_id,auth_user_id' }))
+   await q(db.from('ap_entitlements').upsert({ auth_user_id: authId, status: 'active', school_limit: 1 }, { onConflict: 'auth_user_id' }))
+   leaderGranted = true
+  }
+ }
+
+ return { id: staffId, boardCreated, loginCreated, leaderGranted, matchedOn: existing?.matchedOn, message: outcomeMessage({ boardCreated, matchedOn: existing?.matchedOn, loginCreated, loginExisted, leaderGranted, name: person.name }) }
+}
+
+// Find the login that already belongs to an email, without paging the whole directory
+// every time. Nearly always the profile table answers it; only a login with no profile
+// needs the slow path.
+async function findLogin(db, email) {
+ const [profile] = await q(db.from('users').select('id,role,auth_user_id,email').ilike('email', email.replace(/[\\%_]/g, m => `\\${m}`)).limit(1))
+ if (profile?.auth_user_id) return { authId: profile.auth_user_id, profile }
+ for (let page = 1; page <= 20; page++) {
+  const list = await db.auth.admin.listUsers({ page, perPage: 1000 })
+  if (list.error) throw list.error
+  const hit = list.data.users.find(u => String(u.email || '').toLowerCase() === email)
+  if (hit) return { authId: hit.id, profile: profile || null }
+  if (list.data.users.length < 1000) break
+ }
+ return { authId: null, profile: profile || null }
+}
 
 export const config = { maxDuration: 45 }
 const KINDS = ['attendance', 'absences']
@@ -395,17 +475,40 @@ export default async function handler(req, res) {
    await q(db.from('ap_staff').update(patch).eq('school_id', schoolId).eq('id', body.staffId))
    return res.json({ saved: true })
   }
-  if (action === 'add_staff') {
-   const name = clean(body.name, 120).replace(/\s+/g, ' ')
-   const role = ['teacher', 'support', 'office', 'leader', 'other'].includes(body.role) ? body.role : 'teacher'
-   if (name.length < 2) return res.status(400).json({ error: 'Enter the person’s name.' })
-   const email = clean(body.email, 254).toLowerCase()
-   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return res.status(400).json({ error: 'That email doesn’t look right.' })
-   const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: name, role, email: email || null, active: true, pay_type: body.payType === 'hourly' ? 'hourly' : 'salaried', sick_days: Number.isFinite(Number(body.sickDays)) && body.sickDays !== '' && body.sickDays != null ? Number(body.sickDays) : null }).select('id'))
-   const key = nameKey(body.key || name)
-   if (key && key !== nameKey(name)) for (const l of links) await q(db.from('ap_sheet_links').update({ aliases: { ...(l.aliases || {}), [key]: added.id } }).eq('id', l.id))
-   return res.json({ added: true, id: added.id })
+  // The one place a person is added to a school. A board place, optionally an AskVic
+  // login, optionally the school dashboard -- in one go, so nobody ends up half added.
+  // 'add_staff' is the old name and still answers to it.
+  if (action === 'add_person' || action === 'add_staff') {
+   let person
+   try { person = { ...personInput(body), sheetKey: body.key } } catch (e) { return res.status(400).json({ error: e.message }) }
+   try {
+    const r = await addOnePerson(db, schoolId, links, auth.user.id, person)
+    return res.json({ added: true, ...r })
+   } catch (e) { return res.status(e.code || 503).json({ error: e.message }) }
   }
+
+  // The same thing for a whole staff list at once -- a new school with sixty teachers is
+  // not typing them in one at a time. Preview first, then apply; each row is independent
+  // so one bad line never loses the rest.
+  if (action === 'add_people') {
+   let people
+   try { people = staffUploadRows(body.rows) } catch (e) { return res.status(400).json({ error: e.message }) }
+   if (body.mode === 'preview') {
+    const onBoard = await q(db.from('ap_staff').select('id,display_name,email,active').eq('school_id', schoolId))
+    return res.json({ preview: people.map(p => {
+     const hit = findOnBoard(onBoard, p)
+     return { name: p.name, email: p.email, role: p.role, wantsLogin: p.wantsLogin, leader: p.leader,
+      outcome: hit ? (hit.matchedOn === 'email' ? 'Already on your board — will use that record' : 'Already on your board under another spelling — will use that record') : 'New on your board' }
+    }) })
+   }
+   const results = []
+   for (const p of people) {
+    try { const r = await addOnePerson(db, schoolId, links, auth.user.id, p); results.push({ name: p.name, email: p.email, ok: true, message: r.message }) }
+    catch (e) { results.push({ name: p.name, email: p.email, ok: false, error: e.message }) }
+   }
+   return res.json({ results, done: results.filter(r => r.ok).length, failed: results.filter(r => !r.ok).length })
+  }
+
   if (action === 'alias') {
    const key = nameKey(body.key)
    if (!key || !links.length) return res.status(400).json({ error: 'Choose a name to match.' })

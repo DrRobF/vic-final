@@ -206,7 +206,7 @@ export default function SchoolDashboard() {
       <button className="linkish" onClick={teach}>Switch to my teaching →</button>
      </nav>
     </>}
-   {open && schoolId && <StaffPanel schoolId={schoolId} staffId={open.id} startTab={open.tab} privacy={privacy} canManageAccounts={!!account.manageAccounts} joinCode={walks?.school?.joinCode || ''} onClose={() => setOpen(null)} onChanged={() => { loadAtt(); loadGrowth() }} onOpen={(id, tab) => setOpen({ id, tab })} />}
+   {open && schoolId && <StaffPanel schoolId={schoolId} staffId={open.id} startTab={open.tab} startNotice={open.message || ''} privacy={privacy} canManageAccounts={!!account.manageAccounts} joinCode={walks?.school?.joinCode || ''} onClose={() => setOpen(null)} onChanged={() => { loadAtt(); loadGrowth() }} onOpen={(id, tab, message) => setOpen({ id, tab, message })} />}
   </>}
   <style jsx>{`
    .top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:12px}
