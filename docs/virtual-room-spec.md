@@ -1,3 +1,19 @@
+# The Virtual Room — SHELVED (Oct 20, 2026)
+
+> **This is a record, not a plan.** The Virtual Room is shelved. Read
+> `what-we-are-building.md` for the current direction.
+>
+> Why: the Room's premise is that *place* makes learning better. Place is an
+> engagement lever — real, but modest — and the thing that actually upends
+> standard school was already built: a co-teacher. The Room was a costume for it.
+>
+> What was lifted out and kept: **the chooser, with the venue removed** — VIC
+> reasoning about a child and personalising the *context* of a lesson, which
+> needs no panorama. Plus read-aloud on everything (`lib/speak.js`).
+>
+> The code at `/room` stays as a curiosity. Everything below is the design as it
+> stood, kept so the reasoning is not lost.
+
 # The Virtual Room — agreed design (Oct 18, amended Oct 19, 2026)
 
 Decided with Dr. Rob Furman, principal of Saint Peter's Academy (grades 3–5).
