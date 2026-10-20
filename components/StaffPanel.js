@@ -181,6 +181,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', s
       {!c.done && c.fix === 'login' && (canManageAccounts && prof.email && prof.role === 'teacher' ?<button className="link" onClick={() => giveAccess(false)} disabled={!!busy}>Create login</button> : <a className="link" href="/admin/accounts">{prof.email ? 'Set up' : 'Add email first'}</a>)}
       {!c.done && c.fix === 'join' && <small className="hint">{joinCode ? `They go to askvic.ai/join and enter ${joinCode}` : 'Share your join code'}</small>}
       {!c.done && c.fix === 'class' && <a className="link" href="/admin/classrooms">Set up class</a>}
+      {!c.done && c.fix === 'leader' && (prof.email ? <button className="link" onClick={() => giveAccess(true)} disabled={!!busy}>Give access</button> : <small className="hint">Add their email first</small>)}
       {!c.done && ['edit', 'work', 'code'].includes(c.fix) && <button className="link" onClick={() => fix(c)}>Fix</button>}
      </li>)}</ul>
      {data.classes.length > 0 && <p className="muted small">Classes: {data.classes.join(', ')}</p>}
