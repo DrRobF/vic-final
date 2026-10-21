@@ -1,7 +1,43 @@
-# What AskVic is — agreed direction (Oct 20, 2026)
+# What AskVic is — agreed direction (Oct 20, 2026; updated Oct 21)
 
 Decided with Dr. Rob Furman. Read this first. It supersedes the direction in
 `virtual-room-spec.md`, which is shelved.
+
+## Update, Oct 21 — read this before the rest
+
+These decisions change parts of the Oct 20 text below. Where they disagree, this
+section wins.
+
+- **Business and passion, both.** The **Lesson Designer is the front door**: it is
+  what teachers try, feel in five minutes, and ask for. **VIC is the heart**: it
+  is what helps students most and what Rob believes in. The home page sells to the
+  adult who has never heard of AskVic (teacher or principal) — Designer first,
+  VIC as the payoff. Students never need the home page; signed-in people skip it.
+- **Teachers design it; students master it with VIC.** Teachers are Designer
+  users. Students are the real VIC users. Still being thought through — keep
+  testing home page wording on real teachers.
+- **Grades 3–12, ELA and math.** That is the current scope of the site (not 3–5,
+  not 6–8 as a separate later step).
+- **K–2 has started.** `/read-test` is the ten-minute listening experiment from
+  "Order of work" step 1 below. Next after a real child tries it: the tap-to-answer
+  task format.
+- **What the principal and teacher measure:** students **on level**, and the
+  **red-flag kids**. Not worksheets turned in. The red-flag rule is not decided —
+  Rob is thinking about it; do not build the red-flag card until he signs off on
+  the rule.
+- **Speed over perfection.** Do the most valuable things in the shortest time, not
+  a nine-week plan. Rob reviews from pictures (mock-ups/screenshots) rather than
+  logging in as three different people.
+
+### Shipped Oct 21
+
+- Student: VIC opens the exact lesson the student picked; Today groups lessons by
+  class.
+- Teacher: Today panel with one-tap "Start with class"; My Week step names
+  visible.
+- Home page: Designer leads, grades 3–12 ELA and math, one "Log in", signed-in
+  users go straight to their own home.
+- `/read-test` for the K–2 listening experiment.
 
 ## The thesis, in Rob's own words
 
@@ -183,6 +219,8 @@ Not on this list: the Virtual Room.
 
 ## Still open
 
+- The red-flag rule for the principal's "on level / red flag" card (Rob, Oct 21).
+- Home page wording that says both halves: Designer for teachers, VIC for students.
 - Who receives a child's follow-up report in a middle school with five teachers.
 - Whether the context chooser gets its own approval flow, or just quietly
   personalises and logs what it chose.
