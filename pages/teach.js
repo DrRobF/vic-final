@@ -4,6 +4,7 @@ import PageShell, { PanelStyles } from '../components/PageShell'
 import DayOffCard from '../components/DayOffCard'
 import JoinSchoolCard from '../components/JoinSchoolCard'
 import { useAccount } from '../lib/use-account'
+import { supabase } from '../lib/supabase'
 import { listWeeks, openWeek, deleteWeek } from '../lib/lesson-week-client'
 import { STEPS, stepDone, stepHref, nextStep, doneCount } from '../lib/lesson-steps.mjs'
 import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, mondayOf, weekDates, formatDay, gradeLabel, subjectLabel } from '../lib/lesson-week.mjs'
@@ -19,6 +20,7 @@ function todayIso() { const n = new Date(); return new Date(Date.UTC(n.getFullYe
 export default function MyWeek() {
  const router = useRouter()
  const { account, error: accountError } = useAccount({ next: '/teach' })
+ const [todayItems, setTodayItems] = useState(null), [starts, setStarts] = useState({})
  const [weeks, setWeeks] = useState(null), [chosenId, setChosenId] = useState(''), [detail, setDetail] = useState(null), [error, setError] = useState(''), [loadingWeek, setLoadingWeek] = useState(false), [confirmRemove, setConfirmRemove] = useState(false)
  const weekOf = useMemo(() => (typeof router.query.week === 'string' && mondayOf(router.query.week)) || defaultWeekOf(), [router.query.week])
 
@@ -44,6 +46,41 @@ export default function MyWeek() {
  }
  function go(w) { router.push(`/teach?week=${w}`, undefined, { shallow: true }); setChosenId('') }
  const dates = weekDates(weekOf), today = todayIso()
+ const todayIdx = dates.indexOf(today)
+ const weekKey = thisWeek.map(w => w.id).join(',')
+
+ // Today across every plan this week (an ELA week and a math week both show up here).
+ useEffect(() => {
+  if (weeks === null) return
+  if (todayIdx < 0 || !thisWeek.length) { setTodayItems([]); return }
+  let active = true
+  Promise.all(thisWeek.map(w => openWeek(w.id).then(d => ({ w, d })))).then(rs => {
+   if (!active) return
+   setTodayItems(rs.map(({ w, d }) => {
+    const day = d.week?.days?.[todayIdx], l = day?.lessonId ? d.lessons?.[day.lessonId] : null
+    return l ? { w, lessonId: day.lessonId, title: l.title, steps: l.steps } : null
+   }).filter(Boolean))
+  }).catch(() => { if (active) setTodayItems([]) })
+  return () => { active = false }
+ }, [weeks, weekKey, todayIdx])
+
+ // One tap: today's lesson goes to every student in the class at their saved level.
+ async function startLesson(item, classId) {
+  setStarts(s => ({ ...s, [item.lessonId]: { busy: true } }))
+  try {
+   const { data: { session } } = await supabase.auth.getSession()
+   if (!session) throw new Error('Please log in again.')
+   const headers = { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
+   const r = await fetch('/api/teacher/start-lesson', { method: 'POST', headers, body: JSON.stringify({ lessonId: item.lessonId, ...(classId ? { classId } : {}) }) })
+   const d = await r.json().catch(() => ({}))
+   if (r.status === 409 && d.needClass) { setStarts(s => ({ ...s, [item.lessonId]: { pickClass: d.classes } })); return }
+   if (!r.ok) { setStarts(s => ({ ...s, [item.lessonId]: { err: d.error || 'Could not start this lesson.', fix: d.needsLessonWork ? stepHref('plan', item.lessonId) : d.emptyClass ? '/classes' : d.noClassroom ? '/join' : '' } })); return }
+   await fetch('/api/educator/lesson-steps', { method: 'POST', headers, body: JSON.stringify({ lessonId: item.lessonId, step: 'teach', done: true }) }).catch(() => {})
+   setStarts(s => ({ ...s, [item.lessonId]: { done: d.assignmentCount } }))
+   setTodayItems(list => (list || []).map(x => x.lessonId === item.lessonId ? { ...x, steps: { ...(x.steps || {}), teach: new Date().toISOString() } } : x))
+   if (week) openWeek(week.id).then(setDetail).catch(() => {})
+  } catch (e) { setStarts(s => ({ ...s, [item.lessonId]: { err: e.message } })) }
+ }
  const days = detail?.week?.days || week?.days || []
  const lessons = detail?.lessons || {}
  const planned = days.filter(d => d.lessonId && lessons[d.lessonId]).length
@@ -72,6 +109,26 @@ export default function MyWeek() {
     </div>
    </header>
    {error && <p className="alert" role="alert">{error}</p>}
+
+   {todayItems && todayItems.length > 0 && <section className="dark-panel todaybox" aria-label="Today">
+    <p className="tlabel">Today · {WEEKDAYS[todayIdx]}, {formatDay(today, { month: 'long', day: 'numeric' })}</p>
+    {todayItems.map(item => {
+     const st = starts[item.lessonId] || {}, started = st.done != null || !!item.steps?.teach
+     return <div className="trow" key={item.lessonId}>
+      <div className="tinfo"><span className="tmeta">{gradeLabel(item.w.grade)} · {subjectLabel(item.w.subject)}</span><h2>{item.title}</h2></div>
+      <div className="tact">
+       {account.classroom
+        ? <button type="button" className="btn btn-cyan big" disabled={st.busy} onClick={() => startLesson(item)}>{st.busy ? 'Starting…' : started ? 'Start again with my class' : 'Start with my class'}</button>
+        : <a className="btn btn-cyan big" href="/join">Join your school to start with VIC</a>}
+       <a className="btn btn-outline tsub" href={stepHref('print', item.lessonId)}>Print</a>
+       <a className="btn btn-outline tsub" href={stepHref('teach', item.lessonId)}>Choose students</a>
+      </div>
+      {st.done != null && <p className="tnote" role="status">✓ Sent to {st.done} {st.done === 1 ? 'student' : 'students'}, each at their saved level. It is on their Today screen now.</p>}
+      {st.err && <p className="terr" role="alert">{st.err} {st.fix && <a href={st.fix}>Fix this →</a>}</p>}
+      {st.pickClass && <div className="tpick"><strong>Which class?</strong>{st.pickClass.map(c => <button type="button" key={c.id} className="btn btn-outline tsub" onClick={() => startLesson(item, c.id)}>{c.name} ({c.students})</button>)}</div>}
+     </div>
+    })}
+   </section>}
 
    {weeks === null ? <p role="status">Loading your week…</p> : <>
     {week && <div className="summary">
@@ -128,6 +185,19 @@ export default function MyWeek() {
    </section>
   </>}
   <style jsx>{`
+   .todaybox{display:flex;flex-direction:column;gap:16px;border:2px solid var(--vic-cyan)}
+   .tlabel{margin:0;font-family:var(--font-mono);font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--vic-cyan)}
+   .trow{display:flex;flex-direction:column;gap:12px}
+   .tinfo h2{margin:4px 0 0;font-size:clamp(24px,3vw,32px);color:#fff;line-height:1.2}
+   .tmeta{color:var(--vic-ink-muted);font-size:15px;font-weight:700}
+   .tact{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+   .big{min-height:56px;font-size:19px;padding:12px 26px}
+   .tsub{background:transparent;color:#fff;border-color:var(--vic-ink-line)}
+   .tsub:hover{background:var(--vic-ink-2)}
+   .tnote{margin:0;font-weight:800;color:var(--vic-volt)}
+   .terr{margin:0;font-weight:800;color:#ffd0cc}
+   .terr a{color:var(--vic-cyan)}
+   .tpick{display:flex;gap:10px;flex-wrap:wrap;align-items:center;color:#fff}
    .top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;margin-top:12px}
    h1{margin:0 0 12px;font-size:clamp(30px,3.4vw,42px);line-height:1.1}
    .weeknav{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
