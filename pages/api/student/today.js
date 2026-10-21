@@ -45,7 +45,7 @@ export default async function handler(req, res) {
   const { data: rows, error: aErr } = await db.from('assignments')
    .select('id,mode,assigned_at,lessons!inner(id,class_id,title,source_lesson_id,teacher_id,is_active)')
    .eq('student_id', me).eq('status', 'assigned').in('lessons.class_id', classIds)
-   .order('assigned_at', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(12)
+   .order('assigned_at', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(30)
   if (aErr) throw aErr
   const assigned = (rows || []).map(r => ({ ...r, lesson: Array.isArray(r.lessons) ? r.lessons[0] : r.lessons })).filter(r => r.lesson && r.lesson.is_active !== false)
 
@@ -68,6 +68,7 @@ export default async function handler(req, res) {
    const w = workById.get(r.lesson.id)
    return {
     lessonId: r.lesson.id,
+    classId: r.lesson.class_id,
     title: r.lesson.title,
     className: classes[r.lesson.class_id] || 'My class',
     teacher: teacherById.get(r.lesson.teacher_id) || '',

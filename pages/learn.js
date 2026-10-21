@@ -18,6 +18,9 @@ export default function Learn() {
  const [data, setData] = useState(null), [error, setError] = useState(''), [pick, setPick] = useState(0), [open, setOpen] = useState(false)
  useEffect(() => { call('GET').then(setData).catch(e => setError(e.message)) }, [])
  const lessons = data?.lessons || [], lesson = lessons[pick]
+ // One group per class, so a student with ELA and math sees which lesson belongs to which class.
+ const classGroups = []
+ lessons.forEach((l, i) => { let g = classGroups.find(x => x.className === l.className); if (!g) { g = { className: l.className, teacher: l.teacher, items: [] }; classGroups.push(g) } g.items.push({ l, i }) })
  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
  function updateWork(lessonId, work) { setData(d => ({ ...d, lessons: d.lessons.map(l => l.lessonId === lessonId ? { ...l, work: { ...(l.work || {}), ...work } } : l) })) }
@@ -37,7 +40,7 @@ export default function Learn() {
      <p>You can still learn with VIC any time.</p>
      <a className="go vic" href="/askvic">Learn with VIC →</a>
     </section> : <>
-     {lessons.length > 1 && <nav className="pick" aria-label="Your lessons">{lessons.slice(0, 6).map((l, i) => <button key={l.lessonId} type="button" aria-pressed={i === pick} className={i === pick ? 'on' : ''} onClick={() => { setPick(i); setOpen(false) }}>{l.title}{l.work?.status === 'turned_in' ? ' ✓' : ''}</button>)}</nav>}
+     {lessons.length > 1 && <nav className="picks" aria-label="Your lessons">{classGroups.map(g => <div key={g.className} className="pgroup"><p className="pname">{g.className}{g.teacher ? ` · ${g.teacher}` : ''}</p><div className="pick">{g.items.map(({ l, i }) => <button key={l.lessonId} type="button" aria-pressed={i === pick} className={i === pick ? 'on' : ''} onClick={() => { setPick(i); setOpen(false) }}>{l.title}{l.work?.status === 'turned_in' ? ' ✓' : ''}</button>)}</div></div>)}</nav>}
 
      <section className="card lesson">
       <p className="tag">{lesson.className}{lesson.teacher ? ` · ${lesson.teacher}` : ''}</p>
@@ -56,7 +59,7 @@ export default function Learn() {
        <p className="tl">With VIC</p>
        <h3>Learn it a new way</h3>
        <p>VIC teaches you the same thing, one step at a time, just for you.</p>
-       <a className="go vicbtn" href="/askvic">Start with VIC →</a>
+       <a className="go vicbtn" href={`/askvic?class=${encodeURIComponent(lesson.classId)}&lesson=${encodeURIComponent(lesson.lessonId)}`}>Start {lesson.className} with VIC →</a>
       </section>
      </div>
 
@@ -72,6 +75,8 @@ export default function Learn() {
    h1{font-family:var(--font-read);font-size:clamp(34px,5vw,48px);margin:0}
    .big{font-size:22px}
    .alert{padding:16px;border-radius:14px;background:var(--vic-danger-soft);color:#912018;font-weight:700}
+   .picks{display:flex;flex-direction:column;gap:14px}
+   .pname{margin:0 0 6px;font-weight:700;color:var(--vic-text-secondary);font-size:18px}
    .pick{display:flex;gap:8px;flex-wrap:wrap}
    .pick button{font-family:var(--font-read);font-size:18px;padding:12px 18px;border-radius:999px;border:2px solid var(--vic-border);background:var(--vic-surface);cursor:pointer;color:var(--vic-text-primary);font-weight:700}
    .pick button.on{background:var(--vic-ink);border-color:var(--vic-ink);color:#fff}
