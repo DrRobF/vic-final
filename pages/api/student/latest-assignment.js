@@ -21,7 +21,10 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: 'Requested student does not match signed-in profile.' })
   }
 
-  console.info('[student/latest-assignment] request', { selectedClassId: activeClassId, studentId: auth.profile.id })
+  // A student who picked a specific lesson on Today gets that lesson, not just the newest one in the class.
+  const wantedLessonId = normalizeNumericId(req.body?.lessonId)
+
+  console.info('[student/latest-assignment] request', { selectedClassId: activeClassId, studentId: auth.profile.id, wantedLessonId })
   const { data: enrollment, error: enrollmentError } = await auth.admin.from('enrollments')
     .select('class_id, support_level').eq('student_id', auth.profile.id).eq('class_id', activeClassId).maybeSingle()
   if (enrollmentError) return res.status(500).json({ error: 'Could not verify the selected class.' })
@@ -29,14 +32,21 @@ export default async function handler(req, res) {
 
   // Class ownership belongs to lessons in the real schema. The inner join prevents an
   // assignment for another enrolled subject from enabling Teacher Lesson here.
-  const { data, error } = await auth.admin.from('assignments')
-    .select('id, student_id, lesson_id, mode, status, assigned_at, lessons!inner(id, class_id, title, lesson_text, subject, is_active)')
-    .eq('student_id', auth.profile.id)
-    .eq('status', 'assigned')
-    .eq('lessons.class_id', activeClassId)
-    .order('assigned_at', { ascending: false, nullsFirst: false })
-    .order('id', { ascending: false })
-    .limit(20)
+  const loadRows = lessonId => {
+    let query = auth.admin.from('assignments')
+      .select('id, student_id, lesson_id, mode, status, assigned_at, lessons!inner(id, class_id, title, lesson_text, subject, is_active)')
+      .eq('student_id', auth.profile.id)
+      .eq('status', 'assigned')
+      .eq('lessons.class_id', activeClassId)
+    if (lessonId) query = query.eq('lesson_id', lessonId)
+    return query
+      .order('assigned_at', { ascending: false, nullsFirst: false })
+      .order('id', { ascending: false })
+      .limit(20)
+  }
+  let { data, error } = await loadRows(wantedLessonId)
+  // The lesson they asked for isn't assigned to them in this class: fall back to the newest one.
+  if (!error && wantedLessonId && !(data || []).length) ({ data, error } = await loadRows(null))
   if (error) return res.status(500).json({ error: 'Failed to load the latest assignment.' })
 
   const rows = Array.isArray(data) ? data : []

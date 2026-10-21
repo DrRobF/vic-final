@@ -69,7 +69,9 @@ export default async function handler(req, res) {
         .limit(20)
       if (assignmentError) throw assignmentError
 
-      const assignment = assignments?.[0] || null
+      // Teach the lesson the student is looking at (sent by the screen); otherwise the newest one.
+      const wantedLessonId = Number(req.body?.assignedLessonId)
+      const assignment = (Number.isInteger(wantedLessonId) && wantedLessonId > 0 ? assignments?.find(a => Number(a.lesson_id) === wantedLessonId) : null) || assignments?.[0] || null
       if (!assignment?.lesson_id) {
         return res.status(409).json({ error: 'No active teacher lesson is available for the selected class.' })
       }

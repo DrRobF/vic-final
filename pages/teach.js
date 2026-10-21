@@ -90,7 +90,7 @@ export default function MyWeek() {
        <div className="dhead"><strong>{name}</strong><span>{formatDay(dates[i], { month: 'short', day: 'numeric' })}{isToday ? ' · Today' : ''}</span></div>
        {day.off ? <p className="muted">No class</p>
         : lesson ? <>
-         <a className="title" href={stepHref('plan', day.lessonId)}>{lesson.title}</a>
+         <a className="title" href={stepHref(isToday ? 'teach' : 'plan', day.lessonId)} title={isToday ? 'Open Teach for today' : 'Open the lesson'}>{lesson.title}</a>
          <div className="bar" aria-label={`${doneCount(lesson.steps)} of 4 steps done`}>{STEPS.map(s => <a key={s.key} href={stepHref(s.key, day.lessonId)} className={stepDone(s.key, lesson.steps) ? 'seg done' : 'seg'} title={s.label}><span>{s.label}</span></a>)}</div>
          {next ? <a className="next" href={stepHref(next.key, day.lessonId)}>Next: {next.label} →</a> : <span className="alldone">✓ All done</span>}
         </>
@@ -154,10 +154,11 @@ export default function MyWeek() {
    .dhead span{font-family:var(--font-mono);font-size:13px;color:var(--vic-text-secondary);text-transform:uppercase}
    .title{font-weight:800;font-size:16px;line-height:1.35;color:var(--vic-text-primary);text-decoration:none}
    .title:hover{color:var(--vic-primary)}
-   .bar{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
-   .seg{height:8px;border-radius:4px;background:var(--vic-surface-muted);position:relative}
-   .seg.done{background:var(--vic-volt);box-shadow:inset 0 0 0 1px rgba(10,19,48,.15)}
-   .seg span{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+   .bar{display:grid;grid-template-columns:repeat(2,1fr);gap:4px}
+   .seg{padding:6px 2px;border-radius:8px;background:var(--vic-surface-muted);text-align:center;text-decoration:none;color:var(--vic-text-secondary);font-size:12.5px;font-weight:800;line-height:1.1}
+   .seg:hover{outline:2px solid var(--vic-primary)}
+   .seg.done{background:var(--vic-volt);color:var(--vic-ink);box-shadow:inset 0 0 0 1px rgba(10,19,48,.15)}
+   .seg.done span::before{content:'✓ '}
    .next{margin-top:auto;font-weight:800;font-size:15px;color:var(--vic-primary);text-decoration:none}
    .alldone{margin-top:auto;font-weight:800;font-size:15px;color:var(--vic-success)}
    .plan{margin-top:auto;display:block;text-align:center;padding:12px;border:2px dashed var(--vic-border);border-radius:12px;font-weight:800;color:var(--vic-primary);text-decoration:none}

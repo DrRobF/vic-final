@@ -108,7 +108,7 @@ function getUserDisplayName(userRow) {
   return userRow.name || userRow.email || ''
 }
 
-async function loadLatestAssignmentSafe(accessToken, activeClassId = null) {
+async function loadLatestAssignmentSafe(accessToken, activeClassId = null, lessonId = null) {
   if (!accessToken || !activeClassId) {
     return {
       rows: [],
@@ -122,7 +122,7 @@ async function loadLatestAssignmentSafe(accessToken, activeClassId = null) {
     const response = await fetch('/api/student/latest-assignment', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
-      body: JSON.stringify({ activeClassId }),
+      body: JSON.stringify({ activeClassId, ...(lessonId ? { lessonId } : {}) }),
     })
     const payload = await response.json().catch(() => null)
     if (!response.ok) {
@@ -405,7 +405,12 @@ export default function AskVIC() {
         },
       }))
       setEnrolledClasses(classOptions)
-      const fallbackClassId = classOptions[0]?.id ?? null
+      // "Start with VIC" on the Today screen links here with ?class=&lesson= so VIC opens the lesson the student picked.
+      const linkParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+      const linkedClassId = Number(linkParams?.get('class')) || null
+      const linkedLessonId = Number(linkParams?.get('lesson')) || null
+      const linkedClassOption = classOptions.find((option) => Number(option.id) === linkedClassId)
+      const fallbackClassId = linkedClassOption?.id ?? classOptions[0]?.id ?? null
       const hasExistingActiveClass = classOptions.some((option) => option.id === activeClassId)
       const resolvedActiveClassId = hasExistingActiveClass ? activeClassId : fallbackClassId
       if (activeClassId !== resolvedActiveClassId) {
@@ -424,7 +429,11 @@ export default function AskVIC() {
         latestAssignment: latestAssignmentFromApi,
         assignedLesson: assignedLessonFromApi,
         error: assignmentError,
-      } = await loadLatestAssignmentSafe(accessToken, resolvedActiveClassId)
+      } = await loadLatestAssignmentSafe(
+        accessToken,
+        resolvedActiveClassId,
+        linkedClassOption && Number(resolvedActiveClassId) === Number(linkedClassOption.id) ? linkedLessonId : null
+      )
       const activeEnrollmentSupportLevel = normalizeSupportLevel(activeEnrollment?.support_level)
       const filteredAssignmentRowsByClass =
         activeEnrollmentSupportLevel && safeEnrollmentRows.length > 1
@@ -668,6 +677,7 @@ export default function AskVIC() {
         messages: apiMessages,
         sketchImage,
         activeClassId,
+        assignedLessonId: assignedLesson?.id || null,
         sessionMode,
         studentInterest,
         gradeLevel: studentGradeLevel,
