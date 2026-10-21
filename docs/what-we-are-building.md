@@ -152,6 +152,22 @@ one for the drilling; one class of twenty-five for the conversation. That is the
 defensible version of the line, and the one that survives a challenge from a
 stage.
 
+## Standards coverage (as of Oct 21, 2026)
+
+**Done: ELA and math, K–8, for most states.** Built-in and sourced from the official documents:
+
+- Common Core (CCSS): 601 standards (math 228, ELA 373). Covers the many states that use Common Core or a close copy.
+- Florida B.E.S.T.: 527 standards, audited against the official PDFs on Oct 20 (37 missing math benchmarks added).
+- Pennsylvania Core: 596 standards, audited against the official documents; already complete.
+
+Teachers in any other state can still paste a standard.
+
+**Not started: science and social studies.** The standards screen only accepts reading/ELA and math today. Nothing for science or social studies exists in the catalogue, for any state. This matters most for grades 6–8, where those are separate classes.
+
+Also not in yet: the Common Core "Literacy in History/Social Studies" and "Science and Technical Subjects" standards for grades 6–8. They are in the PDF Rob supplied and are the natural first step into those subjects.
+
+Rule that stays: standards come from the official documents, never written by VIC. See `scripts/audit-lesson-standards.py` and `scripts/import-ccss-*.py`.
+
 ## Order of work
 
 1. **Test reading-aloud recognition** with one real child. Ten minutes. Decides
