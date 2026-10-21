@@ -1,8 +1,21 @@
 import {requireApprovedProfile} from '../../../lib/server-auth'
 import {ADMIN_EMAIL} from '../../../lib/roster-import'
 import {canManageAccounts} from '../../../lib/educator-account.mjs'
-import {classroomPatch,enrollmentAction} from '../../../lib/admin-management.mjs'
+import {classroomPatch,enrollmentAction,handoffAction} from '../../../lib/admin-management.mjs'
 export const config={api:{bodyParser:{sizeLimit:'8kb'}}}
+// Move classrooms to another teacher. Students, lessons, VIC reports and parent-letter drafts
+// go with the class, so nothing is lost when a teacher leaves.
+async function moveClasses(db,classIds,toTeacherId){
+ if(!classIds.length)return
+ const to=await db.from('users').select('auth_user_id').eq('id',toTeacherId).maybeSingle()
+ if(to.error)throw to.error
+ const r1=await db.from('classes').update({teacher_id:toTeacherId}).in('id',classIds);if(r1.error)throw r1.error
+ const r2=await db.from('lessons').update({teacher_id:toTeacherId}).in('class_id',classIds);if(r2.error)throw r2.error
+ if(to.data?.auth_user_id){
+  const r3=await db.from('vic_learning_reports').update({teacher_auth_id:to.data.auth_user_id}).in('class_id',classIds);if(r3.error)throw r3.error
+  const r4=await db.from('parent_letter_drafts').update({teacher_auth_id:to.data.auth_user_id}).in('class_id',classIds);if(r4.error)throw r4.error
+ }
+}
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')
  if(!['GET','POST','PATCH','PUT'].includes(req.method)){res.setHeader('Allow','GET, POST, PATCH, PUT');return res.status(405).json({error:'Method not allowed.'})}
@@ -30,6 +43,17 @@ export default async function handler(req,res){
    if(teachers.error)throw teachers.error
    return res.json({classrooms:classes.data||[],teachers:teachers.data||[]})
   }
+  if(req.method==='POST'&&req.body?.action==='handoff'){
+   let h;try{h=handoffAction(req.body)}catch(e){return res.status(400).json({error:e.message})}
+   const to=await auth.admin.from('users').select('id,name').eq('id',h.toTeacherId).eq('role','teacher').maybeSingle()
+   if(to.error)throw to.error;if(!to.data)return res.status(400).json({error:'Choose an active teacher to receive the classes.'})
+   const owned=await auth.admin.from('classes').select('id').eq('teacher_id',h.fromTeacherId)
+   if(owned.error)throw owned.error
+   const ids=(owned.data||[]).map(c=>c.id)
+   if(!ids.length)return res.status(400).json({error:'That teacher has no classes to hand off.'})
+   await moveClasses(auth.admin,ids,h.toTeacherId)
+   return res.json({success:true,moved:ids.length,message:`${ids.length} class${ids.length===1?'':'es'} handed to ${to.data.name}. Students, lessons and VIC reports moved with them.`})
+  }
   if(['POST','PATCH'].includes(req.method)){
    let patch;try{patch=classroomPatch(req.body)}catch(e){return res.status(400).json({error:e.message})}
    const teacher=await auth.admin.from('users').select('id').eq('id',patch.teacher_id).eq('role','teacher').maybeSingle()
@@ -41,7 +65,7 @@ export default async function handler(req,res){
     const current=await auth.admin.from('classes').select('teacher_id').eq('id',id).maybeSingle()
     if(current.error)throw current.error
     if(!current.data)return res.status(404).json({error:'Classroom not found.'})
-    if(current.data.teacher_id!==patch.teacher_id)return res.status(409).json({error:'A classroom’s teacher cannot be changed here. Create a classroom for the new teacher and move the roster as needed.'})
+    if(current.data.teacher_id!==patch.teacher_id)await moveClasses(auth.admin,[id],patch.teacher_id)
     result=await auth.admin.from('classes').update(patch).eq('id',id).select('id,class_name,teacher_id,grade_level,class_code').maybeSingle()
    }
    if(result.error)throw result.error;if(!result.data)return res.status(404).json({error:'Classroom not found.'})

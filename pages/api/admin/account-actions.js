@@ -22,6 +22,20 @@ export default async function handler(req,res){
   const {data,error}=await auth.admin.auth.admin.getUserById(profile.auth_user_id)
   const user=data?.user
   if(error||!user||user.email?.toLowerCase()!==profile.email?.toLowerCase())return res.status(409).json({error:'Could not verify this person’s login. No changes were made.'})
+  if(action==='delete'){
+   // Only a removed teacher with no classes left. Hand classes off first so students and their work stay.
+   const originalRole=user.app_metadata?.archived_school_role
+   if(!['teacher','principal'].includes(originalRole))return res.status(409).json({error:'Only removed staff accounts can be deleted. Student accounts stay so their work is kept.'})
+   const owned=await auth.admin.from('classes').select('id',{count:'exact',head:true}).eq('teacher_id',profile.id)
+   if(owned.error)throw owned.error
+   if(owned.count)return res.status(409).json({error:`${profile.name} still has ${owned.count} class${owned.count===1?'':'es'}. Hand them to another teacher in Classrooms & rosters first, then delete.`})
+   const gone=await auth.admin.auth.admin.deleteUser(user.id)
+   if(gone.error)return res.status(409).json({error:'Could not delete this login (it is still linked to school records). It stays removed, which already blocks all access.'})
+   const del=await auth.admin.from('users').delete().eq('id',profile.id)
+   if(del.error)throw del.error
+   if(profile.email)await auth.admin.from('ap_staff').update({active:false,code_hash:null}).ilike('email',profile.email)
+   return res.json({success:true,deleted:true,message:`${profile.name} is permanently deleted from AskVic.`})
+  }
   const stamp={account_managed_by:auth.user.id,account_managed_at:new Date().toISOString()}
   if(action==='reset-password'){
    const result=await auth.admin.auth.admin.updateUserById(user.id,{password:req.body.password,app_metadata:{...user.app_metadata,...stamp,must_change_password:profile.role!=='student'}})

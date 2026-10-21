@@ -17,7 +17,7 @@ const TABS = [['overview', 'Overview'], ['attendance', 'Attendance'], ['growth',
 export default function StaffPanel({ schoolId, staffId, startTab = 'overview', startNotice = '', privacy, canManageAccounts, joinCode, onClose, onChanged, onOpen }) {
  const isNew = staffId === 'new'
  const [data, setData] = useState(null), [tab, setTab] = useState(startTab), [busy, setBusy] = useState(''), [error, setError] = useState(''), [notice, setNotice] = useState(startNotice), [reveal, setReveal] = useState(false)
- const [draft, setDraft] = useState(null), [plan, setPlan] = useState(null), [edit, setEdit] = useState(null), [work, setWork] = useState(null), [code, setCode] = useState(''), [fixDay, setFixDay] = useState(null), [fresh, setFresh] = useState({ name: '', email: '', role: 'teacher', payType: 'salaried', sickDays: '10', wantsLogin: false, leader: false })
+ const [draft, setDraft] = useState(null), [plan, setPlan] = useState(null), [edit, setEdit] = useState(null), [work, setWork] = useState(null), [code, setCode] = useState(''), [fixDay, setFixDay] = useState(null), [fresh, setFresh] = useState({ name: '', email: '', role: 'teacher', payType: 'salaried', sickDays: '10', startDate: new Date().toLocaleDateString('en-CA'), wantsLogin: false, leader: false })
  const hide = privacy && !reveal
 
  async function load() {
@@ -88,6 +88,7 @@ export default function StaffPanel({ schoolId, staffId, startTab = 'overview', s
     <label>Role<select value={fresh.role} onChange={e => setFresh({ ...fresh, role: e.target.value })}>{ROLES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select></label>
     <label>Pay<select value={fresh.payType} onChange={e => setFresh({ ...fresh, payType: e.target.value })}><option value="salaried">Salaried</option><option value="hourly">Hourly</option></select></label>
     <label>Paid days off a year<input inputMode="decimal" value={fresh.sickDays} onChange={e => setFresh({ ...fresh, sickDays: e.target.value })} /></label>
+    <label>First day of work <small>(no absences or pay deductions before this day)</small><input type="date" required value={fresh.startDate} onChange={e => setFresh({ ...fresh, startDate: e.target.value })} /></label>
 
     <fieldset className="sp-caps">
      <legend>What can they do?</legend>
