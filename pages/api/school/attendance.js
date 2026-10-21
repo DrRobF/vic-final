@@ -21,8 +21,9 @@ async function addOnePerson(db, schoolId, links, actorAuthId, person) {
   // Fill in an email we did not have: it is what ties this record to their login, and
   // the gap is what let duplicates through before.
   if (person.email && !existing.row.email) await q(db.from('ap_staff').update({ email: person.email }).eq('id', staffId))
+  if (person.startDate) await q(db.from('ap_staff').update({ start_date: person.startDate }).eq('id', staffId))
  } else {
-  const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: person.name, role: person.role, email: person.email || null, active: true, pay_type: person.payType, sick_days: person.sickDays }).select('id'))
+  const [added] = await q(db.from('ap_staff').insert({ school_id: schoolId, display_name: person.name, role: person.role, email: person.email || null, active: true, pay_type: person.payType, sick_days: person.sickDays, start_date: person.startDate || null }).select('id'))
   staffId = added.id
   boardCreated = true
  }
