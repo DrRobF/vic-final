@@ -24,6 +24,7 @@ export default function LoginDoor({ kind }) {
     <p className="eyebrow">{door.eyebrow}</p>
     <h1>{door.h1}</h1>
     <p className="intro">{door.intro}</p>
+    <p className="iam">I’m a…</p>
     <nav className="switch" aria-label="Choose your log in">{DOOR_LINKS.map(([k, href, label]) => <a key={k} href={href} aria-current={k === kind ? 'page' : undefined} className={k === kind ? 'on' : ''}>{label}</a>)}</nav>
    </section>
    <section className="card">
@@ -44,7 +45,8 @@ export default function LoginDoor({ kind }) {
    h1 :global(em){font-style:normal;color:var(--vic-volt)}
    .intro{font-size:19px;line-height:1.6;color:var(--vic-ink-muted);max-width:480px;margin:0}
    .student h1,.student .intro{font-family:var(--font-read)}
-   .switch{display:inline-flex;gap:4px;padding:5px;margin-top:28px;border-radius:14px;background:var(--vic-ink-2);border:1px solid var(--vic-ink-line)}
+   .iam{margin:28px 0 8px;font-weight:800;font-size:17px;color:var(--vic-ink-muted)}
+   .switch{display:inline-flex;gap:4px;padding:5px;margin-top:0;border-radius:14px;background:var(--vic-ink-2);border:1px solid var(--vic-ink-line)}
    .switch a{padding:10px 16px;border-radius:10px;color:var(--vic-ink-muted);font-weight:800;text-decoration:none;font-size:15px}
    .switch a.on{background:#fff;color:var(--vic-ink)}
    .card{background:var(--vic-surface);color:var(--vic-text-primary);border-radius:20px;padding:28px;box-shadow:0 30px 80px rgba(0,0,0,.35)}

@@ -98,8 +98,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
      <span className="who" title={name}>{name || 'Signed in'}</span>
      <button type="button" className="ghost" onClick={logout} disabled={loggingOut}>{loggingOut ? 'Logging out…' : 'Log out'}</button>
     </> : <>
-     <a className="ghost" href="/login">Teacher log in</a>
-     <a className="ghost" href="/student-login">Student log in</a>
+     <a className="ghost" href="/login">Log in</a>
      <a className="cta" href="/signup">Sign up free</a>
     </>}
    </div>
