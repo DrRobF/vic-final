@@ -5,7 +5,7 @@ Route: `/lessonplan`; official-source directory: `/lessonplan/standards`.
 ## First release
 
 - Florida B.E.S.T. and Pennsylvania PA Core: K–8 reading/ELA and mathematics. Reading/ELA includes the ELA writing, vocabulary, and communication strands.
-- 1,123 sourced entries (October 20: 37 Florida math benchmarks that the first import skipped were added from the official B.E.S.T. PDF; Pennsylvania Core 6–8 was checked against the official documents and was already complete). Standards API filters by state, grade, and subject; search by code or wording in the browser. Select up to three standards. Each entry has its official PDF URL, page, and source-check date.
+- 1,724 sourced entries (October 20: 37 Florida math benchmarks that the first import skipped were added from the official B.E.S.T. PDF; Pennsylvania Core 6–8 was checked against the official documents and was already complete). October 21: 601 Common Core State Standards entries (K–8 math 228, K–8 ELA 373) added under the state code `CCSS`, shown to teachers as "Common Core (CCSS)". Literacy in History/Social Studies and Science/Technical Subjects (grades 6–8) are not included yet. Standards API filters by state, grade, and subject; search by code or wording in the browser. Select up to three standards. Each entry has its official PDF URL, page, and source-check date.
 - Any state, grade/course, and subject through teacher-pasted standard text. Teacher-provided standards are never inserted into the shared catalogue automatically.
 - Lesson length, topic, materials, interests, and 1–5 described differentiation groups.
 - 2–16 user-defined section headings in order, optional format instructions, a default template, and an explicit save-format action.

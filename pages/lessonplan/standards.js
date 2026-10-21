@@ -2,6 +2,7 @@ import Head from 'next/head'
 import { useState } from 'react'
 import VICHeader from '../../components/VICHeader'
 const SOURCES=[
+ {name:'Common Core (CCSS)',status:'Built-in K–8 reading/ELA and math. Choose this if your state uses the Common Core standards or a close copy of them.',links:[['Common Core State Standards Initiative','https://www.thecorestandards.org/'],['Mathematics standards','https://www.thecorestandards.org/Math/'],['English language arts standards','https://www.thecorestandards.org/ELA-Literacy/']]},
  {name:'Florida',status:'Built-in K–8 reading/ELA and math',links:[['Browse official standards','https://www.cpalms.org/standards/FLStandardSearch.aspx'],['B.E.S.T. mathematics','https://www.fldoe.org/academics/standards/subject-areas/math-science/mathematics/'],['B.E.S.T. reading/ELA','https://www.fldoe.org/academics/standards/just-read-fl/']]},
  {name:'Pennsylvania',status:'Built-in K–8 reading/ELA and math',links:[['Browse and search SAS standards','https://www.pdesas.org/Standard/View'],['Download official standards','https://www.pdesas.org/Page?pageId=11']]},
  {name:'Texas',status:'Paste a standard to create your lesson today',links:[['Texas Essential Knowledge and Skills (TEKS)','https://tea.texas.gov/curriculum-and-instruction/texas-essential-knowledge-and-skills-teks']]},

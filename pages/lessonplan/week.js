@@ -50,7 +50,7 @@ export default function WeekPlanner(){
   return()=>{active=false}
  },[user?.id,router.isReady,router.query.id])
 
- const builtIn=['FL','PA'].includes(week.state)&&GRADES.includes(week.grade)&&['math','reading'].includes(week.subject)
+ const builtIn=['CCSS','FL','PA'].includes(week.state)&&GRADES.includes(week.grade)&&['math','reading'].includes(week.subject)
  useEffect(()=>{
   let cancelled=false;setStandards([])
   if(!builtIn)return
@@ -153,7 +153,7 @@ export default function WeekPlanner(){
  async function removeWeek(w){if(!window.confirm(`Remove the ${weekPhrase(w.weekOf)} plan? Its lessons stay in My Lessons.`))return;try{await call('/api/lessonplan/weeks',{method:'POST',body:{action:'delete',id:w.id}});if(w.id===week.id)newWeek();loadHistory()}catch(e){setError(e.message)}}
 
  const stepLabel={lesson:'Designing the lesson…',worksheet:'Creating the worksheet and answer key…',saving:'Saving…',done:'Ready',error:'Not finished'}
- const stateChoice=['FL','PA'].includes(week.state)?week.state:'other',gradeChoice=GRADES.includes(week.grade)?week.grade:'other',subjectChoice=['math','reading'].includes(week.subject)?week.subject:'other'
+ const stateChoice=['CCSS','FL','PA'].includes(week.state)?week.state:'other',gradeChoice=GRADES.includes(week.grade)?week.grade:'other',subjectChoice=['math','reading'].includes(week.subject)?week.subject:'other'
 
  return <><Head><title>Weekly Lesson Planner for Teachers | AskVic</title><meta name="description" content="Plan a full week of standards-based lessons in one step: a different standard each day, with materials, worksheets and answer keys. Download the week or send it to your principal."/><link rel="canonical" href="https://www.askvic.ai/lessonplan/week"/></Head>
  <div className="wk-shell"><VICHeader currentPath="/lessonplan"/>
@@ -172,7 +172,7 @@ export default function WeekPlanner(){
   <div className="wk-title"><span>1</span><h2>Your week</h2></div>
   <div className="wk-grid">
    <label>Week of<input type="date" required value={week.weekOf} disabled={locked} onChange={e=>update({weekOf:mondayOf(e.target.value)||week.weekOf})}/><small>Monday {formatDay(dates[0],{month:'short',day:'numeric'})} – Friday {formatDay(dates[4],{month:'short',day:'numeric'})}</small></label>
-   <label>State<select value={stateChoice} disabled={locked} onChange={e=>changeTarget('state',e.target.value==='other'?'':e.target.value)}><option value="FL">Florida</option><option value="PA">Pennsylvania</option><option value="other">Another state or curriculum</option></select></label>
+   <label>State<select value={stateChoice} disabled={locked} onChange={e=>changeTarget('state',e.target.value==='other'?'':e.target.value)}><option value="CCSS">Common Core (CCSS) — used by many states</option><option value="FL">Florida</option><option value="PA">Pennsylvania</option><option value="other">Another state or curriculum</option></select></label>
    {stateChoice==='other'&&<label>State or curriculum name<input required maxLength="60" value={week.state} disabled={locked} onChange={e=>update({state:e.target.value})} placeholder="Texas, Ohio, IB…"/></label>}
    <label>Grade<select value={gradeChoice} disabled={locked} onChange={e=>changeTarget('grade',e.target.value==='other'?'':e.target.value)}>{GRADES.map(g=><option key={g} value={g}>{gradeLabel(g)}</option>)}<option value="other">Another grade or course</option></select></label>
    {gradeChoice==='other'&&<label>Grade or course<input required maxLength="30" value={week.grade} disabled={locked} onChange={e=>update({grade:e.target.value})} placeholder="Grade 10 or Biology"/></label>}
