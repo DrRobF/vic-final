@@ -522,9 +522,11 @@ export default async function handler(req, res) {
    const key = nameKey(body.key)
    if (!key || !links.length) return res.status(400).json({ error: 'Choose a name to match.' })
    if (body.staffId && !uuid(body.staffId)) return res.status(400).json({ error: 'Choose a staff member.' })
+   // body.ignore: this name isn't staff (a former employee, a visitor). Stop asking about it.
+   // Nothing is deleted -- restoring is the same call without staffId.
    for (const l of links) {
     const aliases = { ...(l.aliases || {}) }
-    if (body.staffId) aliases[key] = body.staffId; else delete aliases[key]
+    if (body.ignore === true) aliases[key] = 'ignore'; else if (body.staffId) aliases[key] = body.staffId; else delete aliases[key]
     await q(db.from('ap_sheet_links').update({ aliases }).eq('id', l.id))
    }
    return res.json({ saved: true })

@@ -32,7 +32,7 @@ const LEGEND = [['here', '✓', 'Here'], ['late', '⏰', 'Late'], ['missing', '!
 export default function SchoolDashboard() {
  const { account, error: accountError } = useAccount({ next: '/school' })
  const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState(''), [att, setAtt] = useState(null), [walks, setWalks] = useState(null), [plans, setPlans] = useState(null), [error, setError] = useState('')
- const [open, setOpen] = useState(null), [privacy, setPrivacy] = useState(false), [updated, setUpdated] = useState(null), [deciding, setDeciding] = useState(0), [order, setOrder] = useState(null), [saving, setSaving] = useState(false)
+ const [open, setOpen] = useState(null), [privacy, setPrivacy] = useState(false), [updated, setUpdated] = useState(null), [deciding, setDeciding] = useState(0), [order, setOrder] = useState(null), [saving, setSaving] = useState(false), [dismissed, setDismissed] = useState({}), [showHidden, setShowHidden] = useState(false)
  const weekOf = defaultWeekOf()
 
  useEffect(() => { try { setPrivacy(localStorage.getItem('askvic-privacy') === '1') } catch {} }, [])
@@ -55,6 +55,10 @@ export default function SchoolDashboard() {
   api(`/api/assistantprincipal/lessonplans?${q}&week=${weekOf}`).then(setPlans).catch(() => setPlans({}))
  }, [schoolId])
  useEffect(() => { setAtt(null); setWalks(null); setPlans(null); loadAtt(); loadGrowth() }, [schoolId])
+ const dkey = `askvic-dismissed-${schoolId}`
+ useEffect(() => { try { setDismissed(JSON.parse(localStorage.getItem(dkey) || '{}')) } catch { setDismissed({}) } }, [dkey])
+ function dismiss(n) { const next = { ...dismissed, [n.key]: String(n.sig ?? today) }; setDismissed(next); try { localStorage.setItem(dkey, JSON.stringify(next)) } catch {} }
+ function undismissAll() { setDismissed({}); setShowHidden(false); try { localStorage.removeItem(dkey) } catch {} }
  // Tiles update on their own every minute while the page is open.
  useEffect(() => { if (!schoolId) return; const t = setInterval(() => { if (!document.hidden && !open) loadAtt() }, 60000); return () => clearInterval(t) }, [schoolId, open, loadAtt])
  // Open a person straight from a link (e.g. /school?staff=ID).
@@ -68,7 +72,10 @@ export default function SchoolDashboard() {
  const count = k => people.filter(p => tileState(p).cls === k).length
 
  // "Needs you": only things that need action, most urgent first.
- const needs = []
+ // Each can be dismissed. Day-specific items come back tomorrow; count-based ones (unmatched names,
+ // missing clock-outs...) stay hidden until the count changes, so a leftover you can't fix stops nagging.
+ const allNeeds = []
+ const needs = allNeeds
  if (att) {
   for (const p of people.filter(p => p.today.kind === 'absent_no_form')) needs.push({ key: `m${p.id}`, icon: '!', text: <><b>{displayName(p.name)}</b>: no check-in today</>, open: p.id, tab: 'attendance' })
   const tomorrow = nextWeekday(today)
@@ -77,13 +84,15 @@ export default function SchoolDashboard() {
   if (!privacy) for (const p of people.filter(p => p.leave?.paidLeft != null && p.leave.paidLeft <= 1)) needs.push({ key: `d${p.id}`, icon: '◔', text: p.leave.paidLeft <= 0 ? <><b>{displayName(p.name)}</b> is out of paid days. More absences are unpaid{p.leave.unpaid ? ` (${plural(p.leave.unpaid, 'unpaid day')} so far)` : ''}.</> : <><b>{displayName(p.name)}</b> has 1 paid day left</>, open: p.id })
   for (const r of att.requests || []) needs.push({ key: `q${r.id}`, icon: '✉', text: <><b>{displayName(r.name)}</b> asked for {fmtDay(r.day)} off ({MARK_LABEL[r.kind] || r.kind}){r.needsSub ? ' · needs a sub' : ''}</>, href: '#day-off-requests' })
   const outs = people.filter(p => p.missingOut?.length)
-  if (outs.length) needs.push({ key: 'outs', icon: '⏱', text: <>{plural(outs.length, 'hourly person')} missing a clock-out (payroll)</>, href: '/school/payroll' })
-  if (att.unmatched?.length) needs.push({ key: 'unm', icon: '?', text: <>{plural(att.unmatched.length, 'name')} on your check-in sheet don’t match anyone</>, href: '/school/attendance#unmatched' })
+  if (outs.length) needs.push({ key: 'outs', icon: '⏱', text: <>{plural(outs.length, 'hourly person')} missing a clock-out (payroll)</>, href: '/school/payroll', sig: outs.map(p => p.id + ':' + p.missingOut.length).join(',') })
+  if (att.unmatched?.length) needs.push({ key: 'unm', icon: '?', text: <>{plural(att.unmatched.length, 'name')} on your check-in sheet don’t match anyone</>, href: '/school/attendance#unmatched', sig: att.unmatched.length })
  }
  const toReview = (plans?.weeks || []).filter(w => w.status === 'submitted').length
- if (toReview) needs.push({ key: 'plans', icon: '✎', text: <>{plural(toReview, 'lesson plan')} waiting for your review</>, href: `/weeklyplans?school=${schoolId}&week=${weekOf}` })
+ if (toReview) needs.push({ key: 'plans', icon: '✎', text: <>{plural(toReview, 'lesson plan')} waiting for your review</>, href: `/weeklyplans?school=${schoolId}&week=${weekOf}`, sig: toReview })
  const pending = (walks?.suggestions || []).length
- if (pending) needs.push({ key: 'paths', icon: '★', text: <>{plural(pending, 'Learning Path suggestion')} to approve</>, href: '/walkthroughs?tab=suggestions' })
+ if (pending) needs.push({ key: 'paths', icon: '★', text: <>{plural(pending, 'Learning Path suggestion')} to approve</>, href: '/walkthroughs?tab=suggestions', sig: pending })
+ const isHidden = n => dismissed[n.key] === String(n.sig ?? today)
+ const shown = showHidden ? needs : needs.filter(n => !isHidden(n)), hiddenCount = needs.filter(isHidden).length
 
  // Growth this week.
  const ws = weekStartIso()
@@ -132,10 +141,11 @@ export default function SchoolDashboard() {
    {account.leader && !schools.length ? <section className="dark-panel"><h2 className="dh">Set up your school</h2><p>Create your school, add staff and share a join code so teachers can send lesson plans.</p><div className="row"><a className="btn btn-cyan" href="/assistantprincipal">Set up my school</a></div></section>
     : account.leader && <>
      <section className="panel needs" aria-label="Needs you">
-      <div className="shead"><h2>Needs you {att && <span className="count">{needs.length}</span>}</h2></div>
-      {!att ? <p className="muted">Checking today…</p> : !needs.length ? <p className="calm">✓ Nothing needs you right now.</p> :
-       <ul>{needs.slice(0, 6).map(n => <li key={n.key}><span className="ni" aria-hidden="true">{n.icon}</span>{n.href ? <a href={n.href}>{n.text}</a> : <button className="linkish" onClick={() => setOpen({ id: n.open, tab: n.tab || 'overview' })}>{n.text}</button>}</li>)}</ul>}
-      {needs.length > 6 && <p className="muted small">and {needs.length - 6} more</p>}
+      <div className="shead"><h2>Needs you {att && <span className="count">{shown.length - (showHidden ? hiddenCount : 0)}</span>}</h2></div>
+      {!att ? <p className="muted">Checking today…</p> : !shown.length ? <p className="calm">✓ Nothing needs you right now.</p> :
+       <ul>{shown.slice(0, 6).map(n => <li key={n.key} className={isHidden(n) ? 'dim' : ''}><span className="ni" aria-hidden="true">{n.icon}</span>{n.href ? <a href={n.href}>{n.text}</a> : <button className="linkish" onClick={() => setOpen({ id: n.open, tab: n.tab || 'overview' })}>{n.text}</button>}{!isHidden(n) && <button className="xbtn" aria-label="Hide this for now" title="Hide this for now" onClick={() => dismiss(n)}>✕</button>}</li>)}</ul>}
+      {shown.length > 6 && <p className="muted small">and {shown.length - 6} more</p>}
+      {att && hiddenCount > 0 && <p className="muted small">{hiddenCount} hidden · <button className="linkish" onClick={() => showHidden ? undismissAll() : setShowHidden(true)}>{showHidden ? 'Bring them all back' : 'Show'}</button></p>}
      </section>
 
      {!!att?.requests?.length && <section className="panel asks" id="day-off-requests" aria-label="Day-off requests">
@@ -224,6 +234,9 @@ export default function SchoolDashboard() {
    .needs ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
    .needs li{display:flex;gap:10px;align-items:flex-start;font-size:16px;line-height:1.45}
    .needs a{color:var(--vic-text-primary)}
+   .needs li.dim{opacity:.55}
+   .xbtn{margin-left:auto;background:none;border:0;color:var(--vic-text-secondary);cursor:pointer;font-size:16px;padding:2px 8px;border-radius:6px}
+   .xbtn:hover{background:var(--vic-surface-muted)}
    .ni{flex:none;width:28px;height:28px;border-radius:8px;background:var(--vic-ink);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:900}
    .calm{margin:0;font-weight:800;color:var(--vic-text-secondary)}
    .linkish{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer;text-decoration:underline;text-decoration-color:var(--vic-border);text-underline-offset:3px}
