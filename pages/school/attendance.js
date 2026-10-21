@@ -107,6 +107,11 @@ export default function StaffAttendance() {
      <p>Match each one to someone, or add them in one click.</p>
      <ul className="um">{data.unmatched.map(u => <Unmatched key={u.key} u={u} people={people} act={act} />)}</ul>
     </section>}
+    {data.ignored?.length > 0 && <section className="panel" id="ignored">
+     <p className="label">Names you chose to ignore</p>
+     <p className="muted small">These won’t come up again. Someone ignored by mistake? Restore them and match them properly.</p>
+     <ul className="um">{data.ignored.map(u => <li key={u.key}><div className="umh"><span>{u.name}</span></div><div className="umadd"><button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'alias', key: u.key })}>Restore</button></div></li>)}</ul>
+    </section>}
    </>}
 
    <KioskPanel data={data} schoolId={schoolId} act={act} setMsg={setMsg} setError={setError} />
@@ -261,6 +266,7 @@ function Unmatched({ u, people, act }) {
   </div> : <div className="umadd">
    <select defaultValue="" onChange={e => e.target.value && act({ action: 'alias', key: u.key, staffId: e.target.value })}><option value="">This is…</option>{people.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
    <button type="button" className="btn btn-outline sm" onClick={() => setMode('add')}>+ Add as new staff</button>
+   <button type="button" className="linkbtn" title="Not current staff — a former employee or a visitor. Nothing is deleted." onClick={() => act({ action: 'alias', key: u.key, ignore: true })}>Not staff — ignore</button>
   </div>}
  </li>
 }
