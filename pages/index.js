@@ -1,6 +1,7 @@
 import HeroGraphic from '../components/HeroGraphic'
 import Head from 'next/head'
-import {useState} from 'react'
+import {useEffect,useState} from 'react'
+import {supabase} from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
 const EXAMPLES={
  inquiry:{label:'Inquiry',title:'What makes a habitat a home?',activity:'Investigate & discover',description:'Teams compare two habitats, make a prediction, and use observations to explain how an animal’s needs are met.',question:'What would change if one part of this habitat disappeared?',steps:['Notice and wonder','Investigate in small groups','Share evidence and reflect']},
@@ -10,6 +11,26 @@ const EXAMPLES={
 function Arrow(){return <span aria-hidden="true">↗</span>}
 export default function Home(){
  const [example,setExample]=useState('inquiry'),lesson=EXAMPLES[example]
+ const [signedIn,setSignedIn]=useState(false)
+ // Someone who is already signed in has no need for the sales page: send them to their own home
+ // (students to Today, teachers to My Week, school leaders to School). /?welcome=1 still shows this page.
+ useEffect(()=>{
+  let active=true
+  try{
+   if(new URLSearchParams(window.location.search).has('welcome'))return
+   // Supabase keeps the session in localStorage; a quick look avoids flashing the ad before redirecting.
+   const hasToken=Object.keys(window.localStorage).some(k=>/^sb-.*-auth-token$/.test(k))
+   if(!hasToken)return
+   setSignedIn(true)
+  }catch{return}
+  supabase.auth.getSession().then(({data})=>{
+   if(!active)return
+   if(data?.session)window.location.replace('/start')
+   else setSignedIn(false)
+  }).catch(()=>{if(active)setSignedIn(false)})
+  return()=>{active=false}
+ },[])
+ if(signedIn)return <main style={{padding:'64px 20px',textAlign:'center',fontSize:20}}><p role="status">Opening AskVic…</p></main>
  return <div className="home"><Head><title>Ask VIC | Free AI Lesson Designer &amp; Co-Teacher for Grades 3–12 (ELA &amp; Math)</title><meta name="description" content="Free for educators. Design standards-aligned ELA and math lessons for grades 3–12 with worksheets and answer keys, plan your week, draft parent messages, and give students a guided AI co-teacher. Built by a working principal."/><link rel="canonical" href="https://www.askvic.ai/"/><meta property="og:site_name" content="Ask VIC"/><meta property="og:title" content="Ask VIC: free AI lesson designer and co-teacher for grades 3–12"/><meta property="og:description" content="ELA and math lesson plans, worksheets, answer keys, and parent messages in minutes, then a co-teacher for your students. Free for educators. Built by a principal."/><meta property="og:type" content="website"/><meta property="og:url" content="https://www.askvic.ai/"/><meta property="og:image" content="https://www.askvic.ai/og-askvic.png"/><meta property="og:image:width" content="1200"/><meta property="og:image:height" content="630"/><meta name="twitter:card" content="summary_large_image"/><meta name="twitter:image" content="https://www.askvic.ai/og-askvic.png"/><script type="application/ld+json" dangerouslySetInnerHTML={{__html:`{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Ask VIC","alternateName":"VIC Virtual Co-Teacher","url":"https://www.askvic.ai/","applicationCategory":"EducationalApplication","operatingSystem":"Web","description":"Free AI lesson designer, educator assistant, and virtual co-teacher for grades 3-12 ELA and math teachers. Built by principal Dr. Rob Furman.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"creator":{"@type":"Person","name":"Dr. Rob Furman","url":"https://www.drrobfurman.com/"}}`}}/></Head>
  <div className="shell"><VICHeader currentPath="/"/><main>
  <section className="hero" aria-labelledby="hero-title"><div className="hero-copy"><p className="eyebrow"><span className="spark" aria-hidden="true">✦</span> YOUR IDEAS. YOUR CLASSROOM. YOUR VIC.</p><h1 id="hero-title">Great teaching.<br/><em>A little more help.</em></h1><p className="intro">Design the lesson in minutes.<br/>VIC teaches it at every level.</p><p className="hero-detail">Build tomorrow’s lesson in minutes, with standards, worksheets, and answer keys, for grades 3–12 in ELA and math. Then give a small group a guided co-teacher while you teach another, and draft the note home to parents. Built by a working principal, free for educators.</p><div className="actions"><a className="button primary" href="/signup">Start free: build a lesson <Arrow/></a><a className="text-link" href="#explore">See what VIC does ↓</a></div><p className="free-note"><span aria-hidden="true">✓</span>Free for educators · No credit card · You review everything before it’s used</p></div><HeroGraphic /></section>
