@@ -1,318 +1,211 @@
-import Head from 'next/head'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import VICHeader from '../components/VICHeader'
-import { DEFAULT_ROOM, getRoom, roomIds } from '../lib/rooms.mjs'
-import { speak, stopSpeaking, speechReady, warmVoices } from '../lib/speak'
+import { useRouter } from 'next/router'
+import { useEffect, useRef, useState } from 'react'
+import PageShell, { PanelStyles } from '../components/PageShell'
+import { supabase } from '../lib/supabase'
+import { pictureFor } from '../lib/room-pictures.mjs'
 
-// The Virtual Room — week 1 of docs/virtual-room-spec.md.
-// A real place a child can stand in and look around, with props VIC can point at.
-// No VIC yet, no lesson, no venue chooser. Just the room.
-//
-// Add ?place=1 to place props: click where a thing actually is and paste the
-// coordinates into lib/rooms.mjs. Guessed positions are wrong positions.
+async function api(path, body) {
+ const { data: { session } } = await supabase.auth.getSession()
+ if (!session) { window.location.replace('/login?next=/room'); throw new Error('Please log in.') }
+ const r = await fetch(path, { method: body ? 'POST' : 'GET', headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) })
+ const d = await r.json().catch(() => ({}))
+ if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.')
+ return d
+}
+const STATUS = {
+ alert: { icon: '⚠', word: 'Needs you', cls: 'alert' },
+ quiet: { icon: '⏸', word: 'Quiet', cls: 'quiet' },
+ out: { icon: '○', word: 'Not logged in', cls: 'out' },
+ working: { icon: '✓', word: 'Working', cls: 'working' },
+}
+const ORDER = { alert: 0, quiet: 1, out: 2, working: 3 }
+const Pics = ({ keys }) => keys ? <span className="pics">{keys.map((k, i) => <span key={i} title={pictureFor(k)?.label}>{pictureFor(k)?.emoji}</span>)}</span> : <span className="muted">No pictures yet</span>
 
-const STEP = 90          // how far one arrow-key press turns, in pixels
-const DRAG_SLOP = 6      // movement under this counts as a click, not a drag
-
+// VIC Room: the screen for the adult in a room where students learn with VIC.
+// Who's working, who's quiet, who needs help; launch today's lessons; logins and picture cards.
 export default function Room() {
- const [roomId, setRoomId] = useState(DEFAULT_ROOM)
- const [placeMode, setPlaceMode] = useState(false)
- const [offset, setOffset] = useState(0)        // pixels panned, wrapped to image width
- const [size, setSize] = useState(null)         // natural image size, once loaded
- const [status, setStatus] = useState('loading')
- const [openProp, setOpenProp] = useState(null)
- const [saying, setSaying] = useState('')
- const [placed, setPlaced] = useState(null)
- const [canSpeak, setCanSpeak] = useState(false)   // set on the client only: calling
-                                                   // speechReady() during render would
-                                                   // mismatch the server-rendered HTML
+ const router = useRouter()
+ const [list, setList] = useState(null), [room, setRoom] = useState(null), [error, setError] = useState(''), [tab, setTab] = useState('live')
+ const [open, setOpen] = useState(null), [msg, setMsg] = useState(''), [editing, setEditing] = useState(false)
+ const id = typeof router.query.id === 'string' ? router.query.id : list?.rooms?.[0]?.id || ''
+ const timer = useRef(null)
 
- const frameRef = useRef(null)
- const drag = useRef(null)
-
- const room = getRoom(roomId)
-
+ useEffect(() => { api('/api/room/manage').then(setList).catch(e => setError(e.message)) }, [])
+ async function refresh() { if (!id) return; try { setRoom(await api(`/api/room/manage?id=${encodeURIComponent(id)}`)) } catch (e) { setError(e.message) } }
  useEffect(() => {
-  const q = new URLSearchParams(window.location.search)
-  if (q.get('place') === '1') setPlaceMode(true)
-  const r = q.get('room')
-  if (r && getRoom(r)) setRoomId(r)
-  setCanSpeak(speechReady())
-  warmVoices()
-  return () => stopSpeaking()
- }, [])
+  if (!id) return
+  refresh()
+  clearInterval(timer.current)
+  timer.current = setInterval(() => { if (document.visibilityState === 'visible') refresh() }, 15000)
+  return () => clearInterval(timer.current)
+ }, [id]) // eslint-disable-line react-hooks/exhaustive-deps
 
- // Width the image is drawn at: it fills the frame's height and keeps its aspect ratio.
- const [frameH, setFrameH] = useState(0)
- useEffect(() => {
-  const el = frameRef.current
-  if (!el) return
-  const measure = () => setFrameH(el.clientHeight)
-  measure()
-  const ro = new ResizeObserver(measure)
-  ro.observe(el)
-  return () => ro.disconnect()
- }, [status])
-
- const drawnW = useMemo(() => {
-  if (!size || !frameH) return 0
-  return Math.round(frameH * (size.w / size.h))
- }, [size, frameH])
-
- const wrap = useCallback(v => {
-  if (!drawnW) return 0
-  return ((v % drawnW) + drawnW) % drawnW
- }, [drawnW])
-
- const pan = useCallback(by => setOffset(o => wrap(o + by)), [wrap])
-
- // Dragging. Pointer events cover mouse, touch and pen with one code path.
- function onPointerDown(e) {
-  if (!drawnW) return
-  drag.current = { x: e.clientX, startOffset: offset, moved: 0 }
-  e.currentTarget.setPointerCapture?.(e.pointerId)
- }
- function onPointerMove(e) {
-  const d = drag.current
-  if (!d) return
-  const dx = e.clientX - d.x
-  d.moved = Math.max(d.moved, Math.abs(dx))
-  setOffset(wrap(d.startOffset - dx))
- }
- function onPointerUp(e) {
-  const d = drag.current
-  drag.current = null
-  if (!d) return
-  if (d.moved <= DRAG_SLOP && placeMode) readOutPosition(e)
+ async function act(body, done) {
+  setMsg('')
+  try { const d = await api('/api/room/manage', { roomId: id, ...body }); if (done) setMsg(done(d)); await refresh() } catch (e) { setMsg(e.message) }
  }
 
- // Placement mode: turn a click into coordinates for lib/rooms.mjs.
- function readOutPosition(e) {
-  const el = frameRef.current
-  if (!el || !drawnW) return
-  const r = el.getBoundingClientRect()
-  const withinFrame = e.clientX - r.left
-  const onImage = wrap(offset + withinFrame)
-  const deg = Math.round((onImage / drawnW) * 360)
-  const y = Math.round(((e.clientY - r.top) / r.height) * 100)
-  setPlaced({ x: ((deg % 360) + 360) % 360, y: Math.max(0, Math.min(100, y)) })
- }
+ const student = room?.students?.find(s => s.id === open)
+ const sorted = [...(room?.students || [])].sort((a, b) => ORDER[a.status] - ORDER[b.status] || a.name.localeCompare(b.name))
 
- function onKeyDown(e) {
-  if (e.key === 'ArrowRight') { e.preventDefault(); pan(STEP) }
-  else if (e.key === 'ArrowLeft') { e.preventDefault(); pan(-STEP) }
-  else if (e.key === 'Home') { e.preventDefault(); setOffset(0) }
- }
-
- // Bring a prop into view when it is tabbed to, so keyboard users are not sent
- // to something off screen.
- const showProp = useCallback(p => {
-  if (!drawnW || !frameRef.current) return
-  const target = (p.x / 360) * drawnW
-  const centred = wrap(target - frameRef.current.clientWidth / 2)
-  setOffset(centred)
- }, [drawnW, wrap])
-
- function say(id, text) {
-  if (saying === id) { stopSpeaking(); setSaying(''); return }
-  setSaying(id)
-  const ok = speak(text, { onEnd: () => setSaying(s => (s === id ? '' : s)) })
-  if (!ok) setSaying('')
- }
-
- if (!room) return <main className="pad"><p>That room does not exist.</p></main>
-
- const propsFor = copy => room.props.map(p => ({
-  ...p,
-  left: copy * drawnW + (p.x / 360) * drawnW,
- }))
-
- return <div className="room">
-  <Head><title>{room.title} | AskVic</title></Head>
-  <div className="wrap"><VICHeader currentPath="/room" /></div>
-
-  <main>
-   <header className="top">
-    <div>
-     <p className="kicker">You are here</p>
-     <h1>{room.title}</h1>
-     <p className="where">
-      {room.where}
-      {canSpeak && <button type="button" className="spk inline" aria-label={saying === 'where' ? 'Stop reading' : 'Read this out loud'}
-       aria-pressed={saying === 'where'} onClick={() => say('where', `${room.title}. ${room.where}`)}>
-       {saying === 'where' ? '■' : '🔊'}
-      </button>}
-     </p>
-    </div>
-    {roomIds().length > 1 && <label className="pickroom">
-     <span>Room</span>
-     <select value={roomId} onChange={e => { setRoomId(e.target.value); setOffset(0); setOpenProp(null); setStatus('loading'); setSize(null) }}>
-      {roomIds().map(id => <option key={id} value={id}>{getRoom(id).title}</option>)}
-     </select>
-    </label>}
-   </header>
-
-   {!room.propsVerified && <p className="warn" role="note">
-    The marker positions in this room are guesses — nobody has checked them against the
-    picture yet. Open <code>/room?place=1</code>, click each thing where it really is, and
-    paste the numbers into <code>lib/rooms.mjs</code>.
-   </p>}
-
-   {placeMode && <div className="placebar" role="status">
-    <strong>Placing props.</strong> Click a spot in the picture to get its coordinates.
-    {placed && <code className="coords">x: {placed.x}, y: {placed.y}</code>}
-    <a href={`/room?room=${roomId}`}>Done</a>
-   </div>}
-
-   <section
-    className={`frame${placeMode ? ' placing' : ''}`}
-    ref={frameRef}
-    tabIndex={0}
-    role="group"
-    aria-label={`${room.title}. Drag, or use the left and right arrow keys, to look around.`}
-    onKeyDown={onKeyDown}
-    onPointerDown={onPointerDown}
-    onPointerMove={onPointerMove}
-    onPointerUp={onPointerUp}
-    onPointerCancel={() => { drag.current = null }}
-   >
-    {status === 'loading' && <p className="overlay" role="status">Opening the room…</p>}
-    {status === 'error' && <div className="overlay bad" role="alert">
-     <p><strong>The picture would not load.</strong></p>
-     <p className="sm">Download it from <a href={room.source} target="_blank" rel="noreferrer">{room.credit}</a>,
-      save it to <code>/public/rooms/</code>, and point <code>image</code> in <code>lib/rooms.mjs</code> at the local copy.</p>
-    </div>}
-
-    <div className="track" style={{ transform: `translate3d(${-offset}px,0,0)`, width: drawnW ? drawnW * 2 : undefined }}>
-     {[0, 1].map(copy => <img
-      key={copy}
-      src={room.image}
-      alt={copy === 0 ? `${room.title}. ${room.where}` : ''}
-      aria-hidden={copy === 1 || undefined}
-      draggable={false}
-      style={{ left: copy * drawnW, width: drawnW || undefined }}
-      onLoad={e => { setSize({ w: e.target.naturalWidth, h: e.target.naturalHeight }); setStatus('ready') }}
-      onError={() => setStatus('error')}
-     />)}
-
-     {status === 'ready' && drawnW > 0 && [0, 1].map(copy => propsFor(copy).map((p, i) => <button
-      key={`${copy}-${p.id}`}
-      type="button"
-      className={`prop${openProp === p.id ? ' on' : ''}`}
-      style={{ left: p.left, top: `${p.y}%` }}
-      tabIndex={copy === 0 ? 0 : -1}
-      aria-hidden={copy === 1 || undefined}
-      aria-expanded={openProp === p.id}
-      onFocus={() => showProp(p)}
-      onClick={() => { if (!placeMode) setOpenProp(openProp === p.id ? null : p.id) }}
-     >
-      <span className="dot" aria-hidden="true">{i + 1}</span>
-      <span className="tag">{p.name}</span>
-     </button>))}
-    </div>
-
-    <p className="hint" aria-hidden="true">drag, or ← →, to look around</p>
-   </section>
-
-   <p className="credit">Picture: {room.credit}{room.real ? ' — a real photograph of a real place' : ''}. <a href={room.source} target="_blank" rel="noreferrer">Source</a></p>
-
-   {openProp && (() => {
-    const p = room.props.find(x => x.id === openProp)
-    if (!p) return null
-    const aloud = `${p.name}. ${p.note}`
-    return <aside className="panel" aria-live="polite">
-     <div className="phead">
-      <h2>{p.name}</h2>
-      <div className="pbtns">
-       {canSpeak && <button type="button" className="spk" aria-pressed={saying === p.id}
-        aria-label={saying === p.id ? 'Stop reading' : 'Read this out loud'} onClick={() => say(p.id, aloud)}>
-        {saying === p.id ? '■ Stop' : '🔊 Read it'}
-       </button>}
-       <button type="button" className="close" onClick={() => { setOpenProp(null); stopSpeaking(); setSaying('') }}>Close</button>
-      </div>
+ return <PageShell title={room ? `VIC Room · ${room.name}` : 'VIC Room'} currentPath="/room">
+  <PanelStyles />
+  {error && <p className="alert" role="alert">{error}</p>}
+  {!list ? <p role="status">Opening the VIC Room…</p>
+   : (!list.rooms.length || editing) ? <RoomSetup list={list} room={editing ? room : null} onDone={async rid => { setEditing(false); const l = await api('/api/room/manage'); setList(l); router.replace(`/room?id=${rid}`) }} onCancel={editing ? () => setEditing(false) : null} />
+   : !room ? <p role="status">Opening your room…</p>
+   : <>
+    <header className="top">
+     <div>
+      <p className="label">VIC Room{list.rooms.length > 1 ? '' : ''}</p>
+      <h1>{room.name}</h1>
+      <p className="muted">Room code <strong className="code">{room.code}</strong> · students log in at <strong>askvic.ai/hello</strong></p>
      </div>
-     <p className="note">{p.note}</p>
-     <p className="tl">What you can learn here</p>
-     <ul className="teaches">{p.teaches.map((t, i) => <li key={i}>{t}</li>)}</ul>
-    </aside>
-   })()}
+     <div className="row">
+      {list.rooms.length > 1 && <select aria-label="Choose a room" value={id} onChange={e => router.replace(`/room?id=${e.target.value}`)}>{list.rooms.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}</select>}
+      <button type="button" className="btn btn-outline" onClick={() => setEditing(true)}>Edit room</button>
+     </div>
+    </header>
+    <nav className="tabs" aria-label="Room views">
+     <button type="button" className={tab === 'live' ? 'on' : ''} onClick={() => setTab('live')}>Live</button>
+     <button type="button" className={tab === 'logins' ? 'on' : ''} onClick={() => setTab('logins')}>Logins and picture cards</button>
+    </nav>
+    {msg && <p className="notice" role="status">{msg}</p>}
 
-   <ol className="list" aria-label="Everything in this room">
-    {room.props.map((p, i) => <li key={p.id}>
-     <button type="button" className={openProp === p.id ? 'on' : ''} onClick={() => { setOpenProp(p.id); showProp(p) }}>
-      <span className="n" aria-hidden="true">{i + 1}</span>{p.name}
-     </button>
-    </li>)}
-   </ol>
-  </main>
+    {tab === 'live' ? <>
+     <div className="summary">
+      {['alert', 'quiet', 'out', 'working'].map(k => <span key={k} className={`pill ${STATUS[k].cls}`}><b>{STATUS[k].icon} {room.summary[k]}</b> {STATUS[k].word}</span>)}
+      <span className="muted">of {room.summary.total} · updates every 15 seconds</span>
+     </div>
 
+     {room.launchable?.length > 0 && <section className="panel launch">
+      <p className="label">Today’s lessons</p>
+      {room.launchable.map(l => <div key={l.lessonId + l.classId} className="lrow">
+       <div><strong>{l.title}</strong><span className="muted"> · {l.className}{l.teacher ? ` · ${l.teacher}` : ''}</span></div>
+       {l.live ? <span className="ok">✓ On screens</span> : !l.ready ? <span className="warn">Needs a standard and objective (ask {l.teacher || 'the teacher'})</span>
+        : <button type="button" className="btn btn-primary" onClick={() => act({ action: 'launch', lessonId: l.lessonId, classId: l.classId }, d => `Launched to ${d.launched} students.`)}>Launch</button>}
+      </div>)}
+     </section>}
+
+     <NoteBox label="Note for everyone (VIC will follow it today)" onSave={note => act({ action: 'addNote', everyone: true, note }, d => `Added for ${d.added} students.`)} />
+
+     <div className="grid">
+      {sorted.map(s => <button key={s.id} type="button" className={`kid ${STATUS[s.status].cls}${open === s.id ? ' sel' : ''}`} onClick={() => setOpen(open === s.id ? null : s.id)}>
+       <span className="kn">{s.short}</span>
+       <span className="ks">{STATUS[s.status].icon} {s.status === 'quiet' && s.minutesQuiet != null ? `Quiet ${s.minutesQuiet} min` : STATUS[s.status].word}</span>
+       <span className="kl">{s.lessons[0]?.title || (s.lastWith === 'own' ? 'My own work' : s.status === 'out' ? '' : 'No lesson yet')}</span>
+       {s.notes.length > 0 && <span className="kt">📝 {s.notes.length}</span>}
+       {s.locked && <span className="kt">🔒 Locked</span>}
+      </button>)}
+     </div>
+
+     {student && <section className="panel detail" aria-label={student.name}>
+      <div className="dh"><h2>{student.name}</h2><button type="button" className="btn btn-outline" onClick={() => setOpen(null)}>Close</button></div>
+      <p className="muted">{student.classes.join(' · ')} · {student.turns} messages with VIC today</p>
+      {student.alerts.length > 0 && <p className="warn">⚠ VIC flagged something this child said ({student.alerts.map(a => a.category).join(', ')}). Talk with them now. The teacher and school leader were emailed too.</p>}
+      <p><strong>On today:</strong> {student.lessons.length ? student.lessons.map(l => l.title).join(', ') : 'Nothing launched yet. VIC will help with their own work.'}</p>
+      <div><strong>Notes for VIC:</strong>{student.notes.length ? <ul>{student.notes.map(n => <li key={n.id}>{n.note} <button type="button" className="linkbtn" onClick={() => act({ action: 'clearNote', noteId: n.id })}>Remove</button></li>)}</ul> : <span className="muted"> none</span>}</div>
+      <NoteBox label={`Add a note for VIC about ${student.short}`} onSave={note => act({ action: 'addNote', studentId: student.id, note }, () => 'Note added. VIC will use it on the next message.')} />
+      <p><strong>Login pictures:</strong> <Pics keys={student.pictures} /> {student.locked && <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'unlock', studentId: student.id }, () => 'Unlocked. They can try again.')}>Unlock</button>} <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'newPictures', studentId: student.id }, () => 'New pictures made. Show them to the child.')}>New pictures</button></p>
+     </section>}
+    </> : <section className="panel cards-wrap">
+     <div className="row noprint">
+      <button type="button" className="btn btn-primary" onClick={() => act({ action: 'assignPictures' }, d => d.assigned ? `Pictures made for ${d.assigned} students.` : 'Everyone already has pictures.')}>Give pictures to everyone who needs them</button>
+      <button type="button" className="btn btn-outline" onClick={() => window.print()}>Print picture cards</button>
+     </div>
+     <p className="muted noprint">On each computer: open <strong>askvic.ai/hello</strong> and type room code <strong className="code">{room.code}</strong> once. Then each child taps their name and their two pictures, in order. Keep these cards with you, not on the desks.</p>
+     <div className="cards">{(room.students || []).map(s => <div key={s.id} className="card"><strong>{s.name}</strong><Pics keys={s.pictures} /><small>Room {room.code} · askvic.ai/hello</small></div>)}</div>
+    </section>}
+   </>}
   <style jsx>{`
-   .room{min-height:100vh;background:var(--vic-bg);font-family:var(--font-read);font-size:20px;color:var(--vic-text-primary)}
-   .wrap,main{max-width:1100px;margin:0 auto;padding:0 20px}
-   main{padding-bottom:64px}
-   .pad{padding:40px}
-   .top{display:flex;gap:20px;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;margin:18px 0 14px}
-   .kicker{font-family:var(--font-mono);text-transform:uppercase;font-size:15px;letter-spacing:.04em;color:var(--vic-primary);margin:0}
-   h1{font-family:var(--font-read);font-size:clamp(32px,4.6vw,46px);margin:2px 0 6px;line-height:1.1}
-   .where{margin:0;color:var(--vic-text-secondary);font-size:19px;max-width:62ch}
-   .pickroom{display:flex;flex-direction:column;gap:4px;font-size:16px;color:var(--vic-text-secondary)}
-   .pickroom select{font-family:var(--font-read);font-size:18px;padding:10px 12px;border-radius:12px;border:2px solid var(--vic-field-border);background:var(--vic-surface);color:var(--vic-text-primary)}
-
-   .warn{margin:0 0 14px;padding:14px 16px;border-radius:14px;background:var(--vic-warning-soft);border-left:6px solid var(--vic-warning);font-size:17px}
-   .warn code{font-family:var(--font-mono);font-size:15px}
-   .placebar{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin:0 0 14px;padding:14px 16px;border-radius:14px;background:var(--vic-ink);color:var(--vic-ink-text);font-size:17px}
-   .placebar a{color:#fff;font-weight:700}
-   .coords{font-family:var(--font-mono);background:var(--vic-ink-2);padding:6px 12px;border-radius:999px;font-size:17px}
-
-   .frame{position:relative;overflow:hidden;height:clamp(300px,52vh,560px);border-radius:22px;border:3px solid var(--vic-ink-line);background:var(--vic-ink);cursor:grab;touch-action:pan-y;user-select:none}
-   .frame:active{cursor:grabbing}
-   .frame.placing{cursor:crosshair}
-   .frame:focus-visible{outline:4px solid var(--vic-cyan);outline-offset:3px}
-   .track{position:absolute;inset:0 auto 0 0;height:100%;will-change:transform}
-   .track img{position:absolute;top:0;height:100%;max-width:none;display:block;pointer-events:none}
-
-   .overlay{position:absolute;inset:0;display:flex;flex-direction:column;gap:8px;align-items:center;justify-content:center;margin:0;padding:24px;text-align:center;color:var(--vic-ink-text);background:var(--vic-ink);z-index:3}
-   .overlay.bad{color:#fff}
-   .overlay p{margin:0}
-   .overlay .sm{font-size:16px;color:var(--vic-ink-muted);max-width:52ch}
-   .overlay a{color:var(--vic-vic-glow)}
-
-   /* Markers carry a number AND a word, never colour alone. */
-   .prop{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;background:transparent;border:0;padding:4px;cursor:pointer;z-index:2}
-   .dot{display:grid;place-items:center;width:38px;height:38px;border-radius:999px;background:var(--vic-ink);color:#fff;border:3px solid #fff;font-family:var(--font-mono);font-size:17px;font-weight:700;box-shadow:0 6px 18px rgba(0,0,0,.45);flex:none}
-   .tag{font-size:16px;font-weight:700;color:#fff;background:rgba(10,19,48,.82);padding:5px 11px;border-radius:999px;white-space:nowrap;border:1px solid rgba(255,255,255,.35)}
-   .prop.on .dot{background:var(--vic-primary);transform:scale(1.12)}
-   .prop.on .tag{background:var(--vic-primary)}
-   .prop:focus-visible .dot{outline:4px solid var(--vic-cyan);outline-offset:3px}
-
-   .hint{position:absolute;right:14px;bottom:10px;margin:0;font-family:var(--font-mono);font-size:14px;color:var(--vic-ink-muted);background:rgba(10,19,48,.6);padding:5px 10px;border-radius:999px;z-index:2}
-   .credit{margin:10px 0 0;font-size:16px;color:var(--vic-text-muted)}
-
-   .panel{margin:20px 0 0;background:var(--vic-surface);border:3px solid var(--vic-primary);border-radius:22px;padding:24px;box-shadow:var(--vic-shadow-card)}
-   .phead{display:flex;gap:16px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
-   .panel h2{font-family:var(--font-read);font-size:clamp(24px,3.2vw,32px);margin:0;line-height:1.15}
-   .pbtns{display:flex;gap:10px;flex:none}
-   .note{margin:12px 0 0;font-size:21px;max-width:60ch}
-   .tl{font-family:var(--font-mono);text-transform:uppercase;font-size:14px;letter-spacing:.04em;color:var(--vic-primary);margin:20px 0 6px}
-   .teaches{margin:0;padding-left:22px}
-   .teaches li{margin:4px 0}
-
-   .spk,.close{font-family:var(--font-read);font-size:17px;font-weight:700;min-height:48px;padding:10px 16px;border-radius:14px;cursor:pointer;border:2px solid var(--vic-field-border);background:var(--vic-surface);color:var(--vic-text-primary)}
-   .spk[aria-pressed='true']{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
-   .spk.inline{min-height:36px;padding:2px 10px;margin-left:8px;font-size:15px;vertical-align:middle;border-radius:999px}
-
-   .list{display:flex;flex-wrap:wrap;gap:10px;list-style:none;margin:22px 0 0;padding:0;counter-reset:none}
-   .list button{display:inline-flex;align-items:center;gap:9px;font-family:var(--font-read);font-size:17px;font-weight:700;min-height:48px;padding:10px 16px;border-radius:999px;border:2px solid var(--vic-border);background:var(--vic-surface);color:var(--vic-text-primary);cursor:pointer}
-   .list button.on{background:var(--vic-ink);border-color:var(--vic-ink);color:#fff}
-   .list .n{display:grid;place-items:center;width:26px;height:26px;border-radius:999px;background:var(--vic-surface-muted);color:var(--vic-text-primary);font-family:var(--font-mono);font-size:14px;flex:none}
-   .list button.on .n{background:var(--vic-ink-2);color:#fff}
-
-   @media (max-width:640px){
-    .room{font-size:19px}
-    .tag{display:none}
-    .frame{height:clamp(260px,42vh,420px)}
-   }
-   @media (prefers-reduced-motion:reduce){ .track{will-change:auto} .prop.on .dot{transform:none} }
+   .top{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-top:12px}
+   h1{margin:4px 0 6px;font-size:clamp(28px,3vw,38px)}
+   .code{font-family:var(--font-mono);letter-spacing:.12em;font-size:1.1em}
+   .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+   select{min-height:44px;border-radius:10px;padding:0 10px;font:inherit}
+   .tabs{display:flex;gap:6px;border-bottom:1px solid var(--vic-border-soft)}
+   .tabs button{padding:10px 14px;border:0;background:none;font:inherit;font-weight:800;color:var(--vic-text-secondary);border-bottom:3px solid transparent;cursor:pointer}
+   .tabs button.on{color:var(--vic-text-primary);border-color:var(--vic-primary)}
+   .summary{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+   .pill{padding:8px 12px;border-radius:12px;font-size:15px;border:2px solid var(--vic-border-soft);background:var(--vic-surface)}
+   .pill.alert{border-color:var(--vic-danger)}
+   .pill.quiet{border-color:#B45309}
+   .pill.working{border-color:var(--vic-success)}
+   .launch{display:flex;flex-direction:column;gap:10px}
+   .lrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--vic-border-soft);padding-top:10px}
+   .ok{color:var(--vic-success);font-weight:800}
+   .warn{color:var(--vic-danger);font-weight:700}
+   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+   .kid{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px;border-radius:14px;border:2px solid var(--vic-border-soft);background:var(--vic-surface);cursor:pointer;font:inherit;color:var(--vic-text-primary);min-height:96px}
+   .kid.sel{outline:3px solid var(--vic-primary)}
+   .kid.alert{border-color:var(--vic-danger);background:var(--vic-danger-soft)}
+   .kid.quiet{border-color:#B45309;border-style:dashed}
+   .kid.out{opacity:.65}
+   .kn{font-weight:800;font-size:17px}
+   .ks{font-weight:800;font-size:14px}
+   .kid.working .ks{color:var(--vic-success)}
+   .kid.alert .ks{color:var(--vic-danger)}
+   .kid.quiet .ks{color:#B45309}
+   .kl{font-size:13.5px;color:var(--vic-text-secondary);line-height:1.3}
+   .kt{font-size:13px;font-weight:700}
+   .detail{display:flex;flex-direction:column;gap:10px;border:2px solid var(--vic-primary)}
+   .dh{display:flex;justify-content:space-between;align-items:center;gap:10px}
+   .dh h2{margin:0}
+   .detail p{margin:0}
+   .linkbtn{background:none;border:0;color:var(--vic-primary);text-decoration:underline;cursor:pointer;font:inherit}
+   .sm{min-height:34px;padding:4px 10px;font-size:14px}
+   :global(.pics){display:inline-flex;gap:6px;font-size:26px;vertical-align:middle}
+   .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;margin-top:12px}
+   .card{border:2px dashed var(--vic-border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;break-inside:avoid}
+   .card :global(.pics){font-size:40px}
+   .card small{color:var(--vic-text-secondary)}
+   @media print{:global(header),:global(nav),.noprint,.tabs,.top{display:none!important}.cards{grid-template-columns:repeat(3,1fr)}}
   `}</style>
- </div>
+ </PageShell>
+}
+
+function NoteBox({ label, onSave }) {
+ const [text, setText] = useState('')
+ return <form className="note" onSubmit={e => { e.preventDefault(); if (text.trim()) { onSave(text.trim()); setText('') } }}>
+  <label>{label}<input value={text} onChange={e => setText(e.target.value)} maxLength={600} placeholder="For example: practice 7s and 8s multiplication facts" /></label>
+  <button type="submit" className="btn btn-outline">Add</button>
+  <style jsx>{`
+   .note{display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap}
+   label{display:flex;flex-direction:column;gap:4px;font-weight:700;flex:1 1 320px;min-width:0}
+   input{min-height:44px;border-radius:10px;border:1px solid var(--vic-border);padding:0 12px;font:inherit;font-weight:400}
+  `}</style>
+ </form>
+}
+
+function RoomSetup({ list, room, onDone, onCancel }) {
+ const [name, setName] = useState(room?.name || 'VIC Room'), [ids, setIds] = useState(room?.classes?.map(c => c.id) || []), [emails, setEmails] = useState(''), [busy, setBusy] = useState(false), [err, setErr] = useState('')
+ async function save(e) {
+  e.preventDefault(); setBusy(true); setErr('')
+  try {
+   const staffEmails = emails.split(/[\s,;]+/).filter(Boolean)
+   const d = await api('/api/room/manage', { action: room ? 'update' : 'create', roomId: room?.id, name, classIds: ids, ...(emails.trim() || !room ? { staffEmails } : {}) })
+   await onDone(room ? room.id : d.id)
+  } catch (e2) { setErr(e2.message) } finally { setBusy(false) }
+ }
+ return <form className="panel setup" onSubmit={save}>
+  <p className="label">{room ? 'Edit room' : 'Set up a VIC Room'}</p>
+  <h1>{room ? room.name : 'One room, one adult, every child with VIC'}</h1>
+  <label>Room name<input value={name} onChange={e => setName(e.target.value)} maxLength={120} /></label>
+  <fieldset><legend>Which classes learn in this room?</legend>
+   {list.classes.length ? list.classes.map(c => <label key={c.id} className="chk"><input type="checkbox" checked={ids.includes(c.id)} onChange={e => setIds(e.target.checked ? [...ids, c.id] : ids.filter(x => x !== c.id))} /> {c.name}{c.teacher ? ` · ${c.teacher}` : ''}</label>) : <p className="muted">You have no classes yet.</p>}
+  </fieldset>
+  <label>Aide’s AskVic email{room ? ' (leave blank to keep the current aides)' : ''}<input value={emails} onChange={e => setEmails(e.target.value)} placeholder="aide@school.org" /></label>
+  {err && <p className="alert" role="alert">{err}</p>}
+  <div className="row"><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : room ? 'Save' : 'Create room'}</button>{onCancel && <button type="button" className="btn btn-outline" onClick={onCancel}>Cancel</button>}</div>
+  <style jsx>{`
+   .setup{display:flex;flex-direction:column;gap:14px;max-width:720px}
+   h1{margin:0;font-size:clamp(24px,3vw,32px)}
+   label{display:flex;flex-direction:column;gap:6px;font-weight:700}
+   input:not([type]){min-height:44px;border-radius:10px;border:1px solid var(--vic-border);padding:0 12px;font:inherit;font-weight:400}
+   fieldset{border:1px solid var(--vic-border-soft);border-radius:12px;padding:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:6px}
+   legend{font-weight:800;padding:0 6px}
+   .chk{flex-direction:row;align-items:center;font-weight:500}
+   .row{display:flex;gap:10px}
+  `}</style>
+ </form>
 }

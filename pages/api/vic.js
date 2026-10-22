@@ -118,6 +118,12 @@ export default async function handler(req, res) {
       }
     }
 
+    // Notes the adults running the student's VIC Room left for today ("work on 7s facts").
+    try {
+      const { data: notes } = await auth.admin.from('vic_room_notes').select('note').eq('student_id', auth.profile.id).eq('active', true).order('created_at', { ascending: true }).limit(5)
+      if (notes?.length) context += `\n\nNotes from the adults in this student's room today (follow them where they fit the lesson; do not quote them word for word unless asked):\n${notes.map(n => `- ${String(n.note).slice(0, 600)}`).join('\n')}`
+    } catch {}
+
     const safeMessages = messages
       .filter((message) => message && ['user', 'assistant'].includes(message.role))
       .map((message) => ({ role: message.role, content: typeof message.content === 'string' ? message.content : '' }))

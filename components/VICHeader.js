@@ -19,12 +19,13 @@ const EDUCATOR_NAV = [
 ]
 const SCHOOL_NAV = [
  { href: '/school', label: 'Dashboard', match: ['/school'] },
+ { href: '/room', label: 'VIC Room', match: ['/room'] },
  { href: '/walkthroughs', label: 'Walkthroughs', match: ['/walkthroughs'] },
  { href: '/weeklyplans', label: 'Lesson plans', match: ['/weeklyplans'] },
  { href: '/school/payroll', label: 'Payroll', match: ['/school/payroll'] },
  { href: '/school/setup', label: '⚙ Setup', match: ['/school/setup', '/school/attendance', '/assistantprincipal', '/admin'] },
 ]
-const SCHOOL_PATHS = ['/school', '/weeklyplans', '/walkthroughs', '/assistantprincipal', '/admin']
+const SCHOOL_PATHS = ['/room', '/school', '/weeklyplans', '/walkthroughs', '/assistantprincipal', '/admin']
 const STUDENT_NAV = [
  { href: '/learn', label: 'Today', match: ['/learn', '/student'] },
  { href: '/askvic', label: 'VIC', match: ['/askvic'] },
@@ -73,7 +74,7 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
   setLoggingOut(true)
   rememberLeader({})
   await supabase.auth.signOut()
-  window.location.href = isStudent ? '/student-login' : '/login'
+  window.location.href = isStudent ? '/hello' : '/login'
  }
 
  return (

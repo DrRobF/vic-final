@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 
 async function call(method, body) {
  const { data: { session } } = await supabase.auth.getSession()
- if (!session) { window.location.replace('/student-login'); throw new Error('Please log in.') }
+ if (!session) { window.location.replace('/hello'); throw new Error('Please log in.') }
  const r = await fetch('/api/student/today', { method, headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) })
  const d = await r.json().catch(() => ({}))
  if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.')
