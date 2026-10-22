@@ -58,23 +58,29 @@ export default function MyWeek() {
    if (!active) return
    setTodayItems(rs.map(({ w, d }) => {
     const day = d.week?.days?.[todayIdx], l = day?.lessonId ? d.lessons?.[day.lessonId] : null
-    return l ? { w, lessonId: day.lessonId, title: l.title, steps: l.steps } : null
+    return l ? { w, lessonId: day.lessonId, title: l.title, steps: l.steps, vicReady: l.vicReady !== false, vicIssue: l.vicIssue || '', sent: l.sent || null } : null
    }).filter(Boolean))
   }).catch(() => { if (active) setTodayItems([]) })
   return () => { active = false }
  }, [weeks, weekKey, todayIdx])
 
  // One tap: today's lesson goes to every student in the class at their saved level.
- async function startLesson(item, classId) {
+ // With releaseOn (a later day this week) it is scheduled instead: students see it from that morning.
+ async function startLesson(item, classId, releaseOn) {
   setStarts(s => ({ ...s, [item.lessonId]: { busy: true } }))
   try {
    const { data: { session } } = await supabase.auth.getSession()
    if (!session) throw new Error('Please log in again.')
    const headers = { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
-   const r = await fetch('/api/teacher/start-lesson', { method: 'POST', headers, body: JSON.stringify({ lessonId: item.lessonId, ...(classId ? { classId } : {}) }) })
+   const r = await fetch('/api/teacher/start-lesson', { method: 'POST', headers, body: JSON.stringify({ lessonId: item.lessonId, ...(classId ? { classId } : {}), ...(releaseOn ? { releaseOn } : {}) }) })
    const d = await r.json().catch(() => ({}))
-   if (r.status === 409 && d.needClass) { setStarts(s => ({ ...s, [item.lessonId]: { pickClass: d.classes } })); return }
+   if (r.status === 409 && d.needClass) { setStarts(s => ({ ...s, [item.lessonId]: { pickClass: d.classes, releaseOn } })); return }
    if (!r.ok) { setStarts(s => ({ ...s, [item.lessonId]: { err: d.error || 'Could not start this lesson.', fix: d.needsLessonWork ? stepHref('plan', item.lessonId) : d.emptyClass ? '/classes' : d.noClassroom ? '/join' : '' } })); return }
+   if (d.releaseAt) {
+    setStarts(s => ({ ...s, [item.lessonId]: { scheduled: d.assignmentCount, on: releaseOn } }))
+    if (week) openWeek(week.id).then(setDetail).catch(() => {})
+    return
+   }
    await fetch('/api/educator/lesson-steps', { method: 'POST', headers, body: JSON.stringify({ lessonId: item.lessonId, step: 'teach', done: true }) }).catch(() => {})
    setStarts(s => ({ ...s, [item.lessonId]: { done: d.assignmentCount } }))
    setTodayItems(list => (list || []).map(x => x.lessonId === item.lessonId ? { ...x, steps: { ...(x.steps || {}), teach: new Date().toISOString() } } : x))
@@ -114,18 +120,22 @@ export default function MyWeek() {
     <p className="tlabel">Today · {WEEKDAYS[todayIdx]}, {formatDay(today, { month: 'long', day: 'numeric' })}</p>
     {todayItems.map(item => {
      const st = starts[item.lessonId] || {}, started = st.done != null || !!item.steps?.teach
+     const onScreens = !started && item.sent && item.sent.at.slice(0, 10) >= today && new Date(item.sent.at) <= new Date()
      return <div className="trow" key={item.lessonId}>
       <div className="tinfo"><span className="tmeta">{gradeLabel(item.w.grade)} · {subjectLabel(item.w.subject)}</span><h2>{item.title}</h2></div>
       <div className="tact">
        {account.classroom
-        ? <button type="button" className="btn btn-cyan big" disabled={st.busy} onClick={() => startLesson(item)}>{st.busy ? 'Starting…' : started ? 'Start again with my class' : 'Start with my class'}</button>
+        ? !item.vicReady ? <a className="btn btn-cyan big" href={stepHref('plan', item.lessonId)}>Fix the lesson first</a>
+        : <button type="button" className="btn btn-cyan big" disabled={st.busy} onClick={() => startLesson(item)}>{st.busy ? 'Starting…' : started || onScreens ? 'Send again to my class' : 'Start with my class'}</button>
         : <a className="btn btn-cyan big" href="/join">Join your school to start with VIC</a>}
        <a className="btn btn-outline tsub" href={stepHref('print', item.lessonId)}>Print</a>
        <a className="btn btn-outline tsub" href={stepHref('teach', item.lessonId)}>Choose students</a>
       </div>
+      {account.classroom && !item.vicReady && <p className="terr">{item.vicIssue}</p>}
+      {onScreens && st.done == null && <p className="tnote" role="status">✓ Already on your students’ screens. You scheduled it ahead.</p>}
       {st.done != null && <p className="tnote" role="status">✓ Sent to {st.done} {st.done === 1 ? 'student' : 'students'}, each at their saved level. It is on their Today screen now.</p>}
       {st.err && <p className="terr" role="alert">{st.err} {st.fix && <a href={st.fix}>Fix this →</a>}</p>}
-      {st.pickClass && <div className="tpick"><strong>Which class?</strong>{st.pickClass.map(c => <button type="button" key={c.id} className="btn btn-outline tsub" onClick={() => startLesson(item, c.id)}>{c.name} ({c.students})</button>)}</div>}
+      {st.pickClass && <div className="tpick"><strong>Which class?</strong>{st.pickClass.map(c => <button type="button" key={c.id} className="btn btn-outline tsub" onClick={() => startLesson(item, c.id, st.releaseOn)}>{c.name} ({c.students})</button>)}</div>}
      </div>
     })}
    </section>}
@@ -150,6 +160,7 @@ export default function MyWeek() {
          <a className="title" href={stepHref(isToday ? 'teach' : 'plan', day.lessonId)} title={isToday ? 'Open Teach for today' : 'Open the lesson'}>{lesson.title}</a>
          <div className="bar" aria-label={`${doneCount(lesson.steps)} of 4 steps done`}>{STEPS.map(s => <a key={s.key} href={stepHref(s.key, day.lessonId)} className={stepDone(s.key, lesson.steps) ? 'seg done' : 'seg'} title={s.label}><span>{s.label}</span></a>)}</div>
          {next ? <a className="next" href={stepHref(next.key, day.lessonId)}>Next: {next.label} →</a> : <span className="alldone">✓ All done</span>}
+         {dates[i] > today && account.classroom && <Ahead name={name} date={dates[i]} lessonId={day.lessonId} lesson={lesson} st={starts[day.lessonId] || {}} onSchedule={classId => startLesson({ lessonId: day.lessonId }, classId, dates[i])} />}
         </>
         : loadingWeek ? <p className="muted">Loading…</p>
         : <>
@@ -248,4 +259,31 @@ export default function MyWeek() {
    @media(max-width:560px){.days{grid-template-columns:1fr}.day{min-height:0}}
   `}</style>
  </PageShell>
+}
+
+// A later day this week: is the lesson ready for VIC, and has it been scheduled for students yet?
+function Ahead({ name, date, lessonId, lesson, st, onSchedule }) {
+ const scheduled = st.scheduled != null ? { count: st.scheduled } : lesson.sent && lesson.sent.at.slice(0, 10) === date ? { count: lesson.sent.count } : null
+ return <div className="ahead">
+  {lesson.vicReady === false ? <p className="warn">Needs a standard and an objective before VIC can teach it. <a href={stepHref('plan', lessonId)}>Fix it →</a></p>
+   : scheduled ? <p className="ok">✓ Set for {name}: {scheduled.count} {scheduled.count === 1 ? 'student' : 'students'}</p>
+   : <>
+    <button type="button" className="sched" disabled={st.busy} onClick={() => onSchedule()}>{st.busy ? 'Scheduling…' : `Schedule for ${name}`}</button>
+    {st.err && <span className="aerr">{st.err}</span>}
+    {st.pickClass && <span className="apick">Which class? {st.pickClass.map(c => <button type="button" key={c.id} className="sched sm" onClick={() => onSchedule(c.id)}>{c.name}</button>)}</span>}
+   </>}
+  <style jsx>{`
+   .ahead{display:flex;flex-direction:column;gap:6px}
+   p{margin:0;font-size:13.5px;font-weight:700;line-height:1.35}
+   .warn{color:var(--vic-danger)}
+   .warn a{color:var(--vic-primary)}
+   .ok{color:var(--vic-success)}
+   .sched{padding:9px 10px;border-radius:10px;border:2px solid var(--vic-primary);background:var(--vic-surface);color:var(--vic-primary);font-weight:800;font-size:14px;cursor:pointer}
+   .sched:hover{background:var(--vic-primary-soft)}
+   .sched:disabled{opacity:.6;cursor:wait}
+   .sched.sm{padding:5px 8px;font-size:13px;margin:2px}
+   .aerr{color:var(--vic-danger);font-weight:700;font-size:13px}
+   .apick{font-size:13px;font-weight:700}
+  `}</style>
+ </div>
 }

@@ -17,7 +17,7 @@ const firstName = name => String(name || '').trim().split(/\s+/)[0] || 'there'
 export default function Learn() {
  const [data, setData] = useState(null), [error, setError] = useState(''), [pick, setPick] = useState(0), [open, setOpen] = useState(false)
  useEffect(() => { call('GET').then(setData).catch(e => setError(e.message)) }, [])
- const lessons = data?.lessons || [], lesson = lessons[pick]
+ const lessons = data?.lessons || []
  // One group per class, so a student with ELA and math sees which lesson belongs to which class.
  const classGroups = []
  lessons.forEach((l, i) => { let g = classGroups.find(x => x.className === l.className); if (!g) { g = { className: l.className, teacher: l.teacher, items: [] }; classGroups.push(g) } g.items.push({ l, i }) })
@@ -40,30 +40,27 @@ export default function Learn() {
      <p>You can still learn with VIC any time.</p>
      <a className="go vic" href="/askvic">Learn with VIC →</a>
     </section> : <>
-     {lessons.length > 1 && <nav className="picks" aria-label="Your lessons">{classGroups.map(g => <div key={g.className} className="pgroup"><p className="pname">{g.className}{g.teacher ? ` · ${g.teacher}` : ''}</p><div className="pick">{g.items.map(({ l, i }) => <button key={l.lessonId} type="button" aria-pressed={i === pick} className={i === pick ? 'on' : ''} onClick={() => { setPick(i); setOpen(false) }}>{l.title}{l.work?.status === 'turned_in' ? ' ✓' : ''}</button>)}</div></div>)}</nav>}
-
-     <section className="card lesson">
-      <p className="tag">{lesson.className}{lesson.teacher ? ` · ${lesson.teacher}` : ''}</p>
-      <h2>{lesson.title}</h2>
-      {lesson.goals.length > 0 && <div className="goals"><p className="gl">Today I am learning to…</p><ul>{lesson.goals.map((g, i) => <li key={i}>{g}</li>)}</ul></div>}
-     </section>
-
-     <div className="tracks">
-      <section className="track me">
-       <p className="tl">With my teacher</p>
-       <h3>Learn together</h3>
-       <p>Use the handout your teacher gives you.{lesson.worksheet ? ' Your worksheet is right here, too.' : ''}</p>
-       {lesson.worksheet ? <button type="button" className="go blue" aria-expanded={open} onClick={() => setOpen(!open)}>{lesson.work?.status === 'turned_in' ? '✓ Worksheet turned in' : open ? 'Hide my worksheet' : lesson.work ? 'Keep working on my worksheet' : 'Open my worksheet'}</button> : <p className="small">Your teacher will hand out today’s work.</p>}
-      </section>
-      <section className="track vic">
-       <p className="tl">With VIC</p>
-       <h3>Learn it a new way</h3>
-       <p>VIC teaches you the same thing, one step at a time, just for you.</p>
-       <a className="go vicbtn" href={`/askvic?class=${encodeURIComponent(lesson.classId)}&lesson=${encodeURIComponent(lesson.lessonId)}`}>Start {lesson.className} with VIC →</a>
-      </section>
-     </div>
-
-     {open && lesson.worksheet && <Worksheet key={lesson.lessonId} lesson={lesson} onSaved={w => updateWork(lesson.lessonId, w)} />}
+     {classGroups.map(g => <section key={g.className} className="cgroup" aria-label={g.className}>
+      <h2 className="cname">{g.className}{g.teacher ? <span> · {g.teacher}</span> : null}</h2>
+      {g.items.map(({ l, i }) => {
+       const isOpen = open && i === pick, turnedIn = l.work?.status === 'turned_in'
+       return <div key={l.lessonId} className={isOpen ? 'lrow on' : 'lrow'}>
+        <div className="lhead">
+         <div className="ltext">
+          <h3>{l.title}</h3>
+          {l.goals[0] && <p className="lgoal">Today I am learning to {l.goals[0].replace(/^./, c => c.toLowerCase())}</p>}
+          {turnedIn ? <p className="lstat done">✓ Worksheet turned in</p> : l.work ? <p className="lstat">Worksheet started</p> : null}
+         </div>
+         <div className="lbtns">
+          {l.worksheet ? <button type="button" className="go blue" aria-expanded={isOpen} onClick={() => { if (isOpen) setOpen(false); else { setPick(i); setOpen(true) } }}>{isOpen ? 'Hide worksheet' : turnedIn ? 'See my worksheet' : 'Worksheet'}</button>
+           : <span className="small">Worksheet on paper today</span>}
+          <a className="go vicbtn" href={`/askvic?class=${encodeURIComponent(l.classId)}&lesson=${encodeURIComponent(l.lessonId)}`}>Learn with VIC →</a>
+         </div>
+        </div>
+        {isOpen && l.worksheet && <Worksheet key={l.lessonId} lesson={l} onSaved={w => updateWork(l.lessonId, w)} />}
+       </div>
+      })}
+     </section>)}
     </>}
    </>}
   </main>
@@ -75,7 +72,20 @@ export default function Learn() {
    h1{font-family:var(--font-read);font-size:clamp(34px,5vw,48px);margin:0}
    .big{font-size:22px}
    .alert{padding:16px;border-radius:14px;background:var(--vic-danger-soft);color:#912018;font-weight:700}
-   .picks{display:flex;flex-direction:column;gap:14px}
+   .cgroup{display:flex;flex-direction:column;gap:12px}
+   .cname{font-family:var(--font-read);font-size:clamp(24px,3.2vw,30px);margin:6px 0 0}
+   .cname span{color:var(--vic-text-secondary);font-weight:600}
+   .lrow{background:var(--vic-surface);border-radius:20px;padding:20px 22px;border:2px solid var(--vic-border-soft);display:flex;flex-direction:column;gap:16px}
+   .lrow.on{border-color:var(--vic-primary)}
+   .lhead{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+   .ltext{min-width:0;flex:1 1 280px}
+   .ltext h3{font-family:var(--font-read);font-size:26px;margin:0;line-height:1.2}
+   .lgoal{margin:6px 0 0;line-height:1.5;color:var(--vic-text-secondary)}
+   .lstat{margin:6px 0 0;font-weight:700;font-size:18px;color:var(--vic-primary)}
+   .lstat.done{color:var(--vic-success)}
+   .lbtns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+   .lbtns .go{margin-top:0}
+   .vicbtn{background:var(--vic-vic);color:#fff}
    .pname{margin:0 0 6px;font-weight:700;color:var(--vic-text-secondary);font-size:18px}
    .pick{display:flex;gap:8px;flex-wrap:wrap}
    .pick button{font-family:var(--font-read);font-size:18px;padding:12px 18px;border-radius:999px;border:2px solid var(--vic-border);background:var(--vic-surface);cursor:pointer;color:var(--vic-text-primary);font-weight:700}
@@ -99,7 +109,6 @@ export default function Learn() {
    .small{font-size:18px;color:var(--vic-text-secondary)}
    .go{margin-top:auto;display:inline-flex;justify-content:center;align-items:center;min-height:56px;padding:14px 22px;border-radius:16px;font-family:var(--font-read);font-size:21px;font-weight:700;text-decoration:none;cursor:pointer;border:0}
    .blue{background:var(--vic-primary);color:#fff}
-   .vicbtn{background:#fff;color:var(--vic-vic)}
    .go.vic{background:var(--vic-vic);color:#fff;margin-top:16px}
    @media(max-width:760px){.tracks{grid-template-columns:1fr}.wrap{padding:10px 14px 0}main{padding:12px 16px 56px}}
   `}</style>

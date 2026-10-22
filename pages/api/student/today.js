@@ -1,6 +1,7 @@
 import { requireApprovedProfile } from '../../../lib/server-auth'
 import { lessonTargets } from '../../../lib/lesson-companion.mjs'
 import { studentWorksheet, cleanAnswers } from '../../../lib/student-today.mjs'
+import { releasedFilter } from '../../../lib/release.mjs'
 
 const positive = v => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null }
 
@@ -18,7 +19,7 @@ export default async function handler(req, res) {
   if (req.method === 'POST') {
    const lessonId = positive(req.body?.lessonId)
    if (!lessonId) return res.status(400).json({ error: 'Choose a lesson.' })
-   const { data: assignment } = await db.from('assignments').select('id,mode,lessons!inner(id,source_lesson_id,teacher_id)').eq('student_id', me).eq('lesson_id', lessonId).limit(1).maybeSingle()
+   const { data: assignment } = await db.from('assignments').select('id,mode,lessons!inner(id,source_lesson_id,teacher_id)').eq('student_id', me).eq('lesson_id', lessonId).or(releasedFilter()).limit(1).maybeSingle()
    if (!assignment) return res.status(403).json({ error: 'This lesson isn’t assigned to you.' })
    const lesson = Array.isArray(assignment.lessons) ? assignment.lessons[0] : assignment.lessons
    let count = 20
@@ -44,7 +45,7 @@ export default async function handler(req, res) {
 
   const { data: rows, error: aErr } = await db.from('assignments')
    .select('id,mode,assigned_at,lessons!inner(id,class_id,title,source_lesson_id,teacher_id,is_active)')
-   .eq('student_id', me).eq('status', 'assigned').in('lessons.class_id', classIds)
+   .eq('student_id', me).eq('status', 'assigned').in('lessons.class_id', classIds).or(releasedFilter())
    .order('assigned_at', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(30)
   if (aErr) throw aErr
   const assigned = (rows || []).map(r => ({ ...r, lesson: Array.isArray(r.lessons) ? r.lessons[0] : r.lessons })).filter(r => r.lesson && r.lesson.is_active !== false)

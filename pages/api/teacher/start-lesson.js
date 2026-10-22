@@ -1,6 +1,7 @@
 import { requireApprovedProfile } from '../../../lib/server-auth'
 import { vicTargetText } from '../../../lib/lesson-companion.mjs'
 import assignLesson from './assign-lesson'
+import { schoolDayStart } from '../../../lib/release.mjs'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const positive = v => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null }
@@ -50,7 +51,14 @@ export default async function handler(req, res) {
   if (!enrolled?.length) return res.status(409).json({ error: 'This class has no students yet. Add students in My Classes first.', emptyClass: true })
 
   const students = enrolled.map(r => ({ studentId: r.student_id, mode: toMode(r.support_level) }))
-  const payload = { classId, title: lesson.title || lesson.draft?.plan?.title || 'Today’s lesson', lessonText, sourceLessonId: lesson.id, students }
+  // "Schedule for Wednesday": students see it from midnight that day. A day that has already started means now.
+  let releaseAt = null
+  if (req.body?.releaseOn != null) {
+   releaseAt = schoolDayStart(req.body.releaseOn)
+   if (!releaseAt) return res.status(400).json({ error: 'Choose a school day to schedule this lesson.' })
+   if (new Date(releaseAt).getTime() <= Date.now()) releaseAt = null
+  }
+  const payload = { classId, title: lesson.title || lesson.draft?.plan?.title || 'Today’s lesson', lessonText, sourceLessonId: lesson.id, students, ...(releaseAt ? { releaseAt } : {}) }
   // Hand the finished request to the existing assignment handler, with the same signed-in caller.
   return await assignLesson({ method: 'POST', headers: req.headers, body: payload }, res)
  } catch (e) {

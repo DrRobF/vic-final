@@ -1,4 +1,5 @@
 import { requireApprovedProfile } from '../../lib/server-auth'
+import { releasedFilter } from '../../lib/release.mjs'
 import {
   buildVicContext,
   normalizeSessionMode,
@@ -64,6 +65,7 @@ export default async function handler(req, res) {
         .eq('student_id', auth.profile.id)
         .eq('status', 'assigned')
         .eq('lessons.class_id', enrollment.class_id)
+        .or(releasedFilter())
         .order('assigned_at', { ascending: false, nullsFirst: false })
         .order('id', { ascending: false })
         .limit(20)

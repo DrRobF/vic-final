@@ -1,4 +1,5 @@
 import { requireApprovedProfile } from '../../../lib/server-auth'
+import { validReleaseAt } from '../../../lib/release.mjs'
 
 const positiveInteger = (value) => {
   const parsed = Number(value)
@@ -19,6 +20,9 @@ export default async function handler(req, res) {
   const title = typeof req.body?.title === 'string' ? req.body.title.trim() : ''
   const lessonText = typeof req.body?.lessonText === 'string' ? req.body.lessonText.trim() : ''
   const sourceLessonId = typeof req.body?.sourceLessonId === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(req.body.sourceLessonId) ? req.body.sourceLessonId : null
+  // Optional: schedule ahead. Students see the lesson from this time on (see lib/release.mjs).
+  const releaseAt = req.body?.releaseAt == null ? null : validReleaseAt(req.body.releaseAt)
+  if (req.body?.releaseAt != null && !releaseAt) return res.status(400).json({ error: 'Choose a day within the next month to schedule this lesson.' })
   const requestedStudents = Array.isArray(req.body?.students) ? req.body.students : []
   const students = requestedStudents
     .map((row) => ({ studentId: positiveInteger(row?.studentId), mode: row?.mode === 'core' ? 'on-level' : row?.mode }))
@@ -62,7 +66,7 @@ export default async function handler(req, res) {
   }
   console.info('[teacher/assign-lesson] lesson-created', { selectedClassId: classId, createdLessonId: lesson.id })
 
-  const assignedAt = new Date().toISOString()
+  const assignedAt = releaseAt || new Date().toISOString()
   const assignmentRows = students.map(({ studentId, mode }) => ({
     lesson_id: lesson.id, student_id: studentId, mode, status: 'assigned', assigned_at: assignedAt,
   }))
@@ -88,5 +92,5 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'The assignment could not be confirmed. Refresh before trying again.' })
   }
 
-  return res.status(201).json({ lessonId: lesson.id, classId, assignmentIds: createdAssignments.map((row) => row.id), assignmentCount: persisted.length })
+  return res.status(201).json({ lessonId: lesson.id, classId, assignmentIds: createdAssignments.map((row) => row.id), assignmentCount: persisted.length, releaseAt })
 }

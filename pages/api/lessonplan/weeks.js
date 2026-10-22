@@ -2,6 +2,7 @@ import catalogue from '../../../data/lesson-standards.json'
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { normalizeWeekSetup, lessonIntoWeekDay, mondayOf, WEEKDAYS, weekStandardRows, buildWeekSubmission, submissionEmail, weekFileName, validEmail, isUuid, MAX_EMAIL_SENDS_PER_DAY } from '../../../lib/lesson-week.mjs'
 import { buildWeekDocx } from '../../../lib/lesson-week-docx.mjs'
+import { vicTargetText } from '../../../lib/lesson-companion.mjs'
 export const config={api:{bodyParser:{sizeLimit:'200kb'},responseLimit:'12mb'},maxDuration:60}
 
 const SITE=process.env.NEXT_PUBLIC_SITE_URL||'https://www.askvic.ai'
@@ -34,6 +35,22 @@ async function loadLessons(auth,ids){
  if(error)throw error
  return new Map((data||[]).map(r=>[r.id,{...r.draft,updatedAt:r.updated_at}]))
 }
+// For My Week: when each of these lessons last went to students, and whether that time is still ahead
+// (scheduled). Only the teacher's own lesson ids reach here.
+async function loadSends(auth,ids){
+ if(!ids.length)return new Map()
+ const {data,error}=await auth.admin.from('lessons').select('source_lesson_id,assignments(assigned_at)').in('source_lesson_id',ids)
+ if(error)return new Map()
+ const out=new Map()
+ for(const l of data||[]){
+  const times=(l.assignments||[]).map(a=>a.assigned_at).filter(Boolean)
+  if(!times.length)continue
+  const at=times.sort().at(-1),prev=out.get(l.source_lesson_id)
+  if(!prev||at>prev.at)out.set(l.source_lesson_id,{at,count:times.length})
+ }
+ return out
+}
+function vicReadiness(draft){try{vicTargetText(draft);return {vicReady:true,vicIssue:''}}catch(e){return {vicReady:false,vicIssue:e.message}}}
 async function sendEmail({to,replyTo,subject,body,attachment,key}){
  if(!process.env.RESEND_API_KEY||!process.env.REPORTS_FROM_EMAIL)return {sent:false,note:'Email delivery is not set up yet.'}
  try{
@@ -81,7 +98,8 @@ export default async function handler(req,res){
     res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.setHeader('Content-Disposition',`attachment; filename="${weekFileName(week)}"`)
     return res.status(200).send(buffer)
    }
-   const summaries=Object.fromEntries([...lessons].map(([id,d])=>[id,{title:d.plan?.title||'Untitled lesson',worksheet:!!d.worksheet,steps:d.steps||{},updatedAt:d.updatedAt}]))
+   const sends=await loadSends(auth,[...lessons.keys()])
+   const summaries=Object.fromEntries([...lessons].map(([id,d])=>[id,{title:d.plan?.title||'Untitled lesson',worksheet:!!d.worksheet,steps:d.steps||{},updatedAt:d.updatedAt,...vicReadiness(d),sent:sends.get(id)||null}]))
    return res.json({week:publicWeek(row),lessons:summaries})
   }
 

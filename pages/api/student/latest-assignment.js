@@ -1,4 +1,5 @@
 import { requireApprovedProfile } from '../../../lib/server-auth'
+import { releasedFilter } from '../../../lib/release.mjs'
 
 function normalizeNumericId(value) {
   const parsed = Number(value)
@@ -38,6 +39,7 @@ export default async function handler(req, res) {
       .eq('student_id', auth.profile.id)
       .eq('status', 'assigned')
       .eq('lessons.class_id', activeClassId)
+      .or(releasedFilter()) // scheduled-ahead lessons stay hidden until their day
     if (lessonId) query = query.eq('lesson_id', lessonId)
     return query
       .order('assigned_at', { ascending: false, nullsFirst: false })
