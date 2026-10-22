@@ -31,7 +31,7 @@ export default async function handler(req, res) {
   const mode = normalizeSessionMode(sessionMode)
   const requestedStudentId = Number(studentId)
   if (auth.profile.role !== 'student') {
-    return res.status(403).json({ error: 'Ask VIC student sessions require a student account.' })
+    return res.status(403).json({ error: 'This page is for students. Teachers, open My Week.' })
   }
   if (Number.isFinite(requestedStudentId) && requestedStudentId !== auth.profile.id) {
     return res.status(403).json({ error: 'You may only access your own learning session.' })
@@ -54,7 +54,7 @@ export default async function handler(req, res) {
 
       const enrollment = selectActiveEnrollment(enrollments, activeClassId)
       if (!enrollment) {
-        return res.status(403).json({ error: 'Teacher Lesson is unavailable for the selected class.' })
+        return res.status(403).json({ error: 'Your teacher hasn’t sent a lesson for this class yet.' })
       }
 
       // Deliberately use only columns present in the production assignment schema. The old

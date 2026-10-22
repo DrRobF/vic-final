@@ -26,9 +26,9 @@ export default async function handler(req,res){
   }else{
   heading(plan.title,HeadingLevel.TITLE);body(`${input.state} | Grade ${input.grade} | ${input.subject} | ${input.sessions||1} session(s), ${input.minutes} minutes each`)
   for(const s of lessonOutputSections(plan,input)){heading(s.heading);body(s.body)}
-  body('Review accuracy, pacing, materials, and suitability before teaching or submitting.');body('Created with Ask VIC Lesson Designer | askvic.ai/lessonplan')
+  body('Review accuracy, pacing, materials, and suitability before teaching or submitting.');body('Created with AskVic Lesson Designer | askvic.ai/lessonplan')
   }
-  const buffer=await Packer.toBuffer(new Document({creator:'Ask VIC Lesson Designer',title:worksheetExport?sheet.title:plan.title,styles:{default:{document:{run:{font:'Calibri',size:22}}}},sections:[{properties:{},children:paragraphs}]}))
+  const buffer=await Packer.toBuffer(new Document({creator:'AskVic Lesson Designer',title:worksheetExport?sheet.title:plan.title,styles:{default:{document:{run:{font:'Calibri',size:22}}}},sections:[{properties:{},children:paragraphs}]}))
   res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.setHeader('Content-Disposition',`attachment; filename="${worksheetExport?(answers?'Ask-VIC-Answer-Key':'Ask-VIC-Student-Worksheet'):'Ask-VIC-Lesson-Plan'}.docx"`);return res.status(200).send(buffer)
  }catch(error){console.error('Lesson export failed',{name:error?.name});return res.status(500).json({error:'Could not download the document. Copy the sections or download the text version instead.'})}
 }

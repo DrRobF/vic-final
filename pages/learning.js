@@ -42,7 +42,7 @@ export default function Learning(){
  const step=!item?0:item.status==='completed'?5:quizDone?3:doneCount>0?2:1
 
  return <main aria-busy={!!busy}><Head><title>Learning Paths | AskVic</title><meta name="description" content="Pick any teaching topic. VIC builds a 20–30 minute learning path with a clear overview, real videos and articles, a quick quiz, and one thing to try this week."/></Head><VICHeader currentPath="/educatorassistant"/>
-  <div className="crumbs"><a href="/educatorassistant">← Educator Assistant</a>{id&&<a href="/learning">All my learning paths</a>}</div>
+  <div className="crumbs"><a href="/educatorassistant">← Assistant</a>{id&&<a href="/learning">All my learning paths</a>}</div>
   {!ready?<p role="status">Opening Learning Paths…</p>:!session?<section className="card intro"><p className="eyebrow">LEARNING PATHS</p><h1>Professional learning you actually choose.</h1><p>Pick any teaching topic. VIC builds a 20–30 minute path: a clear overview, real videos and articles, a quick quiz, and one thing to try this week.</p><a className="primary" href="/login?next=/learning">Educator log in</a> <a className="outline" href="/signup">Sign up — it’s free</a></section>:<>
   {error&&<p className="error" role="alert">{error}</p>}
   {busy&&<p className="working" role="status"><span className="spinner" aria-hidden="true"/>{busy}</p>}
@@ -91,7 +91,7 @@ export default function Learning(){
    {item.status==='completed'&&<section className="certificate" aria-label="Certificate of completion">
     <p className="eyebrow">CERTIFICATE OF COMPLETION</p>
     <input className="certName" value={name} onChange={e=>setName(e.target.value)} placeholder="Type your name" aria-label="Your name for the certificate"/>
-    <p>completed the Ask VIC learning path</p><h2>{p.title}</h2>
+    <p>completed the AskVic learning path</p><h2>{p.title}</h2>
     <p>{item.minutes} minutes of self-directed professional learning · {new Date(item.completedAt).toLocaleDateString(undefined,{year:'numeric',month:'long',day:'numeric'})}</p>
     <small>Self-directed learning record. Not a substitute for official continuing-education credit unless your school accepts it.</small>
     <button className="outline noPrint" onClick={()=>window.print()}>Print or save as PDF</button>

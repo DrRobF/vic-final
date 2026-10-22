@@ -8,7 +8,7 @@ import { readLeader, readMode, saveMode, rememberLeader } from '../lib/view-mode
 const VISITOR_NAV = [
  { href: '/', label: 'Home' },
  { href: '/lessonplan', label: 'Lesson Designer' },
- { href: '/vic', label: 'VIC Co-Teacher' },
+ { href: '/vic', label: 'Meet VIC' },
  { href: '/educatorassistant', label: 'Assistant' },
 ]
 const EDUCATOR_NAV = [

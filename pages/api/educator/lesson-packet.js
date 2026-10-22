@@ -16,7 +16,7 @@ async function docx(sections,title,copies=1){
   paragraphs.push(new Paragraph({text:`${title}${copies>1?` — Copy ${copy+1} of ${copies}`:''}`,heading:HeadingLevel.TITLE,spacing:{after:180}}))
   for(const [index,s] of sections.entries()){paragraphs.push(new Paragraph({text:s.title,heading:HeadingLevel.HEADING_1,pageBreakBefore:index>0,spacing:{after:120}}));for(const line of s.body.split('\n'))paragraphs.push(new Paragraph({children:[new TextRun(line||' ')],spacing:{after:80}}))}
  }
- return Packer.toBuffer(new Document({creator:'Ask VIC',title,styles:{default:{document:{run:{font:'Calibri',size:22}}}},sections:[{properties:{},children:paragraphs}]}))
+ return Packer.toBuffer(new Document({creator:'AskVic',title,styles:{default:{document:{run:{font:'Calibri',size:22}}}},sections:[{properties:{},children:paragraphs}]}))
 }
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')

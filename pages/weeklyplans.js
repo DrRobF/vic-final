@@ -53,7 +53,7 @@ export default function WeeklyPlans(){
 
  return <main aria-busy={!!busy}><Head><title>Weekly Lesson Plans | AskVic</title><meta name="robots" content="noindex"/></Head><VICHeader currentPath="/weeklyplans"/>
  <div className="wp-shell">
-  <div className="wp-crumbs"><a href="/assistantprincipal">← School leadership workspace</a></div>
+  <div className="wp-crumbs"><a href="/assistantprincipal">← Staff &amp; deadlines</a></div>
   <header className="wp-hero"><p className="wp-eyebrow">SCHOOL LEADERSHIP · LESSON PLANS</p><h1>Every teacher’s week in one place.</h1><p>Teachers build their week in AskVic and send it here. Open any week to read each day’s lesson, worksheet and answer key, leave feedback and mark it reviewed.</p></header>
   {busy&&<p className="wp-message" role="status">{busy}</p>}
   <div role="alert" className={error?'wp-message wp-error':'wp-hidden'}>{error}</div><div role="status" className={notice?'wp-message':'wp-hidden'}>{notice}</div>

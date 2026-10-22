@@ -10,11 +10,11 @@ const STEPS = [
 
 // Public intro page for the VIC co-teacher, like the Lesson Designer and Assistant pages have.
 export default function VicIntro() {
- return <PageShell title="VIC Co-Teacher" description="VIC is an AI co-teacher. While you teach one group, VIC teaches the other students the same lesson goals from a new angle, at their level." currentPath="/vic">
+ return <PageShell title="Meet VIC" description="VIC is an AI co-teacher. While you teach one group, VIC teaches the other students the same lesson goals from a new angle, at their level." currentPath="/vic">
   <PanelStyles />
   <section className="hero">
    <div className="copy">
-    <p className="label">VIC Co-Teacher</p>
+    <p className="label">Meet VIC</p>
     <h1>You teach one group.<br /><em>VIC teaches the rest.</em></h1>
     <p className="lead">Small-group instruction works. The hard part has always been the other 20 students. VIC teaches them the same lesson goals from a different angle, one-on-one, at each student’s level, while you teach the group in front of you.</p>
     <div className="row">

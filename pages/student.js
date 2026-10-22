@@ -10,7 +10,7 @@ export default function StudentPage() {
 
   return (
     <main style={{ padding: '32px 16px', color: 'var(--vic-surface)' }}>
-      Redirecting to Ask VIC...
+      Opening AskVic…
     </main>
   )
 }

@@ -122,7 +122,7 @@ export default function SchoolDashboard() {
 
  function teach() { saveMode('teacher'); window.location.href = '/teach' }
 
- return <PageShell title="School" currentPath="/school">
+ return <PageShell title="School dashboard" currentPath="/school">
   <PanelStyles />
   {accountError ? <p className="alert" role="alert">{accountError} <a href="/login">Log in</a></p> : !account || schools === null ? <p role="status">Opening your school…</p> : <>
    <header className="top">

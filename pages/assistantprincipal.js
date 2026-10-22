@@ -53,7 +53,7 @@ export default function AssistantPrincipalPage() {
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
     const data = await response.json().catch(() => ({}))
-    if (!response.ok) throw new Error(data.error || 'Could not load Assistant Principal.')
+    if (!response.ok) throw new Error(data.error || 'Could not load Staff & deadlines.')
     return data
   }
 
@@ -166,10 +166,10 @@ export default function AssistantPrincipalPage() {
   const sourceFor = item => dashboard?.sources?.find(src => src.id === item.source_id)
   const dueLabel = item => item.cadence === 'weekly' ? DAYS[item.due_weekday] : item.cadence === 'monthly' ? `monthly on day ${item.due_monthday}` : 'daily'
 
-  if (!ready) return <main className="ap-page"><div className="ap-shell"><p>Loading Assistant Principal…</p></div></main>
+  if (!ready) return <main className="ap-page"><div className="ap-shell"><p>Loading Staff &amp; deadlines…</p></div></main>
   if (!session) return (
     <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/school">← School dashboard</a></div>
-      <section className="ap-hero"><p className="ap-eyebrow">Ask VIC for school leaders</p><h1>Meet your Assistant Principal.</h1>
+      <section className="ap-hero"><p className="ap-eyebrow">AskVic for school leaders</p><h1>Meet your Assistant Principal.</h1>
         <p>Bring your school’s roster, weekly commitments, and the tools you already use. Plan the week, track follow-through, and review every draft before it goes to anyone.</p>
         <div className="ap-actions"><a className="ap-primary" href="/login?next=/assistantprincipal">Sign in</a><a className="ap-outline" href="/signup">Request school access</a></div>
       </section><Styles /></div></main>
@@ -188,10 +188,10 @@ export default function AssistantPrincipalPage() {
 
   return (
     <main className="ap-page"><div className="ap-shell"><VICHeader currentPath="/assistantprincipal" /><div className="ap-actions"><a className="ap-outline" href="/school">← School dashboard</a><a className="ap-outline" href="/weeklyplans">Lesson plans</a><a className="ap-primary" href="/walkthroughs">Walkthroughs &amp; Learning Paths →</a></div>
-      <header className="ap-heading"><div><p className="ap-eyebrow">Assistant Principal</p><h1>{dashboard.school.name}</h1><p>{clock.date} · {dashboard.school.time_zone} · principal review</p></div>
+      <header className="ap-heading"><div><p className="ap-eyebrow">Staff &amp; deadlines</p><h1>{dashboard.school.name}</h1><p>{clock.date} · {dashboard.school.time_zone} · principal review</p></div>
         {schools.length > 1 && <label>School<select value={dashboard.school.id} onChange={e => switchSchool(e.target.value)}>{schools.map(item => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>}
       </header>
-      <nav className="ap-tabs" aria-label="Assistant Principal"><button className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Weekly brief</button><button className={view === 'setup' ? 'selected' : ''} onClick={() => setView('setup')}>School setup</button></nav>
+      <nav className="ap-tabs" aria-label="Staff and deadlines"><button className={view === 'week' ? 'selected' : ''} onClick={() => setView('week')}>Weekly brief</button><button className={view === 'setup' ? 'selected' : ''} onClick={() => setView('setup')}>School setup</button></nav>
       {message && <p className="ap-message" role="status">{message}</p>}
       {view === 'week' && <section><div className="ap-section-title"><div><h2>Weekly brief</h2><p>Friday before leaving or Monday morning. Enter non-confidential notes and review the result.</p></div></div>
         <div className="ap-grid"><form className="ap-panel" onSubmit={async e => { e.preventDefault(); await mutate({ action: 'draft_brief', notes }, 'Draft saved privately for your review.') }}><h3>Your notes</h3><textarea value={notes} onChange={e => setNotes(e.target.value)} maxLength="5000" placeholder="Goals, dates, loose ends, staff meeting topics…" rows="12" /><button className="ap-primary" disabled={busy || latestBrief?.state === 'approved'}>Draft weekly brief</button><p className="ap-small">Do not include student names, confidential evaluations, or private personnel details.</p></form>

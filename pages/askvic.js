@@ -30,20 +30,20 @@ const ASSIGNED_LESSON_UNAVAILABLE_MESSAGE = {
 function getEntryModeMeta({ hasAssignedLesson, hasUserMessages, sessionMode }) {
   if (sessionMode === 'teacher_directed' && hasAssignedLesson && !hasUserMessages) {
     return {
-      label: 'Teacher Lesson',
+      label: 'My teacher’s lesson',
       helper: "Your teacher has picked today's lesson. Send an opening line to begin.",
     }
   }
 
   if (sessionMode === 'teacher_directed' && hasAssignedLesson && hasUserMessages) {
     return {
-      label: 'Teacher Lesson In Progress',
+      label: 'My teacher’s lesson',
       helper: "VIC is following your teacher's lesson and guiding you step by step.",
     }
   }
 
   return {
-    label: 'My Own Work',
+    label: 'My own work',
     helper: 'Type what you want help with, and VIC will help you get started.',
   }
 }
@@ -222,7 +222,7 @@ export default function AskVIC() {
   async function commitSessionInterestInline() {
     const interest = sessionInterestInput.replace(/[<>]/g, '').trim().replace(/\s+/g, ' ').slice(0, 120)
     if (!interest) {
-      setInterestStatus({ tone: 'error', text: 'Please enter an interest.' })
+      setInterestStatus({ tone: 'error', text: 'Type something you love.' })
       return
     }
     if (interest === studentInterest) {
@@ -241,14 +241,14 @@ export default function AskVIC() {
         body: JSON.stringify({ interest }),
       })
       const payload = await response.json().catch(() => null)
-      if (!response.ok) throw new Error(payload?.error || 'Could not save your interest.')
+      if (!response.ok) throw new Error(payload?.error || 'Could not save that. Try again.')
       setStudentInterest(payload.interest)
       setSessionInterestInput(payload.interest)
       setIsEditingSessionInterest(false)
       setInterestStatus({ tone: 'success', text: `Interest changed to ${payload.interest}. VIC will use it in new examples.` })
     } catch (error) {
       setSessionInterestInput(studentInterest)
-      setInterestStatus({ tone: 'error', text: error?.message || 'Could not save your interest. Your previous interest is still saved.' })
+      setInterestStatus({ tone: 'error', text: error?.message || 'Could not save that. VIC still remembers what you told it before.' })
     } finally {
       setInterestSaving(false)
     }
@@ -286,7 +286,7 @@ export default function AskVIC() {
       setStudentGradeLevel('')
       setEnrolledClasses([])
       setActiveClassId(null)
-      setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
+      setStudentLookupStatus('VIC is ready.')
       return
     }
 
@@ -302,7 +302,7 @@ export default function AskVIC() {
         setStudentGradeLevel('')
         setEnrolledClasses([])
         setActiveClassId(null)
-        setStudentLookupStatus('Supabase is not configured. Ask VIC is in free mode.')
+        setStudentLookupStatus('VIC is ready.')
         return
       }
 
@@ -369,7 +369,7 @@ export default function AskVIC() {
         setStudentGradeLevel('')
         setEnrolledClasses([])
         setActiveClassId(null)
-        setStudentLookupStatus('Signed in as non-student. Ask VIC is in free mode.')
+        setStudentLookupStatus('VIC is ready.')
         return
       }
 
@@ -955,13 +955,13 @@ ${context}`
   const heroSection = (
     <section style={styles.controlCenterCard}>
       <div style={styles.controlCenterHeader}>
-        <div style={styles.sectionEyebrow}>Student controls</div>
-        <div style={styles.controlCenterTitle}>Control Center</div>
-        <div style={styles.controlCenterSubtext}>Manage your mode, class, and interest.</div>
+        <div style={styles.sectionEyebrow}>Get ready</div>
+        <div style={styles.controlCenterTitle}>Before we start</div>
+        <div style={styles.controlCenterSubtext}>Pick your class and tell VIC what you love.</div>
       </div>
 
       <div style={styles.controlCenterSection}>
-        <div style={styles.controlCenterSectionLabel}>Mode</div>
+        <div style={styles.controlCenterSectionLabel}>What are we doing?</div>
         <div style={styles.sessionModeToggle}>
           <button
             type="button"
@@ -976,18 +976,18 @@ ${context}`
             }
             title={
               teacherLessonDisabled
-                ? `Teacher Lesson disabled: ${teacherLessonDisabledReason}`
-                : 'Teacher Lesson available'
+                ? `No lesson from your teacher right now: ${teacherLessonDisabledReason}`
+                : 'Learn the lesson your teacher picked'
             }
           >
-            Teacher Lesson
+            My teacher’s lesson
           </button>
           <button
             type="button"
             onClick={() => handleSessionModeToggle('student_directed')}
             style={sessionMode === 'student_directed' ? styles.sessionModeButtonActive : styles.sessionModeButton}
           >
-            My Own Work
+            My own work
           </button>
         </div>
         <div style={{fontSize:13,lineHeight:1.5,marginTop:10,color:'#475569'}}>Learning conversations in your selected class are saved so your teacher can review your work and help you learn.</div>
@@ -1058,7 +1058,7 @@ ${context}`
                   style={enrolledClass.id === activeClassId ? styles.enrolledClassCardActive : styles.enrolledClassCard}
                 >
                   <strong>{enrolledClass.className || `Class ${enrolledClass.id}`}</strong>
-                  <span>{enrolledClass.id === activeClassId ? 'Selected • Ask VIC' : 'Select class'}</span>
+                  <span>{enrolledClass.id === activeClassId ? '✓ My class now' : 'Pick this class'}</span>
                 </button>
               ))}
             </div>
@@ -1080,9 +1080,9 @@ ${context}`
       </div>
 
       <div style={styles.controlCenterSection}>
-        <div style={styles.controlCenterSectionLabel}>Interest</div>
+        <div style={styles.controlCenterSectionLabel}>Things I love</div>
         <div style={styles.sessionInterestInline}>
-          <span style={styles.sessionInterestInlineLabel}>Interest:</span>
+          <span style={styles.sessionInterestInlineLabel}>I love:</span>
           {isEditingSessionInterest ? (
             <input
               id="session-interest-input"
@@ -1095,7 +1095,7 @@ ${context}`
                   commitSessionInterestInline()
                 }
               }}
-              placeholder="Set interest"
+              placeholder="Soccer, horses, Minecraft…"
               style={styles.sessionInterestInlineInput}
               maxLength={120}
               autoFocus
@@ -1109,7 +1109,7 @@ ${context}`
               }}
               style={styles.sessionInterestInlineValue}
             >
-              {studentInterest || 'None (Set)'}
+              {studentInterest || 'Tell VIC'}
             </button>
           )}
           <button
@@ -1137,9 +1137,9 @@ ${context}`
     <section style={styles.toolsCard}>
       <div style={styles.toolsHeaderRow}>
         <div style={styles.toolsHeaderText}>
-          <div style={styles.sectionEyebrow}>Workspace</div>
-          <div style={styles.sectionTitle}>Student Tools</div>
-          <div style={styles.toolsSubtext}>Click a tool to open your large workspace. Your work stays here while you switch tools.</div>
+          <div style={styles.sectionEyebrow}>Tools</div>
+          <div style={styles.sectionTitle}>My tools</div>
+          <div style={styles.toolsSubtext}>Practice, sketch, take notes or use a calculator. Your work stays here.</div>
         </div>
       </div>
       <div style={styles.toolLauncherGrid}>
@@ -1159,7 +1159,7 @@ ${context}`
       <section style={styles.toolModal} role="dialog" aria-modal="true" aria-labelledby="student-tool-title">
         <div style={styles.toolModalHeader}>
           <div>
-            <div style={styles.sectionEyebrow}>Student workspace</div>
+            <div style={styles.sectionEyebrow}>My tools</div>
             <div id="student-tool-title" style={styles.sectionTitle}>{activeTool[0].toUpperCase() + activeTool.slice(1)}</div>
           </div>
           <button type="button" autoFocus style={styles.toolCloseButton} onClick={() => setActiveTool(null)}>Close</button>
@@ -1167,11 +1167,11 @@ ${context}`
         <div style={styles.toolModalBody}>
           {activeTool === 'practice' ? <>
             <textarea aria-label="Practice workspace" value={workArea} onChange={(e) => setWorkArea(e.target.value)} placeholder="Work out your thinking here..." style={styles.modalTextarea} />
-            <div style={styles.supportRowTwoUp}><button style={styles.supportButtonWhite} onClick={requestHint}>Hint</button><button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>Ask VIC About This</button></div>
+            <div style={styles.supportRowTwoUp}><button style={styles.supportButtonWhite} onClick={requestHint}>Hint</button><button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>Ask VIC about this</button></div>
           </> : null}
           {activeTool === 'notes' ? <>
             <textarea aria-label="Notes workspace" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Save important ideas here..." style={styles.modalTextarea} />
-            <div style={styles.supportRowTwoUp}><button style={styles.supportButtonWhite} onClick={requestHint}>Hint</button><button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>Ask VIC About This</button></div>
+            <div style={styles.supportRowTwoUp}><button style={styles.supportButtonWhite} onClick={requestHint}>Hint</button><button style={styles.supportButtonWhiteStrong} onClick={requestAskVICAboutThis}>Ask VIC about this</button></div>
           </> : null}
           {activeTool === 'sketch' ? <>
             <div style={styles.sketchToolbar}><button style={styles.sketchToolButton} onClick={() => setCanvasMode('draw')}>Pen</button><button style={styles.sketchToolButton} onClick={() => setCanvasMode('erase')}>Erase</button><button style={styles.sketchToolButton} onClick={clearCanvas}>Clear</button></div>

@@ -99,7 +99,7 @@ const START = [
   who: 'Students', steps: [
    ['Go to askvic.ai/student-login', 'and type the username and password from your login card.'],
    ['Today', 'shows the lessons your teacher sent you.'],
-   ['Choose Teacher Lesson', 'to learn what your teacher assigned, or My Own Work for homework help and anything else.'],
+   ['Choose My teacher’s lesson', 'to learn what your teacher assigned, or My own work for homework help and anything else.'],
    ['Set your interest', '(music, sports, games…) so VIC can use it in examples.'],
    ['Use your workspace:', 'Sketch to draw, Practice to work problems, Notes to save ideas, and the Calculator.'],
   ],
@@ -111,7 +111,7 @@ const STUCK = [
  ['My name is on the staff list, but my principal says I haven’t joined.', 'Being on the list and joining are different. Your principal added your name; joining connects your account. Open My Week: if your principal used the same email you log in with, a card offers one-click join. If not, type the school code in that card, or go to askvic.ai/join.'],
  ['I got “The activity sequence was incomplete.”', 'VIC now retries automatically when this happens, so it should be rare. If you still see it, pick at least one activity in the customize panel and build again. Your previous draft is still saved.'],
  ['A student can’t log in.', 'Students log in at askvic.ai/student-login, not the teacher page. Check the username on their card. Passwords are all lowercase, like happy-tiger-47. A school leader can reset any student password in Setup → Teachers & students.'],
- ['VIC is talking about a different topic than my lesson.', 'The student is probably in My Own Work. Have them switch to Teacher Lesson at the top of their screen. VIC teaches the assigned lesson only in Teacher Lesson, and only after you have assigned one to their class.'],
+ ['VIC is talking about a different topic than my lesson.', 'The student is probably in My own work. Have them switch to My teacher’s lesson at the top of their screen. VIC teaches the assigned lesson only in Teacher Lesson, and only after you have assigned one to their class.'],
  ['I got a VIC safety alert email. What do I do?', 'Check on the student today and follow your school’s reporting procedures. VIC flags anything that might mean a child is unsafe, so some alerts will be false alarms, but every one deserves a look. VIC does not replace your counselor or your mandated-reporting duties.'],
  ['Can my principal see my drafts or my Learning Path quiz scores?', 'No. Leaders see only the weeks you send. For Learning Paths they see completed or not completed and your own reflection, never your quiz score.'],
  ['Does VIC send emails to families without me?', 'No. Every letter is a draft you read, edit, and send yourself.'],

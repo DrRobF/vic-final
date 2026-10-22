@@ -62,7 +62,7 @@ export default function Walkthroughs(){
    {!data?<p role="status">Loading your school…</p>:<>
 
    {tab==='new'&&<form className="card" onSubmit={submit}>
-    {!data.staff.length&&<p className="error">Your staff list is empty. Add teachers in the <a href="/assistantprincipal">leadership workspace</a> first.</p>}
+    {!data.staff.length&&<p className="error">Your staff list is empty. Add teachers on <a href="/assistantprincipal">Staff &amp; deadlines</a> first.</p>}
     <div className="row3">
      <label>Observer<input value={data.me.name} disabled/></label>
      <label>Teacher<select required value={form.staffId} onChange={e=>set({staffId:e.target.value})}><option value="">Choose</option>{data.staff.map(s=><option key={s.id} value={s.id}>{s.name}{s.assignment?` — ${s.assignment}`:''}</option>)}<option value="__other">Someone not on the staff list…</option></select>{other&&<input required minLength="2" maxLength="120" placeholder="Teacher’s name" value={form.teacherName} onChange={e=>set({teacherName:e.target.value})}/>}</label>
@@ -115,7 +115,7 @@ export default function Walkthroughs(){
      <div className="seats"><div className="bar"><span style={{width:`${Math.min(100,Math.round(100*data.school.seatsUsed/Math.max(1,data.school.seatLimit)))}%`}}/></div><p><strong>{data.school.seatsUsed}</strong> of <strong>{data.school.seatLimit}</strong> seats used by staff who log in. {data.school.seatsUsed>=data.school.seatLimit?'Your school is full. Remove someone or ask about a larger plan.':''}</p></div>
      <button className="textButton" type="button" onClick={newCode}>Make a new code (the old one stops working)</button>
     </section>
-    <section className="card"><h2>Staff list</h2><p className="muted">Add, edit, or remove people in the <a href="/assistantprincipal">leadership workspace</a>. Walkthroughs work for everyone on the list. “Joined” means they’ve linked their AskVic account, so assigned Learning Paths reach them.</p>
+    <section className="card"><h2>Staff list</h2><p className="muted">Add, edit, or remove people on <a href="/assistantprincipal">Staff &amp; deadlines</a>. Walkthroughs work for everyone on the list. “Joined” means they’ve linked their AskVic account, so assigned Learning Paths reach them.</p>
      <ul className="staffList">{data.staff.map(s=><li key={s.id}><span>{s.name}{s.assignment?<small className="muted"> · {s.assignment}</small>:null}</span><b className={s.joined?'joined':'notJoined'}>{s.joined?'✓ Joined':s.hasEmail?'Not joined yet':'No email · not joined'}</b></li>)}</ul>
     </section>
    </>}

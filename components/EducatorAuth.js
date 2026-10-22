@@ -51,7 +51,7 @@ export default function EducatorAuth({mode='signup'}){
  const checks=<>
   <fieldset className="updatesChoice" style={{border:'2px solid var(--vic-primary)',borderRadius:14,padding:'16px 18px',margin:'20px 0',background:'var(--vic-primary-soft, #E8EBF4)'}}>
    <legend style={{fontWeight:800,fontSize:16,padding:'0 6px'}}>Would you like email updates from Dr. Rob Furman?</legend>
-   <p style={{margin:'4px 0 12px',fontSize:14,lineHeight:1.6}}>Occasional teaching tips, new Ask VIC features, and workshop news. <strong>Please choose one.</strong> Saying no never limits your access to Ask VIC, and you can change your mind anytime.</p>
+   <p style={{margin:'4px 0 12px',fontSize:14,lineHeight:1.6}}>Occasional teaching tips, new AskVic features, and workshop news. <strong>Please choose one.</strong> Saying no never limits your access to Ask VIC, and you can change your mind anytime.</p>
    <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}>
     {[[true,'Yes, send me updates'],[false,'No thanks']].map(([value,label])=><label key={label} style={{display:'flex',alignItems:'center',gap:10,padding:'14px 16px',border:`2px solid ${updates===value?'var(--vic-primary)':'var(--vic-border, #ddd)'}`,borderRadius:12,background:updates===value?'white':'rgba(255,255,255,.6)',fontWeight:750,fontSize:15,cursor:'pointer'}}><input type="radio" name="vic-updates" required checked={updates===value} onChange={()=>setUpdates(value)} style={{width:20,height:20}}/>{label}</label>)}
    </div>

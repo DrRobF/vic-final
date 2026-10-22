@@ -70,7 +70,7 @@ export default async function handler(req, res) {
   if(activityError)return res.status(500).json({error:'Could not read recorded VIC activity.'})
   const {data:openWork,error:openError}=await auth.admin.from('vic_open_work_snapshots').select('turns,updated_at').eq('student_id',safeStudentId).eq('class_id',safeClassId).maybeSingle()
   if(openError)return res.status(500).json({error:'Could not read recorded VIC activity.'})
-  const sources=[...(snapshots||[]).map(s=>({...s,label:'Teacher Lesson'})),...(openWork?[{...openWork,label:'My Own Work'}]:[])].sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at)).slice(0,3)
+  const sources=[...(snapshots||[]).map(s=>({...s,label:'Teacher’s lesson'})),...(openWork?[{...openWork,label:'My own work'}]:[])].sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at)).slice(0,3)
   if(sources[0]?.label==='My Own Work')safeSessionFocus='My Own Work with VIC'
   else if(sources[0]?.assignment_id){const {data:assignment}=await auth.admin.from('assignments').select('lessons:lesson_id(title)').eq('id',sources[0].assignment_id).eq('student_id',safeStudentId).maybeSingle();const linked=Array.isArray(assignment?.lessons)?assignment.lessons[0]:assignment?.lessons;if(linked?.title)safeSessionFocus=linked.title}
   const transcriptText=sources.reverse().flatMap(row=>(Array.isArray(row.turns)?row.turns:[]).map(turn=>`Mode: ${row.label}\nStudent: ${String(turn.student||'').slice(0,1200)}\nVIC: ${String(turn.vic||'').slice(0,1800)}`)).slice(-20).join('\n\n')
