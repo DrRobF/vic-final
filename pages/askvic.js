@@ -491,6 +491,8 @@ export default function AskVIC() {
       setHasTeacherAssignment(true)
       setStudentMode(latestAssignment.mode || '')
       setStudentSupportLevel(resolvedSupportLevel)
+      // Came from "Learn with VIC" on a lesson: start on that lesson, not on My own work.
+      if (linkedLessonId && Number(lessonRow.id) === linkedLessonId) setSessionMode('teacher_directed')
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
   }, [activeClassId])
 

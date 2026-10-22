@@ -17,6 +17,11 @@ const firstName = name => String(name || '').trim().split(/\s+/)[0] || 'there'
 export default function Learn() {
  const [data, setData] = useState(null), [error, setError] = useState(''), [pick, setPick] = useState(0), [open, setOpen] = useState(false)
  useEffect(() => { call('GET').then(setData).catch(e => setError(e.message)) }, [])
+ // A student waiting on this screen sees the lesson appear when the teacher taps Launch, without reloading.
+ useEffect(() => {
+  const t = setInterval(() => { if (document.visibilityState === 'visible') call('GET').then(d => setData(cur => (cur && JSON.stringify(cur.lessons.map(l => l.lessonId)) === JSON.stringify(d.lessons.map(l => l.lessonId)) ? cur : d))).catch(() => {}) }, 20000)
+  return () => clearInterval(t)
+ }, [])
  const lessons = data?.lessons || []
  // One group per class, so a student with ELA and math sees which lesson belongs to which class.
  const classGroups = []
