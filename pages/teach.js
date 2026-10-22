@@ -58,24 +58,13 @@ export default function MyWeek() {
    if (!active) return
    setTodayItems(rs.map(({ w, d }) => {
     const day = d.week?.days?.[todayIdx], l = day?.lessonId ? d.lessons?.[day.lessonId] : null
-    return l ? { w, lessonId: day.lessonId, title: l.title, vicReady: l.vicReady !== false, vicIssue: l.vicIssue || '', release: d.release?.byDay?.[todayIdx] || null } : null
+    return l ? { w, lessonId: day.lessonId, title: l.title, vicReady: l.vicReady !== false, vicIssue: l.vicIssue || '' } : null
    }).filter(Boolean))
   }).catch(() => { if (active) setTodayItems([]) })
   return () => { active = false }
  }, [weeks, weekKey, todayIdx])
 
 
- // When AskVic can't tell which class a week is for, the teacher picks it once.
- async function setWeekClass(classId) {
-  try {
-   const { data: { session } } = await supabase.auth.getSession()
-   if (!session) throw new Error('Please log in again.')
-   const r = await fetch('/api/lessonplan/weeks', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setClass', weekId: week.id, classId }) })
-   const d = await r.json().catch(() => ({}))
-   if (!r.ok) throw new Error(d.error || 'Could not save the class.')
-   setDetail(await openWeek(week.id))
-  } catch (e) { setError(e.message) }
- }
  const days = detail?.week?.days || week?.days || []
  const lessons = detail?.lessons || {}
  const planned = days.filter(d => d.lessonId && lessons[d.lessonId]).length
@@ -110,11 +99,11 @@ export default function MyWeek() {
     {todayItems.map(item => {
      const problem = !account.classroom ? { text: 'Join your school so VIC can teach your students.', fix: '/join', label: 'Join your school' }
       : !item.vicReady ? { text: item.vicIssue, fix: stepHref('plan', item.lessonId), label: 'Fix the lesson' }
-      : problemFor(item.release?.status)
+      : null
      return <div className="trow" key={item.lessonId}>
       <div className="tinfo"><span className="tmeta">{gradeLabel(item.w.grade)} · {subjectLabel(item.w.subject)}</span><h2>{item.title}</h2></div>
       <div className="tact">
-       <a className="btn btn-cyan big" href={`/lesson/live?id=${encodeURIComponent(item.lessonId)}`}>Launch lesson</a>
+       {problem ? <a className="btn btn-cyan big" href={problem.fix}>{problem.label}</a> : <a className="btn btn-cyan big" href={`/lesson/live?id=${encodeURIComponent(item.lessonId)}&launch=1`}>Launch lesson</a>}
        <a className="btn btn-outline tsub" href={stepHref('print', item.lessonId)}>Print</a>
       </div>
       {problem && <p className="terr" role="alert">{problem.text} {problem.fix && <a href={problem.fix}>{problem.label} →</a>}</p>}
@@ -131,10 +120,6 @@ export default function MyWeek() {
       : <button type="button" className="trash" onClick={() => setConfirmRemove(true)}>Remove this week</button>)}
     </div>}
 
-    {account.classroom && detail?.release && !detail.release.classId && detail.release.classes?.length > 0 && planned > 0 && <section className="panel pickc">
-     <p><strong>Which class is this week for?</strong> Pick once and every planned day goes to those students on its morning.</p>
-     <div className="row">{detail.release.classes.map(c => <button key={c.id} type="button" className="btn btn-outline" onClick={() => setWeekClass(c.id)}>{c.name}</button>)}</div>
-    </section>}
     <div className="days">
      {WEEKDAYS.map((name, i) => {
       const day = days[i] || {}, lesson = day.lessonId ? lessons[day.lessonId] : null, isToday = dates[i] === today
@@ -146,9 +131,9 @@ export default function MyWeek() {
          <a className="title" href={stepHref(isToday ? 'teach' : 'plan', day.lessonId)} title={isToday ? 'Open Teach for today' : 'Open the lesson'}>{lesson.title}</a>
          <div className="bar" aria-label={`${doneCount(lesson.steps)} of 4 steps done`}>{STEPS.map(s => <a key={s.key} href={stepHref(s.key, day.lessonId)} className={stepDone(s.key, lesson.steps) ? 'seg done' : 'seg'} title={s.label}><span>{s.label}</span></a>)}</div>
          {next ? <a className="next" href={stepHref(next.key, day.lessonId)}>Next: {next.label} →</a> : <span className="alldone">✓ All done</span>}
-         {(() => { const st = detail?.release?.byDay?.[i]?.status, p = lesson.vicReady === false ? { text: 'Needs a standard and an objective before VIC can teach it.', fix: stepHref('plan', day.lessonId), label: 'Fix it' } : account.classroom && dates[i] >= today ? problemFor(st) : null
+         {(() => { const p = lesson.vicReady === false && dates[i] >= today ? { text: 'Needs a standard and an objective before VIC can teach it.', fix: stepHref('plan', day.lessonId), label: 'Fix it' } : null
           return p ? <p className="dprob">{p.text} {p.fix && <a href={p.fix}>{p.label} →</a>}</p> : null })()}
-         {isToday && <a className="launch" href={`/lesson/live?id=${encodeURIComponent(day.lessonId)}`}>Launch</a>}
+         {isToday && lesson.vicReady !== false && account.classroom && <a className="launch" href={`/lesson/live?id=${encodeURIComponent(day.lessonId)}&launch=1`}>Launch</a>}
         </>
         : loadingWeek ? <p className="muted">Loading…</p>
         : <>
@@ -188,8 +173,6 @@ export default function MyWeek() {
    .dprob a{color:var(--vic-primary)}
    .launch{display:block;text-align:center;padding:10px;border-radius:12px;background:var(--vic-primary);color:#fff;font-weight:800;text-decoration:none}
    .launch:hover{filter:brightness(1.08)}
-   .pickc{display:flex;flex-direction:column;gap:10px;border:2px solid var(--vic-primary)}
-   .pickc p{margin:0}
    .todaybox{display:flex;flex-direction:column;gap:16px;border:2px solid var(--vic-cyan)}
    .tlabel{margin:0;font-family:var(--font-mono);font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--vic-cyan)}
    .trow{display:flex;flex-direction:column;gap:12px}
@@ -253,11 +236,4 @@ export default function MyWeek() {
    @media(max-width:560px){.days{grid-template-columns:1fr}.day{min-height:0}}
   `}</style>
  </PageShell>
-}
-
-// Only problems get words on a card. A planned day with nothing wrong just goes to students that morning.
-function problemFor(status) {
- if (status === 'noClass') return { text: 'Pick which class this week is for (above).', fix: '', label: '' }
- if (status === 'emptyClass') return { text: 'This class has no students yet.', fix: '/classes', label: 'Add students' }
- return null
 }

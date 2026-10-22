@@ -21,12 +21,20 @@ export default function LiveLesson() {
  const [data, setData] = useState(null), [error, setError] = useState('')
  const [at, setAt] = useState(0), [left, setLeft] = useState(0), [running, setRunning] = useState(false)
  const [show, setShow] = useState(false), [send, setSend] = useState({}), [refresh, setRefresh] = useState(0)
- const tick = useRef(null)
+ const tick = useRef(null), launched = useRef(false)
 
  useEffect(() => {
   if (!id) return
   authed(`/api/teacher/live-lesson?id=${encodeURIComponent(id)}`).then(({ r, d }) => { if (!r.ok) setError(d.error || 'Could not open this lesson.'); else setData(d) }).catch(e => setError(e.message))
  }, [id, refresh])
+
+ // Launch from My Week: students get the lesson now, once. Reloading this page never sends it twice.
+ useEffect(() => {
+  if (!data || launched.current || router.query.launch !== '1') return
+  launched.current = true
+  router.replace(`/lesson/live?id=${encodeURIComponent(id)}`, undefined, { shallow: true })
+  if (!data.live?.today) sendNow()
+ }, [data]) // eslint-disable-line react-hooks/exhaustive-deps
 
  const phases = data?.phases || [], phase = phases[at]
  useEffect(() => { setLeft((phase?.minutes || 0) * 60); setRunning(false) }, [at, phase?.minutes])
@@ -46,7 +54,7 @@ export default function LiveLesson() {
   return () => window.removeEventListener('keydown', key)
  }, [phases.length])
 
- // Only needed when the lesson isn't on students' screens yet (it wasn't in the week plan, say).
+ // Students get the lesson only when the teacher launches it.
  async function sendNow(classId) {
   setSend({ busy: true })
   try {
@@ -70,10 +78,10 @@ export default function LiveLesson() {
      {goal && <p className="goal">Today we are learning to {goal.replace(/^./, c => c.toLowerCase())}</p>}
     </div>
     <div className="status">
-     {data.live ? <p className="on">✓ On students’ screens: {data.live.count} {data.live.count === 1 ? 'student' : 'students'}{data.live.className ? ` in ${data.live.className}` : ''}</p>
+     {data.live?.today ? <p className="on">✓ On students’ screens: {data.live.count} {data.live.count === 1 ? 'student' : 'students'}{data.live.className ? ` in ${data.live.className}` : ''}</p>
       : <>
        <p className="off">Not on students’ screens yet.</p>
-       <button type="button" className="btn btn-primary" disabled={send.busy} onClick={() => sendNow()}>{send.busy ? 'Sending…' : 'Send to my class'}</button>
+       <button type="button" className="btn btn-primary" disabled={send.busy} onClick={() => sendNow()}>{send.busy ? 'Launching…' : 'Launch to my class'}</button>
        {send.pick && <span className="pick">Which class? {send.pick.map(c => <button key={c.id} type="button" className="btn btn-outline sm" onClick={() => sendNow(c.id)}>{c.name}</button>)}</span>}
        {send.err && <p className="err" role="alert">{send.err} {send.fix && <a href={send.fix}>Fix this →</a>}</p>}
       </>}

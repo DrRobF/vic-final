@@ -2,6 +2,7 @@ import { requireApprovedProfile } from '../../../lib/server-auth'
 import { vicTargetText } from '../../../lib/lesson-companion.mjs'
 import assignLesson from './assign-lesson'
 import { schoolDayStart } from '../../../lib/release.mjs'
+import { matchClass } from '../../../lib/class-match.mjs'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const positive = v => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null }
@@ -31,14 +32,14 @@ export default async function handler(req, res) {
   let lessonText
   try { lessonText = vicTargetText(lesson.draft) } catch (e) { return res.status(400).json({ error: e.message, needsLessonWork: true }) }
 
-  const { data: classes, error: classesError } = await auth.admin.from('classes').select('id,class_name').eq('teacher_id', auth.profile.id).order('id', { ascending: true })
+  const { data: classes, error: classesError } = await auth.admin.from('classes').select('id,class_name,grade_level').eq('teacher_id', auth.profile.id).order('id', { ascending: true })
   if (classesError) throw classesError
   if (!classes?.length) return res.status(409).json({ error: 'Your account isn’t linked to a school classroom yet. Join with your school’s code first.', noClassroom: true })
 
   let classId = positive(req.body?.classId)
+  if (!classId) classId = matchClass(classes, { grade: lesson.draft?.input?.grade, subject: lesson.draft?.input?.subject })?.id || null
   if (!classId) {
-   if (classes.length === 1) classId = classes[0].id
-   else {
+   {
     const { data: counts } = await auth.admin.from('enrollments').select('class_id').in('class_id', classes.map(c => c.id))
     const sizes = {}; (counts || []).forEach(r => { sizes[r.class_id] = (sizes[r.class_id] || 0) + 1 })
     return res.status(409).json({ error: 'Which class is this for?', needClass: true, classes: classes.map(c => ({ id: c.id, name: c.class_name, students: sizes[c.id] || 0 })) })

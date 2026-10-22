@@ -3,6 +3,7 @@ import { validLessonId } from '../../../lib/educator-lessons.mjs'
 import { buildLessonPacket } from '../../../lib/lesson-packet.mjs'
 import { lessonTargets } from '../../../lib/lesson-companion.mjs'
 import { lessonPhases } from '../../../lib/lesson-live.mjs'
+import { schoolToday } from '../../../lib/release.mjs'
 
 // Live lesson: everything the teacher needs while the lesson is running, in one response.
 // The schedule of activities, the teacher's own materials, what students are looking at,
@@ -32,7 +33,7 @@ export default async function handler(req, res) {
    const { data: rows } = await db.from('lessons').select('id,class_id,classes:class_id(class_name),assignments!inner(assigned_at)')
     .eq('source_lesson_id', id).eq('teacher_id', auth.profile.id).lte('assignments.assigned_at', nowIso)
    const best = (rows || []).map(r => ({ r, at: (r.assignments || []).map(a => a.assigned_at).sort().at(-1), n: (r.assignments || []).length })).sort((a, b) => (a.at < b.at ? 1 : -1))[0]
-   if (best) live = { className: best.r.classes?.class_name || '', count: best.n, at: best.at }
+   if (best) live = { className: best.r.classes?.class_name || '', count: best.n, at: best.at, today: schoolToday(new Date(best.at)) === schoolToday() }
   }
 
   return res.json({

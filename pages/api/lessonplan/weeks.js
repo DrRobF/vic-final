@@ -3,7 +3,6 @@ import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { normalizeWeekSetup, lessonIntoWeekDay, mondayOf, WEEKDAYS, weekStandardRows, buildWeekSubmission, submissionEmail, weekFileName, validEmail, isUuid, MAX_EMAIL_SENDS_PER_DAY } from '../../../lib/lesson-week.mjs'
 import { buildWeekDocx } from '../../../lib/lesson-week-docx.mjs'
 import { vicTargetText } from '../../../lib/lesson-companion.mjs'
-import { syncWeekReleases } from '../../../lib/week-release.mjs'
 export const config={api:{bodyParser:{sizeLimit:'200kb'},responseLimit:'12mb'},maxDuration:60}
 
 const SITE=process.env.NEXT_PUBLIC_SITE_URL||'https://www.askvic.ai'
@@ -99,12 +98,9 @@ export default async function handler(req,res){
     res.setHeader('Content-Type','application/vnd.openxmlformats-officedocument.wordprocessingml.document');res.setHeader('Content-Disposition',`attachment; filename="${weekFileName(week)}"`)
     return res.status(200).send(buffer)
    }
-   // The week plan is the schedule: make sure each planned day goes to students that morning.
-   let release=null
-   if(auth.profile?.role==='teacher'){try{release=await syncWeekReleases(db,{teacherId:auth.profile.id,row,lessons})}catch(e){console.error('Week release sync failed',{message:e?.message})}}
    const sends=await loadSends(auth,[...lessons.keys()])
    const summaries=Object.fromEntries([...lessons].map(([id,d])=>[id,{title:d.plan?.title||'Untitled lesson',worksheet:!!d.worksheet,steps:d.steps||{},updatedAt:d.updatedAt,...vicReadiness(d),sent:sends.get(id)||null}]))
-   return res.json({week:publicWeek(row),lessons:summaries,release})
+   return res.json({week:publicWeek(row),lessons:summaries})
   }
 
   const action=req.body?.action
@@ -115,20 +111,6 @@ export default async function handler(req,res){
    if(existing&&existing.user_id!==owner)return res.status(404).json({error:'This week is not in your account.'})
    if(!await persistWeek(db,owner,week,existing))return res.status(503).json({error:'Your week could not be saved. Please retry.'})
    return res.json({saved:true,id:week.id,status:existing?.status||'draft'})
-  }
-
-  // When AskVic can't tell which class a week is for, the teacher picks once and it's remembered.
-  if(action==='setClass'){
-   if(!isUuid(req.body?.weekId))return res.status(400).json({error:'Invalid week link.'})
-   const classId=Number(req.body?.classId)
-   if(!auth.profile?.id||!Number.isInteger(classId))return res.status(400).json({error:'Choose one of your classes.'})
-   const {data:cls}=await db.from('classes').select('id').eq('id',classId).eq('teacher_id',auth.profile.id).maybeSingle()
-   if(!cls)return res.status(403).json({error:'That class does not belong to you.'})
-   const {data:row,error}=await db.from('lesson_weeks').select('id,settings').eq('user_id',owner).eq('id',req.body.weekId).maybeSingle()
-   if(error||!row)return res.status(404).json({error:'This week is not in your account.'})
-   const {error:upErr}=await db.from('lesson_weeks').update({settings:{...(row.settings||{}),classId}}).eq('id',row.id).eq('user_id',owner)
-   if(upErr)return res.status(503).json({error:'Could not save the class. Please retry.'})
-   return res.json({saved:true})
   }
 
   // A lesson made in the detailed single-lesson planner goes into one day of a week.
