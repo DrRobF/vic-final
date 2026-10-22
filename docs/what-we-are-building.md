@@ -217,6 +217,16 @@ Rule that stays: standards come from the official documents, never written by VI
 
 Not on this list: the Virtual Room.
 
+## Later: Hiring (employment and interviews), Oct 22
+
+Rob built a teacher hiring system for Saint Peter's Academy (repo `DrRobF/SaintPetersAcademy`:
+`app/employment`, `lib/employment-screening.ts`, `components/employment/EmploymentInbox.tsx`).
+It has an employment inquiry form, invitation links to a recorded video screening (five
+questions, up to five minutes each, plus résumé and consent), and a private staff inbox where
+reviewers score each answer 1–5 with notes and move a candidate to second round, hold or not
+advancing. Rob wants it in AskVic as another perk for school leaders. Not started — talk it
+through with Rob after the current work is clean.
+
 ## Still open
 
 - The red-flag rule for the principal's "on level / red flag" card (Rob, Oct 21).
