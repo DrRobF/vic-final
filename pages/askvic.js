@@ -180,6 +180,8 @@ export default function AskVIC() {
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
   const [practiceDone, setPracticeDone] = useState('')
+  // "waiting" until a lesson link has loaded its lesson, then "ready", then "done" once VIC has started.
+  const autoStartRef = useRef('waiting')
   const [nextBusy, setNextBusy] = useState(false)
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
@@ -495,7 +497,11 @@ export default function AskVIC() {
       setStudentMode(latestAssignment.mode || '')
       setStudentSupportLevel(resolvedSupportLevel)
       // Came from "Learn with VIC" on a lesson: start on that lesson, not on My own work.
-      if (linkedLessonId && Number(lessonRow.id) === linkedLessonId) setSessionMode('teacher_directed')
+      if (linkedLessonId && Number(lessonRow.id) === linkedLessonId && autoStartRef.current === 'waiting') {
+        setSessionMode('teacher_directed')
+        setMessages(messagesForModeSwitch('teacher_directed', lessonRow.title || 'your lesson'))
+        autoStartRef.current = 'ready'
+      }
       setStudentLookupStatus(`Loaded assigned lesson: ${lessonRow.title || 'Untitled lesson'}`)
   }, [activeClassId])
 
@@ -636,6 +642,14 @@ export default function AskVIC() {
       behavior: 'smooth',
     })
   }, [messages])
+
+  // Came from "Learn with VIC" or "Practice": VIC starts the lesson itself, no opening line needed.
+  useEffect(() => {
+    if (autoStartRef.current !== 'ready' || sessionMode !== 'teacher_directed' || !assignedLesson || loading) return
+    if (messages.some((m) => m.role === 'user')) { autoStartRef.current = 'done'; return }
+    autoStartRef.current = 'done'
+    sendMessage('I’m ready to start!')
+  }, [sessionMode, assignedLesson, messages, loading]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function goNextPractice() {
     setNextBusy(true)
@@ -1023,7 +1037,6 @@ ${context}`
       </div>
 
       <div style={styles.controlCenterSection}>
-        <div style={styles.controlCenterSectionLabel}>Class</div>
         <div style={styles.joinClassControlWrap}>
           <label style={styles.classSwitcherControlLabel}>
             <span style={styles.classSwitcherControlLabelText}>Class</span>
@@ -1077,21 +1090,7 @@ ${context}`
             </button>
               </div>
             </>
-          ) : (
-            <div style={styles.enrolledClassGrid}>
-              {enrolledClasses.map((enrolledClass) => (
-                <button
-                  key={enrolledClass.id}
-                  type="button"
-                  onClick={() => setActiveClassId(enrolledClass.id)}
-                  style={enrolledClass.id === activeClassId ? styles.enrolledClassCardActive : styles.enrolledClassCard}
-                >
-                  <strong>{enrolledClass.className || `Class ${enrolledClass.id}`}</strong>
-                  <span>{enrolledClass.id === activeClassId ? '✓ My class now' : 'Pick this class'}</span>
-                </button>
-              ))}
-            </div>
-          )}
+          ) : null}
           {joinClassStatus.text ? (
             <div
               style={
@@ -1229,8 +1228,8 @@ ${context}`
         <div style={styles.shell}>
           {!isCompact ? (
             <div style={styles.leftColumn}>
-              {heroSection}
               {toolsSection}
+              {heroSection}
             </div>
           ) : null}
 
