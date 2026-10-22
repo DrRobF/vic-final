@@ -48,13 +48,16 @@ export default async function handler(req, res) {
   // Taught standards from the week plans of the teacher who teaches this subject, most recent week first.
   // In a VIC class that is the child's Math or ELA teacher, not the VIC teacher.
   let owner = cls.users?.auth_user_id
+  // A mixed 3/4 group is planned as one grade; what the teacher taught that group comes first.
+  let planGrade = cls.grade_level == null ? grade : String(cls.grade_level)
   if (vicClass) {
-   const { data: mine } = await db.from('enrollments').select('classes:class_id(class_name,users:teacher_id(auth_user_id))').eq('student_id', me)
+   const { data: mine } = await db.from('enrollments').select('classes:class_id(class_name,grade_level,users:teacher_id(auth_user_id))').eq('student_id', me)
    const content = (mine || []).map(m => m.classes).find(c => c && !VIC_CLASS.test(c.class_name || '') && SUBJECT_WORDS[subject].test(c.class_name || ''))
    owner = content?.users?.auth_user_id || null
+   if (content?.grade_level != null) planGrade = String(content.grade_level)
   }
   const thisWeek = mondayOf(schoolToday())
-  const { data: weeks } = owner ? await db.from('lesson_weeks').select('week_of,grade,subject,days').eq('user_id', owner).eq('subject', subject).eq('grade', grade).lte('week_of', thisWeek).order('week_of', { ascending: false }).limit(8) : { data: [] }
+  const { data: weeks } = owner ? await db.from('lesson_weeks').select('week_of,grade,subject,days').eq('user_id', owner).eq('subject', subject).in('grade', [...new Set([planGrade, grade])]).lte('week_of', thisWeek).order('week_of', { ascending: false }).limit(8) : { data: [] }
   const taught = []
   for (const w of weeks || []) for (const d of [...(w.days || [])].reverse()) for (const id of d?.standardIds || []) if (!taught.includes(id) && byId.get(id)?.state === STATE) taught.push(id)
   const rest = catalogue.filter(s => s.state === STATE && s.subject === subject && s.grade === grade && practiceable(s)).map(s => s.id)
