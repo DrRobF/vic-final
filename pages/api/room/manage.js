@@ -110,6 +110,19 @@ export default async function handler(req, res) {
    if (aErr) { await db.from('lessons').delete().eq('id', lesson.id); throw aErr }
    return res.json({ launched: enrolled.length })
   }
+  // Finishing a move into the room: its students leave every class outside the room. School leaders only.
+  if (action === 'leaveOldClasses') {
+   if (!leader) return res.status(403).json({ error: 'Only a school leader can move students between classes.' })
+   const ids = students.map(s => s.id)
+   const { data: other } = ids.length ? await db.from('enrollments').select('class_id,student_id').in('student_id', ids).not('class_id', 'in', `(${(room.class_ids || []).join(',')})`) : { data: [] }
+   if (req.body?.confirm !== true) {
+    const counts = {}; for (const e of other || []) counts[e.class_id] = (counts[e.class_id] || 0) + 1
+    const { data: names } = Object.keys(counts).length ? await db.from('classes').select('id,class_name').in('id', Object.keys(counts).map(Number)) : { data: [] }
+    return res.json({ preview: (names || []).map(c => ({ name: c.class_name, students: counts[c.id] })) })
+   }
+   if (other?.length) { const { error } = await db.from('enrollments').delete().in('student_id', ids).not('class_id', 'in', `(${(room.class_ids || []).join(',')})`); if (error) throw error }
+   return res.json({ removed: other?.length || 0 })
+  }
   if (action === 'unlock') {
    if (!inRoom(studentId)) return res.status(400).json({ error: 'Choose a student in this room.' })
    await db.from('student_picture_logins').update({ failed_count: 0, locked_until: null }).eq('student_id', studentId)

@@ -196,6 +196,7 @@ function RoomSetup({ list, room, onDone, onCancel }) {
   <fieldset><legend>Which classes learn in this room?</legend>
    {list.classes.length ? list.classes.map(c => <label key={c.id} className="chk"><input type="checkbox" checked={ids.includes(c.id)} onChange={e => setIds(e.target.checked ? [...ids, c.id] : ids.filter(x => x !== c.id))} /> {c.name}{c.teacher ? ` · ${c.teacher}` : ''}</label>) : <p className="muted">You have no classes yet.</p>}
   </fieldset>
+  {room && list.leader && <OldClasses roomId={room.id} />}
   <label>Aide’s AskVic email{room ? ' (leave blank to keep the current aides)' : ''}<input value={emails} onChange={e => setEmails(e.target.value)} placeholder="aide@school.org" /></label>
   {err && <p className="alert" role="alert">{err}</p>}
   <div className="row"><button type="submit" className="btn btn-primary" disabled={busy}>{busy ? 'Saving…' : room ? 'Save' : 'Create room'}</button>{onCancel && <button type="button" className="btn btn-outline" onClick={onCancel}>Cancel</button>}</div>
@@ -210,4 +211,20 @@ function RoomSetup({ list, room, onDone, onCancel }) {
    .row{display:flex;gap:10px}
   `}</style>
  </form>
+}
+
+// After moving students into a room's classes, take them out of the classes they were in before.
+function OldClasses({ roomId }) {
+ const [preview, setPreview] = useState(null), [done, setDone] = useState(''), [err, setErr] = useState(''), [sure, setSure] = useState(false)
+ useEffect(() => { api('/api/room/manage', { action: 'leaveOldClasses', roomId }).then(d => setPreview(d.preview)).catch(e => setErr(e.message)) }, [roomId])
+ if (err) return <p className="alert">{err}</p>
+ if (!preview) return null
+ if (done) return <p className="notice">{done}</p>
+ if (!preview.length) return <p className="muted">Everyone in this room is only in the room’s classes.</p>
+ return <div className="old">
+  <p><strong>These students are still in their old classes too:</strong> {preview.map(p => `${p.name} (${p.students})`).join(', ')}.</p>
+  {!sure ? <button type="button" className="btn btn-outline" onClick={() => setSure(true)}>Take them out of the old classes</button>
+   : <span className="row"><strong>Sure? Their accounts and past work stay.</strong><button type="button" className="btn btn-primary" onClick={() => api('/api/room/manage', { action: 'leaveOldClasses', roomId, confirm: true }).then(d => setDone(`Done. ${d.removed} old class spots removed.`)).catch(e => setErr(e.message))}>Yes, take them out</button><button type="button" className="btn btn-outline" onClick={() => setSure(false)}>Cancel</button></span>}
+  <style jsx>{`.old{border:2px solid var(--vic-primary);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}.old p{margin:0}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}`}</style>
+ </div>
 }
