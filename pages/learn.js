@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 import VICHeader from '../components/VICHeader'
 import { supabase } from '../lib/supabase'
 
-async function call(method, body) {
+async function call(method, body, url = '/api/student/today', json) {
+ if (json) body = json
  const { data: { session } } = await supabase.auth.getSession()
  if (!session) { window.location.replace('/hello'); throw new Error('Please log in.') }
- const r = await fetch('/api/student/today', { method, headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) })
+ const r = await fetch(url, { method, headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) }, ...(body ? { body: JSON.stringify(body) } : {}) })
  const d = await r.json().catch(() => ({}))
  if (!r.ok) throw new Error(d.error || 'Something went wrong. Please try again.')
  return d
@@ -25,7 +26,15 @@ export default function Learn() {
  const lessons = data?.lessons || []
  // One group per class, so a student with ELA and math sees which lesson belongs to which class.
  const classGroups = []
- lessons.forEach((l, i) => { let g = classGroups.find(x => x.className === l.className); if (!g) { g = { className: l.className, teacher: l.teacher, items: [] }; classGroups.push(g) } g.items.push({ l, i }) })
+ lessons.forEach((l, i) => { let g = classGroups.find(x => x.className === l.className); if (!g) { g = { className: l.className, classId: l.classId, teacher: l.teacher, items: [] }; classGroups.push(g) } g.items.push({ l, i }) })
+ // Every class gets a group, even with no lesson today, so practice is always one tap away.
+ ;(data?.classes || []).forEach(c => { if (c?.id && !classGroups.some(g => Number(g.classId) === Number(c.id))) classGroups.push({ className: c.name, classId: c.id, teacher: '', items: [] }) })
+ const [practicing, setPracticing] = useState(''), [practiceError, setPracticeError] = useState('')
+ async function practice(classId) {
+  setPracticing(String(classId)); setPracticeError('')
+  try { const d = await call('POST', null, '/api/student/practice', { classId }); window.location.href = `/askvic?class=${encodeURIComponent(d.classId)}&lesson=${encodeURIComponent(d.lessonId)}` }
+  catch (e) { setPracticeError(e.message); setPracticing('') }
+ }
  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
 
  function updateWork(lessonId, work) { setData(d => ({ ...d, lessons: d.lessons.map(l => l.lessonId === lessonId ? { ...l, work: { ...(l.work || {}), ...work } } : l) })) }
@@ -40,13 +49,15 @@ export default function Learn() {
      <h1>Hi, {firstName(data.name)}!</h1>
     </header>
 
-    {!lessons.length ? <section className="card empty">
+    {!lessons.length && !classGroups.length ? <section className="card empty">
      <h2>No lessons from your teacher yet</h2>
      <p>You can still learn with VIC any time.</p>
      <a className="go vic" href="/askvic">Learn with VIC →</a>
     </section> : <>
      {classGroups.map(g => <section key={g.className} className="cgroup" aria-label={g.className}>
-      <h2 className="cname">{g.className}{g.teacher ? <span> · {g.teacher}</span> : null}</h2>
+      <div className="chead"><h2 className="cname">{g.className}{g.teacher ? <span> · {g.teacher}</span> : null}</h2>
+       {g.classId && <button type="button" className="go practice" disabled={!!practicing} onClick={() => practice(g.classId)}>{practicing === String(g.classId) ? 'Getting your practice…' : `${/math/i.test(g.className) ? 'Math' : /reading|ela/i.test(g.className) ? 'Reading' : ''} practice with VIC →`}</button>}</div>
+      {!g.items.length && <p className="small">No lesson from your teacher yet. Practice with VIC while you wait.</p>}
       {g.items.map(({ l, i }) => {
        const isOpen = open && i === pick, turnedIn = l.work?.status === 'turned_in'
        return <div key={l.lessonId} className={isOpen ? 'lrow on' : 'lrow'}>
@@ -67,6 +78,7 @@ export default function Learn() {
        </div>
       })}
      </section>)}
+     {practiceError && <p className="alert" role="alert">{practiceError}</p>}
     </>}
    </>}
   </main>
@@ -79,6 +91,9 @@ export default function Learn() {
    .big{font-size:22px}
    .alert{padding:16px;border-radius:14px;background:var(--vic-danger-soft);color:#912018;font-weight:700}
    .cgroup{display:flex;flex-direction:column;gap:12px}
+   .chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+   .practice{background:var(--vic-surface);color:var(--vic-vic);border:3px solid var(--vic-vic);margin-top:0}
+   .practice:disabled{opacity:.6}
    .cname{font-family:var(--font-read);font-size:clamp(24px,3.2vw,30px);margin:6px 0 0}
    .cname span{color:var(--vic-text-secondary);font-weight:600}
    .lrow{background:var(--vic-surface);border-radius:20px;padding:20px 22px;border:2px solid var(--vic-border-soft);display:flex;flex-direction:column;gap:16px}

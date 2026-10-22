@@ -40,7 +40,7 @@ test('brain explains the tags; route sends the visual and never one with a safet
   assert.match(VIC_BRAIN, /not the student's last answer/)
   const route = readFileSync(new URL('../pages/api/vic.js', import.meta.url), 'utf8')
   assert.match(route, /const visual = safety\.category \? null : shown\.visual/)
-  assert.match(route, /json\(\{ reply, visual \}\)/)
+  assert.match(route, /json\(\{ reply, visual, goal/)
 })
 
 test('the page draws what VIC chose instead of guessing', () => {

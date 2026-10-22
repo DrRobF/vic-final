@@ -142,7 +142,7 @@ async function liveRoom(db, room) {
  const ids = students.map(s => s.id)
  const dayStart = schoolDayStart(schoolToday()), now = Date.now()
  const empty = { data: [] }
- const [{ data: classes }, { data: pics }, { data: acts }, { data: open }, { data: alerts }, { data: notes }, { data: assigned }] = await Promise.all([
+ const [{ data: classes }, { data: pics }, { data: acts }, { data: open }, { data: alerts }, { data: notes }, { data: assigned }, { data: goals }] = await Promise.all([
   db.from('classes').select('id,class_name,grade_level').in('id', room.class_ids || []),
   ids.length ? db.from('student_picture_logins').select('student_id,pictures,locked_until,last_login_at').in('student_id', ids) : empty,
   ids.length ? db.from('vic_activity_snapshots').select('student_id,class_id,assignment_id,turns,updated_at').in('student_id', ids).gte('updated_at', dayStart) : empty,
@@ -150,11 +150,12 @@ async function liveRoom(db, room) {
   ids.length ? db.from('vic_safety_alerts').select('id,student_id,category,created_at,reviewed_at').in('student_id', ids).gte('created_at', dayStart) : empty,
   ids.length ? db.from('vic_room_notes').select('id,student_id,note,created_at').eq('room_id', room.id).eq('active', true).in('student_id', ids) : empty,
   ids.length ? db.from('assignments').select('student_id,mode,assigned_at,lessons!inner(id,title,class_id,source_lesson_id)').in('student_id', ids).eq('status', 'assigned').in('lessons.class_id', room.class_ids || []).gte('assigned_at', dayStart).lte('assigned_at', new Date().toISOString()) : empty,
+  ids.length ? db.from('vic_goal_results').select('student_id,verdict').in('student_id', ids).gte('created_at', dayStart) : empty,
  ])
  const by = (rows, key = 'student_id') => { const m = new Map(); for (const r of rows || []) { const k = Number(r[key]); m.set(k, [...(m.get(k) || []), r]) } return m }
  const picBy = new Map((pics || []).map(p => [Number(p.student_id), p]))
  const actBy = by([...(acts || []).map(a => ({ ...a, kind: 'lesson' })), ...(open || []).map(a => ({ ...a, kind: 'own' }))])
- const alertBy = by(alerts), noteBy = by(notes), lessonBy = by(assigned)
+ const alertBy = by(alerts), noteBy = by(notes), lessonBy = by(assigned), goalBy = by(goals)
  const className = Object.fromEntries((classes || []).map(c => [c.id, c.class_name]))
 
  const rows = students.map(s => {
@@ -172,6 +173,7 @@ async function liveRoom(db, room) {
    status, minutesQuiet, turns, lastWith: activity[0]?.kind || null,
    lessons, alerts: openAlerts.map(a => ({ id: a.id, category: a.category, at: a.created_at })),
    notes: (noteBy.get(id) || []).map(n => ({ id: n.id, note: n.note })),
+   goals: ['met', 'partly', 'not_yet'].reduce((o, v) => ({ ...o, [v]: (goalBy.get(id) || []).filter(g => g.verdict === v).length }), {}),
    pictures: pic?.pictures || null, locked: !!(pic?.locked_until && new Date(pic.locked_until) > new Date()),
   }
  })

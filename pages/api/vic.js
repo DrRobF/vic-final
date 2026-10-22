@@ -1,6 +1,7 @@
 import { requireApprovedProfile } from '../../lib/server-auth'
 import { releasedFilter } from '../../lib/release.mjs'
 import { vicTargetText } from '../../lib/lesson-companion.mjs'
+import { extractGoal } from '../../lib/vic-goal.mjs'
 import {
   buildVicContext,
   normalizeSessionMode,
@@ -42,6 +43,7 @@ export default async function handler(req, res) {
       ? auth.profile.interest_tags.map(cleanInterest).filter(Boolean).join(', ').slice(0, 120)
       : ''
     let context
+    let assignedLessonRow = null
     let activityAssignment = null
 
     if (mode === TEACHER_DIRECTED) {
@@ -82,12 +84,13 @@ export default async function handler(req, res) {
 
       const { data: lessons, error: lessonError } = await auth.admin
         .from('lessons')
-        .select('id, class_id, subject, title, lesson_text, is_active, source_lesson_id')
+        .select('id, class_id, subject, title, lesson_text, is_active, source_lesson_id, practice_standard')
         .eq('id', assignment.lesson_id)
         .eq('class_id', enrollment.class_id)
         .limit(1)
       if (lessonError) throw lessonError
       const lesson = lessons?.[0] || null
+      assignedLessonRow = lesson
       // Teachers can edit the lesson all week: VIC teaches the goals as they are now, not as they were when sent.
       if (lesson?.source_lesson_id) {
         try {
@@ -166,7 +169,8 @@ export default async function handler(req, res) {
     const safety = detectSafety({ studentText, reply: rawReply })
     // VIC may end a reply with one [[VIC_VISUAL: ...]] tag; it is checked, removed and drawn by the page.
     // A safety reply never carries a visual.
-    const shown = extractVisual(safety.reply)
+    const goalTag = extractGoal(safety.reply)
+    const shown = extractVisual(goalTag.text)
     const visual = safety.category ? null : shown.visual
     const reply = shown.text || 'Thank you for telling me. That matters, and you did the right thing. I’m going to let your teacher know so a grown-up can help. Please tell a trusted adult today, like your teacher, school counselor, or someone in your family. If you are in danger right now, go to an adult or call 911. You can also call or text 988 any time.'
     if (safety.category) {
@@ -185,7 +189,15 @@ export default async function handler(req, res) {
         if(saveError)throw saveError
       }catch(saveError){console.error('Could not save VIC activity',{name:saveError?.name})}
     }
-    return res.status(200).json({ reply, visual })
+    // VIC's verdict on this lesson or practice skill: the evidence behind "on level" and red flags.
+    let goal = null
+    if (goalTag.goal && !safety.category && activityAssignment?.assignment_id && assignedLessonRow) {
+      goal = goalTag.goal
+      const { error: goalError } = await auth.admin.from('vic_goal_results').insert({ student_id: auth.profile.id, class_id: activityAssignment.class_id, lesson_id: assignedLessonRow.id, assignment_id: activityAssignment.assignment_id, standard_id: assignedLessonRow.practice_standard || null, verdict: goal, practice: !!assignedLessonRow.practice_standard })
+      if (goalError) console.error('VIC goal result not saved', { code: goalError.code })
+    }
+
+    return res.status(200).json({ reply, visual, goal, practice: !!assignedLessonRow?.practice_standard })
   } catch (error) {
     console.error('VIC request failed.', { name: error?.name, mode })
     return res.status(500).json({ error: 'VIC could not load this learning session. Please try again.' })

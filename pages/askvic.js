@@ -179,6 +179,8 @@ export default function AskVIC() {
   const [studentGradeLevel, setStudentGradeLevel] = useState('')
   const [studentLookupStatus, setStudentLookupStatus] = useState('Loading student...')
   const [sessionMode, setSessionMode] = useState('student_directed')
+  const [practiceDone, setPracticeDone] = useState('')
+  const [nextBusy, setNextBusy] = useState(false)
   const [messages, setMessages] = useState(INITIAL_MESSAGES)
   const [currentUserProfile, setCurrentUserProfile] = useState(null)
   const [currentUserStatus, setCurrentUserStatus] = useState('Loading signed-in user...')
@@ -635,6 +637,20 @@ export default function AskVIC() {
     })
   }, [messages])
 
+  async function goNextPractice() {
+    setNextBusy(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const r = await fetch('/api/student/practice', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token}` }, body: JSON.stringify({ classId: activeClassId }) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(d.error || 'Could not get the next skill.')
+      window.location.href = `/askvic?class=${encodeURIComponent(d.classId)}&lesson=${encodeURIComponent(d.lessonId)}`
+    } catch (e) {
+      setNextBusy(false)
+      setMessages((m) => [...m, { role: 'assistant', text: e.message }])
+    }
+  }
+
   async function sendMessage(customMessage) {
     const outgoing =
       typeof customMessage === 'string'
@@ -720,6 +736,8 @@ export default function AskVIC() {
         throw new Error(data?.error || 'VIC could not respond right now.')
       }
       const finalReply = data.reply || 'No reply'
+      // A practice skill is finished: offer the next one.
+      if (data.goal && data.practice) setPracticeDone(data.goal)
       // VIC chooses the picture; the server has already checked it.
       const visual = data.visual || null
 
@@ -1269,6 +1287,13 @@ ${context}`
                 </div>
               </div>
             </section>
+
+            {practiceDone ? (
+              <section style={{ ...styles.inputCard, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', border: '3px solid #5B21B6' }}>
+                <div style={{ fontSize: 20, fontWeight: 800 }}>{practiceDone === 'met' ? '⭐ Skill done! Ready for the next one?' : 'Nice work. Ready for a new skill?'}</div>
+                <button type="button" disabled={nextBusy} onClick={goNextPractice} style={{ minHeight: 52, padding: '10px 22px', borderRadius: 14, border: 0, background: '#5B21B6', color: '#fff', fontSize: 19, fontWeight: 800, cursor: 'pointer' }}>{nextBusy ? 'Getting it…' : 'Next skill →'}</button>
+              </section>
+            ) : null}
 
             <section style={styles.inputCard}>
               <div style={styles.inputHeaderRow}>

@@ -46,7 +46,7 @@ export default async function handler(req, res) {
 
   const { data: rows, error: aErr } = await db.from('assignments')
    .select('id,mode,assigned_at,lessons!inner(id,class_id,title,source_lesson_id,teacher_id,is_active)')
-   .eq('student_id', me).eq('status', 'assigned').in('lessons.class_id', classIds).or(releasedFilter())
+   .eq('student_id', me).eq('status', 'assigned').in('lessons.class_id', classIds).is('lessons.practice_standard', null).or(releasedFilter())
    .order('assigned_at', { ascending: false, nullsFirst: false }).order('id', { ascending: false }).limit(30)
   if (aErr) throw aErr
   const assigned = (rows || []).map(r => ({ ...r, lesson: Array.isArray(r.lessons) ? r.lessons[0] : r.lessons })).filter(r => r.lesson && r.lesson.is_active !== false)
@@ -91,7 +91,7 @@ export default async function handler(req, res) {
     work: w ? { answers: w.answers || {}, status: w.status, updatedAt: w.updated_at } : null,
    }
   })
-  return res.json({ name: auth.profile.name || '', classes: Object.values(classes), lessons })
+  return res.json({ name: auth.profile.name || '', classes: Object.entries(classes).map(([id, name]) => ({ id: Number(id), name })), lessons })
  } catch (e) {
   console.error('Student today failed', { message: e?.message, code: e?.code })
   return res.status(500).json({ error: 'Something went wrong loading your lessons. Please try again.' })

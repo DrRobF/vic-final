@@ -6,11 +6,11 @@ import { buildVicContext } from '../lib/ask-vic-context.mjs'
 
 const route = readFileSync(new URL('../pages/api/vic.js', import.meta.url), 'utf8')
 
-test('VIC brain is the full v3.5 text, not a stub', () => {
-  assert.match(VIC_BRAIN_VERSION, /v3\.5/)
+test('VIC brain is the full v3.6 text, not a stub', () => {
+  assert.match(VIC_BRAIN_VERSION, /v3\.6/)
   assert.ok(VIC_BRAIN.length > 20000)
-  assert.match(VIC_BRAIN, /^=+\nVIC MASTER BRAIN v3\.5/)
-  assert.match(VIC_BRAIN, /END VIC MASTER BRAIN v3\.5\n=+$/)
+  assert.match(VIC_BRAIN, /^=+\nVIC MASTER BRAIN v3\.6/)
+  assert.match(VIC_BRAIN, /END VIC MASTER BRAIN v3\.6\n=+$/)
   for (const section of ['CORE IDENTITY', 'ASSIGNED LESSON ENTRY', 'ANSWER VERIFICATION', 'DIRECT ANSWER ACCEPTANCE RULE', 'INTEREST USAGE', 'MINI PROJECT MODE', 'DEPTH OVER COMPLETION']) assert.ok(VIC_BRAIN.includes(section), section)
 })
 
