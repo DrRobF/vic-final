@@ -29,10 +29,13 @@ export default function Learn() {
  lessons.forEach((l, i) => { let g = classGroups.find(x => x.className === l.className); if (!g) { g = { className: l.className, classId: l.classId, teacher: l.teacher, items: [] }; classGroups.push(g) } g.items.push({ l, i }) })
  // Every class gets a group, even with no lesson today, so practice is always one tap away.
  ;(data?.classes || []).forEach(c => { if (c?.id && !classGroups.some(g => Number(g.classId) === Number(c.id))) classGroups.push({ className: c.name, classId: c.id, teacher: '', items: [] }) })
+ const vicIds = new Set((data?.classes || []).filter(c => c.vic).map(c => Number(c.id)))
+ // VIC class first: that's where practice happens.
+ classGroups.sort((a, b) => (vicIds.has(Number(b.classId)) ? 1 : 0) - (vicIds.has(Number(a.classId)) ? 1 : 0))
  const [practicing, setPracticing] = useState(''), [practiceError, setPracticeError] = useState('')
- async function practice(classId) {
-  setPracticing(String(classId)); setPracticeError('')
-  try { const d = await call('POST', null, '/api/student/practice', { classId }); window.location.href = `/askvic?class=${encodeURIComponent(d.classId)}&lesson=${encodeURIComponent(d.lessonId)}` }
+ async function practice(classId, subject) {
+  setPracticing(`${classId}${subject || ''}`); setPracticeError('')
+  try { const d = await call('POST', null, '/api/student/practice', { classId, subject }); window.location.href = `/askvic?class=${encodeURIComponent(d.classId)}&lesson=${encodeURIComponent(d.lessonId)}` }
   catch (e) { setPracticeError(e.message); setPracticing('') }
  }
  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -56,8 +59,9 @@ export default function Learn() {
     </section> : <>
      {classGroups.map(g => <section key={g.className} className="cgroup" aria-label={g.className}>
       <div className="chead"><h2 className="cname">{g.className}{g.teacher ? <span> · {g.teacher}</span> : null}</h2>
-       {g.classId && <button type="button" className="go practice" disabled={!!practicing} onClick={() => practice(g.classId)}>{practicing === String(g.classId) ? 'Getting your practice…' : `${/math/i.test(g.className) ? 'Math' : /reading|ela/i.test(g.className) ? 'Reading' : ''} practice with VIC →`}</button>}</div>
-      {!g.items.length && <p className="small">No lesson from your teacher yet. Practice with VIC while you wait.</p>}
+       {g.classId && vicIds.has(Number(g.classId)) ? <span className="pbtns">{['reading', 'math'].map(sub => <button key={sub} type="button" className="go practice" disabled={!!practicing} onClick={() => practice(g.classId, sub)}>{practicing === `${g.classId}${sub}` ? 'Getting it…' : `${sub === 'math' ? 'Math' : 'Reading'} practice →`}</button>)}</span>
+        : g.classId && !vicIds.size && <button type="button" className="go practice" disabled={!!practicing} onClick={() => practice(g.classId)}>{practicing === String(g.classId) ? 'Getting your practice…' : `${/math/i.test(g.className) ? 'Math' : /reading|ela/i.test(g.className) ? 'Reading' : ''} practice with VIC →`}</button>}</div>
+      {!g.items.length && (vicIds.has(Number(g.classId)) ? <p className="small">Pick reading or math. VIC has a skill ready for you.</p> : !vicIds.size ? <p className="small">No lesson from your teacher yet. Practice with VIC while you wait.</p> : <p className="small">No lesson from your teacher right now.</p>)}
       {g.items.map(({ l, i }) => {
        const isOpen = open && i === pick, turnedIn = l.work?.status === 'turned_in'
        return <div key={l.lessonId} className={isOpen ? 'lrow on' : 'lrow'}>
@@ -91,6 +95,7 @@ export default function Learn() {
    .big{font-size:22px}
    .alert{padding:16px;border-radius:14px;background:var(--vic-danger-soft);color:#912018;font-weight:700}
    .cgroup{display:flex;flex-direction:column;gap:12px}
+   .pbtns{display:flex;gap:10px;flex-wrap:wrap}
    .chead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
    .practice{background:var(--vic-surface);color:var(--vic-vic);border:3px solid var(--vic-vic);margin-top:0}
    .practice:disabled{opacity:.6}

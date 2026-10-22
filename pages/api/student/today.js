@@ -91,7 +91,7 @@ export default async function handler(req, res) {
     work: w ? { answers: w.answers || {}, status: w.status, updatedAt: w.updated_at } : null,
    }
   })
-  return res.json({ name: auth.profile.name || '', classes: Object.entries(classes).map(([id, name]) => ({ id: Number(id), name })), lessons })
+  return res.json({ name: auth.profile.name || '', classes: Object.entries(classes).map(([id, name]) => ({ id: Number(id), name, vic: /\bVIC\b/.test(name) })), lessons })
  } catch (e) {
   console.error('Student today failed', { message: e?.message, code: e?.code })
   return res.status(500).json({ error: 'Something went wrong loading your lessons. Please try again.' })
