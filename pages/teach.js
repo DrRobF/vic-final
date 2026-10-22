@@ -20,7 +20,7 @@ function todayIso() { const n = new Date(); return new Date(Date.UTC(n.getFullYe
 export default function MyWeek() {
  const router = useRouter()
  const { account, error: accountError } = useAccount({ next: '/teach' })
- const [todayItems, setTodayItems] = useState(null), [starts, setStarts] = useState({})
+ const [todayItems, setTodayItems] = useState(null)
  const [weeks, setWeeks] = useState(null), [chosenId, setChosenId] = useState(''), [detail, setDetail] = useState(null), [error, setError] = useState(''), [loadingWeek, setLoadingWeek] = useState(false), [confirmRemove, setConfirmRemove] = useState(false)
  const weekOf = useMemo(() => (typeof router.query.week === 'string' && mondayOf(router.query.week)) || defaultWeekOf(), [router.query.week])
 
@@ -58,34 +58,23 @@ export default function MyWeek() {
    if (!active) return
    setTodayItems(rs.map(({ w, d }) => {
     const day = d.week?.days?.[todayIdx], l = day?.lessonId ? d.lessons?.[day.lessonId] : null
-    return l ? { w, lessonId: day.lessonId, title: l.title, steps: l.steps, vicReady: l.vicReady !== false, vicIssue: l.vicIssue || '', sent: l.sent || null } : null
+    return l ? { w, lessonId: day.lessonId, title: l.title, vicReady: l.vicReady !== false, vicIssue: l.vicIssue || '', release: d.release?.byDay?.[todayIdx] || null } : null
    }).filter(Boolean))
   }).catch(() => { if (active) setTodayItems([]) })
   return () => { active = false }
  }, [weeks, weekKey, todayIdx])
 
- // One tap: today's lesson goes to every student in the class at their saved level.
- // With releaseOn (a later day this week) it is scheduled instead: students see it from that morning.
- async function startLesson(item, classId, releaseOn) {
-  setStarts(s => ({ ...s, [item.lessonId]: { busy: true } }))
+
+ // When AskVic can't tell which class a week is for, the teacher picks it once.
+ async function setWeekClass(classId) {
   try {
    const { data: { session } } = await supabase.auth.getSession()
    if (!session) throw new Error('Please log in again.')
-   const headers = { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }
-   const r = await fetch('/api/teacher/start-lesson', { method: 'POST', headers, body: JSON.stringify({ lessonId: item.lessonId, ...(classId ? { classId } : {}), ...(releaseOn ? { releaseOn } : {}) }) })
+   const r = await fetch('/api/lessonplan/weeks', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'setClass', weekId: week.id, classId }) })
    const d = await r.json().catch(() => ({}))
-   if (r.status === 409 && d.needClass) { setStarts(s => ({ ...s, [item.lessonId]: { pickClass: d.classes, releaseOn } })); return }
-   if (!r.ok) { setStarts(s => ({ ...s, [item.lessonId]: { err: d.error || 'Could not start this lesson.', fix: d.needsLessonWork ? stepHref('plan', item.lessonId) : d.emptyClass ? '/classes' : d.noClassroom ? '/join' : '' } })); return }
-   if (d.releaseAt) {
-    setStarts(s => ({ ...s, [item.lessonId]: { scheduled: d.assignmentCount, on: releaseOn } }))
-    if (week) openWeek(week.id).then(setDetail).catch(() => {})
-    return
-   }
-   await fetch('/api/educator/lesson-steps', { method: 'POST', headers, body: JSON.stringify({ lessonId: item.lessonId, step: 'teach', done: true }) }).catch(() => {})
-   setStarts(s => ({ ...s, [item.lessonId]: { done: d.assignmentCount } }))
-   setTodayItems(list => (list || []).map(x => x.lessonId === item.lessonId ? { ...x, steps: { ...(x.steps || {}), teach: new Date().toISOString() } } : x))
-   if (week) openWeek(week.id).then(setDetail).catch(() => {})
-  } catch (e) { setStarts(s => ({ ...s, [item.lessonId]: { err: e.message } })) }
+   if (!r.ok) throw new Error(d.error || 'Could not save the class.')
+   setDetail(await openWeek(week.id))
+  } catch (e) { setError(e.message) }
  }
  const days = detail?.week?.days || week?.days || []
  const lessons = detail?.lessons || {}
@@ -119,23 +108,16 @@ export default function MyWeek() {
    {todayItems && todayItems.length > 0 && <section className="dark-panel todaybox" aria-label="Today">
     <p className="tlabel">Today · {WEEKDAYS[todayIdx]}, {formatDay(today, { month: 'long', day: 'numeric' })}</p>
     {todayItems.map(item => {
-     const st = starts[item.lessonId] || {}, started = st.done != null || !!item.steps?.teach
-     const onScreens = !started && item.sent && item.sent.at.slice(0, 10) >= today && new Date(item.sent.at) <= new Date()
+     const problem = !account.classroom ? { text: 'Join your school so VIC can teach your students.', fix: '/join', label: 'Join your school' }
+      : !item.vicReady ? { text: item.vicIssue, fix: stepHref('plan', item.lessonId), label: 'Fix the lesson' }
+      : problemFor(item.release?.status)
      return <div className="trow" key={item.lessonId}>
       <div className="tinfo"><span className="tmeta">{gradeLabel(item.w.grade)} · {subjectLabel(item.w.subject)}</span><h2>{item.title}</h2></div>
       <div className="tact">
-       {account.classroom
-        ? !item.vicReady ? <a className="btn btn-cyan big" href={stepHref('plan', item.lessonId)}>Fix the lesson first</a>
-        : <button type="button" className="btn btn-cyan big" disabled={st.busy} onClick={() => startLesson(item)}>{st.busy ? 'Starting…' : started || onScreens ? 'Send again to my class' : 'Start with my class'}</button>
-        : <a className="btn btn-cyan big" href="/join">Join your school to start with VIC</a>}
+       <a className="btn btn-cyan big" href={`/lesson/live?id=${encodeURIComponent(item.lessonId)}`}>Launch lesson</a>
        <a className="btn btn-outline tsub" href={stepHref('print', item.lessonId)}>Print</a>
-       <a className="btn btn-outline tsub" href={stepHref('teach', item.lessonId)}>Choose students</a>
       </div>
-      {account.classroom && !item.vicReady && <p className="terr">{item.vicIssue}</p>}
-      {onScreens && st.done == null && <p className="tnote" role="status">✓ Already on your students’ screens. You scheduled it ahead.</p>}
-      {st.done != null && <p className="tnote" role="status">✓ Sent to {st.done} {st.done === 1 ? 'student' : 'students'}, each at their saved level. It is on their Today screen now.</p>}
-      {st.err && <p className="terr" role="alert">{st.err} {st.fix && <a href={st.fix}>Fix this →</a>}</p>}
-      {st.pickClass && <div className="tpick"><strong>Which class?</strong>{st.pickClass.map(c => <button type="button" key={c.id} className="btn btn-outline tsub" onClick={() => startLesson(item, c.id, st.releaseOn)}>{c.name} ({c.students})</button>)}</div>}
+      {problem && <p className="terr" role="alert">{problem.text} {problem.fix && <a href={problem.fix}>{problem.label} →</a>}</p>}
      </div>
     })}
    </section>}
@@ -149,6 +131,10 @@ export default function MyWeek() {
       : <button type="button" className="trash" onClick={() => setConfirmRemove(true)}>Remove this week</button>)}
     </div>}
 
+    {account.classroom && detail?.release && !detail.release.classId && detail.release.classes?.length > 0 && planned > 0 && <section className="panel pickc">
+     <p><strong>Which class is this week for?</strong> Pick once and every planned day goes to those students on its morning.</p>
+     <div className="row">{detail.release.classes.map(c => <button key={c.id} type="button" className="btn btn-outline" onClick={() => setWeekClass(c.id)}>{c.name}</button>)}</div>
+    </section>}
     <div className="days">
      {WEEKDAYS.map((name, i) => {
       const day = days[i] || {}, lesson = day.lessonId ? lessons[day.lessonId] : null, isToday = dates[i] === today
@@ -160,7 +146,9 @@ export default function MyWeek() {
          <a className="title" href={stepHref(isToday ? 'teach' : 'plan', day.lessonId)} title={isToday ? 'Open Teach for today' : 'Open the lesson'}>{lesson.title}</a>
          <div className="bar" aria-label={`${doneCount(lesson.steps)} of 4 steps done`}>{STEPS.map(s => <a key={s.key} href={stepHref(s.key, day.lessonId)} className={stepDone(s.key, lesson.steps) ? 'seg done' : 'seg'} title={s.label}><span>{s.label}</span></a>)}</div>
          {next ? <a className="next" href={stepHref(next.key, day.lessonId)}>Next: {next.label} →</a> : <span className="alldone">✓ All done</span>}
-         {dates[i] > today && account.classroom && <Ahead name={name} date={dates[i]} lessonId={day.lessonId} lesson={lesson} st={starts[day.lessonId] || {}} onSchedule={classId => startLesson({ lessonId: day.lessonId }, classId, dates[i])} />}
+         {(() => { const st = detail?.release?.byDay?.[i]?.status, p = lesson.vicReady === false ? { text: 'Needs a standard and an objective before VIC can teach it.', fix: stepHref('plan', day.lessonId), label: 'Fix it' } : account.classroom && dates[i] >= today ? problemFor(st) : null
+          return p ? <p className="dprob">{p.text} {p.fix && <a href={p.fix}>{p.label} →</a>}</p> : null })()}
+         {isToday && <a className="launch" href={`/lesson/live?id=${encodeURIComponent(day.lessonId)}`}>Launch</a>}
         </>
         : loadingWeek ? <p className="muted">Loading…</p>
         : <>
@@ -196,6 +184,12 @@ export default function MyWeek() {
    </section>
   </>}
   <style jsx>{`
+   .dprob{margin:0;font-size:13.5px;font-weight:700;line-height:1.35;color:var(--vic-danger)}
+   .dprob a{color:var(--vic-primary)}
+   .launch{display:block;text-align:center;padding:10px;border-radius:12px;background:var(--vic-primary);color:#fff;font-weight:800;text-decoration:none}
+   .launch:hover{filter:brightness(1.08)}
+   .pickc{display:flex;flex-direction:column;gap:10px;border:2px solid var(--vic-primary)}
+   .pickc p{margin:0}
    .todaybox{display:flex;flex-direction:column;gap:16px;border:2px solid var(--vic-cyan)}
    .tlabel{margin:0;font-family:var(--font-mono);font-size:14px;letter-spacing:.04em;text-transform:uppercase;color:var(--vic-cyan)}
    .trow{display:flex;flex-direction:column;gap:12px}
@@ -261,29 +255,9 @@ export default function MyWeek() {
  </PageShell>
 }
 
-// A later day this week: is the lesson ready for VIC, and has it been scheduled for students yet?
-function Ahead({ name, date, lessonId, lesson, st, onSchedule }) {
- const scheduled = st.scheduled != null ? { count: st.scheduled } : lesson.sent && lesson.sent.at.slice(0, 10) === date ? { count: lesson.sent.count } : null
- return <div className="ahead">
-  {lesson.vicReady === false ? <p className="warn">Needs a standard and an objective before VIC can teach it. <a href={stepHref('plan', lessonId)}>Fix it →</a></p>
-   : scheduled ? <p className="ok">✓ Set for {name}: {scheduled.count} {scheduled.count === 1 ? 'student' : 'students'}</p>
-   : <>
-    <button type="button" className="sched" disabled={st.busy} onClick={() => onSchedule()}>{st.busy ? 'Scheduling…' : `Schedule for ${name}`}</button>
-    {st.err && <span className="aerr">{st.err}</span>}
-    {st.pickClass && <span className="apick">Which class? {st.pickClass.map(c => <button type="button" key={c.id} className="sched sm" onClick={() => onSchedule(c.id)}>{c.name}</button>)}</span>}
-   </>}
-  <style jsx>{`
-   .ahead{display:flex;flex-direction:column;gap:6px}
-   p{margin:0;font-size:13.5px;font-weight:700;line-height:1.35}
-   .warn{color:var(--vic-danger)}
-   .warn a{color:var(--vic-primary)}
-   .ok{color:var(--vic-success)}
-   .sched{padding:9px 10px;border-radius:10px;border:2px solid var(--vic-primary);background:var(--vic-surface);color:var(--vic-primary);font-weight:800;font-size:14px;cursor:pointer}
-   .sched:hover{background:var(--vic-primary-soft)}
-   .sched:disabled{opacity:.6;cursor:wait}
-   .sched.sm{padding:5px 8px;font-size:13px;margin:2px}
-   .aerr{color:var(--vic-danger);font-weight:700;font-size:13px}
-   .apick{font-size:13px;font-weight:700}
-  `}</style>
- </div>
+// Only problems get words on a card. A planned day with nothing wrong just goes to students that morning.
+function problemFor(status) {
+ if (status === 'noClass') return { text: 'Pick which class this week is for (above).', fix: '', label: '' }
+ if (status === 'emptyClass') return { text: 'This class has no students yet.', fix: '/classes', label: 'Add students' }
+ return null
 }

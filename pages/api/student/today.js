@@ -2,6 +2,7 @@ import { requireApprovedProfile } from '../../../lib/server-auth'
 import { lessonTargets } from '../../../lib/lesson-companion.mjs'
 import { studentWorksheet, cleanAnswers } from '../../../lib/student-today.mjs'
 import { releasedFilter } from '../../../lib/release.mjs'
+import { buildLessonPacket } from '../../../lib/lesson-packet.mjs'
 
 const positive = v => { const n = Number(v); return Number.isInteger(n) && n > 0 ? n : null }
 
@@ -53,11 +54,21 @@ export default async function handler(req, res) {
   const sourceIds = [...new Set(assigned.map(r => r.lesson.source_lesson_id).filter(Boolean))]
   const lessonIds = assigned.map(r => r.lesson.id)
   const teacherIds = [...new Set(assigned.map(r => r.lesson.teacher_id).filter(Boolean))]
-  const [{ data: sources }, { data: work }, { data: teachers }] = await Promise.all([
+  const [{ data: sources }, { data: work }, { data: teachers }, { data: packets }] = await Promise.all([
    sourceIds.length ? db.from('educator_lessons').select('id,draft').in('id', sourceIds) : { data: [] },
    lessonIds.length ? db.from('student_work').select('lesson_id,answers,status,updated_at').eq('student_id', me).in('lesson_id', lessonIds) : { data: [] },
    teacherIds.length ? db.from('users').select('id,name').in('id', teacherIds) : { data: [] },
+   sourceIds.length ? db.from('educator_lesson_packets').select('lesson_id,packet').in('lesson_id', sourceIds) : { data: [] },
   ])
+  const packetById = new Map((packets || []).map(p => [p.lesson_id, p.packet]))
+  // Everything else the teacher's student packet holds (the reading, organizers, exit ticket),
+  // as the teacher last edited it. The leveled worksheet itself comes separately, one version per child.
+  const materialsFor = (sourceId, draft) => {
+   let packet = packetById.get(sourceId)
+   if (!packet && draft) { try { packet = buildLessonPacket(draft) } catch { packet = null } }
+   return (packet?.student || []).filter(s => s?.body && !/^learning goal$/i.test(s.title) && !/— worksheet$/.test(s.title))
+    .slice(0, 8).map(s => ({ title: String(s.title).slice(0, 150), body: String(s.body).slice(0, 18000) }))
+  }
   const sourceById = new Map((sources || []).map(s => [s.id, s.draft]))
   const workById = new Map((work || []).map(w => [w.lesson_id, w]))
   const teacherById = new Map((teachers || []).map(t => [t.id, t.name]))
@@ -76,6 +87,7 @@ export default async function handler(req, res) {
     assignedAt: r.assigned_at,
     goals,
     worksheet: draft ? studentWorksheet(draft.worksheet, r.mode, draft.input?.groups) : null,
+    materials: r.lesson.source_lesson_id ? materialsFor(r.lesson.source_lesson_id, draft) : [],
     work: w ? { answers: w.answers || {}, status: w.status, updatedAt: w.updated_at } : null,
    }
   })

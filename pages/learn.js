@@ -52,11 +52,12 @@ export default function Learn() {
           {turnedIn ? <p className="lstat done">✓ Worksheet turned in</p> : l.work ? <p className="lstat">Worksheet started</p> : null}
          </div>
          <div className="lbtns">
-          {l.worksheet ? <button type="button" className="go blue" aria-expanded={isOpen} onClick={() => { if (isOpen) setOpen(false); else { setPick(i); setOpen(true) } }}>{isOpen ? 'Hide worksheet' : turnedIn ? 'See my worksheet' : 'Worksheet'}</button>
-           : <span className="small">Worksheet on paper today</span>}
+          {l.worksheet || l.materials?.length ? <button type="button" className="go blue" aria-expanded={isOpen} onClick={() => { if (isOpen) setOpen(false); else { setPick(i); setOpen(true) } }}>{isOpen ? 'Close my work' : turnedIn ? 'See my work' : 'Today’s work'}</button>
+           : <span className="small">Your teacher will hand out today’s work</span>}
           <a className="go vicbtn" href={`/askvic?class=${encodeURIComponent(l.classId)}&lesson=${encodeURIComponent(l.lessonId)}`}>Learn with VIC →</a>
          </div>
         </div>
+        {isOpen && l.materials?.length > 0 && <div className="mats">{l.materials.map((m, k) => <section key={k} className="mat"><h4>{m.title}</h4><div className="mbody">{m.body}</div></section>)}</div>}
         {isOpen && l.worksheet && <Worksheet key={l.lessonId} lesson={l} onSaved={w => updateWork(l.lessonId, w)} />}
        </div>
       })}
@@ -83,6 +84,10 @@ export default function Learn() {
    .lgoal{margin:6px 0 0;line-height:1.5;color:var(--vic-text-secondary)}
    .lstat{margin:6px 0 0;font-weight:700;font-size:18px;color:var(--vic-primary)}
    .lstat.done{color:var(--vic-success)}
+   .mats{display:flex;flex-direction:column;gap:14px}
+   .mat{border-radius:18px;padding:20px 22px;background:var(--vic-surface-muted)}
+   .mat h4{font-family:var(--font-read);font-size:22px;margin:0 0 10px}
+   .mbody{white-space:pre-wrap;line-height:1.75}
    .lbtns{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
    .lbtns .go{margin-top:0}
    .vicbtn{background:var(--vic-vic);color:#fff}

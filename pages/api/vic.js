@@ -1,5 +1,6 @@
 import { requireApprovedProfile } from '../../lib/server-auth'
 import { releasedFilter } from '../../lib/release.mjs'
+import { vicTargetText } from '../../lib/lesson-companion.mjs'
 import {
   buildVicContext,
   normalizeSessionMode,
@@ -81,12 +82,19 @@ export default async function handler(req, res) {
 
       const { data: lessons, error: lessonError } = await auth.admin
         .from('lessons')
-        .select('id, class_id, subject, title, lesson_text, is_active')
+        .select('id, class_id, subject, title, lesson_text, is_active, source_lesson_id')
         .eq('id', assignment.lesson_id)
         .eq('class_id', enrollment.class_id)
         .limit(1)
       if (lessonError) throw lessonError
       const lesson = lessons?.[0] || null
+      // Teachers can edit the lesson all week: VIC teaches the goals as they are now, not as they were when sent.
+      if (lesson?.source_lesson_id) {
+        try {
+          const { data: src } = await auth.admin.from('educator_lessons').select('title,draft').eq('id', lesson.source_lesson_id).maybeSingle()
+          if (src?.draft) { lesson.lesson_text = vicTargetText(src.draft); lesson.title = src.draft.plan?.title || src.title || lesson.title }
+        } catch {}
+      }
       const classRow = Array.isArray(enrollment.classes) ? enrollment.classes[0] : enrollment.classes
       context = buildVicContext({
         mode,
