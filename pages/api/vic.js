@@ -13,7 +13,7 @@ import { detectSafety } from '../../lib/vic-safety.mjs'
 import { extractVisual } from '../../lib/vic-visuals.mjs'
 import { raiseSafetyAlert } from '../../lib/vic-safety-notify.js'
 
-export const config = { api: { bodyParser: { sizeLimit: '8mb' } } }
+export const config = { api: { bodyParser: { sizeLimit: '8mb' } }, maxDuration: 60 }
 
 const cleanInterest = (value) => typeof value === 'string' ? value.trim().slice(0, 120) : ''
 
@@ -121,7 +121,11 @@ export default async function handler(req, res) {
     const safeMessages = messages
       .filter((message) => message && ['user', 'assistant'].includes(message.role))
       .map((message) => ({ role: message.role, content: typeof message.content === 'string' ? message.content : '' }))
-    const input = [{ role: 'system', content: context }, ...safeMessages]
+    // Long sessions: only the most recent turns go back to the model. The lesson itself is in the
+    // system context, so nothing important is lost, and replies stay fast at minute 80.
+    const recent = safeMessages.slice(-24)
+    while (recent.length && recent[0].role !== 'user') recent.shift()
+    const input = [{ role: 'system', content: context }, ...recent]
     if (typeof sketchImage === 'string' && sketchImage.startsWith('data:image/') && input.at(-1)?.role === 'user') {
       input[input.length - 1] = {
         role: 'user',
@@ -140,10 +144,10 @@ export default async function handler(req, res) {
       input,
       store: false,
       max_output_tokens: 4000,
-    })
+    }, { timeoutMs: 22000, budgetMs: 52000 })
     if (!response.ok) {
       console.error('VIC provider request failed.', { status: response.status, mode, model })
-      return res.status(502).json({ error: 'VIC could not respond right now. Please try again.' })
+      return res.status(503).json({ error: 'VIC is very busy right now. Wait a few seconds and send your message again.' })
     }
 
     const rawReply = outputText(data)

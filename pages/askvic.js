@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { pause } from '../lib/pause.mjs'
 import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
@@ -668,7 +669,8 @@ export default function AskVIC() {
     setInput('')
 
     try {
-      const apiMessages = nextMessages.map((msg) => ({
+      // The server only uses the most recent turns; sending fewer keeps long sessions light.
+      const apiMessages = nextMessages.slice(-40).map((msg) => ({
         role: msg.role,
         content: msg.text,
       }))
@@ -693,7 +695,8 @@ export default function AskVIC() {
         throw new Error('Your session has expired. Please sign in again.')
       }
 
-      const res = await fetch(apiUrl, {
+      // If VIC is busy or the Wi-Fi blips, try once more by itself before showing the child an error.
+      const post = () => fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -701,6 +704,12 @@ export default function AskVIC() {
         },
         body: JSON.stringify(requestBody),
       })
+      let res
+      try { res = await post() } catch { res = null }
+      if (!res || [502, 503, 504].includes(res.status)) {
+        await pause(2500 + Math.random() * 2500)
+        try { res = await post() } catch { throw new Error('The internet connection dropped. Check the Wi-Fi, then send your message again.') }
+      }
       if (res.status === 401) {
         await supabase.auth.signOut()
         router.replace('/student-login')
