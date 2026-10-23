@@ -14,6 +14,15 @@
 -- Grants nothing new. School dashboard access lives in ap_memberships, not here; this only
 -- ties the records together (and lets that person ask for a day off). Reversible by setting
 -- auth_user_id back to null.
+-- Shontae Mack's board record carries no email, so the match below cannot find her.
+-- Rob confirmed on Oct 23 that shontayemack87@gmail.com -- the login that owns the three
+-- VIC & IXL classes -- is the same person as this board record. Filled in by id, and only
+-- while it is still blank, so this cannot overwrite an address somebody sets later.
+update public.ap_staff
+set email = 'shontayemack87@gmail.com'
+where id = '85fbd295-0246-4836-83dd-b9f727f8113a'
+  and email is null;
+
 with pairs as (
  select s.id as staff_id, u.auth_user_id
  from public.ap_staff s
