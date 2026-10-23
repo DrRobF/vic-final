@@ -1,9 +1,7 @@
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { isLeader, canRunRoom, roomStudents, newRoomCode, randomPictures, shortName } from '../../../lib/vic-room.mjs'
 import { schoolToday, schoolDayStart } from '../../../lib/release.mjs'
-import { mondayOf, weekDates } from '../../../lib/lesson-week.mjs'
-import { matchClass } from '../../../lib/class-match.mjs'
-import { vicTargetText } from '../../../lib/lesson-companion.mjs'
+import { plannedToday, launchLesson } from '../../../lib/lesson-launch.mjs'
 
 const QUIET_MINUTES = 5
 const isUuid = v => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)
@@ -28,7 +26,7 @@ export default async function handler(req, res) {
    if (req.query.id) {
     const room = await guard(req.query.id)
     if (!room) return res.status(404).json({ error: 'This room isn’t yours to run.' })
-    return res.json({ ...(await liveRoom(db, room)), launchable: await launchable(db, room) })
+    return res.json({ ...(await liveRoom(db, room)), launchable: await plannedToday(db, room.class_ids) })
    }
    const { data: all } = await db.from('vic_rooms').select('id,name,code,class_ids,staff_ids').order('created_at', { ascending: true })
    const mine = []
@@ -94,21 +92,12 @@ export default async function handler(req, res) {
   // The aide sends a teacher's planned lesson for today to that class, each child at their saved level.
   if (action === 'launch') {
    const classId = Number(req.body?.classId), lessonId = String(req.body?.lessonId || '')
-   const options = await launchable(db, room)
+   const options = await plannedToday(db, room.class_ids)
    const pick = options.find(o => o.lessonId === lessonId && Number(o.classId) === classId)
    if (!pick) return res.status(400).json({ error: 'That lesson isn’t planned for this room today.' })
    if (!pick.ready) return res.status(400).json({ error: 'This lesson needs a standard and objective before VIC can teach it. Ask the teacher to fix it.' })
-   const { data: src } = await db.from('educator_lessons').select('id,title,draft').eq('id', lessonId).maybeSingle()
-   const { data: cls } = await db.from('classes').select('id,class_name,teacher_id').eq('id', classId).maybeSingle()
-   const { data: enrolled } = await db.from('enrollments').select('student_id,support_level').eq('class_id', classId)
-   if (!src || !cls || !enrolled?.length) return res.status(400).json({ error: 'This class has no students yet.' })
-   const toMode = l => (l === 'remediation' ? 'remediation' : l === 'enrichment' ? 'enrichment' : 'on-level')
-   const { data: lesson, error: lErr } = await db.from('lessons').insert({ class_id: classId, teacher_id: cls.teacher_id, subject: cls.class_name, title: src.draft?.plan?.title || src.title || 'Today’s lesson', lesson_text: vicTargetText(src.draft), is_active: true, source_lesson_id: src.id }).select('id').single()
-   if (lErr) throw lErr
-   const at = new Date().toISOString()
-   const { error: aErr } = await db.from('assignments').insert(enrolled.map(e => ({ lesson_id: lesson.id, student_id: e.student_id, mode: toMode(e.support_level), status: 'assigned', assigned_at: at })))
-   if (aErr) { await db.from('lessons').delete().eq('id', lesson.id); throw aErr }
-   return res.json({ launched: enrolled.length })
+   const done = await launchLesson(db, { classId, lessonId })
+   return res.json(done)
   }
   // Finishing a move into the room: its students leave every class outside the room. School leaders only.
   if (action === 'leaveOldClasses') {
@@ -196,31 +185,3 @@ async function liveRoom(db, room) {
 
 // Today's planned lessons from the week plans of the teachers whose classes are in this room,
 // matched to the right class by grade and subject, and whether each is already on screens.
-async function launchable(db, room) {
- const { data: classes } = await db.from('classes').select('id,class_name,grade_level,teacher_id,users:teacher_id(auth_user_id,name)').in('id', room.class_ids || [])
- const today = schoolToday(), weekOf = mondayOf(today), idx = weekDates(weekOf).indexOf(today)
- if (idx < 0 || !classes?.length) return []
- const owners = [...new Set(classes.map(c => c.users?.auth_user_id).filter(Boolean))]
- const { data: weeks } = owners.length ? await db.from('lesson_weeks').select('user_id,grade,subject,days').in('user_id', owners).eq('week_of', weekOf) : { data: [] }
- const out = []
- for (const w of weeks || []) {
-  const lessonId = w.days?.[idx]?.lessonId
-  if (!lessonId || w.days[idx].off) continue
-  const theirs = classes.filter(c => c.users?.auth_user_id === w.user_id)
-  const cls = matchClass(theirs, w)
-  if (!cls || out.some(o => o.lessonId === lessonId && o.classId === cls.id)) continue
-  out.push({ lessonId, classId: cls.id, className: cls.class_name, teacher: cls.users?.name || '' })
- }
- if (!out.length) return []
- const ids = out.map(o => o.lessonId)
- const [{ data: drafts }, { data: sent }] = await Promise.all([
-  db.from('educator_lessons').select('id,title,draft').in('id', ids),
-  db.from('lessons').select('source_lesson_id,class_id,assignments!inner(assigned_at)').in('source_lesson_id', ids).gte('assignments.assigned_at', schoolDayStart(today)).lte('assignments.assigned_at', new Date().toISOString()),
- ])
- const draftBy = new Map((drafts || []).map(d => [d.id, d]))
- return out.map(o => {
-  const d = draftBy.get(o.lessonId)
-  let ready = true; try { vicTargetText(d?.draft) } catch { ready = false }
-  return { ...o, title: d?.draft?.plan?.title || d?.title || 'Lesson', ready, live: (sent || []).some(x => x.source_lesson_id === o.lessonId && Number(x.class_id) === Number(o.classId)) }
- })
-}

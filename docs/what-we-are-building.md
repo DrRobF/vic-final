@@ -212,7 +212,8 @@ Rule that stays: standards come from the official documents, never written by VI
    using code that already exists. Helps struggling Grade 3 readers immediately
    and makes Grade 2 semi-viable.
 3. **6–8 standards.** A couple of weekends, and AskVic becomes a K–8 story.
-4. **Sub coverage** — "the lesson still happens". The business case.
+4. **Sub coverage** — "the lesson still happens". The business case. *(Built Oct 23 — see
+   "Sub coverage" below.)*
 5. **K–2 properly**, once 1 has told us whether listening works.
 
 Not on this list: the Virtual Room.
@@ -236,6 +237,51 @@ confirms. Backup of the pre-move enrollments: table enrollment_backup_20261022.
 - VIC brain v3.6 records met / partly / not yet per lesson in vic_goal_results. This is the
   evidence for the principal's on-level and red-flag card (red-flag rule still Rob's call).
 - Teachers: plan 3/4 as Grade 3 and 4/5 as Grade 4 so Launch finds the right class.
+
+## Sub coverage — built Oct 23
+
+"When your sub doesn't show, the lesson still happens." Item 4 in the order of work.
+
+**What Rob asked for (Oct 23), in his framing:** any principal in any school, however they got
+their sub, hands that person the day's lessons — either a teacher already on staff who is
+covering a period, or a stranger who needs credentials for the day. The admin makes the
+connection. The sub can start the lesson with the children, or have them use VIC with no
+lesson at all. Beyond grabbing it and turning it on, the sub needs no access to the lesson.
+
+**What was already true, and decided the shape:** the VIC Room's "Launch today's planned
+lessons" is this mechanic. Shontae uses other teachers' lessons every day; a sub uses them for
+one day. Same plumbing, different duration — so the launch logic moved to
+`lib/lesson-launch.mjs` (`plannedToday`, `launchLesson`) and the room now calls it rather than
+owning its own copy.
+
+**The credential is a printed slip, not an account.** Rob picked this over emailing a link: a
+sub at 7:30 may have no school email and no time. `cover_grants` holds the day, the classes,
+who is covering and an 8-character code; the code *is* the credential, sent with every request.
+Nothing to set up, nothing left behind, and it stops working at the end of its day.
+
+- `/cover` — the covering adult's screen: their classes, today's lesson per class, one button.
+- `/school/cover` — the principal makes a slip (pick a teacher to select all their classes, or
+  classes one at a time — a class is a period), sees live slips, and can take one back.
+- A grant permits exactly one thing: launching those classes' own teachers' planned lessons.
+  It cannot read the teacher's plan (title and objective only), reach a class not on the slip,
+  or work on another day. Tested in `test/cover-api.test.mjs`.
+- No lesson planned, or a lesson without a standard and objective: the screen says so and
+  points at VIC practice, which students start themselves. Nothing for the adult to do.
+
+**Not built, deliberately:** a coverage dashboard. Saint Peter's has no sub pool, so "do we
+have a sub?" is a decision Rob makes that morning, not a field. The dashboard already shows
+who is here, late and out, and that is enough. For the same reason sub coverage got no nav
+item of its own — see the dashboard rework, still to be designed.
+
+**Groundwork that had to come first:** `ap_staff` (attendance) and `users`/`classes` (teaching)
+are two lists of the same people, joined only at `ap_staff.auth_user_id`, which was unset for
+most of the staff — so an absence could not be walked through to the classes it leaves
+uncovered. Migration `20261023120000` linked 12 active staff by matching email, Sandra Morgan
+and Shontae Mack among them. Amber Manuel has no AskVic login at all, which the printed-code
+route handles without one.
+
+**Still open here:** surfacing a slip on a covering teacher's own `/teach` screen, so staff who
+do have logins need not type a code; and whether a sub should be recorded for payroll.
 
 ## Later: Hiring (employment and interviews), Oct 22
 
