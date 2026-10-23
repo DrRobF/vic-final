@@ -217,6 +217,26 @@ Rule that stays: standards come from the official documents, never written by VI
 
 Not on this list: the Virtual Room.
 
+## VIC Room — live Oct 22, first real day Monday Oct 26
+
+Saint Peter's lost its Grade 5 teacher and moved Grades 3–5 to a teaming model: 34 students in
+three groups (3/4: 11, 4/5: 13, Group 5: 10). Each group has three classes in AskVic:
+Math & Science (Karen Green), ELA & Social Studies (Sandra Morgan), VIC & IXL (Shontae Mack, aide).
+Class ids 36–44. Old Grade 3–5 classes are renamed "(old)" with grade_level null; 7 students
+Rob believes are Grade 2 (Amarah Charles, Donae Taylor, Florencia Pierre, John P Louis, Kenzie
+Morris, Kenny Morris Jr, Kyrie Hadden) are in Grade 2 classes and still in the (old) ones until he
+confirms. Backup of the pre-move enrollments: table enrollment_backup_20261022.
+
+- Room "VIC & IXL Room", code HPXJ5U, all 9 classes, staff Shontae (users.id 178).
+- Students log in at /hello (room code once per computer, then name + two pictures).
+- /room is the aide's screen: working / quiet / not logged in / needs you, Launch today's
+  planned lessons, notes for VIC, picture cards, unlock.
+- Practice path: Reading/Math practice in the VIC & IXL class; Florida B.E.S.T. skills from what
+  Green/Morgan planned for the group, then the child's own grade (users.grade_level).
+- VIC brain v3.6 records met / partly / not yet per lesson in vic_goal_results. This is the
+  evidence for the principal's on-level and red-flag card (red-flag rule still Rob's call).
+- Teachers: plan 3/4 as Grade 3 and 4/5 as Grade 4 so Launch finds the right class.
+
 ## Later: Hiring (employment and interviews), Oct 22
 
 Rob built a teacher hiring system for Saint Peter's Academy (repo `DrRobF/SaintPetersAcademy`:
