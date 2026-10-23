@@ -6,8 +6,32 @@ import {schoolEducator,studentProfile} from '../lib/educator-account.mjs'
 import {createHash} from 'node:crypto'
 import {LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION,signupConsentRecord} from '../lib/lesson-access.mjs'
 import {lessonSignupEnabled,signupEmail,lessonSigninLink} from '../lib/lesson-signup.mjs'
+import {accountForEmail} from '../lib/email-aliases.mjs'
 const env={RESEND_API_KEY:'fake',REPORTS_FROM_EMAIL:'VIC <reports@example.com>',SUPABASE_SERVICE_ROLE_KEY:'private',NEXT_PUBLIC_SUPABASE_URL:'https://example.supabase.co',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'public'}
-function load(allowed=true,sent=true,registered=true,profile=null){let messages=[],links=0;const src=readFileSync(new URL('../pages/api/lessonplan/email.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('export const ','const ').replace('export default async function handler','async function handler')+'\nthis.handler=handler';const context={console:{error(){}},AbortSignal,process:{env},createHash,LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION,signupConsentRecord,lessonSignupEnabled,signupEmail,lessonSigninLink,schoolEducator,studentProfile,createClient:()=>({from:table=>({select(){return this},eq(){return this},order(){return this},limit(){return this},maybeSingle:async()=>({data:table==='users'?profile:registered?{user_id:'teacher'}:null,error:null}),upsert:async()=>({error:null})}),rpc:async()=>({data:allowed,error:null}),auth:{admin:{generateLink:async()=>{links++;return {data:{user:{id:'teacher'},properties:{hashed_token:'private-token',verification_type:'signup',email_otp:'123456'}},error:null}}}}}),fetch:async(url,options)=>{messages.push(JSON.parse(options.body));return {ok:sent,status:sent?200:503,json:async()=>sent?{id:'delivery'}:{}}}};vm.createContext(context);vm.runInContext(src,context);return {run:context.handler,messages,links:()=>links}}
+function load(allowed=true,sent=true,registered=true,profile=null,alias=null,aliasOwner=null){
+ let messages=[],links=0,generated=[]
+ const src=readFileSync(new URL('../pages/api/lessonplan/email.js',import.meta.url),'utf8').replace(/^import .*\n/gm,'').replace('export const ','const ').replace('export default async function handler','async function handler')+'\nthis.handler=handler'
+ // Table- and column-aware so an alias lookup can answer differently from a plain account
+ // lookup -- accountForEmail asks users by email, then the alias table, then users by id.
+ const db=()=>({
+  from(table){
+   let col=null
+   const q={select(){return q},eq(c){col=c;return q},order(){return q},limit(){return q},is(){return q},
+    maybeSingle:async()=>({data:
+     table==='users'?(col==='id'?(aliasOwner||profile):profile)
+     :table==='user_email_aliases'?alias
+     :registered?{user_id:'teacher'}:null,error:null}),
+    upsert:async()=>({error:null})}
+   return q
+  },
+  rpc:async()=>({data:allowed,error:null}),
+  auth:{admin:{generateLink:async({email})=>{links++;generated.push(email);return {data:{user:{id:'teacher'},properties:{hashed_token:'private-token',verification_type:'signup',email_otp:'123456'}},error:null}}}}
+ })
+ const context={console:{error(){}},AbortSignal,process:{env},createHash,LESSON_CONSENT_TEXT,LESSON_CONSENT_VERSION,signupConsentRecord,lessonSignupEnabled,signupEmail,lessonSigninLink,schoolEducator,studentProfile,accountForEmail,createClient:db,fetch:async(url,options)=>{messages.push(JSON.parse(options.body));return {ok:sent,status:sent?200:503,json:async()=>sent?{id:'delivery'}:{}}}}
+ vm.createContext(context);vm.runInContext(src,context)
+ return {run:context.handler,messages,links:()=>links,generated}
+}
+
 const response=()=>({setHeader(){},status(code){this.code=code;return this},json(data){this.data=data;return this}})
 const request={method:'POST',headers:{'x-vercel-forwarded-for':'127.0.0.1'},body:{email:'Teacher@Example.com',adultEducator:true,consent:true,updates:true}}
 test('Email signup depends on configured sender and can be explicitly disabled',()=>{

@@ -13,13 +13,42 @@ test('An older request missing recorded consent provides a clear recovery instea
 })
 
 test('Email code creates a session and activates access before the workspace opens',async()=>{
- const events=[],client={auth:{verifyOtp:async body=>{assert.deepEqual(body,{email:'teacher@example.com',token:'123456',type:'email'});events.push('verify');return {data:{session:{access_token:'code-session'}}}}}}
- await finishLessonCode(client,async(url,options)=>{assert.equal(options.headers.Authorization,'Bearer code-session');events.push('activate');return {ok:true,json:async()=>({success:true})}},'Teacher@Example.com','123456')
- assert.deepEqual(events,['verify','activate'])
+ const events=[],client={auth:{setSession:async body=>{assert.deepEqual(body,{access_token:'code-session',refresh_token:'code-refresh'});events.push('session');return {data:{session:{access_token:'code-session'}}}}}}
+ const fetcher=async(url,options)=>{
+  if(url==='/api/lessonplan/code'){
+   // The typed address goes to the server, which decides what the code was issued against.
+   assert.deepEqual(JSON.parse(options.body),{email:'teacher@example.com',code:'123456'})
+   events.push('verify');return {ok:true,json:async()=>({access_token:'code-session',refresh_token:'code-refresh'})}
+  }
+  assert.equal(options.headers.Authorization,'Bearer code-session');events.push('activate');return {ok:true,json:async()=>({success:true})}
+ }
+ await finishLessonCode(client,fetcher,'Teacher@Example.com','123456')
+ assert.deepEqual(events,['verify','session','activate'])
 })
 test('Incorrect email codes never activate account access',async()=>{
+ let activations=0
+ const fetcher=async url=>{
+  if(url==='/api/lessonplan/code')return {ok:false,json:async()=>({error:'This code expired or is incorrect. Use your latest email or request a new one.'})}
+  activations++;return {ok:true,json:async()=>({success:true})}
+ }
+ await assert.rejects(finishLessonCode({auth:{setSession:async()=>{throw new Error('must not reach setSession')}}},fetcher,'teacher@example.com','123456'),/expired or is incorrect/)
+ assert.equal(activations,0)
+})
+test('A code typed for a school address signs in without the browser learning the other address',async()=>{
+ // The alias case: what the teacher types is not what Supabase issued the code against.
+ // The browser sends only what was typed and gets back only a session.
+ let seen=null
+ const client={auth:{setSession:async()=>({data:{session:{access_token:'alias-session'}}})}}
+ const fetcher=async(url,options)=>{
+  if(url==='/api/lessonplan/code'){seen=JSON.parse(options.body);return {ok:true,json:async()=>({access_token:'alias-session',refresh_token:'alias-refresh'})}}
+  return {ok:true,json:async()=>({success:true})}
+ }
+ assert.equal(await finishLessonCode(client,fetcher,'rfurman@saintpetersacademy.org','654321'),true)
+ assert.deepEqual(seen,{email:'rfurman@saintpetersacademy.org',code:'654321'})
+})
+test('A malformed code never reaches the server',async()=>{
  let calls=0
- await assert.rejects(finishLessonCode({auth:{verifyOtp:async()=>({error:{message:'invalid'}})}},async()=>{calls++},'teacher@example.com','123456'),/expired or is incorrect/)
+ await assert.rejects(finishLessonCode({auth:{}},async()=>{calls++},'teacher@example.com','12ab'),/verification code/)
  assert.equal(calls,0)
 })
 
