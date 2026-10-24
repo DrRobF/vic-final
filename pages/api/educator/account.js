@@ -10,5 +10,5 @@ export default async function handler(req,res){
  // Whoever runs a VIC Room starts the day on the room screen.
  let roomAide=false
  if(auth.profile?.id){const {data:rooms}=await auth.admin.from('vic_rooms').select('id').contains('staff_ids',[auth.profile.id]).limit(1);roomAide=!!rooms?.length}
- return res.json({leader:!!lead?.length,email:auth.user.email,role:auth.profile?.role||'educator',classroom:auth.profile?.role==='teacher',principal:['teacher','principal'].includes(auth.profile?.role),manageAccounts:canManageAccounts(auth,ADMIN_EMAIL),roomAide})
+ return res.json({leader:!!lead?.length,email:auth.user.email,name:auth.profile?.name||'',role:auth.profile?.role||'educator',classroom:auth.profile?.role==='teacher',principal:['teacher','principal'].includes(auth.profile?.role),manageAccounts:canManageAccounts(auth,ADMIN_EMAIL),roomAide})
 }

@@ -17,13 +17,13 @@ const EDUCATOR_NAV = [
  { href: '/classes', label: 'My Classes', match: ['/classes', '/askvic', '/teacher', '/assignlesson'] },
  { href: '/parentletters', label: 'Families', match: ['/parentletters'] },
 ]
+// Three places, not six. The dashboard is the way in to everything else -- each of those
+// lives on it as a door wearing its own state, which beats a menu that says only its name.
+// VIC Room stays because the aide running it has it open all day and is not the principal.
 const SCHOOL_NAV = [
  { href: '/school', label: 'Dashboard', match: ['/school'] },
  { href: '/room', label: 'VIC Room', match: ['/room'] },
- { href: '/walkthroughs', label: 'Walkthroughs', match: ['/walkthroughs'] },
- { href: '/weeklyplans', label: 'Lesson plans', match: ['/weeklyplans'] },
- { href: '/school/payroll', label: 'Payroll', match: ['/school/payroll'] },
- { href: '/school/setup', label: '⚙ Setup', match: ['/school/setup', '/school/attendance', '/assistantprincipal', '/admin'] },
+ { href: '/school/setup', label: '⚙ Setup', match: ['/school/setup', '/school/attendance', '/school/cover', '/school/payroll', '/walkthroughs', '/weeklyplans', '/assistantprincipal', '/admin'] },
 ]
 const SCHOOL_PATHS = ['/room', '/school', '/weeklyplans', '/walkthroughs', '/assistantprincipal', '/admin']
 const STUDENT_NAV = [

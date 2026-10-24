@@ -167,6 +167,55 @@ Tile state names in code are `here` / `late` / `missing` / `told` / `waiting`
   it stay on record. The date picker matters because a day with no check-in on
   a day that wasn't a school day never appears in the list at all.
 
+## Rework — Oct 23, 2026
+
+Decided with Rob. Where this disagrees with the sections above, this wins.
+
+**What he asked for:** wasted space gone; things he doesn't use daily off the page; a
+screening/interviews section coming; the dashboard as a command centre that reaches
+everywhere while showing only what matters.
+
+**He wanted buttons to summon the hidden panels. We did not build those**, and the reason is
+section 1's own rule: "same position every day so the eye learns the layout." A page that
+changes shape fights that, and six panels plus six toggles is a control panel to operate
+rather than a board to read. Instead: a small dashboard that never changes shape, and
+everything else a door wearing its own state.
+
+**The rule, which is the point of the whole rework:** permanent space is for what changes
+every day; everything else is a door; anything behind a door that needs attention raises its
+hand in Needs you. Screening lands as a door plus a Needs-you item when candidates wait — no
+redesign, and the dashboard does not grow as AskVic does.
+
+### What changed
+
+- **A clock**, large, top right, with the date under it. Rob asked for it by name.
+- **Needs you holds only what he can settle from here, and every item carries the button
+  that settles it.** His words: it gets annoying after you read it once. The cause is that
+  reading an item never fixes it, so it repeats itself every morning. Items with no exit
+  moved to door status lines: lesson plans to review, Learning Path suggestions, missing
+  clock-outs, unmatched check-in names. What stays: no check-in today (Say why), out today
+  or tomorrow needing a sub (Make a cover slip, which arrives at /school/cover with that
+  teacher's classes already ticked), out of paid days, and day-off requests (Approve /
+  Decline, already settled in place). Each also has "Handled it" for when he fixed it in the
+  hallway. On a quiet day the whole panel is one line.
+- **Cut:** the five-item legend (every tile already states its own state in words), the
+  Staff growth panel, the "Add staff" tile inside the grid, and "Change the order" from the
+  section header. The last two moved to one quiet line under the board — a few-times-a-year
+  job was charging daily rent in the thing he scans fastest.
+- **Growth belongs to the person, not the board.** Rob: walkthrough counts go on the teacher
+  panel. They were already there — the slide-out's Overview opens with "Walkthroughs: 4 this
+  year · last Oct 2 (21 days ago)" and the Growth tab holds every visit. Nothing was built.
+- **A dashboard-level "N teachers not visited in 30+ days" nag was proposed and rejected.**
+  Rob pointed out it reads 8 only because he, Ruth and Dale have not started walkthroughs: a
+  rule about 30-day gaps says nothing until there are visits to have gaps between. It can
+  come back once walkthroughs are in use.
+- **Doors** (each with its live state): Sub coverage, Lesson plans, Walkthroughs, Payroll,
+  Attendance detail, My teaching. Sub coverage is outlined when somebody is out and no slip
+  is made.
+- **Top nav cut from six to three**: Dashboard · VIC Room · ⚙ Setup. The doors beat a menu
+  that shows only names. VIC Room stays because the aide running it has it open all day and
+  is not the principal.
+
 ## Still open
 
 - Student academics (section 9) — Rob will say how he wants this.

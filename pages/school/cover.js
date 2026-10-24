@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useRouter } from 'next/router'
 import PageShell, { PanelStyles } from '../../components/PageShell'
 import { useAccount } from '../../lib/use-account'
 import { supabase } from '../../lib/supabase'
@@ -25,7 +26,9 @@ const fmt = iso => iso ? new Date(`${iso}T12:00:00Z`).toLocaleDateString(undefin
 // at askvic.ai/cover. It works for a teacher down the hall and for a sub nobody has met,
 // because it needs no account and nothing set up in advance.
 export default function CoverPage() {
+ const router = useRouter()
  const { account, error: accountError } = useAccount({ next: '/school/cover' })
+ const prefilled = useRef(false)
  const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState('')
  const [data, setData] = useState(null), [error, setError] = useState(''), [made, setMade] = useState(null)
  const [day, setDay] = useState(''), [who, setWho] = useState(''), [note, setNote] = useState('')
@@ -42,6 +45,19 @@ export default function CoverPage() {
   api(`/api/school/cover?schoolId=${encodeURIComponent(schoolId)}`).then(d => { setData(d); setDay(p => p || d.today) }).catch(e => setError(e.message))
  }, [schoolId])
  useEffect(() => { setData(null); load() }, [schoolId, load])
+
+ // Arriving from "Make a cover slip" on the dashboard: that teacher's classes are already
+ // ticked and the day is set, so the principal only types who is covering. Done once, so a
+ // later untick is not undone on the next refresh.
+ useEffect(() => {
+  if (!data || !router.isReady || prefilled.current) return
+  const wanted = router.query.staffId, wantedDay = router.query.day
+  if (!wanted && !wantedDay) return
+  prefilled.current = true
+  if (typeof wantedDay === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(wantedDay) && wantedDay >= data.today) setDay(wantedDay)
+  const theirs = (data.teachers || []).find(t => String(t.staffId) === String(wanted))
+  if (theirs?.classIds?.length) setPicked(theirs.classIds)
+ }, [data, router.isReady, router.query.staffId, router.query.day])
 
  function toggle(id) { setPicked(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id]) }
  // Picking a teacher selects every class of theirs; the name of who is covering is separate.
