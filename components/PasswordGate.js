@@ -7,7 +7,12 @@ const ACCOUNT_ROUTES=new Set(['/login','/student-login','/signup','/lessonplan/a
 // Public marketing pages render immediately (including the server-rendered HTML that search
 // engines and link previews read). The account check still runs in the background so a
 // signed-in user who must change their password is redirected.
-const PUBLIC_ROUTES=new Set(['/','/privacy','/terms','/help','/lessonplan','/lessonplan/standards','/educatorassistant'])
+// /cover is here on purpose: it is the one staff screen built for somebody with no account
+// at all -- a sub holding a printed code. Waiting on a session check would greet them with
+// "Checking account access..." and make them think they need a login they were never given.
+// Nothing is exposed by rendering it early; the page shows nothing until the server accepts
+// the code.
+const PUBLIC_ROUTES=new Set(['/','/privacy','/terms','/help','/lessonplan','/lessonplan/standards','/educatorassistant','/cover'])
 export default function PasswordGate({children}){
  const router=useRouter(),accountPage=ACCOUNT_ROUTES.has(router.pathname),publicPage=PUBLIC_ROUTES.has(router.pathname)
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)
