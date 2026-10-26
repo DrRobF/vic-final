@@ -234,7 +234,7 @@ confirms. Backup of the pre-move enrollments: table enrollment_backup_20261022.
   planned lessons, notes for VIC, picture cards, unlock.
 - Practice path: Reading/Math practice in the VIC & IXL class; Florida B.E.S.T. skills from what
   Green/Morgan planned for the group, then the child's own grade (users.grade_level).
-- VIC brain v3.6 records met / partly / not yet per lesson in vic_goal_results. This is the
+- VIC brain v3.7 records met / partly / not yet per lesson in vic_goal_results. This is the
   evidence for the principal's on-level and red-flag card (red-flag rule still Rob's call).
 - Teachers: plan 3/4 as Grade 3 and 4/5 as Grade 4 so Launch finds the right class.
 
@@ -282,6 +282,43 @@ route handles without one.
 
 **Still open here:** surfacing a slip on a covering teacher's own `/teach` screen, so staff who
 do have logins need not type a code; and whether a sub should be recorded for payroll.
+
+## First real day, Oct 26 — VIC was finishing lessons in ten minutes
+
+Shontae's report from the VIC Room's first period: VIC teaches well, but the time frame is far
+too short. It asked a couple of questions, the student got them right, it said the skill was
+complete and to move on — and then there was nothing. Rob: even when a child seems to
+understand it, we do not want them done in 10–20 minutes, and we do not want VIC to stop
+teaching. It should either go deeper into the concept or work a project with the student.
+
+Two causes, and only one of them was VIC.
+
+1. **The student page announced it.** On any goal verdict, `/askvic` showed a large
+   "⭐ Skill done! Ready for the next one?" banner with a "Next skill →" button. That is the
+   "skill complete, move on" Shontae saw, and it fired the moment a verdict arrived — which is
+   early by design. Now a quiet line that says VIC is taking it further, with a plain "Switch
+   to a different skill" for a child who really is finished.
+2. **The brain treated the verdict as a bell.** The goal tag is evidence for the adults, but
+   emitting it read as the end of the lesson, and its own rules said to tell the student "what
+   comes next". New **AFTER THE GOAL TAG** section (brain v3.7): the tag never ends a lesson,
+   VIC must not say the skill is complete or offer another skill, and on `met` it continues on
+   the same standard either by GO DEEPER (harder and non-routine cases, the edges, why it
+   works, another representation, teach-it-back, find-the-error, two ideas at once) or by
+   BUILD SOMETHING (Mini Project Mode). Where it fits the student chooses which.
+
+Also: **Mini Project Mode was capped at "2–5 minutes, 1–3 steps" and "do NOT assign long
+projects"** — so even the enrichment path was built to be brief. It is now the body of a
+lesson rather than a lap of honour: several turns, real decisions, at least three meaningful
+steps, nothing hurried to its end and no busywork padding either.
+
+**The line that is deliberately kept:** a child who says they want to stop may stop. VIC offers
+the deeper version or the project once, then stops warmly. The fix must not become a trap —
+"learning continues until the student chooses otherwise" still holds. What changed is that VIC
+is never the one who suggests the exit.
+
+**Not changed, on purpose:** what earns `met` (still three correct in a row unaided). The
+complaint was about stopping, not about the verdict being wrong, and the verdict is the
+evidence stream behind the principal's on-level card. Guarded by `test/vic-brain.test.mjs`.
 
 ## Later: Hiring (employment and interviews), Oct 22
 
