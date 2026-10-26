@@ -1287,10 +1287,14 @@ ${context}`
               </div>
             </section>
 
+            {/* VIC records a verdict the moment a student can do something, which is early --
+                the lesson is meant to keep going from there, deeper or into a project. So this
+                is a quiet way out for a child who really is finished, not an announcement that
+                they are. Calling it "Skill done!" was ending lessons in ten minutes. */}
             {practiceDone ? (
-              <section style={{ ...styles.inputCard, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', border: '3px solid #5B21B6' }}>
-                <div style={{ fontSize: 20, fontWeight: 800 }}>{practiceDone === 'met' ? '⭐ Skill done! Ready for the next one?' : 'Nice work. Ready for a new skill?'}</div>
-                <button type="button" disabled={nextBusy} onClick={goNextPractice} style={{ minHeight: 52, padding: '10px 22px', borderRadius: 14, border: 0, background: '#5B21B6', color: '#fff', fontSize: 19, fontWeight: 800, cursor: 'pointer' }}>{nextBusy ? 'Getting it…' : 'Next skill →'}</button>
+              <section style={{ ...styles.inputCard, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 18, fontWeight: 700 }}>{practiceDone === 'met' ? 'You’ve got this one — VIC is taking it further.' : 'Nice work — VIC is staying with this one.'}</div>
+                <button type="button" disabled={nextBusy} onClick={goNextPractice} style={{ minHeight: 48, padding: '9px 18px', borderRadius: 12, border: '1px solid #C9D3E6', background: '#fff', color: '#4E5B78', fontSize: 16, fontWeight: 700, cursor: 'pointer' }}>{nextBusy ? 'Getting it…' : 'Switch to a different skill'}</button>
               </section>
             ) : null}
 
