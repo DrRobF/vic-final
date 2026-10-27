@@ -154,3 +154,20 @@ test('reading what is set tells a teacher who to ask about alternate standards',
  assert.equal(r.body.can.alternateStandards, false)
  assert.match(r.body.help, /school leader/i)
 })
+
+test('a teacher is told they may change read-aloud and language, but not alternate standards', async () => {
+ const { handler } = load({ mine: [{ id: 40 }], enrolled: [{ id: 1 }] })
+ const r = await call(handler, { method: 'GET', query: { studentId: '112' } })
+ assert.equal(r.body.can.readAloud, true)
+ assert.equal(r.body.can.language, true)
+ assert.equal(r.body.can.alternateStandards, false)
+})
+
+test('a teacher can switch read-aloud and language on for their own student', async () => {
+ const { handler, log } = load({ mine: [{ id: 40 }], enrolled: [{ id: 1 }] })
+ const r = await call(handler, { body: { studentId: 112, supports: { read_aloud: 'always', language: 'es' } } })
+ assert.equal(r.code, 200)
+ const row = log.upserts.find(u => u.table === 'student_supports').row
+ assert.equal(row.read_aloud, 'always'); assert.equal(row.language, 'es')
+ assert.equal('alternate_standards' in row, false, 'a change to other fields must not reset alternate standards')
+})

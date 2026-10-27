@@ -49,7 +49,7 @@ export default async function handler(req, res) {
     student: { id: student.id, name: student.name, enrolledGrade: student.grade_level },
     levels: bySubject,
     supports: { read_aloud: 'off', language: 'en', alternate_standards: false, ...(supports || {}) },
-    can: { level: perms.level, alternateStandards: perms.alternateStandards },
+    can: { level: perms.level, readAloud: perms.readAloud, language: perms.language, alternateStandards: perms.alternateStandards },
     help: perms.alternateStandards ? '' : ALTERNATE_STANDARDS_HELP,
    }
   }
