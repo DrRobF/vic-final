@@ -92,6 +92,7 @@ const TOUR = [
 const START = [
  {
   who: 'Teachers', steps: [
+   ['Work through the walkthrough', 'at askvic.ai/help/tutorial if you would rather do all of it once, hands on, than read these steps.'],
    ['Log in', 'at askvic.ai with the Teacher log in button.'],
    ['Join your school.', 'Right after you log in, My Week shows a “Join your school” card. If your principal added your email, it is one click. Otherwise type the code from your principal. Until you join, your lesson plans cannot reach your principal.'],
    ['Open My Week', 'and set the grade, subject, and a standard or topic for each day. Mark days with no lesson as “no lesson.”'],
@@ -181,6 +182,12 @@ export default function Help() {
     <p className="lead">Teachers get a planner and a co-teacher. Leaders get the school. Students get today’s lesson. If you only found one part, here is the rest.</p>
    </section>
 
+   <a className="walk" href="/help/tutorial">
+    <span className="walkTag">Walkthrough</span>
+    <strong>Learn VIC by doing all of it once</strong>
+    <span className="walkWhy">Nine hands-on stations: plan, send, print, get students logged in, run the room, cover a class, write home. Finish them and print your VIC certificate.</span>
+   </a>
+
    <div className="tabs" role="tablist" aria-label="Help sections">
     {TABS.map((t, i) => (
      <button key={t.id} id={`tab-${t.id}`} role="tab" type="button" aria-selected={tab === t.id} aria-controls={`panel-${t.id}`} tabIndex={tab === t.id ? 0 : -1} onClick={() => choose(t.id)} onKeyDown={e => onKey(e, i)}>{t.label}</button>
@@ -224,6 +231,11 @@ export default function Help() {
     .eyebrow{margin:0;font-size:13px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--vic-primary)}
     h1{margin:0;font-family:var(--font-head);font-size:clamp(30px,5vw,46px);line-height:1.1;letter-spacing:-.02em;max-width:22ch;text-wrap:balance}
     .lead{margin:0;font-size:18px;line-height:1.6;color:var(--vic-text-secondary);max-width:62ch}
+    .walk{display:grid;gap:6px;padding:20px 22px;border-radius:16px;background:var(--vic-ink);color:var(--vic-ink-text);text-decoration:none;margin:4px 0 6px}
+    .walk:hover{background:#15294a}
+    .walkTag{font-size:12px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;color:var(--vic-cyan)}
+    .walk strong{font-family:var(--font-head);font-size:21px;color:#fff}
+    .walkWhy{font-size:15px;line-height:1.55;color:var(--vic-ink-muted);max-width:64ch}
     .tabs{display:flex;gap:6px;overflow-x:auto;padding:6px;margin:6px 0 22px;background:var(--vic-surface-muted);border:1px solid var(--vic-border);border-radius:14px;width:fit-content;max-width:100%}
     .tabs button{flex:0 0 auto;padding:10px 18px;border-radius:10px;border:0;background:transparent;color:var(--vic-text-secondary);font-family:var(--font-head);font-weight:700;font-size:16px;cursor:pointer;white-space:nowrap}
     .tabs button[aria-selected="true"]{background:var(--vic-primary);color:#fff}
