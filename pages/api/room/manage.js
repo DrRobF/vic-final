@@ -2,6 +2,9 @@ import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { isLeader, canRunRoom, roomStudents, newRoomCode, randomPictures, shortName } from '../../../lib/vic-room.mjs'
 import { schoolToday, schoolDayStart } from '../../../lib/release.mjs'
 import { plannedToday, launchLesson } from '../../../lib/lesson-launch.mjs'
+import { practiceForRoom, VIC_CLASS } from '../../../lib/vic-practice.mjs'
+import general from '../../../data/lesson-standards.json'
+import access from '../../../data/access-points.json'
 
 const QUIET_MINUTES = 5
 const isUuid = v => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)
@@ -9,7 +12,7 @@ const isUuid = v => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)
 // The VIC Room screen for the adult running the room (aide, teacher or school leader).
 // GET            → rooms this adult can run (and, for leaders/teachers, classes they may add)
 // GET ?id=       → one room, live: every child, what they're on, quiet or working, alerts, notes
-// POST {action}  → create, update, assignPictures, newPictures, unlock, addNote, clearNote
+// POST {action}  → create, update, assignPictures, newPictures, unlock, addNote, clearNote, practiceAll
 export default async function handler(req, res) {
  res.setHeader('Cache-Control', 'no-store')
  if (!['GET', 'POST'].includes(req.method)) { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({ error: 'Method not allowed.' }) }
@@ -97,6 +100,23 @@ export default async function handler(req, res) {
    if (!pick) return res.status(400).json({ error: 'That lesson isn’t planned for this room today.' })
    if (!pick.ready) return res.status(400).json({ error: 'This lesson needs a standard and objective before VIC can teach it. Ask the teacher to fix it.' })
    const done = await launchLesson(db, { classId, lessonId })
+   return res.json(done)
+  }
+  // No teacher planned a lesson, so the aide starts each child on their own next skill.
+  // Deliberately per-child rather than one shared topic: a group of eleven sits at eleven
+  // different places, and the picker already knows where each of them is.
+  if (action === 'practiceAll') {
+   const subject = ['math', 'reading'].includes(req.body?.subject) ? req.body.subject : null
+   if (!subject) return res.status(400).json({ error: 'Choose reading or math.' })
+   const roomClassIds = (room.class_ids || []).map(Number)
+   const { data: roomClasses } = roomClassIds.length
+    ? await db.from('classes').select('id,class_name').in('id', roomClassIds) : { data: [] }
+   const vicIds = new Set((roomClasses || []).filter(c => VIC_CLASS.test(c.class_name || '')).map(c => Number(c.id)))
+   const targets = students.map(s => ({
+    ...s,
+    vicClassId: (s.classIds || []).map(Number).find(id => vicIds.has(id)) || null,
+   }))
+   const done = await practiceForRoom(db, { students: targets, subject, catalogues: { general, access } })
    return res.json(done)
   }
   // Finishing a move into the room: its students leave every class outside the room. School leaders only.
