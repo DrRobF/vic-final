@@ -13,6 +13,12 @@ import { VIC_BRAIN } from '../../lib/vic-brain.mjs'
 import { detectSafety } from '../../lib/vic-safety.mjs'
 import { extractVisual } from '../../lib/vic-visuals.mjs'
 import { raiseSafetyAlert } from '../../lib/vic-safety-notify.js'
+import { splitText, buildSpeech, policyForLesson, sessionInstructions } from '../../lib/read-aloud.mjs'
+import general from '../../data/lesson-standards.json'
+import access from '../../data/access-points.json'
+
+// Standards by id, so a practice skill's read-aloud policy can be looked up.
+const standardsById = new Map([...general, ...access].map(x => [x.id, x]))
 
 export const config = { api: { bodyParser: { sizeLimit: '8mb' } }, maxDuration: 60 }
 
@@ -121,6 +127,19 @@ export default async function handler(req, res) {
       }
     }
 
+    // What this child has switched on (read-aloud, a language), and what this skill measures.
+    // A child on the defaults gets no extra instructions and no speech plan: nothing changes for them.
+    let supports = null
+    try {
+      const { data } = await auth.admin.from('student_supports').select('read_aloud,language,alternate_standards').eq('student_id', auth.profile.id).maybeSingle()
+      supports = data || null
+    } catch {}
+    const standard = assignedLessonRow?.practice_standard ? standardsById.get(assignedLessonRow.practice_standard) || null : null
+    const audioPolicy = policyForLesson({ standard, subjectName: assignedLessonRow?.subject, ownWork: mode !== TEACHER_DIRECTED })
+    const translate = standard?.translate || (/math/i.test(assignedLessonRow?.subject || '') ? 'free' : 'scaffold_only')
+    const supportNote = sessionInstructions({ policy: audioPolicy, translate, supports })
+    if (supportNote) context += `\n\n${supportNote}`
+
     // Notes the adults running the student's VIC Room left for today ("work on 7s facts").
     try {
       const { data: notes } = await auth.admin.from('vic_room_notes').select('note').eq('student_id', auth.profile.id).eq('active', true).order('created_at', { ascending: true }).limit(5)
@@ -172,7 +191,8 @@ export default async function handler(req, res) {
     const goalTag = extractGoal(safety.reply)
     const shown = extractVisual(goalTag.text)
     const visual = safety.category ? null : shown.visual
-    const reply = shown.text || 'Thank you for telling me. That matters, and you did the right thing. I’m going to let your teacher know so a grown-up can help. Please tell a trusted adult today, like your teacher, school counselor, or someone in your family. If you are in danger right now, go to an adult or call 911. You can also call or text 988 any time.'
+    const marked = splitText(shown.text)
+    const reply = marked.text || 'Thank you for telling me. That matters, and you did the right thing. I’m going to let your teacher know so a grown-up can help. Please tell a trusted adult today, like your teacher, school counselor, or someone in your family. If you are in danger right now, go to an adult or call 911. You can also call or text 988 any time.'
     if (safety.category) {
       await raiseSafetyAlert({ admin: auth.admin, student: auth.profile, classId: activityAssignment?.class_id ?? Number(activeClassId), category: safety.category, source: safety.source, studentText, vicReply: reply })
     }
@@ -197,7 +217,11 @@ export default async function handler(req, res) {
       if (goalError) console.error('VIC goal result not saved', { code: goalError.code })
     }
 
-    return res.status(200).json({ reply, visual, goal, practice: !!assignedLessonRow?.practice_standard })
+    // May this reply be spoken, and which parts? Null for a child who uses neither read-aloud nor a language.
+    // A safety reply is comfort, not assessment, so it is always free to speak.
+    const speech = buildSpeech({ marked: safety.category ? splitText(reply) : marked, policy: safety.category ? 'free' : audioPolicy, translate, supports })
+
+    return res.status(200).json({ reply, visual, goal, practice: !!assignedLessonRow?.practice_standard, ...(speech ? { speech } : {}) })
   } catch (error) {
     console.error('VIC request failed.', { name: error?.name, mode })
     return res.status(500).json({ error: 'VIC could not load this learning session. Please try again.' })

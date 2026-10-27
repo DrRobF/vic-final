@@ -4,6 +4,8 @@ import { useRouter } from 'next/router'
 import { supabase } from '../lib/supabase'
 import VICHeader from '../components/VICHeader'
 import VICVisual, { VICText } from '../components/VICVisual'
+import SpeakButton from '../components/SpeakButton'
+import { stopSpeaking } from '../lib/speak'
 import { lessonFromAssignment, pickLatestAssignment } from '../lib/assignment-resolution'
 import { messagesForModeSwitch } from '../lib/ask-vic-context.mjs'
 
@@ -705,6 +707,9 @@ export default function AskVIC() {
         content: msg.text,
       }))
 
+      // A new message means the old one is no longer being listened to.
+      try { stopSpeaking() } catch {}
+
       const apiUrl = '/api/vic'
 
       const requestBody = {
@@ -761,6 +766,8 @@ export default function AskVIC() {
           role: 'assistant',
           text: finalReply,
           visual,
+          // What the server decided may be spoken. Absent for a child who does not use read-aloud.
+          speech: data.speech || null,
         },
       ])
 
@@ -1281,6 +1288,7 @@ ${context}`
                       </p>
 
                       {msg.role === 'assistant' && msg.visual ? <VICVisual visual={msg.visual} /> : null}
+                      {msg.role === 'assistant' && msg.speech ? <SpeakButton speech={msg.speech} auto={index === messages.length - 1} /> : null}
                     </div>
                   ))}
                 </div>
