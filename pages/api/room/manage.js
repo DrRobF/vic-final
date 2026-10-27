@@ -1,5 +1,6 @@
 import { requireLessonEducator } from '../../../lib/lesson-designer-auth'
 import { isLeader, canRunRoom, roomStudents, newRoomCode, randomPictures, shortName } from '../../../lib/vic-room.mjs'
+import { PICTURE_KEYS } from '../../../lib/room-pictures.mjs'
 import { schoolToday, schoolDayStart } from '../../../lib/release.mjs'
 import { plannedToday, launchLesson } from '../../../lib/lesson-launch.mjs'
 import { practiceForRoom, VIC_CLASS } from '../../../lib/vic-practice.mjs'
@@ -12,7 +13,7 @@ const isUuid = v => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)
 // The VIC Room screen for the adult running the room (aide, teacher or school leader).
 // GET            → rooms this adult can run (and, for leaders/teachers, classes they may add)
 // GET ?id=       → one room, live: every child, what they're on, quiet or working, alerts, notes
-// POST {action}  → create, update, assignPictures, newPictures, unlock, unlockAll, addNote, clearNote, practiceAll
+// POST {action}  → create, update, assignPictures, newPictures, setPictures, unlock, unlockAll, addNote, clearNote, practiceAll
 export default async function handler(req, res) {
  res.setHeader('Cache-Control', 'no-store')
  if (!['GET', 'POST'].includes(req.method)) { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({ error: 'Method not allowed.' }) }
@@ -83,6 +84,20 @@ export default async function handler(req, res) {
 
   // Give every child without pictures a pair (or one child a fresh pair). Picture login replaces
   // the first-login password change for these students.
+  // An adult picks the two pictures themselves, so they can hand the child something the
+  // child will remember -- and so the pair on the adult's screen is the pair that was set.
+  // The random buttons below overwrite silently, which strands a child who was told otherwise.
+  if (action === 'setPictures') {
+   if (!inRoom(studentId)) return res.status(400).json({ error: 'Choose a student in this room.' })
+   const picked = Array.isArray(req.body?.pictures) ? req.body.pictures.map(String) : []
+   if (picked.length !== 2 || !picked.every(p => PICTURE_KEYS.includes(p))) return res.status(400).json({ error: 'Pick two pictures.' })
+   if (picked[0] === picked[1]) return res.status(400).json({ error: 'Pick two different pictures.' })
+   const { error } = await db.from('student_picture_logins').upsert(
+    [{ student_id: studentId, pictures: picked, failed_count: 0, locked_until: null, updated_at: new Date().toISOString() }],
+    { onConflict: 'student_id' })
+   if (error) throw error
+   return res.json({ pictures: picked })
+  }
   if (action === 'assignPictures' || action === 'newPictures') {
    const targets = action === 'newPictures' ? (inRoom(studentId) ? [studentId] : []) : students.map(s => s.id)
    if (!targets.length) return res.status(400).json({ error: 'Choose a student in this room.' })

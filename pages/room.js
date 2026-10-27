@@ -2,7 +2,7 @@ import { useRouter } from 'next/router'
 import { useEffect, useRef, useState } from 'react'
 import PageShell, { PanelStyles } from '../components/PageShell'
 import { supabase } from '../lib/supabase'
-import { pictureFor } from '../lib/room-pictures.mjs'
+import { PICTURES, pictureFor } from '../lib/room-pictures.mjs'
 import LearnerLevelPanel from '../components/LearnerLevelPanel'
 
 async function api(path, body) {
@@ -21,6 +21,40 @@ const STATUS = {
 }
 const ORDER = { alert: 0, quiet: 1, out: 2, working: 3 }
 const Pics = ({ keys }) => keys ? <span className="pics">{keys.map((k, i) => <span key={i} title={pictureFor(k)?.label}>{pictureFor(k)?.emoji}</span>)}</span> : <span className="muted">No pictures yet</span>
+
+// Choosing beats rolling dice. An adult who picks a child's two pictures can hand the child
+// something they will remember, and the pair on the screen is the pair that was set -- the
+// random buttons overwrite silently, which is how a child ends up locked out of their own name.
+function PicturePicker({ student, onSave }) {
+ const [pick, setPick] = useState([])
+ const [saving, setSaving] = useState(false)
+ const toggle = k => setPick(p => p.includes(k) ? p.filter(x => x !== k) : p.length >= 2 ? p : [...p, k])
+ async function save() {
+  if (pick.length !== 2 || saving) return
+  setSaving(true)
+  try { await onSave(pick); setPick([]) } finally { setSaving(false) }
+ }
+ return (
+  <details className="picker">
+   <summary>Choose {student.short}'s pictures yourself</summary>
+   <p className="muted">Tap two. The order matters — the child taps them in the same order you pick them.</p>
+   <div className="pgrid">
+    {PICTURES.map(pic => {
+     const at = pick.indexOf(pic.key)
+     return <button type="button" key={pic.key} className={at > -1 ? 'pbtn on' : 'pbtn'} aria-pressed={at > -1} onClick={() => toggle(pic.key)}>
+      <span className="pem" aria-hidden="true">{pic.emoji}</span>
+      <span className="plabel">{pic.label}</span>
+      {at > -1 && <span className="pnum">{at + 1}</span>}
+     </button>
+    })}
+   </div>
+   <div className="row">
+    <button type="button" className="btn btn-primary" disabled={pick.length !== 2 || saving} onClick={save}>{saving ? 'Saving…' : pick.length === 2 ? 'Save these two' : `Pick ${2 - pick.length} more`}</button>
+    {pick.length > 0 && <button type="button" className="btn btn-outline" onClick={() => setPick([])}>Start over</button>}
+   </div>
+  </details>
+ )
+}
 
 // VIC Room: the screen for the adult in a room where students learn with VIC.
 // Who's working, who's quiet, who needs help; launch today's lessons; logins and picture cards.
@@ -126,14 +160,15 @@ export default function Room() {
       <p><strong>On today:</strong> {student.lessons.length ? student.lessons.map(l => l.title).join(', ') : 'Nothing launched yet. VIC will help with their own work.'}</p>
       <div><strong>Notes for VIC:</strong>{student.notes.length ? <ul>{student.notes.map(n => <li key={n.id}>{n.note} <button type="button" className="linkbtn" onClick={() => act({ action: 'clearNote', noteId: n.id })}>Remove</button></li>)}</ul> : <span className="muted"> none</span>}</div>
       <NoteBox label={`Add a note for VIC about ${student.short}`} onSave={note => act({ action: 'addNote', studentId: student.id, note }, () => 'Note added. VIC will use it on the next message.')} />
-      <p><strong>Login pictures:</strong> <Pics keys={student.pictures} /> {student.locked && <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'unlock', studentId: student.id }, () => 'Unlocked. They can try again.')}>Unlock</button>} <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'newPictures', studentId: student.id }, () => 'New pictures made. Show them to the child.')}>New pictures</button></p>
+      <p><strong>Login pictures:</strong> <Pics keys={student.pictures} /> {student.locked && <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'unlock', studentId: student.id }, () => 'Unlocked. They can try again.')}>Unlock</button>} <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'newPictures', studentId: student.id }, d => 'Random pictures made. They are shown above — read them to the child now.')}>Surprise me</button></p>
+      <PicturePicker student={student} onSave={pictures => act({ action: 'setPictures', studentId: student.id, pictures }, () => `Saved. ${student.short} taps those two, in that order.`)} />
       <p className="row"><button type="button" className="btn btn-primary" onClick={() => setLevelFor({ id: student.id, name: student.name })}>Change how VIC teaches {student.short}</button><span className="muted">Working level, language VIC explains in, and read-aloud. Takes effect on their next message.</span></p>
      </section>}
 
      {levelFor && <LearnerLevelPanel student={levelFor} onClose={() => { setLevelFor(null); refresh() }} />}
     </> : <section className="panel cards-wrap">
      <div className="row noprint">
-      <button type="button" className="btn btn-primary" onClick={() => act({ action: 'assignPictures' }, d => d.assigned ? `Pictures made for ${d.assigned} students.` : 'Everyone already has pictures.')}>Give pictures to everyone who needs them</button>
+      <button type="button" className="btn btn-primary" onClick={() => act({ action: 'assignPictures' }, d => d.assigned ? `Random pictures made for ${d.assigned} students. Print the cards below and read each child theirs — they have no way to know them otherwise.` : 'Everyone already has pictures.')}>Give random pictures to everyone who needs them</button>
       <button type="button" className="btn btn-outline" onClick={() => window.print()}>Print picture cards</button>
      </div>
      <p className="muted noprint">On each computer: open <strong>askvic.ai/hello</strong> and type room code <strong className="code">{room.code}</strong> once. Then each child taps their name and their two pictures, in order. Keep these cards with you, not on the desks.</p>
@@ -146,6 +181,14 @@ export default function Room() {
    .code{font-family:var(--font-mono);letter-spacing:.12em;font-size:1.1em}
    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
    .lockbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
+   .picker{margin:10px 0 2px;border:1px solid var(--vic-border-soft);border-radius:12px;padding:10px 14px}
+   .picker summary{cursor:pointer;font-weight:800;min-height:44px;display:flex;align-items:center}
+   .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px;margin:10px 0}
+   .pbtn{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 6px;min-height:76px;border:2px solid var(--vic-border);border-radius:12px;background:var(--vic-surface);font:inherit;cursor:pointer}
+   .pbtn.on{border-color:var(--vic-primary);box-shadow:inset 0 0 0 2px var(--vic-primary)}
+   .pem{font-size:30px;line-height:1}
+   .plabel{font-size:13px;font-weight:700}
+   .pnum{position:absolute;top:4px;right:6px;min-width:22px;height:22px;border-radius:11px;background:var(--vic-primary);color:#fff;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center}
    select{min-height:44px;border-radius:10px;padding:0 10px;font:inherit}
    .tabs{display:flex;gap:6px;border-bottom:1px solid var(--vic-border-soft)}
    .tabs button{padding:10px 14px;border:0;background:none;font:inherit;font-weight:800;color:var(--vic-text-secondary);border-bottom:3px solid transparent;cursor:pointer}
