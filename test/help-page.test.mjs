@@ -37,3 +37,22 @@ test('help opens without signing in, so a link someone texts you works', () => {
   const gate = readFileSync(new URL('../components/PasswordGate.js', import.meta.url), 'utf8')
   assert.match(gate, /PUBLIC_ROUTES=new Set\(\[[^\]]*'\/help'/)
 })
+
+test('help explains how to run a VIC session, including when no lesson was planned', () => {
+  assert.match(page, /Running a VIC session/)
+  assert.match(page, /Start reading/)
+  assert.match(page, /Start math/)
+  assert.match(page, /Note for everyone/)
+  assert.match(page, /askvic\.ai\/hello/)
+  assert.match(page, /no teacher planned a lesson/i)
+})
+
+test('help only names the room statuses the room screen really uses', () => {
+  const room = readFileSync(new URL('../pages/room.js', import.meta.url), 'utf8')
+  for (const word of ['Working', 'Quiet', 'Not logged in', 'Needs you']) {
+    assert.match(room, new RegExp(`word: '${word}'`), `${word} is not a room status`)
+    assert.match(page, new RegExp(word), `help should mention ${word}`)
+  }
+  // The buttons help tells people to press must exist on the screen.
+  for (const label of ['Start reading', 'Start math', 'Launch']) assert.match(room, new RegExp(label))
+})
