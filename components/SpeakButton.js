@@ -11,7 +11,7 @@ import { speak, stopSpeaking, canSpeak, warmVoices } from '../lib/speak'
 // weakest readers and some of them cannot rely on telling shades apart.
 const LANGUAGE_WORD = { es: 'Spanish', ht: 'Haitian Creole' }
 
-export default function SpeakButton({ speech, auto = false }) {
+export default function SpeakButton({ speech, auto = false, onSpoke }) {
  const language = speech?.language || 'en'
  const [ready, setReady] = useState(false)
  const [speaking, setSpeaking] = useState(false)
@@ -39,6 +39,9 @@ export default function SpeakButton({ speech, auto = false }) {
   setSpeaking(true)
   const ok = speak(speech.text, { language, onEnd: () => { if (mounted.current) setSpeaking(false) } })
   if (!ok) setSpeaking(false)
+  // The attempt record needs to know VIC actually spoke: a child can have the button all
+  // period and never press it, and a 'met' heard aloud is a different fact from one read cold.
+  else onSpoke?.()
  }
  function toggle() {
   if (speaking) { stopSpeaking(); setSpeaking(false) } else play()

@@ -14,6 +14,8 @@ import { detectSafety } from '../../lib/vic-safety.mjs'
 import { extractVisual } from '../../lib/vic-visuals.mjs'
 import { raiseSafetyAlert } from '../../lib/vic-safety-notify.js'
 import { splitText, buildSpeech, policyForLesson, sessionInstructions } from '../../lib/read-aloud.mjs'
+import { supportFor, levelFor, toLevel } from '../../lib/learner-profile.mjs'
+import { conditionFor, attemptRow, resolvePatch, resultRow, levelSubjectFor, turnsIn } from '../../lib/vic-attempt.mjs'
 import general from '../../data/lesson-standards.json'
 import access from '../../data/access-points.json'
 
@@ -27,7 +29,7 @@ const cleanInterest = (value) => typeof value === 'string' ? value.trim().slice(
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed.' })
 
-  const { messages, sketchImage, sessionMode, studentId, activeClassId } = req.body || {}
+  const { messages, sketchImage, sessionMode, studentId, activeClassId, spoke } = req.body || {}
   if (!Array.isArray(messages) || messages.length === 0) {
     return res.status(400).json({ error: 'Send at least one message.' })
   }
@@ -129,10 +131,22 @@ export default async function handler(req, res) {
 
     // What this child has switched on (read-aloud, a language), and what this skill measures.
     // A child on the defaults gets no extra instructions and no speech plan: nothing changes for them.
+    // The working level is read for the same reason: an attempt record has to say what level the
+    // child was being taught at, because both the level and the grade move and a verdict earned in
+    // October still has to be readable in May.
     let supports = null
+    let working = null
+    let enrolledGrade = null
     try {
-      const { data } = await auth.admin.from('student_supports').select('read_aloud,language,alternate_standards').eq('student_id', auth.profile.id).maybeSingle()
-      supports = data || null
+      const subject = levelSubjectFor(assignedLessonRow?.subject)
+      const [{ data: supportRow }, { data: levelRows }, { data: me }] = await Promise.all([
+        auth.admin.from('student_supports').select('read_aloud,language,alternate_standards').eq('student_id', auth.profile.id).maybeSingle(),
+        auth.admin.from('student_levels').select('subject,level,source,confirmed_at').eq('student_id', auth.profile.id),
+        auth.admin.from('users').select('grade_level').eq('id', auth.profile.id).maybeSingle(),
+      ])
+      supports = supportRow || null
+      enrolledGrade = me?.grade_level ?? null
+      working = levelFor(levelRows || [], subject, enrolledGrade)
     } catch {}
     const standard = assignedLessonRow?.practice_standard ? standardsById.get(assignedLessonRow.practice_standard) || null : null
     const audioPolicy = policyForLesson({ standard, subjectName: assignedLessonRow?.subject, ownWork: mode !== TEACHER_DIRECTED })
@@ -209,12 +223,66 @@ export default async function handler(req, res) {
         if(saveError)throw saveError
       }catch(saveError){console.error('Could not save VIC activity',{name:saveError?.name})}
     }
+    // The attempt record: one row per assignment, opened the first time the child works it and
+    // kept current after that. This is what gives the evidence a denominator -- without it a
+    // child who worked eight standards and met three is indistinguishable from one who worked
+    // three, and a child who never got there leaves no trace at all. A safety reply is not
+    // schoolwork, so it does not count as a turn.
+    const condition = conditionFor({
+      support: supportFor({ audio: audioPolicy, translate }, supports),
+      spoke: spoke === true,
+      alternateStandard: Boolean(supports?.alternate_standards),
+    })
+    const onTask = !safety.category && activityAssignment?.assignment_id && assignedLessonRow
+    let attemptId = null
+    if (onTask) {
+      try {
+        const row = attemptRow({
+          studentId: auth.profile.id,
+          classId: activityAssignment.class_id,
+          lessonId: assignedLessonRow.id,
+          assignmentId: activityAssignment.assignment_id,
+          standardId: assignedLessonRow.practice_standard || null,
+          condition,
+          level: working?.level ?? null,
+          enrolledGrade: toLevel(enrolledGrade),
+          turns: turnsIn(messages),
+        })
+        const { data: saved, error: attemptError } = await auth.admin
+          .from('vic_goal_attempts')
+          .upsert(row, { onConflict: 'assignment_id' })
+          .select('id')
+          .maybeSingle()
+        if (attemptError) throw attemptError
+        attemptId = saved?.id ?? null
+      } catch (attemptError) {
+        // Evidence is worth having, but never at the cost of the child's lesson.
+        console.error('VIC attempt not recorded', { code: attemptError?.code })
+      }
+    }
+
     // VIC's verdict on this lesson or practice skill: the evidence behind "on level" and red flags.
     let goal = null
-    if (goalTag.goal && !safety.category && activityAssignment?.assignment_id && assignedLessonRow) {
+    if (goalTag.goal && onTask) {
       goal = goalTag.goal
-      const { error: goalError } = await auth.admin.from('vic_goal_results').insert({ student_id: auth.profile.id, class_id: activityAssignment.class_id, lesson_id: assignedLessonRow.id, assignment_id: activityAssignment.assignment_id, standard_id: assignedLessonRow.practice_standard || null, verdict: goal, practice: !!assignedLessonRow.practice_standard })
+      const { error: goalError } = await auth.admin.from('vic_goal_results').insert(resultRow({
+        studentId: auth.profile.id,
+        classId: activityAssignment.class_id,
+        lessonId: assignedLessonRow.id,
+        assignmentId: activityAssignment.assignment_id,
+        standardId: assignedLessonRow.practice_standard || null,
+        verdict: goal,
+        practice: !!assignedLessonRow.practice_standard,
+        attemptId,
+        condition,
+      }))
       if (goalError) console.error('VIC goal result not saved', { code: goalError.code })
+      // The verdict closes the attempt, so it stops counting as unfinished work.
+      const patch = resolvePatch(goal)
+      if (patch && attemptId) {
+        const { error: closeError } = await auth.admin.from('vic_goal_attempts').update(patch).eq('id', attemptId).is('resolved_at', null)
+        if (closeError) console.error('VIC attempt not resolved', { code: closeError.code })
+      }
     }
 
     // May this reply be spoken, and which parts? Null for a child who uses neither read-aloud nor a language.
