@@ -32,6 +32,20 @@ const TOUR = [
   ],
  },
  {
+  title: 'Running a VIC session', tag: 'Teachers, aides and anyone covering',
+  lead: 'For the stretch of the day when VIC is the teacher and you are the adult in the room. You do not need to plan anything to start.',
+  points: [
+   ['One screen for the whole group.', 'Open VIC Room in the top bar. Each child shows as Working, Quiet, Not logged in, or Needs you, and it refreshes every 15 seconds. Tap a child to see what they are on.'],
+   ['If a teacher planned today, press Launch.', 'Today’s lessons lists what each class’s own teacher planned. Launch puts it on every child’s screen, each at their own level.'],
+   ['If nobody planned anything, you are not stuck.', 'The panel says so, and Their own next skill gives you Start reading and Start math. Each child begins on their own next standard: what their teacher taught most recently first, then the rest of their level in order, skipping anything they mastered in the last two weeks.'],
+   ['It is per child on purpose.', 'A group of eleven is working at eleven different places, so VIC does not hand everyone the same topic. A child already on a skill carries on rather than being given a second one, so pressing it twice is harmless.'],
+   ['You will be told who did not start.', 'If a child cannot be started, their name and the reason appear in the message so you can fix it. The others still start.'],
+   ['Steer VIC with a note.', 'Note for everyone tells VIC what to focus on today, for example “practice 7s and 8s multiplication facts.” Each child also has their own note box when you tap them.'],
+   ['Do not expect VIC to stop early.', 'After a child gets answers right, VIC keeps going: harder cases, a different angle, or a small project. A child who really wants to stop may stop.'],
+   ['Safety is still on.', 'If a child tells VIC something worrying, the teacher is emailed straight away. You do not need to watch for it.'],
+  ],
+ },
+ {
   title: 'Student safety', tag: 'Always on',
   lead: 'If a student tells VIC they are being hurt, want to hurt themselves, or feel unsafe, VIC stops the lesson and responds with care.',
   points: [
@@ -87,6 +101,15 @@ const START = [
   ],
  },
  {
+  who: 'Aides and anyone running a VIC session', steps: [
+   ['Open VIC Room', 'from the top bar. Your school leader adds you to a room first. If you do not see it, ask them.'],
+   ['Get the children logged in.', 'On each computer open askvic.ai/hello and type the room code once. Each child then taps their name and their two pictures, in order. Keep the picture cards with you, not on the desks.'],
+   ['Watch the grid.', 'Working is good. Quiet means a child has not done anything for a few minutes. Needs you means VIC flagged something.'],
+   ['Start the work.', 'Press Launch if a teacher planned today. If not, press Start reading or Start math.'],
+   ['Add a note if you want VIC to focus on something.', 'Use Note for everyone, or tap one child.'],
+  ],
+ },
+ {
   who: 'School leaders', steps: [
    ['Log in', 'with School leader log in at askvic.ai/school-login.'],
    ['Set up your school', 'from ⚙ Setup: staff list, schedules, and the check-in kiosk.'],
@@ -116,6 +139,10 @@ const STUCK = [
  ['Can my principal see my drafts or my Learning Path quiz scores?', 'No. Leaders see only the weeks you send. For Learning Paths they see completed or not completed and your own reflection, never your quiz score.'],
  ['Does VIC send emails to families without me?', 'No. Every letter is a draft you read, edit, and send yourself.'],
  ['Is student information safe?', 'AskVic never sells data or shows ads, and our AI provider does not train on your content. VIC conversations are not stored by the AI provider. The full details are in the Privacy Policy.'],
+ ['I opened VIC Room and there is no lesson to launch.', 'That means no teacher planned a lesson for today, and nothing is wrong. Use Start reading or Start math under Their own next skill and every child begins on their own next skill. You can also add a Note for everyone to point VIC at a topic.'],
+ ['The message says it could not start a child.', 'It names the child and the reason. The most common reasons are that the child is not in a class in this room, or no grade is set for them. Tell your school leader which child it was. Everyone else has already started.'],
+ ['A child is stuck on something that is far too easy or far too hard.', 'Tap the child and add a note for VIC, for example “work on counting to 20 with pictures” or “give this child fifth grade fractions.” VIC reads it on the next message. Tell the teacher too, so the child’s level can be changed properly.'],
+ ['A child says VIC will not let them stop.', 'VIC offers to go deeper or build something once, then stops warmly if the child still wants to. If a child is truly done, they can choose a different skill from their screen.'],
  ['Text is too small.', 'Use the text-size control in the top bar once you are signed in.'],
 ]
 
