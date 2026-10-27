@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import AddClassStudents from './AddClassStudents'
+import LearnerLevelPanel from './LearnerLevelPanel'
 import { supabase } from '../lib/supabase'
 import { buildReportHtml } from '../lib/report-format'
 
@@ -225,6 +226,8 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
 
     loadStudents(selectedClass.id)
   }, [selectedClass?.id])
+
+  const [levelPanelFor, setLevelPanelFor] = useState(null)
 
   async function loadStudents(classId) {
     if (!classId) return false
@@ -1121,7 +1124,10 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
 
                             return (
                               <tr key={student.id} className={isAssigned ? 'studentRow isSelected' : 'studentRow'}>
-                                <td className="studentCellName">{getStudentName(student)}</td>
+                                <td className="studentCellName">
+                                  {getStudentName(student)}
+                                  <button type="button" className="levelLink" onClick={() => setLevelPanelFor(student)}>Working level</button>
+                                </td>
                                 <td>
                                   <div className="supportButtonRow">
                                     <button
@@ -1305,6 +1311,8 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           </>
         ) : null}
       </div>
+
+      {levelPanelFor ? <LearnerLevelPanel student={levelPanelFor} onClose={() => setLevelPanelFor(null)} /> : null}
 
       <style jsx>{`
         .assignmentToolbar { position: sticky; top: 8px; z-index: 5; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:16px; margin:18px 0; border:2px solid var(--vic-primary); border-radius:12px; background:var(--vic-surface); box-shadow:var(--vic-shadow-raised); }
@@ -1799,6 +1807,7 @@ export default function VICClassroomWorkspace({prefillLesson, assignmentMode = f
           color: var(--vic-text-primary);
           overflow-wrap: anywhere;
         }
+        .levelLink { display:block; margin-top:4px; padding:0; border:0; background:none; color:var(--vic-primary); font:inherit; font-size:13px; font-weight:600; text-decoration:underline; cursor:pointer; }
         .studentMetaLine {
           font-size:13px;
           color: var(--vic-text-secondary);

@@ -98,6 +98,7 @@ const START = [
    ['Build my week,', 'then read and edit each day. VIC writes the draft; you are still the teacher.'],
    ['Send it.', 'When every day is finished, “Send to administration” appears at the bottom of My Week.'],
    ['Bring VIC into class', 'from My Classes: create a class, add students, set each student’s level, and assign a lesson.'],
+   ['Teach a child at a different grade.', 'On My Classes, tap Working level under their name. A child who needs to build up, or is ready for more, gets VIC practice from that grade instead of their own.'],
   ],
  },
  {
@@ -141,7 +142,7 @@ const STUCK = [
  ['Is student information safe?', 'AskVic never sells data or shows ads, and our AI provider does not train on your content. VIC conversations are not stored by the AI provider. The full details are in the Privacy Policy.'],
  ['I opened VIC Room and there is no lesson to launch.', 'That means no teacher planned a lesson for today, and nothing is wrong. Use Start reading or Start math under Their own next skill and every child begins on their own next skill. You can also add a Note for everyone to point VIC at a topic.'],
  ['The message says it could not start a child.', 'It names the child and the reason. The most common reasons are that the child is not in a class in this room, or no grade is set for them. Tell your school leader which child it was. Everyone else has already started.'],
- ['A child is stuck on something that is far too easy or far too hard.', 'Tap the child and add a note for VIC, for example “work on counting to 20 with pictures” or “give this child fifth grade fractions.” VIC reads it on the next message. Tell the teacher too, so the child’s level can be changed properly.'],
+ ['A child is stuck on something that is far too easy or far too hard.', 'Tap the child and add a note for VIC, for example “work on counting to 20 with pictures” or “give this child fifth grade fractions.” VIC reads it on the next message. Then tell the child’s teacher. On My Classes, the Working level link under the child’s name sets which grade VIC teaches from, in reading and math, up or down.'],
  ['A child says VIC will not let them stop.', 'VIC offers to go deeper or build something once, then stops warmly if the child still wants to. If a child is truly done, they can choose a different skill from their screen.'],
  ['Text is too small.', 'Use the text-size control in the top bar once you are signed in.'],
 ]
