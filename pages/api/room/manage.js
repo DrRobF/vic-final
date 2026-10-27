@@ -12,7 +12,7 @@ const isUuid = v => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)
 // The VIC Room screen for the adult running the room (aide, teacher or school leader).
 // GET            → rooms this adult can run (and, for leaders/teachers, classes they may add)
 // GET ?id=       → one room, live: every child, what they're on, quiet or working, alerts, notes
-// POST {action}  → create, update, assignPictures, newPictures, unlock, addNote, clearNote, practiceAll
+// POST {action}  → create, update, assignPictures, newPictures, unlock, unlockAll, addNote, clearNote, practiceAll
 export default async function handler(req, res) {
  res.setHeader('Cache-Control', 'no-store')
  if (!['GET', 'POST'].includes(req.method)) { res.setHeader('Allow', 'GET, POST'); return res.status(405).json({ error: 'Method not allowed.' }) }
@@ -136,6 +136,16 @@ export default async function handler(req, res) {
    if (!inRoom(studentId)) return res.status(400).json({ error: 'Choose a student in this room.' })
    await db.from('student_picture_logins').update({ failed_count: 0, locked_until: null }).eq('student_id', studentId)
    return res.json({ unlocked: true })
+  }
+  // A whole group hits the five-try wall at once on a first day. The adult is standing right
+  // there, so clearing the room costs nothing the lock was protecting.
+  if (action === 'unlockAll') {
+   const ids = students.map(s => s.id)
+   if (!ids.length) return res.json({ unlocked: 0 })
+   const { data: locked } = await db.from('student_picture_logins').select('student_id').in('student_id', ids).not('locked_until', 'is', null)
+   const targets = (locked || []).map(l => l.student_id)
+   if (targets.length) await db.from('student_picture_logins').update({ failed_count: 0, locked_until: null }).in('student_id', targets)
+   return res.json({ unlocked: targets.length })
   }
   if (action === 'addNote') {
    const note = String(req.body?.note || '').trim().slice(0, 600)

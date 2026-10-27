@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import PageShell, { PanelStyles } from '../components/PageShell'
 import { supabase } from '../lib/supabase'
 import { pictureFor } from '../lib/room-pictures.mjs'
+import LearnerLevelPanel from '../components/LearnerLevelPanel'
 
 async function api(path, body) {
  const { data: { session } } = await supabase.auth.getSession()
@@ -27,6 +28,7 @@ export default function Room() {
  const router = useRouter()
  const [list, setList] = useState(null), [room, setRoom] = useState(null), [error, setError] = useState(''), [tab, setTab] = useState('live')
  const [open, setOpen] = useState(null), [msg, setMsg] = useState(''), [editing, setEditing] = useState(false)
+ const [levelFor, setLevelFor] = useState(null)
  const id = typeof router.query.id === 'string' ? router.query.id : list?.rooms?.[0]?.id || ''
  const timer = useRef(null)
 
@@ -98,6 +100,11 @@ export default function Room() {
       </div>
      </section>
 
+     {sorted.some(s => s.locked) && <section className="panel pad lockbar">
+      <div><strong>🔒 {sorted.filter(s => s.locked).length} locked out</strong><span className="muted"> · five wrong picture taps locks a child for five minutes. You are standing right here, so clear it.</span></div>
+      <button type="button" className="btn btn-primary" onClick={() => act({ action: 'unlockAll' }, d => d.unlocked ? `Unlocked ${d.unlocked}. They can try again now.` : 'Nobody was locked.')}>Unlock everyone</button>
+     </section>}
+
      <NoteBox label="Note for everyone (VIC will follow it today)" onSave={note => act({ action: 'addNote', everyone: true, note }, d => `Added for ${d.added} students.`)} />
 
      <div className="grid">
@@ -120,7 +127,10 @@ export default function Room() {
       <div><strong>Notes for VIC:</strong>{student.notes.length ? <ul>{student.notes.map(n => <li key={n.id}>{n.note} <button type="button" className="linkbtn" onClick={() => act({ action: 'clearNote', noteId: n.id })}>Remove</button></li>)}</ul> : <span className="muted"> none</span>}</div>
       <NoteBox label={`Add a note for VIC about ${student.short}`} onSave={note => act({ action: 'addNote', studentId: student.id, note }, () => 'Note added. VIC will use it on the next message.')} />
       <p><strong>Login pictures:</strong> <Pics keys={student.pictures} /> {student.locked && <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'unlock', studentId: student.id }, () => 'Unlocked. They can try again.')}>Unlock</button>} <button type="button" className="btn btn-outline sm" onClick={() => act({ action: 'newPictures', studentId: student.id }, () => 'New pictures made. Show them to the child.')}>New pictures</button></p>
+      <p className="row"><button type="button" className="btn btn-primary" onClick={() => setLevelFor({ id: student.id, name: student.name })}>Change how VIC teaches {student.short}</button><span className="muted">Working level, language VIC explains in, and read-aloud. Takes effect on their next message.</span></p>
      </section>}
+
+     {levelFor && <LearnerLevelPanel student={levelFor} onClose={() => { setLevelFor(null); refresh() }} />}
     </> : <section className="panel cards-wrap">
      <div className="row noprint">
       <button type="button" className="btn btn-primary" onClick={() => act({ action: 'assignPictures' }, d => d.assigned ? `Pictures made for ${d.assigned} students.` : 'Everyone already has pictures.')}>Give pictures to everyone who needs them</button>
@@ -135,6 +145,7 @@ export default function Room() {
    h1{margin:4px 0 6px;font-size:clamp(28px,3vw,38px)}
    .code{font-family:var(--font-mono);letter-spacing:.12em;font-size:1.1em}
    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+   .lockbar{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:12px 0}
    select{min-height:44px;border-radius:10px;padding:0 10px;font:inherit}
    .tabs{display:flex;gap:6px;border-bottom:1px solid var(--vic-border-soft)}
    .tabs button{padding:10px 14px;border:0;background:none;font:inherit;font-weight:800;color:var(--vic-text-secondary);border-bottom:3px solid transparent;cursor:pointer}
