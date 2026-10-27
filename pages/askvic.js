@@ -262,6 +262,8 @@ export default function AskVIC() {
   }
 
 
+  // True once VIC has actually spoken aloud in this session (see the attempt record).
+  const spokeRef = useRef(false)
   const messageAreaRef = useRef(null)
   const messageRefs = useRef([])
   const canvasRef = useRef(null)
@@ -720,6 +722,8 @@ export default function AskVIC() {
         sessionMode,
         studentInterest,
         gradeLevel: studentGradeLevel,
+        // Whether VIC has actually spoken to this child in this session, for the attempt record.
+        spoke: spokeRef.current,
       }
 
 
@@ -1288,7 +1292,7 @@ ${context}`
                       </p>
 
                       {msg.role === 'assistant' && msg.visual ? <VICVisual visual={msg.visual} /> : null}
-                      {msg.role === 'assistant' && msg.speech ? <SpeakButton speech={msg.speech} auto={index === messages.length - 1} /> : null}
+                      {msg.role === 'assistant' && msg.speech ? <SpeakButton speech={msg.speech} auto={index === messages.length - 1} onSpoke={() => { spokeRef.current = true }} /> : null}
                     </div>
                   ))}
                 </div>

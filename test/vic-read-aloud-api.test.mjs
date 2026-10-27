@@ -7,6 +7,8 @@ import { extractVisual } from '../lib/vic-visuals.mjs'
 import { detectSafety } from '../lib/vic-safety.mjs'
 import { buildVicContext, normalizeSessionMode, selectActiveEnrollment, TEACHER_DIRECTED } from '../lib/ask-vic-context.mjs'
 import { splitText, buildSpeech, policyForLesson, sessionInstructions } from '../lib/read-aloud.mjs'
+import { supportFor, levelFor, toLevel } from '../lib/learner-profile.mjs'
+import { conditionFor, attemptRow, resolvePatch, resultRow, levelSubjectFor, turnsIn } from '../lib/vic-attempt.mjs'
 
 const general = JSON.parse(readFileSync(new URL('../data/lesson-standards.json', import.meta.url), 'utf8'))
 const access = JSON.parse(readFileSync(new URL('../data/access-points.json', import.meta.url), 'utf8'))
@@ -26,16 +28,20 @@ async function run({ standard = READING, supports = null, modelReply, subject = 
   assignments: [{ id: 5, lesson_id: 7, mode: 'on-level', status: 'assigned', assigned_at: 'x', lessons: { id: 7, class_id: 40 } }],
   lessons: [{ id: 7, class_id: 40, subject, title: 'Practice', lesson_text: 'RL: explain how a character changes', is_active: true, practice_standard: standard }],
   student_supports: supports ? [supports] : [],
+  student_levels: [],
+  users: [{ grade_level: 3 }],
  }
  const db = {
   from(table) {
    const rows = () => tables[table] || []
+   let mode = null
    const b = {
-    select: () => b, eq: () => b, or: () => b, order: () => b, limit: () => b, not: () => b, gte: () => b, in: () => b,
-    insert(row) { if (table === 'vic_goal_results') seen.goalRows.push(row); return Promise.resolve({ error: null }) },
-    upsert: () => Promise.resolve({ error: null }),
-    maybeSingle: async () => ({ data: rows()[0] ?? null, error: null }),
-    then: (res, rej) => Promise.resolve({ data: rows(), error: null }).then(res, rej),
+    select: () => b, eq: () => b, or: () => b, order: () => b, limit: () => b, not: () => b, gte: () => b, lte: () => b, in: () => b, is: () => b,
+    insert(row) { if (table === 'vic_goal_results') seen.goalRows.push(row); mode = 'write'; return b },
+    upsert() { mode = 'upsert'; return b },
+    update() { mode = 'write'; return b },
+    maybeSingle: async () => (mode === 'upsert' ? { data: { id: 1 }, error: null } : { data: rows()[0] ?? null, error: null }),
+    then: (res, rej) => Promise.resolve(mode ? { data: null, error: null } : { data: rows(), error: null }).then(res, rej),
    }
    return b
   },
@@ -46,6 +52,8 @@ async function run({ standard = READING, supports = null, modelReply, subject = 
   releasedFilter: () => 'x', vicTargetText: () => 'x',
   extractGoal, extractVisual, detectSafety, buildVicContext, normalizeSessionMode, selectActiveEnrollment, TEACHER_DIRECTED,
   splitText, buildSpeech, policyForLesson, sessionInstructions,
+  supportFor, levelFor, toLevel,
+  conditionFor, attemptRow, resolvePatch, resultRow, levelSubjectFor, turnsIn,
   general, access,
   VIC_BRAIN: 'BRAIN',
   respond: async (_name, body) => { seen.input = body.input; return { response: { ok: true }, data: { text: modelReply }, model: 'm' } },
