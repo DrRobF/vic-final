@@ -45,6 +45,10 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
  const [loggingOut, setLoggingOut] = useState(false)
  const [open, setOpen] = useState(false)
  const [lead, setLead] = useState(null)
+ // The adult who runs a VIC Room is usually a teacher, not a leader, so the room link cannot
+ // live on the school side alone. Ask once whether this person runs one; if they do, the link
+ // joins their own nav. A single Lesson Designer account with no school gets no rooms and no link.
+ const [runsRoom, setRunsRoom] = useState(false)
 
  useEffect(() => {
   let mounted = true
@@ -58,6 +62,22 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
   }
   load()
   setLead(readLeader())
+  ;(async () => {
+   try {
+    const cached = sessionStorage.getItem('vic.runsRoom')
+    if (cached !== null) { if (mounted) setRunsRoom(cached === '1') ; return }
+   } catch {}
+   try {
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const r = await fetch('/api/room/manage', { headers: { Authorization: `Bearer ${session.access_token}` } })
+    if (!r.ok) return
+    const d = await r.json().catch(() => ({}))
+    const has = !!(d.rooms || []).length
+    try { sessionStorage.setItem('vic.runsRoom', has ? '1' : '0') } catch {}
+    if (mounted) setRunsRoom(has)
+   } catch {}
+  })()
   const { data: listener } = supabase.auth.onAuthStateChange((_e, session) => { setAuthUser(session?.user || null); if (!session?.user) setProfile(null) })
   return () => { mounted = false; listener?.subscription?.unsubscribe() }
  }, [])
@@ -65,7 +85,13 @@ export default function VICHeader({ currentPath = '', statusLabel = '', statusTo
  const name = useMemo(() => displayName(profile, authUser), [profile, authUser])
  const isStudent = profile?.role === 'student'
  const schoolSide = !!lead && SCHOOL_PATHS.some(p => currentPath === p || currentPath.startsWith(p + '/'))
- const nav = !authUser ? VISITOR_NAV : isStudent ? STUDENT_NAV : schoolSide ? SCHOOL_NAV : EDUCATOR_NAV
+ const baseNav = !authUser ? VISITOR_NAV : isStudent ? STUDENT_NAV : schoolSide ? SCHOOL_NAV : EDUCATOR_NAV
+ // Teachers and aides who run a room get the door to it on their own side too.
+ const nav = useMemo(() => (
+  runsRoom && !isStudent && authUser && !baseNav.some(i => i.href === '/room')
+   ? [...baseNav, { href: '/room', label: 'VIC Room', match: ['/room'] }]
+   : baseNav
+ ), [baseNav, runsRoom, isStudent, authUser])
  const home = !authUser ? '/' : isStudent ? '/learn' : lead && readMode() !== 'teacher' ? '/school' : '/teach'
  function switchTo(mode) { saveMode(mode); window.location.href = mode === 'teacher' ? '/teach' : '/school' }
 
