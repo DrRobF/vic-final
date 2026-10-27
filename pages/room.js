@@ -78,14 +78,25 @@ export default function Room() {
       <span className="muted">of {room.summary.total} · updates every 15 seconds</span>
      </div>
 
-     {room.launchable?.length > 0 && <section className="panel launch">
+     <section className="panel launch">
       <p className="label">Today’s lessons</p>
-      {room.launchable.map(l => <div key={l.lessonId + l.classId} className="lrow">
-       <div><strong>{l.title}</strong><span className="muted"> · {l.className}{l.teacher ? ` · ${l.teacher}` : ''}</span></div>
-       {l.live ? <span className="ok">✓ On screens</span> : !l.ready ? <span className="warn">Needs a standard and objective (ask {l.teacher || 'the teacher'})</span>
-        : <button type="button" className="btn btn-primary" onClick={() => act({ action: 'launch', lessonId: l.lessonId, classId: l.classId }, d => `Launched to ${d.launched} students.`)}>Launch</button>}
-      </div>)}
-     </section>}
+      {room.launchable?.length > 0
+       ? room.launchable.map(l => <div key={l.lessonId + l.classId} className="lrow">
+         <div><strong>{l.title}</strong><span className="muted"> · {l.className}{l.teacher ? ` · ${l.teacher}` : ''}</span></div>
+         {l.live ? <span className="ok">✓ On screens</span> : !l.ready ? <span className="warn">Needs a standard and objective (ask {l.teacher || 'the teacher'})</span>
+          : <button type="button" className="btn btn-primary" onClick={() => act({ action: 'launch', lessonId: l.lessonId, classId: l.classId }, d => `Launched to ${d.launched} students.`)}>Launch</button>}
+        </div>)
+       : <p className="none">No teacher has planned a lesson for today. Nothing is wrong — start the children on their own next skill instead.</p>}
+      {/* Always available, not only when nothing is planned: a lesson can finish early, or a
+          child can arrive after it was launched. */}
+      <div className="lrow">
+       <div><strong>Their own next skill</strong><span className="muted"> · each child carries on from where they are</span></div>
+       <div className="row">
+        <button type="button" className="btn btn-primary" onClick={() => act({ action: 'practiceAll', subject: 'reading' }, practiceMsg)}>Start reading</button>
+        <button type="button" className="btn btn-primary" onClick={() => act({ action: 'practiceAll', subject: 'math' }, practiceMsg)}>Start math</button>
+       </div>
+      </div>
+     </section>
 
      <NoteBox label="Note for everyone (VIC will follow it today)" onSave={note => act({ action: 'addNote', everyone: true, note }, d => `Added for ${d.added} students.`)} />
 
@@ -136,6 +147,7 @@ export default function Room() {
    .launch{display:flex;flex-direction:column;gap:10px}
    .lrow{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--vic-border-soft);padding-top:10px}
    .ok{color:var(--vic-success);font-weight:800}
+   .none{margin:0;color:var(--vic-text-secondary)}
    .warn{color:var(--vic-danger);font-weight:700}
    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
    .kid{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px;border-radius:14px;border:2px solid var(--vic-border-soft);background:var(--vic-surface);cursor:pointer;font:inherit;color:var(--vic-text-primary);min-height:96px}
@@ -164,6 +176,17 @@ export default function Room() {
    @media print{:global(header),:global(nav),.noprint,.tabs,.top{display:none!important}.cards{grid-template-columns:repeat(3,1fr)}}
   `}</style>
  </PageShell>
+}
+
+// What the aide is told after starting practice for the group. Names anyone who could not be
+// started: she is standing in the room and can act on it, where a silent skip helps nobody.
+function practiceMsg(d) {
+ const bits = []
+ if (d.started) bits.push(`Started ${d.started}`)
+ if (d.resumed) bits.push(`${d.resumed} already working`)
+ let msg = bits.length ? `${bits.join(' · ')}.` : 'Nobody needed starting.'
+ if (d.skipped?.length) msg += ` Could not start ${d.skipped.length}: ${d.skipped.map(s => `${s.name} (${s.why})`).join(', ')}`
+ return msg
 }
 
 function NoteBox({ label, onSave }) {
