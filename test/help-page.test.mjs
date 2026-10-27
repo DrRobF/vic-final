@@ -56,3 +56,9 @@ test('help only names the room statuses the room screen really uses', () => {
   // The buttons help tells people to press must exist on the screen.
   for (const label of ['Start reading', 'Start math', 'Launch']) assert.match(room, new RegExp(label))
 })
+
+test('help points teachers at the Working level control that really exists', () => {
+  const workspace = readFileSync(new URL('../components/VICClassroomWorkspace.js', import.meta.url), 'utf8')
+  assert.match(page, /Working level/)
+  assert.match(workspace, />Working level</)
+})
