@@ -139,13 +139,14 @@ const STATIONS = [
   steps: [
    ['The normal way here: just open VIC Room.', 'If you can see it in your top bar (station 0), you already have everything. Launch the absent teacher’s planned lesson, or press Start reading or Start math. There is no code and nothing expires. This is what Shontae does every day.'],
    ['The other way: a printed slip with an 8-character code.', 'Go to askvic.ai/cover, type the code, press Open today’s lessons. You get one card per class and a Start this lesson button. No account needed — which is the point, because it is built for someone who has never heard of AskVic.'],
-   ['Know what the slip cannot do, before you need it.', 'It can start a planned lesson, and that is all. No student grid. No Start reading or Start math — if nothing was planned, the screen tells you the children can find their own practice and there is nothing for you to press. No unlocking a child who mis-tapped their pictures. No notes for VIC.'],
+   ['Know what the slip cannot do, before you need it.', 'It can start a planned lesson, and that is all. No list of who is working. No Start reading or Start math — if nothing was planned, or a child finishes early, there is nothing on that screen for you to press. No notes for VIC. No way to help a child who cannot log in.'],
+   ['So know the two answers before you need them.', 'A child who mis-taps their pictures five times is locked out for five minutes and then it clears by itself — wait, do not go looking for a button. A child who finishes early, or who has no card at all, needs someone with VIC Room: the teacher next door, the office, or whoever set the room up. That is a real limit of the code route, and it is the reason to use VIC Room instead whenever you can.'],
    ['So if you can use VIC Room, use VIC Room.', 'Only fall back to a code if you genuinely have no access — at another school, or a day nobody added you.'],
    ['A code works for that day only', 'and shows nothing but the lessons for the classes on the slip. Close the tab and it is gone.'],
   ],
   see: 'Either the full VIC Room, or the cover screen with one card per class.',
   note: 'The other half of this is what you do for whoever covers YOU: plan the day with a standard and an objective. Without those two fields their screen says “needs a standard and objective” and the person standing in your classroom has nothing to start.',
-  does: 'Open VIC Room as if you were covering, and launch someone else’s planned lesson.',
+  does: 'Open VIC Room as if you were covering, and launch someone else’s planned lesson. Then say out loud what you would do if a child finished in five minutes.',
  },
  {
   id: 'home',
