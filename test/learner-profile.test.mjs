@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
  supportFor, levelFor, levelSummary, trackFor, attemptSupport, toLevel, toGrade, DEFAULT_SUPPORTS,
+ standardsFor,
 } from '../lib/learner-profile.mjs'
 
 const catalogue = JSON.parse(readFileSync(new URL('../data/lesson-standards.json', import.meta.url), 'utf8'))
@@ -143,4 +144,77 @@ test('a runtime cannot stamp audio_on_assessed where the standard forbids it', (
 test('grade and level convert both ways, K included', () => {
  assert.equal(toLevel('K'), 0); assert.equal(toLevel('6'), 6); assert.equal(toLevel(null), null)
  assert.equal(toGrade(0), 'K'); assert.equal(toGrade(6), '6')
+})
+
+// ---------------------------------------------------------------------------
+// Access Points: the alternate catalogue, and the ways it must not leak.
+// ---------------------------------------------------------------------------
+const access = JSON.parse(readFileSync(new URL('../data/access-points.json', import.meta.url), 'utf8'))
+
+test('every access point is tagged, related to a real benchmark, and marked access track', () => {
+ const audio = new Set(['free', 'stem_only', 'none', 'required'])
+ const bad = access.filter(s => s.track !== 'access' || !audio.has(s.audio) || !s.related_to || !s.text)
+ assert.deepEqual(bad.map(s => s.id), [])
+ // Within the grades the general catalogue covers, every related_to resolves.
+ const g = s => (s.grade === 'K' ? 0 : Number(s.grade))
+ const dangling = access.filter(s => g(s) <= 8 && !byId.has(s.related_to))
+ assert.deepEqual(dangling.slice(0, 5).map(s => `${s.id} -> ${s.related_to}`), [])
+})
+
+test('the general catalogue stops at grade 8 while the site claims 3-12', () => {
+ // Not an import bug -- a real gap. The Access Points run to grade 12 and the general
+ // B.E.S.T. catalogue does not, so every unresolved reference is above grade 8 and there
+ // are no grade 9-12 standards of any kind to teach from. This test exists to fail the day
+ // someone imports them, as a reminder to re-check the links.
+ assert.equal(catalogue.some(s => Number(s.grade) > 8), false)
+ const g = s => (s.grade === 'K' ? 0 : Number(s.grade))
+ assert.ok(access.filter(s => !byId.has(s.related_to)).every(s => g(s) > 8))
+})
+
+test('access points are not in the general catalogue and cannot be served by grade filters', () => {
+ // The invisible failure this guards against: an Access Point reaching a typical student
+ // because it matched state + subject + grade.
+ assert.equal(catalogue.some(s => s.track === 'access' || /\.AP\./.test(s.code)), false)
+})
+
+test('a child on access points gets access points, not grade-level standards', () => {
+ const iep = { read_aloud: 'always', language: 'en', alternate_standards: true }
+ const got = standardsFor({ supports: iep, general: catalogue, access, subject: 'reading', level: 1 })
+ assert.equal(got.track, 'access')
+ assert.equal(got.available, true)
+ assert.ok(got.standards.length > 0)
+ assert.ok(got.standards.every(s => s.track === 'access' && s.grade === '1'))
+})
+
+test('a typical child never receives an access point', () => {
+ const got = standardsFor({ supports: DEFAULT_SUPPORTS, general: catalogue, access, subject: 'reading', level: 5 })
+ assert.equal(got.track, 'general')
+ assert.ok(got.standards.length > 0)
+ assert.equal(got.standards.some(s => s.track === 'access'), false)
+})
+
+test('access points still refuse rather than fall back when the catalogue is empty', () => {
+ const iep = { ...DEFAULT_SUPPORTS, alternate_standards: true }
+ const got = standardsFor({ supports: iep, general: catalogue, access: [], subject: 'math', level: 6 })
+ assert.equal(got.available, false)
+ assert.deepEqual(got.standards, [])
+})
+
+test('the construct rule holds inside the access catalogue too', () => {
+ // An access point for decoding still measures decoding.
+ const decoding = access.filter(s => /^ELA\.\d*K?\.F\./.test(s.code) && s.audio === 'free')
+ assert.deepEqual(decoding.map(s => s.id), [])
+ const math = access.filter(s => s.subject === 'math' && s.audio !== 'free')
+ assert.deepEqual(math.map(s => s.id), [])
+})
+
+test('Kyaunna: enrolled grade 6, access points, reading at level 1', () => {
+ // The whole chain, as it will actually run for her.
+ const supports = { read_aloud: 'always', language: 'en', alternate_standards: true }
+ const level = levelFor([{ subject: 'reading', level: 1, source: 'iep', confirmed_at: '2026-10-27' }], 'reading', 6)
+ const got = standardsFor({ supports, general: catalogue, access, subject: 'reading', level: level.level })
+ assert.equal(level.offset, -5)
+ assert.ok(got.standards.length > 0, 'she must have something to work on')
+ // And what a teacher sees versus what she sees.
+ assert.equal(levelSummary(level.level, 6), 'Grade 1 — 5 years below enrolled grade')
 })
