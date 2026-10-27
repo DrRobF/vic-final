@@ -39,6 +39,62 @@ section wins.
   users go straight to their own home.
 - `/read-test` for the K–2 listening experiment.
 
+## Open right now — Oct 27, read before building anything about student data
+
+### The verdict stream is not trustworthy yet. Do not build the dashboard on it.
+
+After the first real day (Oct 26): **85 verdicts in `vic_goal_results`, 13 students, 6
+standards, and every single one is `met`.** No `partly`. No `not_yet`.
+
+That is not thirteen children mastering everything. It is censored data, and it breaks
+precisely what the principal's card is for. VIC is told to give the verdict "once per lesson,
+when you are sure", and `not_yet` requires having taught it two different ways and the child
+still cannot do it. So a child who is struggling produces **silence, not a record**. Success
+is written down; difficulty is not. The red-flag children are the ones missing from the
+table, not the ones in it.
+
+Built on this today, an on-level card would read **100% at grade level** and the children who
+need finding would be invisible.
+
+**So the first build is the denominator, not the dashboard.** Record the *attempt*: a row
+when VIC starts working a standard with a child, updated as it goes. Then "not met" is a fact
+rather than an absence, and the red-flag rule — open since Oct 21 and still Rob's call — can
+come from the data instead of a guessed threshold: *attempted four times across two weeks,
+still not met.*
+
+### Two things to hold on to when the dashboard does get built
+
+- **`met` is acquisition, not mastery.** It means VIC judged three correct in one sitting;
+  nobody knows whether it survives a fortnight. The honest route to "on level" is the spaced
+  retrieval already agreed in `assessment-and-privacy-spec.md`: **met, then met again two or
+  more weeks later.** That is a claim that stands up to a board, and few others can produce
+  it cheaply. Until the second reading exists, do not print the words "on level".
+- **The minimum-cell-size-of-5 rule bites hard at this size.** Groups of 11, 13 and 10 mean
+  most cuts land under five, and "2 below grade level in fractions" identifies those two
+  children to anyone who can count. At Saint Peter's the principal's number has to be about
+  **standards and teaching, not children** — "fractions came back not-met more than met this
+  week" says where to send a coach without naming a child, and is more use to a principal
+  anyway.
+
+### Smaller things still open
+
+- **Shontae's read on the v3.7 change.** Rob went to watch Monday's last class after the fix
+  that stops VIC ending a lesson at the first run of right answers. Three questions he took
+  in: does VIC keep going now; does deeper/project feel like teaching or like padding; and —
+  the important one — watch a struggling child and see whether VIC ever actually says
+  `not_yet` or just keeps reframing until something lands.
+- **Kyaunna Renee Jefferson (users.id 112)** is still enrolled in Grade 1 Reading ELA and
+  Grade 1 Math alongside her Grade 6 roster and Group 5 room classes. Stale from last year;
+  remove when there is a quiet moment. Her blank grade level is what made her invisible to
+  the room on Monday morning — worth checking nobody else has one.
+- **The family note** about the Grades 3–5 teaming move is drafted and needs two decisions
+  from Rob: which contact number goes on it, and whether VIC is named in it (it currently is
+  not, deliberately — a letter that opens with "we lost a teacher" and then introduces an AI
+  invites a parent to connect the two).
+- **Four pre-existing test failures** on main: `lesson-designer`, `lesson-import`,
+  `staff-setup`, and one teacher-assignment test. Unrelated to recent work, red before it
+  started, nobody has looked at them.
+
 ## The thesis, in Rob's own words
 
 He has been saying both of these for years, and together they are the whole
