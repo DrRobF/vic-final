@@ -139,6 +139,11 @@ export default function Room() {
       <button type="button" className="btn btn-primary" onClick={() => act({ action: 'unlockAll' }, d => d.unlocked ? `Unlocked ${d.unlocked}. They can try again now.` : 'Nobody was locked.')}>Unlock everyone</button>
      </section>}
 
+     <p className="alertline">
+      <strong>Safety alerts go to</strong> each child’s own teachers{room.alerts?.aides?.length ? <> and <strong>{room.alerts.aides.join(', ')}</strong></> : <> only — nobody is set as an aide on this room</>}.
+      <span className="muted"> Being able to open this room does not put you on that list. Ask a school leader to change who is on it.</span>
+     </p>
+
      <NoteBox label="Note for everyone (VIC will follow it today)" onSave={note => act({ action: 'addNote', everyone: true, note }, d => `Added for ${d.added} students.`)} />
 
      <div className="grid">
@@ -203,6 +208,7 @@ export default function Room() {
    .ok{color:var(--vic-success);font-weight:800}
    .none{margin:0;color:var(--vic-text-secondary)}
    .warn{color:var(--vic-danger);font-weight:700}
+   .alertline{margin:4px 0 0;padding:12px 14px;border-radius:12px;background:var(--vic-surface-muted);border:1px solid var(--vic-border-soft);font-size:15px;line-height:1.55}
    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
    .kid{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:12px;border-radius:14px;border:2px solid var(--vic-border-soft);background:var(--vic-surface);cursor:pointer;font:inherit;color:var(--vic-text-primary);min-height:96px}
    .kid.sel{outline:3px solid var(--vic-primary)}
