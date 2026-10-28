@@ -6,25 +6,36 @@ import { createHash } from 'node:crypto'
 import { tidyCoverCode, COVER_CODE, grantUsable, COVER_REFUSALS } from '../lib/cover.mjs'
 
 // The handler is loaded into a sandbox so the rules can be tested without a database.
-function load({ grant = null, today = '2026-10-26', allowed = true, planned = [], launched = null, classes = [] } = {}) {
- const calls = { launches: [], plannedFor: [] }
+function load({ grant = null, today = '2026-10-26', allowed = true, planned = [], launched = null, classes = [], roster = [], logins = [], practiced = null } = {}) {
+ const calls = { launches: [], plannedFor: [], practices: [], upserts: [] }
  const src = readFileSync(new URL('../pages/api/cover/index.js', import.meta.url), 'utf8')
   .replace(/^import .*\n/gm, '').replace('export const ', 'const ')
   .replace('export default async function handler', 'async function handler') + '\nthis.handler=handler'
  const context = {
-  console: { error() {} }, createHash,
+  console: { error() {}, info() {} }, createHash,
   tidyCoverCode, COVER_CODE, grantUsable, COVER_REFUSALS,
   schoolToday: () => today,
   plannedToday: async (_db, ids) => { calls.plannedFor.push([...ids]); return planned },
   launchLesson: async (_db, body) => { calls.launches.push(body); return launched || { launched: 7 } },
+  roomStudents: async (_db, room) => roster.filter(s => (s.classIds || []).some(id => (room.class_ids || []).map(Number).includes(Number(id)))),
+  randomPictures: () => ['dog', 'star'],
+  shortName: n => String(n || '').split(' ')[0],
+  LOCK_MINUTES: 5,
+  VIC_CLASS: /VIC/i,
+  general: {}, access: {},
+  practiceForRoom: async (_db, body) => { calls.practices.push({ subject: body.subject, students: body.students.map(s => s.id) }); return practiced || { started: body.students.length, resumed: 0, skipped: [] } },
   serviceDb: () => ({
    rpc: async () => ({ data: allowed, error: null }),
    // Table-aware and awaitable: the handler reads the grant with maybeSingle and the class
    // list by awaiting the builder itself, so the mock has to answer both shapes.
    from(table) {
-    const rows = table === 'classes' ? classes : table === 'ap_schools' ? [{ name: 'Saint Peter\'s Academy' }] : [grant]
+    const rows = table === 'classes' ? classes
+     : table === 'ap_schools' ? [{ name: 'Saint Peter\'s Academy' }]
+     : table === 'student_picture_logins' ? logins
+     : [grant]
     const q = {
      select() { return q }, eq() { return q }, in() { return q }, order() { return q }, update() { return q },
+     upsert(row) { calls.upserts.push({ table, row }); return Promise.resolve({ data: null, error: null }) },
      maybeSingle: async () => ({ data: rows[0] ?? null, error: null }),
      then: (resolve, reject) => Promise.resolve({ data: rows, error: null }).then(resolve, reject),
     }
@@ -112,4 +123,69 @@ test('GET is refused: the code must not travel in a URL', async () => {
  const { run } = load({ grant: GRANT }), r = res()
  await run({ method: 'GET', headers: {}, query: { code: 'ABCD2345' }, socket: {} }, r)
  assert.equal(r.code, 405)
+})
+
+// The three actions added so a covering adult alone with a room is not stuck. Each one must
+// stay inside the classes on the slip: the code is the only credential, so the grant is the
+// only thing standing between a day's cover and the rest of the school.
+const ROSTER = [
+ { id: 101, name: 'Ana Silva', classIds: [36] },
+ { id: 102, name: 'Ben Carter', classIds: [37] },
+ { id: 999, name: 'Outsider Child', classIds: [50] },
+]
+
+test('A finished lesson is not a dead end: practice starts every child on the slip', async () => {
+ const { run, calls } = load({ grant: GRANT, roster: ROSTER }), r = res()
+ await run(post({ code: 'ABCD2345', action: 'practice', subject: 'reading' }), r)
+ assert.equal(calls.practices.length, 1)
+ assert.equal(calls.practices[0].subject, 'reading')
+ // Only the two children in classes 36 and 37, never the child in class 50.
+ assert.deepEqual(calls.practices[0].students.sort(), [101, 102])
+})
+
+test('Practice refuses a subject VIC does not pick from', async () => {
+ for (const subject of ['science', '', undefined, 'READING ']) {
+  const { run, calls } = load({ grant: GRANT, roster: ROSTER }), r = res()
+  await run(post({ code: 'ABCD2345', action: 'practice', subject }), r)
+  assert.equal(r.code, 400)
+  assert.equal(calls.practices.length, 0)
+ }
+})
+
+test('A code for another day cannot start practice either', async () => {
+ const { run, calls } = load({ grant: { ...GRANT, day: '2026-10-23' }, roster: ROSTER }), r = res()
+ await run(post({ code: 'ABCD2345', action: 'practice', subject: 'math' }), r)
+ assert.equal(r.code, 403)
+ assert.equal(calls.practices.length, 0)
+})
+
+test('New pictures can be made for a child on the slip, and are handed back to read out', async () => {
+ const { run, calls } = load({ grant: GRANT, roster: ROSTER }), r = res()
+ await run(post({ code: 'ABCD2345', action: 'resetPictures', studentId: 101 }), r)
+ assert.deepEqual(r.data.pictures, ['dog', 'star'])
+ assert.equal(r.data.name, 'Ana')
+ const saved = calls.upserts.find(u => u.table === 'student_picture_logins')
+ assert.equal(saved.row.student_id, 101)
+ // A reset must also clear the lockout, or the child waits five minutes on new pictures.
+ assert.equal(saved.row.locked_until, null)
+ assert.equal(saved.row.failed_count, 0)
+})
+
+test('A cover code cannot touch the login of a child in another class', async () => {
+ const { run, calls } = load({ grant: GRANT, roster: ROSTER }), r = res()
+ await run(post({ code: 'ABCD2345', action: 'resetPictures', studentId: 999 }), r)
+ assert.equal(r.code, 403)
+ assert.equal(calls.upserts.length, 0)
+})
+
+test('Opening a slip lists who is in the room, and never their pictures', async () => {
+ const logins = [{ student_id: 101, pictures: ['cat', 'pizza'], locked_until: new Date(Date.now() + 3 * 60000).toISOString() }]
+ const { run } = load({ grant: GRANT, roster: ROSTER, logins }), r = res()
+ await run(post({ code: 'ABCD2345' }), r)
+ assert.deepEqual(r.data.students.map(s => s.short).sort(), ['Ana', 'Ben'])
+ const ana = r.data.students.find(s => s.short === 'Ana')
+ assert.equal(ana.locked, true)
+ assert.equal(ana.hasPictures, true)
+ // The whole point of per-child reset: a slip never shows the room's passwords.
+ assert.equal(/cat|pizza/.test(JSON.stringify(r.data)), false, 'login pictures leaked to the cover screen')
 })

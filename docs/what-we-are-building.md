@@ -339,6 +339,31 @@ route handles without one.
 **Still open here:** surfacing a slip on a covering teacher's own `/teach` screen, so staff who
 do have logins need not type a code; and whether a sub should be recorded for payroll.
 
+### Oct 28 — the slip stopped being a dead end
+
+Writing the teacher walkthrough surfaced the hole: a grant permitted exactly one thing, launching a
+planned lesson, so an adult alone with 25 children had nothing to press the moment the lesson ended
+early or nobody had planned one, and no way to help a child who could not log in. Ringing the office
+every few minutes is not an answer. Three additions, all still fenced by the grant:
+
+- **Start reading / Start math** on `/cover`, the same per-child picker the Room uses
+  (`practiceForRoom`), so each child carries on from their own next standard. The old "nothing for
+  you to start" wording is gone, because it is no longer true.
+- **New pictures for one child**, handed straight back on screen to read out. Deliberately one child
+  rather than the room's cards: pictures are the password and they do not rotate on their own, so a
+  screen showing all of them hands a stranger every child's login for good, long after the code dies
+  at midnight. The reset clears the lockout too, or the child waits five minutes on new pictures.
+- **The roster**, short names only, never anybody's pictures, with how long a locked child has left.
+  Non-fatal: if it cannot be read the adult loses the panel, not their lessons.
+
+Guarded in `test/cover-api.test.mjs`: a code cannot start practice for, or reset the login of, a
+child in a class that is not on its slip.
+
+**Still not built, on purpose:** the covering adult cannot see who is working, quiet or stuck, and
+cannot steer VIC with a note or change a level. That is the Room's live grid, and it is a feature
+rather than a patch. It is the honest reason the walkthrough tells staff to use VIC Room whenever
+they can and keep the code for the adult with no other way in.
+
 ## First real day, Oct 26 — VIC was finishing lessons in ten minutes
 
 Shontae's report from the VIC Room's first period: VIC teaches well, but the time frame is far
