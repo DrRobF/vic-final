@@ -17,6 +17,7 @@ export default function AddToWeek({draft,targetDay,targetWeekOf,targetWeekId,ope
  const [weekOf,setWeekOf]=useState(draft?.week?.weekOf||targetWeekOf||defaultWeekOf()),[day,setDay]=useState(Number.isInteger(draft?.week?.day)?draft.week.day:Number.isInteger(targetDay)?targetDay:0)
  const [picked,setPicked]=useState(Number.isInteger(draft?.week?.day)||Number.isInteger(targetDay))
  const [busy,setBusy]=useState(false),[error,setError]=useState('')
+ const [newClass,setNewClass]=useState('')
  const refresh=()=>listWeeks().then(d=>{setWeeks(d.weeks||[]);setClasses(d.classes||[]);setLoaded(true)}).catch(()=>setLoaded(true))
  useEffect(()=>{refresh()},[draft?.savedLessonId])
  const home=lessonHome(weeks,draft?.savedLessonId)
@@ -36,11 +37,14 @@ export default function AddToWeek({draft,targetDay,targetWeekOf,targetWeekId,ope
   setBusy(true);setError('')
   try{
    await beforeAdd?.()
-   const d=await addLessonToWeek({lessonId:draft.savedLessonId,...(match?{weekId:match.id}:{weekOf}),day,replace})
+   const d=await addLessonToWeek({lessonId:draft.savedLessonId,...(match?{weekId:match.id}:{weekOf}),day,replace,...(match?{}:newClass?{classId:Number(newClass)}:{})})
    await refresh();onAdded?.({id:d.weekId,day:d.day,weekOf:d.weekOf,ready:d.ready});onToggle?.(false)
   }catch(e){
    if(e.conflict&&window.confirm(`${WEEKDAYS[day]} already has “${e.existingTitle}”. Replace it with this lesson? The other lesson stays in My Lessons.`)){setBusy(false);return add(true)}
-   setError(e.message)
+   // No week exists for this week and subject yet, and the teacher has more than one class, so
+   // one has to be named before a week is invented for it.
+   if(e.needsClass&&e.classes?.length){setClasses(e.classes);setError(e.message)}
+   else setError(e.message)
   }finally{setBusy(false)}
  }
  const label=i=>{const d=match?.days?.[i];return `${WEEKDAYS[i]} ${formatDay(dates[i],{month:'short',day:'numeric'})}${d?.off?' · no lesson':d?.lessonId?(d.lessonId===draft?.savedLessonId?' · this lesson':' · taken'):''}`}
@@ -53,6 +57,7 @@ export default function AddToWeek({draft,targetDay,targetWeekOf,targetWeekId,ope
    <div className="atw-row">
     <label>Week of<input type="date" value={weekOf} disabled={busy||disabled} onChange={e=>{setWeekOf(mondayOf(e.target.value)||weekOf);setChosenWeek('')}}/></label>
     {same.length>1&&<label>Which class<select value={match?.id||''} disabled={busy||disabled} onChange={e=>setChosenWeek(e.target.value)}>{same.map(w=><option key={w.id} value={w.id}>{weekTitle(w)}{w.status!=='draft'?' · sent':''}</option>)}</select></label>}
+    {!match&&classes.length>1&&<label>Which class is this week for<select value={newClass} disabled={busy||disabled} onChange={e=>setNewClass(e.target.value)}><option value="">Choose a class</option>{classes.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select><small className="atw-hint">You have no week for {weekLabel(weekOf)} yet, so this starts one. A week belongs to one class.</small></label>}
     <label>Day<select value={day} disabled={busy||disabled} onChange={e=>{setDay(Number(e.target.value));setPicked(true)}}>{WEEKDAYS.map((_,i)=><option key={i} value={i}>{label(i)}</option>)}</select></label>
    </div>
    <small>{match?`${match.days.filter(d=>d.off||d.lessonId).length} of 5 days ready in this week.`:loaded?`Starts your ${weekPhrase(weekOf)}. Add the other days whenever you’re ready.`:''}</small>

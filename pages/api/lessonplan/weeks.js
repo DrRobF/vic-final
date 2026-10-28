@@ -145,11 +145,28 @@ export default async function handler(req,res){
    }else{
     const weekOf=mondayOf(String(req.body?.weekOf||''))
     if(!weekOf)return res.status(400).json({error:'Choose the week this lesson belongs to.'})
+    const wantedClass=Number(req.body?.classId)
+    const forClass=Number.isInteger(wantedClass)&&wantedClass>0?wantedClass:null
     const {data,error}=await db.from('lesson_weeks').select('*').eq('user_id',owner).eq('week_of',weekOf).eq('subject',input.subject).eq('grade',input.grade).order('updated_at',{ascending:false}).limit(10)
     if(error)throw error
+    const candidates=data||[]
+    // One grade and subject can hold several weeks now, one per class. So when a class is named,
+    // only that class's weeks count -- otherwise this quietly files the lesson under whichever
+    // week happened to be touched last.
+    const mine=forClass?candidates.filter(w=>Number(w.settings?.classId)===forClass):candidates
     // Prefer a week still being planned over one already sent.
-    row=(data||[]).find(w=>w.status==='draft')||data?.[0]||null
-    if(!row)row={id:crypto.randomUUID(),week_of:weekOf,state:input.state,grade:input.grade,subject:input.subject,minutes:input.minutes,days:null,settings:{},status:'draft',school_id:null,user_id:owner,_new:true}
+    row=mine.find(w=>w.status==='draft')||mine[0]||null
+    if(!row){
+     // About to invent a week. A week with no class falls back to guessing from grade and
+     // subject, and when two of the teacher's classes fit, it launches to neither and says
+     // nothing -- so a teacher with more than one class has to tell us which, rather than
+     // find out weeks later that their plans went nowhere.
+     const owned=await myClasses(auth)
+     if(!forClass&&owned.length>1)return res.status(409).json({needsClass:true,classes:owned,error:'Which class is this week for? You teach more than one, so AskVic cannot work it out on its own.'})
+     if(forClass&&!owned.some(c=>Number(c.id)===forClass))return res.status(400).json({error:'That class is not one of yours.'})
+     const only=!forClass&&owned.length===1?Number(owned[0].id):forClass
+     row={id:crypto.randomUUID(),week_of:weekOf,state:input.state,grade:input.grade,subject:input.subject,minutes:input.minutes,days:null,settings:only?{classId:only}:{},status:'draft',school_id:null,user_id:owner,_new:true}
+    }
    }
    const current=Array.isArray(row.days)?row.days[day]:null
    if(current?.lessonId&&current.lessonId!==lessonId&&req.body?.replace!==true){

@@ -144,9 +144,13 @@ export default function MyWeek() {
      })}
     </div>
 
+    {/* One front door on purpose. Planning starts with a week, because a week is what carries the
+        class -- and the class is what decides whose screens a lesson reaches. The single-lesson
+        planner is still here, but as a place to try something, not as a second way to plan. */}
     {!week && <section className="dark-panel empty">
-     <div><h2>Nothing planned for this week yet</h2><p>Plan all five days at once, or make one lesson and add it to a day.</p></div>
-     <div className="row"><a className="btn btn-cyan" href="/lessonplan/week">Plan the whole week</a><a className="btn btn-outline" href="/lessonplan?new=1">Make one lesson</a></div>
+     <div><h2>Nothing planned for this week yet</h2><p>Start a week and say which class it is for. Then build all five days at once, or one day at a time.</p></div>
+     <div className="row"><a className="btn btn-cyan" href="/lessonplan/week">Start a week</a></div>
+     <p className="scratch">Just trying an idea? <a href="/lessonplan?new=1">Try a lesson</a> — it stays in My Lessons until you add it to a week.</p>
     </section>}
 
     {week && planned > 0 && <section className="panel send">
@@ -222,6 +226,9 @@ export default function MyWeek() {
    .plan{margin-top:auto;display:block;text-align:center;padding:12px;border:2px dashed var(--vic-border);border-radius:12px;font-weight:800;color:var(--vic-primary);text-decoration:none}
    .plan:hover{border-color:var(--vic-primary);background:var(--vic-primary-soft)}
    .empty,.send{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+   .empty{flex-wrap:wrap}
+   .scratch{flex:1 1 100%;margin:4px 0 0;font-size:15px;line-height:1.55;color:var(--vic-ink-muted)}
+   .scratch a{color:var(--vic-cyan);font-weight:700}
    .empty h2{color:#fff;margin:0 0 6px}
    .row{display:flex;gap:10px;flex-wrap:wrap}
    .more{margin-top:8px}
