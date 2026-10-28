@@ -13,7 +13,7 @@ import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, weekDates, mondayOf, formatDay, w
 const GRADES=['K','1','2','3','4','5','6','7','8']
 const FORMAT_KEY='vic-lesson-format-v1'
 const BUILD_AT_ONCE=2
-const blankWeek=()=>({id:crypto.randomUUID(),weekOf:defaultWeekOf(),state:'FL',grade:'3',subject:'math',minutes:45,days:Array.from({length:5},emptyWeekDay),settings:{mode:'quick',worksheet:true,worksheetCount:5,materials:'',interests:'',groups:GROUP_DEFAULTS.slice(0,3)}})
+const blankWeek=()=>({id:crypto.randomUUID(),weekOf:defaultWeekOf(),state:'FL',grade:'3',subject:'math',minutes:45,days:Array.from({length:5},emptyWeekDay),settings:{mode:'quick',worksheet:true,worksheetCount:5,materials:'',interests:'',groups:GROUP_DEFAULTS.slice(0,3),classId:null}})
 
 async function token(){const {data:{session}}=await supabase.auth.getSession();if(!session?.access_token)throw new Error('Log in to plan your week.');return session.access_token}
 async function call(path,{method='GET',body}={}){
@@ -31,6 +31,7 @@ export default function WeekPlanner(){
  const [lessons,setLessons]=useState({}),[progress,setProgress]=useState({}),[building,setBuilding]=useState(false)
  const [standards,setStandards]=useState([]),[loadingStandards,setLoadingStandards]=useState(false),[search,setSearch]=useState({}),[pasteDays,setPasteDays]=useState({})
  const [history,setHistory]=useState([]),[schools,setSchools]=useState([]),[email,setEmail]=useState(''),[showEmail,setShowEmail]=useState(false)
+ const [classes,setClasses]=useState([])
  const [busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState(''),[format,setFormat]=useState({sections:DEFAULT_SECTIONS,instructions:''})
  const weekRef=useRef(week),saveQueue=useRef(Promise.resolve())
  weekRef.current=week
@@ -41,12 +42,12 @@ export default function WeekPlanner(){
   const {data:listener}=supabase.auth.onAuthStateChange((_e,session)=>setUser(session?.user||null))
   return()=>listener?.subscription?.unsubscribe()
  },[])
- async function loadHistory(){try{const d=await call('/api/lessonplan/weeks');setHistory(d.weeks);setSchools(d.schools)}catch(e){setError(e.message)}}
+ async function loadHistory(){try{const d=await call('/api/lessonplan/weeks');setHistory(d.weeks);setSchools(d.schools);setClasses(d.classes||[])}catch(e){setError(e.message)}}
  useEffect(()=>{if(user)loadHistory()},[user?.id])
  useEffect(()=>{
   if(!user||!router.isReady||!router.query.id)return
   let active=true;setBusy('Opening your week…')
-  call(`/api/lessonplan/weeks?id=${encodeURIComponent(router.query.id)}`).then(d=>{if(!active)return;const w=d.week;setWeek({id:w.id,weekOf:w.weekOf,state:w.state,grade:w.grade,subject:w.subject,minutes:w.minutes,days:w.days.map(day=>({off:!!day.off,standardIds:day.standardIds||[],customStandard:day.customStandard||'',customCode:day.customCode||'',topic:day.topic||'',lessonId:day.lessonId||null})),settings:{mode:w.settings?.mode==='detail'?'detail':'quick',worksheet:w.settings?.worksheet!==false,worksheetCount:w.settings?.worksheetCount||5,materials:w.settings?.materials||'',interests:w.settings?.interests||'',groups:w.settings?.groups?.length?w.settings.groups:GROUP_DEFAULTS.slice(0,3)}});setPasteDays(Object.fromEntries(w.days.map((day,i)=>[i,!!day.customStandard&&!day.standardIds?.length])));setLessons(d.lessons);setStatus(w.status);setWeekMeta(w);setProgress({})}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setBusy('')})
+  call(`/api/lessonplan/weeks?id=${encodeURIComponent(router.query.id)}`).then(d=>{if(!active)return;const w=d.week;setWeek({id:w.id,weekOf:w.weekOf,state:w.state,grade:w.grade,subject:w.subject,minutes:w.minutes,days:w.days.map(day=>({off:!!day.off,standardIds:day.standardIds||[],customStandard:day.customStandard||'',customCode:day.customCode||'',topic:day.topic||'',lessonId:day.lessonId||null})),settings:{mode:w.settings?.mode==='detail'?'detail':'quick',worksheet:w.settings?.worksheet!==false,worksheetCount:w.settings?.worksheetCount||5,materials:w.settings?.materials||'',interests:w.settings?.interests||'',groups:w.settings?.groups?.length?w.settings.groups:GROUP_DEFAULTS.slice(0,3),classId:w.settings?.classId??null}});if(d.classes)setClasses(d.classes);setPasteDays(Object.fromEntries(w.days.map((day,i)=>[i,!!day.customStandard&&!day.standardIds?.length])));setLessons(d.lessons);setStatus(w.status);setWeekMeta(w);setProgress({})}).catch(e=>{if(active)setError(e.message)}).finally(()=>{if(active)setBusy('')})
   return()=>{active=false}
  },[user?.id,router.isReady,router.query.id])
 
@@ -75,6 +76,23 @@ export default function WeekPlanner(){
   setWeek(w=>({...w,[key]:value,days:w.days.map(d=>({...d,standardIds:[],lessonId:null}))}));setPasteDays({})
  }
  function settings(patch){setWeek(w=>({...w,settings:{...w.settings,...patch}}))}
+ // Picking a class also fills in its grade, which is the mistake this choice exists to prevent:
+ // a week whose grade does not match its class launches nowhere. Only when nothing is built yet,
+ // so choosing a class never silently throws away lessons -- changeTarget owns that conversation.
+ function chooseClass(value){
+  const id=value===''?null:Number(value)
+  const cls=classes.find(c=>Number(c.id)===id)
+  const grade=cls&&cls.grade!=null?String(cls.grade):null
+  const safe=!week.days.some(d=>d.lessonId)
+  if(grade&&grade!==week.grade&&safe){
+   setWeek(w=>({...w,grade,days:w.days.map(d=>({...d,standardIds:[],lessonId:null})),settings:{...w.settings,classId:id}}))
+   setPasteDays({})
+   setNotice(`Set to ${gradeLabel(grade)} to match ${cls.name}.`)
+   return
+  }
+  if(grade&&grade!==week.grade&&!safe)setNotice(`${cls.name} is ${gradeLabel(grade)} but this week is ${gradeLabel(week.grade)}. Change the grade yourself if that is wrong — it rebuilds the lessons.`)
+  settings({classId:id})
+ }
  function requestBody(w=weekRef.current){return {id:w.id,weekOf:w.weekOf,state:w.state.trim(),grade:w.grade.trim(),subject:w.subject.trim(),minutes:Number(w.minutes),days:w.days.map((d,i)=>({off:d.off,standardIds:pasteDays[i]?[]:d.standardIds,customStandard:pasteDays[i]||!builtIn?d.customStandard:'',customCode:pasteDays[i]||!builtIn?d.customCode:'',topic:d.topic,lessonId:d.lessonId})),settings:w.settings}}
  function saveWeek(){
   const next=saveQueue.current.catch(()=>{}).then(()=>call('/api/lessonplan/weeks',{method:'POST',body:{action:'save',week:requestBody()}}))
@@ -163,7 +181,7 @@ export default function WeekPlanner(){
  {!authReady?<p>Checking your sign-in…</p>:!user?<div className="wk-banner"><a href="/login?next=/lessonplan/week">Log in</a> or <a href="/signup">sign up free</a> to plan your week.</div>:null}
  <div role="alert" className={error?'wk-message wk-error':'wk-hidden'}>{error}</div><div role="status" aria-live="polite" className={notice?'wk-message':'wk-hidden'}>{notice}</div>
 
- {user&&history.length>0&&<details className="wk-panel wk-history"><summary>My weeks ({history.length})</summary><ul>{history.map(h=><li key={h.id} className={h.id===week.id?'current':''}><div><strong>{weekLabel(h.weekOf)}</strong><span>{gradeLabel(h.grade)} · {subjectLabel(h.subject)}</span></div><span className={`wk-badge ${h.status}`}>{WEEK_STATUS[h.status]}{h.status!=='draft'&&(h.schoolName||h.sentToEmail)?` · ${h.schoolName||h.sentToEmail}`:''}</span>{h.principalComment&&<p className="wk-comment"><strong>{h.reviewerName||'Administration'}:</strong> {h.principalComment}</p>}<div className="wk-actions"><a href={`/lessonplan/week?id=${h.id}`}>Open</a>{h.status==='draft'&&<button type="button" className="wk-text" onClick={()=>removeWeek(h)}>Remove</button>}</div></li>)}</ul></details>}
+ {user&&history.length>0&&<details className="wk-panel wk-history"><summary>My weeks ({history.length})</summary><ul>{history.map(h=><li key={h.id} className={h.id===week.id?'current':''}><div><strong>{weekLabel(h.weekOf)}</strong><span>{gradeLabel(h.grade)} · {subjectLabel(h.subject)}{h.settings?.classId?` · ${classes.find(c=>Number(c.id)===Number(h.settings.classId))?.name||'a class'}`:''}</span></div><span className={`wk-badge ${h.status}`}>{WEEK_STATUS[h.status]}{h.status!=='draft'&&(h.schoolName||h.sentToEmail)?` · ${h.schoolName||h.sentToEmail}`:''}</span>{h.principalComment&&<p className="wk-comment"><strong>{h.reviewerName||'Administration'}:</strong> {h.principalComment}</p>}<div className="wk-actions"><a href={`/lessonplan/week?id=${h.id}`}>Open</a>{h.status==='draft'&&<button type="button" className="wk-text" onClick={()=>removeWeek(h)}>Remove</button>}</div></li>)}</ul></details>}
 
  {status!=='draft'&&weekMeta&&<div className={`wk-panel wk-sent ${status}`}><strong>{WEEK_STATUS[status]}</strong>{weekMeta.submittedAt&&<span> · {new Date(weekMeta.submittedAt).toLocaleString()}{weekMeta.schoolName?` · ${weekMeta.schoolName}`:weekMeta.sentToEmail?` · ${weekMeta.sentToEmail}`:''}</span>}{weekMeta.principalComment&&<p className="wk-comment"><strong>{weekMeta.reviewerName||'Administration'}:</strong> {weekMeta.principalComment}</p>}{editedSinceSent?<p className="wk-comment">You changed this week after sending it. Send it again so your administration sees the latest version.</p>:<small>Changed something after sending? Send the week again so your administration sees the latest version.</small>}</div>}
 
@@ -174,6 +192,13 @@ export default function WeekPlanner(){
    <label>Week of<input type="date" required value={week.weekOf} disabled={locked} onChange={e=>update({weekOf:mondayOf(e.target.value)||week.weekOf})}/><small>Monday {formatDay(dates[0],{month:'short',day:'numeric'})} – Friday {formatDay(dates[4],{month:'short',day:'numeric'})}</small></label>
    <label>State<select value={stateChoice} disabled={locked} onChange={e=>changeTarget('state',e.target.value==='other'?'':e.target.value)}><option value="CCSS">Common Core (CCSS) — used by many states</option><option value="FL">Florida</option><option value="PA">Pennsylvania</option><option value="other">Another state or curriculum</option></select></label>
    {stateChoice==='other'&&<label>State or curriculum name<input required maxLength="60" value={week.state} disabled={locked} onChange={e=>update({state:e.target.value})} placeholder="Texas, Ohio, IB…"/></label>}
+   {classes.length>0&&<label>Class
+    <select value={week.settings.classId??''} disabled={locked} onChange={e=>chooseClass(e.target.value)}>
+     <option value="">Work it out from grade and subject</option>
+     {classes.map(c=><option key={c.id} value={c.id}>{c.name}{c.grade!=null?` · ${gradeLabel(String(c.grade))}`:''}</option>)}
+    </select>
+    <small className="wk-hint">{week.settings.classId?'This week is for that class. Plan one class at a time, then start another week for the next one.':classes.length>1?'Pick the class and this week goes to it. Left as it is, AskVic guesses from grade and subject — and if two of your classes fit, nothing launches.':'You only have one class, so this is already clear.'}</small>
+   </label>}
    <label>Grade<select value={gradeChoice} disabled={locked} onChange={e=>changeTarget('grade',e.target.value==='other'?'':e.target.value)}>{GRADES.map(g=><option key={g} value={g}>{gradeLabel(g)}</option>)}<option value="other">Another grade or course</option></select></label>
    {gradeChoice==='other'&&<label>Grade or course<input required maxLength="30" value={week.grade} disabled={locked} onChange={e=>update({grade:e.target.value})} placeholder="Grade 10 or Biology"/></label>}
    <label>Subject<select value={subjectChoice} disabled={locked} onChange={e=>changeTarget('subject',e.target.value==='other'?'':e.target.value)}><option value="math">Math</option><option value="reading">Reading / ELA</option><option value="other">Another subject</option></select></label>
