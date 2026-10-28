@@ -111,8 +111,28 @@ const STATIONS = [
   does: 'Log in one student yourself, start to finish, including printing the cards.',
  },
  {
-  id: 'run',
+  id: 'student',
   n: 6,
+  title: 'Sit where the children sit',
+  mins: 15,
+  why: 'Every station so far has put you on the adult side of VIC, watching tiles change colour. This one puts you in the chair. It is the only way to know what you are actually putting a child in front of — and most teachers change their mind about VIC here, in either direction.',
+  steps: [
+   ['Use the practice room, not a real class.', 'In VIC Room, pick VIC Tutorial Room (practice) from the room dropdown. The children in it are made up, so nothing you do here touches a real child’s work.'],
+   ['Give the demo children something to do.', 'Press Start reading. Each demo child begins on their own next skill, the same as a real group would.'],
+   ['Open a private browsing window.', 'This matters: logging in as a student in your normal window signs you out of your own account. A private or incognito window keeps both open side by side.'],
+   ['In that window, go to askvic.ai/hello', 'and type the room code TUTOR2. Then tap a demo child’s name and their two pictures, from the printed cards.'],
+   ['Now learn something, properly, for five minutes.', 'Read what VIC says and answer it as a nine-year-old would. Do not skim.'],
+   ['Get one wrong on purpose.', 'This is the whole point of the station. Watch what VIC does with a wrong answer: it re-teaches from a different angle instead of asking the same question again. That behaviour is the product.'],
+   ['Try the things a child would reach for.', 'The Sketch pad, to draw an answer and send it. The Listen button, if read-aloud is on. Tell VIC what you are interested in and watch the examples change.'],
+   ['Then go back to your own window and look at the room.', 'You are on the grid, as a Working tile. That is both halves of VIC in one view: what the child is doing, and what the adult sees.'],
+  ],
+  see: 'VIC teaching you, and your own demo child showing as Working on the room screen.',
+  note: 'The demo children live in their own room on purpose, so the teaching staff can press anything they like without landing on a real child’s screen. Keep practising there rather than in the live room.',
+  does: 'Be taught by VIC for five minutes as a demo student, get one answer wrong deliberately, and find yourself on the room grid afterwards.',
+ },
+ {
+  id: 'run',
+  n: 7,
   title: 'Run the room',
   mins: 15,
   why: 'This is the screen Shontae uses every day. Once the children are on, everything you do for the next hour is on this one page.',
@@ -132,7 +152,7 @@ const STATIONS = [
  },
  {
   id: 'sub',
-  n: 7,
+  n: 8,
   title: 'When you are the one covering',
   mins: 10,
   why: 'Someone is out and the room is yours for the day. There are two ways this reaches you, and they are not equally good — so know which one you are holding, and what to do when a child finishes early or cannot get in.',
@@ -152,7 +172,7 @@ const STATIONS = [
  },
  {
   id: 'home',
-  n: 8,
+  n: 9,
   title: 'Email home — one child, or everybody',
   mins: 12,
   why: 'The writing around teaching, which is the part that eats your evenings. Three kinds of message, all of them a draft you read before anything moves.',
@@ -219,7 +239,7 @@ export default function Tutorial() {
    <section className="hero">
     <p className="eyebrow">Walkthrough</p>
     <h1>Learn VIC by doing all of it once.</h1>
-    <p className="lead">Nine stations, about {Math.round(total / 5) * 5} minutes if you do every one properly. You are meant to have VIC open in another tab and actually press the buttons — reading this without doing it is worth very little.</p>
+    <p className="lead">Ten stations, about {Math.round(total / 5) * 5} minutes if you do every one properly. You are meant to have VIC open in another tab and actually press the buttons — reading this without doing it is worth very little.</p>
     <p className="lead small">Your ticks are saved in this browser only. Nobody is marked and nobody is checking.</p>
    </section>
 
@@ -271,10 +291,10 @@ export default function Tutorial() {
    <section className={`cert${all ? ' ready' : ''}`}>
     <h2>Your VIC certificate</h2>
     {!all ? (
-     <p>Finish all nine stations and the certificate appears here. {STATIONS.length - count} to go.</p>
+     <p>Finish all ten stations and the certificate appears here. {STATIONS.length - count} to go.</p>
     ) : (
      <>
-      <p>All nine done. Put your name on it and print it.</p>
+      <p>All ten done. Put your name on it and print it.</p>
       <div className="row">
        <label htmlFor="cert-name">Your name, as it should read</label>
        <input id="cert-name" value={name} onChange={e => setName(e.target.value)} placeholder="Jane Smith" autoComplete="name" />

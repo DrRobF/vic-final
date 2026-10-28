@@ -13,6 +13,7 @@ const SKILLS = [
  'Sent VIC’s version of a lesson to students at three levels',
  'Printed a teacher packet and worksheets by level',
  'Got students logged in with room code and picture cards',
+ 'Sat on the student side and was taught by VIC',
  'Ran a VIC Room: launched work, steered VIC with notes, changed a child’s level',
  'Covered another teacher’s class and started their planned lesson',
  'Wrote home to one family and to a whole class',
