@@ -127,3 +127,38 @@ test('a detailed single lesson drops into the chosen day with its own standards 
  assert.equal(moved[4].lessonId,LESSON)
  assert.equal(moved[2].lessonId,null)
 })
+
+// Which class a week is for. Grade and subject cannot answer it: two Grade 4 math sections are
+// ordinary, and a teaming teacher has several subjects across several groups.
+test('a week remembers the class it is for, and refuses a junk class id', () => {
+ const kept = normalizeWeekSetup(setup({ settings: { classId: 49 } }), catalogue)
+ assert.equal(kept.settings.classId, 49)
+ for (const junk of [null, undefined, 0, -3, 'abc', 1.5, {}, []]) {
+  const w = normalizeWeekSetup(setup({ settings: { classId: junk } }), catalogue)
+  assert.equal(w.settings.classId, null, `classId ${JSON.stringify(junk)} should normalize to null`)
+ }
+ // Left unset, the week behaves as it always did: no class, matched on grade and subject.
+ assert.equal(normalizeWeekSetup(setup(), catalogue).settings.classId, null)
+})
+
+// matchClass with the choice made. These are the cases guessing cannot reach.
+test('a chosen class wins over anything grade and subject would guess', async () => {
+ const { matchClass } = await import('../lib/class-match.mjs')
+ const two4thMaths = [
+  { id: 60, class_name: 'Grade 4 Math A', grade_level: 4 },
+  { id: 61, class_name: 'Grade 4 Math B', grade_level: 4 },
+ ]
+ // Guessing gives up when two classes fit, and the week silently launches nowhere.
+ assert.equal(matchClass(two4thMaths, { grade: '4', subject: 'math' }), null)
+ // Chosen, it lands exactly where the teacher said.
+ assert.equal(matchClass(two4thMaths, { grade: '4', subject: 'math', settings: { classId: 61 } }).id, 61)
+
+ // A VIC & IXL class is never GUESSED, so those children are not handed a subject lesson by
+ // accident. An explicit choice is not a guess, so it is still allowed.
+ const withVic = [{ id: 70, class_name: '4/5 VIC & IXL', grade_level: 4 }, { id: 71, class_name: '4/5 Math & Science', grade_level: 4 }]
+ assert.equal(matchClass(withVic, { grade: '4', subject: 'math' }).id, 71)
+ assert.equal(matchClass(withVic, { grade: '4', subject: 'math', settings: { classId: 70 } }).id, 70)
+
+ // A class that is not the teacher's own is ignored rather than trusted.
+ assert.equal(matchClass(two4thMaths, { grade: '4', subject: 'math', settings: { classId: 999 } }), null)
+})

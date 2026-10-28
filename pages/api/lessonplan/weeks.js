@@ -24,6 +24,15 @@ async function persistWeek(db,owner,week,existing){
  if(rows.length){const {error:standardsError}=await db.from('lesson_week_standards').insert(rows);if(standardsError)console.error('Lesson week standards save failed',{code:standardsError.code})}
  return true
 }
+// The classes this teacher owns, for the week's "which class is this for?" choice. A VIC & IXL
+// class is included: a teacher may well plan for one directly, even though matchClass refuses to
+// GUESS one, and an explicit choice is not a guess.
+async function myClasses(auth){
+ if(!auth.profile?.id)return []
+ const {data,error}=await auth.admin.from('classes').select('id,class_name,grade_level').eq('teacher_id',auth.profile.id).order('grade_level',{ascending:true,nullsFirst:false}).order('class_name')
+ if(error){console.error('Lesson week classes failed',{code:error.code});return []}
+ return (data||[]).map(c=>({id:c.id,name:c.class_name,grade:c.grade_level}))
+}
 async function teacherName(auth){
  const {data}=await auth.admin.from('users').select('name').eq('auth_user_id',auth.user.id).limit(1).maybeSingle()
  const name=String(data?.name||auth.user.user_metadata?.full_name||auth.user.user_metadata?.name||'').trim()
@@ -79,11 +88,14 @@ export default async function handler(req,res){
   if(req.method==='GET'){
    if(!req.query.id){
     const [{data:weeks,error},{data:staff,error:staffError}]=await Promise.all([
-     db.from('lesson_weeks').select(LIST_COLUMNS).eq('user_id',owner).order('week_of',{ascending:false}).order('updated_at',{ascending:false}).limit(60),
+     db.from('lesson_weeks').select(LIST_COLUMNS+',settings').eq('user_id',owner).order('week_of',{ascending:false}).order('updated_at',{ascending:false}).limit(60),
      db.from('ap_staff').select('id,school_id,ap_schools(name)').eq('auth_user_id',owner).eq('active',true),
     ])
     if(error||staffError){console.error('Lesson weeks list failed',{code:(error||staffError)?.code});return res.status(503).json({error:'Could not load your weeks. If this keeps happening, the weekly planner may still be getting set up.'})}
-    return res.json({weeks:(weeks||[]).map(publicWeek),schools:(staff||[]).map(s=>({id:s.school_id,name:s.ap_schools?.name||'My school'}))})
+    // The teacher's own classes, so a week can say which one it is for. Never fatal: without
+    // them the planner simply offers no class and falls back to matching on grade and subject.
+    const classes=await myClasses(auth)
+    return res.json({weeks:(weeks||[]).map(publicWeek),schools:(staff||[]).map(s=>({id:s.school_id,name:s.ap_schools?.name||'My school'})),classes})
    }
    if(!isUuid(req.query.id))return res.status(400).json({error:'Invalid week link.'})
    const {data:row,error}=await db.from('lesson_weeks').select(LIST_COLUMNS+',settings').eq('user_id',owner).eq('id',req.query.id).maybeSingle()
@@ -100,7 +112,7 @@ export default async function handler(req,res){
    }
    const sends=await loadSends(auth,[...lessons.keys()])
    const summaries=Object.fromEntries([...lessons].map(([id,d])=>[id,{title:d.plan?.title||'Untitled lesson',worksheet:!!d.worksheet,steps:d.steps||{},updatedAt:d.updatedAt,...vicReadiness(d),sent:sends.get(id)||null}]))
-   return res.json({week:publicWeek(row),lessons:summaries})
+   return res.json({week:publicWeek(row),lessons:summaries,classes:await myClasses(auth)})
   }
 
   const action=req.body?.action
