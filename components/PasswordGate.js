@@ -12,7 +12,7 @@ const ACCOUNT_ROUTES=new Set(['/login','/student-login','/signup','/lessonplan/a
 // "Checking account access..." and make them think they need a login they were never given.
 // Nothing is exposed by rendering it early; the page shows nothing until the server accepts
 // the code.
-const PUBLIC_ROUTES=new Set(['/','/privacy','/terms','/help','/lessonplan','/lessonplan/standards','/educatorassistant','/cover'])
+const PUBLIC_ROUTES=new Set(['/','/privacy','/terms','/help','/help/tutorial','/help/certificate','/lessonplan','/lessonplan/standards','/educatorassistant','/cover'])
 export default function PasswordGate({children}){
  const router=useRouter(),accountPage=ACCOUNT_ROUTES.has(router.pathname),publicPage=PUBLIC_ROUTES.has(router.pathname)
  const [ready,setReady]=useState(false),[error,setError]=useState(''),[retry,setRetry]=useState(0)

@@ -1,6 +1,7 @@
 import Head from 'next/head'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { tidyCoverCode, COVER_CODE } from '../lib/cover.mjs'
+import { pictureFor } from '../lib/room-pictures.mjs'
 
 // The screen for whoever is covering a class today. It is the first AskVic screen many of
 // these adults will ever see, often at 7:30 with children arriving, so it asks for one code
@@ -16,6 +17,7 @@ export default function Cover() {
  const [code, setCode] = useState(''), [typed, setTyped] = useState('')
  const [data, setData] = useState(null), [error, setError] = useState(''), [msg, setMsg] = useState('')
  const [busy, setBusy] = useState(''), [loading, setLoading] = useState(false)
+ const [shown, setShown] = useState(null)
  const timer = useRef(null)
 
  useEffect(() => { setCode(readCode()) }, [])
@@ -63,7 +65,36 @@ export default function Cover() {
   } catch { setError('Check the internet connection, then try again.') }
   finally { setBusy('') }
  }
- function signOut() { saveCode(''); setCode(''); setData(null); setMsg(''); setError('') }
+ // Nothing planned, or they finished early. Every child picks up their own next skill.
+ async function practice(subject) {
+  setBusy(`practice:${subject}`); setMsg(''); setError(''); setShown(null)
+  try {
+   const r = await fetch('/api/cover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, action: 'practice', subject }) })
+   const d = await r.json().catch(() => ({}))
+   if (!r.ok) { setError(d.error || 'That did not go through. Try again.'); return }
+   const bits = []
+   if (d.started) bits.push(`Started ${d.started}`)
+   if (d.resumed) bits.push(`${d.resumed} already working`)
+   let line = bits.length ? `${bits.join(' · ')}.` : 'Nobody needed starting.'
+   if (d.skipped?.length) line += ` Could not start ${d.skipped.map(x => `${x.name} (${x.why})`).join(', ')} — tell the office.`
+   setMsg(line)
+   await load(code, { quiet: true })
+  } catch { setError('Check the internet connection, then try again.') }
+  finally { setBusy('') }
+ }
+ // One child, no card. New pictures handed straight back to read to them.
+ async function resetPictures(studentId, name) {
+  setBusy(`reset:${studentId}`); setMsg(''); setError(''); setShown(null)
+  try {
+   const r = await fetch('/api/cover', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code, action: 'resetPictures', studentId }) })
+   const d = await r.json().catch(() => ({}))
+   if (!r.ok) { setError(d.error || 'That did not go through. Try again.'); return }
+   setShown({ name: d.name || name, pictures: d.pictures || [] })
+   await load(code, { quiet: true })
+  } catch { setError('Check the internet connection, then try again.') }
+  finally { setBusy('') }
+ }
+ function signOut() { saveCode(''); setCode(''); setData(null); setMsg(''); setError(''); setShown(null) }
 
  const dayLabel = data?.day ? new Date(`${data.day}T12:00:00Z`).toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' }) : ''
 
@@ -95,17 +126,44 @@ export default function Cover() {
      : data.classes.map(c => <section key={c.id} className="card">
       <h2>{c.name}</h2>
       <p className="muted">{c.teacher ? `${c.teacher}’s class` : 'This class'}{c.grade != null ? ` · Grade ${c.grade}` : ''}</p>
-      {!c.lessons.length ? <p className="fallback"><strong>No lesson was planned for today.</strong> The children can still work with VIC on their own reading and math practice — they will find it when they log in. Nothing for you to start.</p>
+      {!c.lessons.length ? <p className="fallback"><strong>No lesson was planned for today.</strong> Nothing is wrong. Use <strong>Start reading</strong> or <strong>Start math</strong> below and every child begins on their own next skill.</p>
        : c.lessons.map(l => <div key={l.lessonId} className="lesson">
         <div className="about">
          <strong>{l.title}</strong>
          {l.objective && <span className="obj">{l.objective}</span>}
         </div>
         {l.live ? <span className="on">✓ On their screens</span>
-         : !l.ready ? <span className="notready">Not ready for VIC to teach. The children can use VIC for their own practice instead — ask the office if you need {c.teacher || 'the teacher'}.</span>
+         : !l.ready ? <span className="notready">Not ready for VIC to teach. Use Start reading or Start math below instead — ask the office if you need {c.teacher || 'the teacher'}.</span>
          : <button className="go" disabled={busy === `${c.id}:${l.lessonId}`} onClick={() => launch(c.id, l.lessonId, l.title)}>{busy === `${c.id}:${l.lessonId}` ? 'Starting…' : 'Start this lesson'}</button>}
        </div>)}
      </section>)}
+    <section className="card">
+     <h2>If they finish early, or nothing was planned</h2>
+     <p className="muted">Every child carries on from their own next skill — each one in their own place, not all the same topic. Safe to press twice: a child already working just keeps going.</p>
+     <div className="two">
+      <button className="go" disabled={busy === 'practice:reading'} onClick={() => practice('reading')}>{busy === 'practice:reading' ? 'Starting…' : 'Start reading'}</button>
+      <button className="go" disabled={busy === 'practice:math'} onClick={() => practice('math')}>{busy === 'practice:math' ? 'Starting…' : 'Start math'}</button>
+     </div>
+    </section>
+
+    <details className="card help">
+     <summary>A child cannot log in</summary>
+     <p className="muted">First: if they tapped the wrong pictures {data.lockMinutes || 5} times, they are locked out for {data.lockMinutes || 5} minutes and it clears by itself. Just wait — there is nothing to press.</p>
+     <p className="muted">If they have no card, or cannot remember their pictures, give them new ones here and read them out. Their printed card at home will be out of date, so tell the office which child it was.</p>
+     {shown && <div className="shownPics">
+      <strong>{shown.name}</strong>
+      <span className="pics">{shown.pictures.map((k, i) => <span key={i}>{pictureFor(k)?.emoji}</span>)}</span>
+      <span className="muted">Read these two to {shown.name}, in this order. Do not leave this on screen.</span>
+     </div>}
+     {!data.students?.length ? <p className="muted">No students are listed for these classes.</p>
+      : <ul className="kids">
+       {data.students.map(st => <li key={st.id}>
+        <span className="kname">{st.short}{st.locked ? <span className="lockw"> · locked {st.lockedMinutes} more min</span> : !st.hasPictures ? <span className="lockw"> · no pictures yet</span> : ''}</span>
+        <button className="small" disabled={busy === `reset:${st.id}`} onClick={() => resetPictures(st.id, st.short)}>{busy === `reset:${st.id}` ? 'Making…' : 'New pictures'}</button>
+       </li>)}
+      </ul>}
+    </details>
+
     <p className="out"><button className="plain" onClick={signOut}>Finished — close this</button></p>
    </>}
   </main>
@@ -133,9 +191,21 @@ export default function Cover() {
    .fallback{background:#eef4fb;border-radius:12px;padding:14px 16px;margin:12px 0 0}
    .good{background:#e7f1fb;color:#15405f;font-weight:800;padding:14px 16px;border-radius:12px}
    .bad{background:#fbebeb;color:#8a1c13;font-weight:800;padding:14px 16px;border-radius:12px}
+   .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+   .two .go{width:100%}
+   .help summary{cursor:pointer;font-size:19px;font-weight:800;padding:6px 0;min-height:44px;display:flex;align-items:center}
+   .help p{margin:10px 0 0}
+   .kids{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
+   .kids li{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:2px solid #eef1f5;padding-top:8px}
+   .kname{font-weight:700}
+   .lockw{color:#8a4b00;font-weight:800}
+   .small{min-height:44px;padding:9px 14px;border:2px solid #b9c3d0;border-radius:10px;background:#fff;font:inherit;font-weight:800;cursor:pointer;flex-shrink:0}
+   .small:disabled{opacity:.6;cursor:wait}
+   .shownPics{display:flex;flex-direction:column;gap:6px;margin:14px 0 0;padding:14px 16px;border-radius:12px;background:#eef4fb}
+   .shownPics .pics{font-size:46px;display:flex;gap:14px}
    .out{margin-top:26px;text-align:center}
    .plain{background:none;border:0;color:#1d4ed8;text-decoration:underline;font:inherit;cursor:pointer;padding:10px}
-   @media(max-width:600px){h1{font-size:25px}.card{padding:17px}}
+   @media(max-width:600px){h1{font-size:25px}.card{padding:17px}.two{grid-template-columns:1fr}}
   `}</style>
  </>
 }
