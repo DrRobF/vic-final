@@ -46,7 +46,7 @@ export default function Certificate() {
     <header>
      <p className="eyebrow">AskVic</p>
      <h1>VIC Certified</h1>
-     <p className="sub">This teacher has worked through every part of VIC, hands on.</p>
+     <p className="sub">This teacher has worked through every part of VIC, hands on, and is cleared to teach with it.</p>
     </header>
 
     <p className="awarded">Awarded to</p>
@@ -59,8 +59,8 @@ export default function Certificate() {
     <footer>
      <div className="sig">
       <span className="line" />
-      <span className="role">Dr. Rob Furman, Principal</span>
-      <span className="school">Saint Peter’s Academy</span>
+      <span className="role">Dr. L. Robert Furman</span>
+      <span className="school">Founder, AskVic</span>
      </div>
      <div className="sig">
       <span className="line" />
