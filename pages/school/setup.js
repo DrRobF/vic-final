@@ -48,7 +48,10 @@ export default function SchoolSetup() {
    ['/school?staff=new', '+ Add a staff member', 'One form, then a checklist for code, login and class.', true],
    ['/school/staff-upload', 'Upload a whole staff list', 'A CSV for a new school, or a batch of new hires. Nobody already on the board is duplicated.'],
    ['/assistantprincipal', 'Staff list & weekly deadlines', 'Who’s on staff, what’s due each week, the weekly brief.'],
-   account?.manageAccounts && ['/admin/accounts', 'Logins & passwords', 'Create teacher and student logins, reset passwords.'],
+   // Called "Logins & passwords" until 29 October, which is why nobody could find where to
+   // edit a child. It is the only screen that edits a student at all -- name, their grade,
+   // parent email, interests -- and the sign on the door mentioned none of it.
+   account?.manageAccounts && ['/admin/accounts', 'Students & staff', 'Edit a child’s name, grade, parent email and interests. Create logins and reset passwords.'],
   ]],
   ['Students & classes', [
    ['/school/students', 'Student logins', 'Every student and the username they sign in with. Downloadable.'],
