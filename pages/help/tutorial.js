@@ -34,7 +34,7 @@ const STATIONS = [
   mins: 5,
   why: 'Everyone who logs in sees a different AskVic. Knowing which door leads where means you stop hunting for the button that was never on that screen.',
   steps: [
-   ['Log in at askvic.ai', 'with the Teacher log in button.'],
+   ['Log in at askvic.ai.', 'Press Log in, then choose Teacher. AskVic emails you a login link by default — if you would rather type a password, use “Use my school password instead” on that screen.'],
    ['Read the top bar, left to right.', 'My Week is your planning. My Lessons is everything you have built. My Classes is your students and their levels. Families is everything you send home. VIC Room is the screen for running a room.'],
    ['Check you have joined your school.', 'Open My Week. If a “Join your school” card is sitting at the top, you have not joined yet — one click if your principal used your login email, otherwise type the school code. Until you join, your plans cannot reach your principal.'],
    ['Find the text size control', 'in the top bar, and make it bigger if that helps. It stays that way.'],

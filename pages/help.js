@@ -93,7 +93,7 @@ const START = [
  {
   who: 'Teachers', steps: [
    ['Work through the walkthrough', 'at askvic.ai/help/tutorial if you would rather do all of it once, hands on, than read these steps.'],
-   ['Log in', 'at askvic.ai with the Teacher log in button.'],
+   ['Log in', 'at askvic.ai. Press Log in, then choose Teacher. You can have a login link emailed to you, or use “Use my school password instead”.'],
    ['Join your school.', 'Right after you log in, My Week shows a “Join your school” card. If your principal added your email, it is one click. Otherwise type the code from your principal. Until you join, your lesson plans cannot reach your principal.'],
    ['Open My Week', 'and set the grade, subject, and a standard or topic for each day. Mark days with no lesson as “no lesson.”'],
    ['Build my week,', 'then read and edit each day. VIC writes the draft; you are still the teacher.'],
@@ -185,7 +185,7 @@ export default function Help() {
    <a className="walk" href="/help/tutorial">
     <span className="walkTag">Walkthrough</span>
     <strong>Learn VIC by doing all of it once</strong>
-    <span className="walkWhy">Nine hands-on stations: plan, send, print, get students logged in, run the room, cover a class, write home. Finish them and print your VIC certificate.</span>
+    <span className="walkWhy">Ten hands-on stations: plan, send, print, get students logged in, sit where the children sit and be taught by VIC, run the room, cover a class, write home. Finish them and print your VIC certificate.</span>
    </a>
 
    <div className="tabs" role="tablist" aria-label="Help sections">
