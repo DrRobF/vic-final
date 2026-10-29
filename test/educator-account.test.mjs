@@ -42,3 +42,23 @@ test('Individual edit targets exactly one verified row and never touches Auth or
  const res=response();await loadAccounts(auth,admin)({method:'PATCH',body:{id:2,name:'New',parentEmail:'',interestTags:'music'},query:{}},res)
  assert.equal(res.code,200);assert.equal(res.body.account.name,'New');assert.deepEqual(events,[['id',2],['patch',{name:'New',parent_email:null,interest_tags:['music']}],['id',2],['role','student']])
 })
+
+// A child's own grade, which in a mixed class is not the class's grade. VIC picks practice
+// standards from it, so until this was editable a Grade 4 child in a 3/4 class was taught
+// Grade 3 and nobody could see why -- the column existed from 22 October and nothing wrote it.
+test('a student’s own grade can be set, cleared, and never silently mangled', () => {
+ const student = { id: 5, role: 'student' }
+ assert.equal(accountPatch({ id: 5, name: 'Ana B', gradeLevel: '4' }, student).grade_level, 4)
+ // Kindergarten is zero, and zero is the value most easily read as "nothing set".
+ assert.equal(accountPatch({ id: 5, name: 'Ana B', gradeLevel: 'K' }, student).grade_level, 0)
+ assert.equal(accountPatch({ id: 5, name: 'Ana B', gradeLevel: 'Kindergarten' }, student).grade_level, 0)
+ // Blank means "use the class grade", which is a real choice and must reach the database as null.
+ assert.equal(accountPatch({ id: 5, name: 'Ana B', gradeLevel: '' }, student).grade_level, null)
+ // Not sent at all: leave whatever is there alone.
+ assert.equal('grade_level' in accountPatch({ id: 5, name: 'Ana B' }, student), false)
+ for (const bad of ['13', '-1', 'abc', '4.5', '99']) {
+  assert.throws(() => accountPatch({ id: 5, name: 'Ana B', gradeLevel: bad }, student), undefined, `grade ${bad} should be refused`)
+ }
+ // A grade is a child's field. Staff accounts have no business carrying one.
+ assert.throws(() => accountPatch({ id: 7, name: 'A Teacher', gradeLevel: '4' }, { id: 7, role: 'teacher' }))
+})

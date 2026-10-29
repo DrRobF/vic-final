@@ -34,7 +34,7 @@ async function importRow(admin, row, classesByCode) {
   if (classIds.length !== row.classCodes.length) throw new Error(`Required classes are missing: ${row.classCodes.filter((code) => !classesByCode.has(code)).join(', ')}`)
 
   const { data: profileRows, error: profileLookupError } = await admin.from('users')
-    .select('id, name, email, role, auth_user_id').eq('email', row.email).limit(1)
+    .select('id, name, email, role, auth_user_id, grade_level').eq('email', row.email).limit(1)
   if (profileLookupError) throw profileLookupError
   let profile = profileRows?.[0] || null
   let authUser = profile?.auth_user_id ? { id: profile.auth_user_id } : await findAuthUserByEmail(admin, row.email)
@@ -56,9 +56,14 @@ async function importRow(admin, row, classesByCode) {
 
   try {
     if (!profile) {
+      // row.grade is already validated as 'K' or 1-6 -- it has been parsed here since this
+      // importer was written, and used only to pick class codes. Storing it as the child's own
+      // grade is the difference between VIC teaching a Grade 4 child in a 3/4 class at their
+      // level and teaching them at the class's.
       const { data, error } = await admin.from('users').insert({
         name: row.name, email: row.email, role: 'student', auth_user_id: authUser.id,
-      }).select('id, name, email, role, auth_user_id').single()
+        grade_level: row.grade === 'K' ? 0 : Number(row.grade),
+      }).select('id, name, email, role, auth_user_id, grade_level').single()
       if (error) throw error
       profile = data
       changed = true
@@ -67,9 +72,13 @@ async function importRow(admin, row, classesByCode) {
       if (profile.name !== row.name) patch.name = row.name
       if (profile.role !== 'student') patch.role = 'student'
       if (profile.auth_user_id !== authUser.id) patch.auth_user_id = authUser.id
+      // Fill a grade that was never set, but never overwrite one an adult chose: a child moved
+      // up or down a level deliberately must not be reset by next term's roster upload.
+      const fromCsv = row.grade === 'K' ? 0 : Number(row.grade)
+      if (profile.grade_level == null && Number.isInteger(fromCsv)) patch.grade_level = fromCsv
       if (Object.keys(patch).length) {
         const { data, error } = await admin.from('users').update(patch).eq('id', profile.id)
-          .select('id, name, email, role, auth_user_id').single()
+          .select('id, name, email, role, auth_user_id, grade_level').single()
         if (error) throw error
         profile = data
         changed = true
