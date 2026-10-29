@@ -23,7 +23,7 @@ export default async function handler(req,res){
   if(made.error){if(/already|registered|exists/i.test(made.error.message))return res.status(409).json({error:'That login already exists. Use an existing account or a different username.'});throw made.error}
   if(!made.data?.user?.id)throw new Error('No authentication account returned.')
   authId=made.data.user.id
-  const profile=await auth.admin.from('users').insert({name:input.name,email:input.email,role:'student',auth_user_id:authId}).select('id,name,email,role').single()
+  const profile=await auth.admin.from('users').insert({name:input.name,email:input.email,role:'student',auth_user_id:authId,grade_level:input.gradeLevel}).select('id,name,email,role,grade_level').single()
   if(profile.error)throw profile.error
   profileId=profile.data.id
   if(input.classIds.length){const added=await auth.admin.from('enrollments').insert(input.classIds.map(class_id=>({class_id,student_id:profileId,support_level:'core'})));if(added.error)throw added.error}

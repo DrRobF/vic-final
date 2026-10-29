@@ -2,7 +2,7 @@ import {requireApprovedProfile} from '../../../lib/server-auth'
 import {ADMIN_EMAIL} from '../../../lib/roster-import'
 import {accountPatch,canManageAccounts} from '../../../lib/educator-account.mjs'
 export const config={api:{bodyParser:{sizeLimit:'8kb'}}}
-const FIELDS='id,name,email,role,parent_email,interest_tags'
+const FIELDS='id,name,email,role,parent_email,interest_tags,grade_level'
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store')
  if(!['GET','PATCH'].includes(req.method)){res.setHeader('Allow','GET, PATCH');return res.status(405).json({error:'Method not allowed.'})}
