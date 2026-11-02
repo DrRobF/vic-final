@@ -116,12 +116,31 @@ export default async function handler(req, res) {
    console.error('[cover] roster failed', { message: rosterError?.message })
    roster = []
   }
+  // The code each COMPUTER needs before any child can log in. Two different codes are at work
+  // on a cover day: the slip's code gets the adult onto this screen, and the room's code is
+  // typed once per machine at /hello so the children can reach their names. A sub who has only
+  // the first one has a room full of children who cannot get in and no way to find out why --
+  // which is exactly what happened on Nov 2. So the slip carries it.
+  //
+  // One per room rather than one for the slip: a slip can span classes in different rooms, and
+  // a computer only remembers the last code typed into it.
+  let rooms = []
+  try {
+   const { data: allRooms } = await db.from('vic_rooms').select('name,code,class_ids')
+   rooms = (allRooms || [])
+    .map(r => ({ name: r.name, code: r.code, classIds: (r.class_ids || []).map(Number).filter(id => granted.includes(id)) }))
+    .filter(r => r.classIds.length)
+  } catch (roomError) {
+   console.error('[cover] room codes failed', { message: roomError?.message })
+   rooms = []
+  }
   const now = Date.now()
   return res.json({
    school: school?.name || '',
    coveringName: grant.covering_name,
    day: grant.day,
    note: grant.note || '',
+   rooms,
    students: roster.map(s => {
     const l = loginBy.get(Number(s.id))
     const lockedUntil = l?.locked_until ? Date.parse(l.locked_until) : 0

@@ -119,6 +119,20 @@ export default function Cover() {
      <p className="muted">{dayLabel}</p>
      {data.note && <p className="note">From the office: {data.note}</p>}
     </section>
+    {/* First thing on the screen, because it is the first thing that happens in the room:
+        the children cannot reach their own names until this code is on the computer. The
+        slip's code gets the adult here; this one gets the class in. */}
+    {data.rooms?.length > 0 && <section className="setup">
+     <h2>Start here — get the computers ready</h2>
+     <p>On each computer the children will use, open <strong>askvic.ai/hello</strong> and type the code below. Once per computer, then it remembers.</p>
+     {data.rooms.map(r => <div key={r.code} className="roomcode">
+      <span className="rc">{r.code}</span>
+      <span className="rcwhat">{data.rooms.length > 1 ? <><strong>{r.name}</strong><br /></> : null}{r.classIds.length === data.classes.length ? 'For all the classes on this slip' : `For ${r.classIds.length} of your ${data.classes.length} classes`}</span>
+     </div>)}
+     {data.rooms.length > 1 && <p className="warn2">Your classes are in more than one room, so there is more than one code. A computer only remembers the last code typed into it — keep each group on its own machines where you can.</p>}
+     <p className="muted small">Then each child taps their name and their two pictures. If a child is stuck, their name and whether they have pictures is further down this page.</p>
+    </section>}
+
     {msg && <p className="good" role="status">{msg}</p>}
     {error && <p className="bad" role="alert">{error}</p>}
 
@@ -173,6 +187,14 @@ export default function Cover() {
    h2{font-size:22px;margin:0 0 2px}
    .lead{font-size:18px}
    .card{background:#fff;border:2px solid #d8dee7;border-radius:16px;padding:22px;margin:0 0 16px}
+   .setup{background:#fff;border:3px solid #1d4ed8;border-radius:16px;padding:20px 22px;margin:0 0 16px}
+   .setup h2{margin:0 0 8px;font-size:21px;color:#15316e}
+   .setup p{margin:0 0 12px}
+   .roomcode{display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:#eef4fb;border-radius:12px;padding:14px 16px;margin:0 0 10px}
+   .rc{font-family:ui-monospace,monospace;font-size:clamp(34px,8vw,46px);font-weight:800;letter-spacing:.16em;line-height:1;color:#15316e}
+   .rcwhat{font-size:15px;color:#41506a;line-height:1.4}
+   .warn2{background:#f9ece7;color:#7a3c00;font-weight:700;padding:11px 13px;border-radius:10px}
+   .small{font-size:14px}
    .who{background:#10213a;color:#fff;border-radius:16px;padding:18px 22px;margin:0 0 16px}
    .who p{margin:0}
    .who .muted{color:#b9c6da}
