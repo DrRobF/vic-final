@@ -21,12 +21,22 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
    // Only staff whose attendance record is tied to their login have classes we can find;
    // that link is what makes "who is out" and "whose lessons" the same question.
-   const [{ data: staff }, { data: classes }, { data: grants }] = await Promise.all([
+   const [{ data: staff }, { data: classes }, { data: grants }, { data: rooms }, { data: rolls }] = await Promise.all([
     db.from('ap_staff').select('id,display_name,auth_user_id').eq('school_id', school.schoolId).eq('active', true).limit(500),
     db.from('classes').select('id,class_name,grade_level,teacher_id,users:teacher_id(auth_user_id,name)').order('class_name').limit(500),
     db.from('cover_grants').select('id,day,class_ids,covering_name,code,note,created_at,revoked_at,last_opened_at')
      .eq('school_id', school.schoolId).gte('day', today).order('day').limit(100),
+    // The code each computer needs. A printed slip carries it, so nobody has to find it from
+    // a classroom at eight in the morning.
+    db.from('vic_rooms').select('name,code,class_ids'),
+    // Which classes actually have children. Four of the seven on Nov 2's slip were empty
+    // leftovers, which is easy to do when every class looks alike in a tick list.
+    db.from('enrollments').select('class_id').limit(20000),
    ])
+   const roomByClass = new Map()
+   for (const r of rooms || []) for (const id of r.class_ids || []) roomByClass.set(Number(id), { name: r.name, code: r.code })
+   const headcount = new Map()
+   for (const e of rolls || []) headcount.set(Number(e.class_id), (headcount.get(Number(e.class_id)) || 0) + 1)
    const authToStaff = new Map((staff || []).filter(s => s.auth_user_id).map(s => [s.auth_user_id, s]))
    // A class is coverable when AskVic knows whose it is, because the lessons come from its teacher.
    const coverable = (classes || []).filter(c => c.users?.auth_user_id && authToStaff.has(c.users.auth_user_id))
@@ -37,6 +47,8 @@ export default async function handler(req, res) {
      id: c.id, name: c.class_name, grade: c.grade_level ?? null,
      teacher: c.users?.name || '',
      staffId: authToStaff.get(c.users.auth_user_id)?.id || null,
+     students: headcount.get(Number(c.id)) || 0,
+     room: roomByClass.get(Number(c.id)) || null,
      plannedToday: planned.filter(p => Number(p.classId) === Number(c.id)).map(p => ({ title: p.title, ready: p.ready, live: p.live })),
     })),
     // Named so the principal can pick "cover Mrs. Morgan" rather than hunting her classes.

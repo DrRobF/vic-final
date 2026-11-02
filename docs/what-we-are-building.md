@@ -39,6 +39,42 @@ section wins.
   users go straight to their own home.
 - `/read-test` for the K–2 listening experiment.
 
+## Nov 2 — two things a covered classroom taught us before 8:30
+
+Grimison covering Karen Green, first real use of a cover slip in anger. Both faults were in
+the cover build, both were found by Rob standing in the room.
+
+**1. The slip only carried one of the two codes.** A cover day needs two: the slip's eight
+characters get the adult onto `/cover`, and the room's six get typed once per computer at
+`/hello` so the children can reach their own names. The slip never mentioned the second, and
+the person holding it is usually a stranger with nobody to ask. The room code is now the first
+thing on `/cover` — above the lessons, because it is the first thing that has to happen in the
+room — and the printed slip from `/school/cover` carries both, side by side, numbered. One
+code per room, since a slip can straddle two and a computer remembers only the last one typed.
+
+**2. The rate limit treated the school as an attacker.** The guard on `/cover` exists to stop
+somebody guessing an eight-character code: twenty tries per ten minutes per IP. It charged
+every request rather than every failed one — and the page refreshes itself every thirty
+seconds, each launch is a request, each picture reset is a request, and the budget is keyed to
+the building's IP, shared by the principal, the sub and every machine in the school. Rob
+handing out picture logins to a room of children was cut off after twenty with "too many
+tries". A code that resolves to a live grant is not a guess, so it now costs nothing; only a
+code that does not work spends budget.
+
+**The design lesson worth keeping, because it will recur:** the adult on `/cover` has no
+account, no training and nobody to ask. Anything they need and cannot guess has to be on that
+screen. Both faults were the same mistake — building the screen as if the person reading it
+already knew how AskVic works.
+
+**Also fixed:** four of the seven classes on that slip had no children in them (two "(old)"
+leftovers and two called "Science"). The tick list showed every class alike, so the slip
+screen now gives each one its headcount and marks an empty class.
+
+**Process, not code:** picture cards belong in the sub folder before the day starts. The
+printed slip now says so and links to where they print. A sub should never be handing out
+logins, and `/cover`'s reset gives a child *new* pictures — any card printed earlier is then
+out of date.
+
 ## Open right now — Oct 27, read before building anything about student data
 
 ### The verdict stream is not trustworthy yet. Do not build the dashboard on it.
