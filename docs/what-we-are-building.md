@@ -455,3 +455,48 @@ through with Rob after the current work is clean.
 - Whether the context chooser gets its own approval flow, or just quietly
   personalises and logs what it chose.
 - What a 9pm disclosure to VIC should do differently from a 10am one.
+
+## Nov 2, afternoon — two faults Rob found watching the deeper work
+
+Both from standing in the room after the v3.8 change, and they turn out to be one behaviour seen
+from two sides: VIC carries on teaching after the goal tag (which is the v3.7 fix working), and
+nothing told it to change the material or to stop re-emitting the tag.
+
+**1. Going deeper was the same passage with the question reworded.** The v3.8 text said to keep
+teaching the SAME standard and listed moves to use, but never said the material had to change —
+so it did not. A child who has just answered a question about a passage learns nothing from a
+near-identical question about that same passage, and they can tell: it reads as the lesson being
+stuck. Brain v3.9 makes new material a rule rather than a preference — never the same passage,
+numbers or problem, and explicitly never the same question with the words changed around — plus a
+check before the turn ("is the thing in front of the student new?") and a line in the GO DEEPER
+menu saying that reaching for the old passage is the signal to pick a different move. *Same
+standard means the same skill, not the same text.*
+
+**2. The skill counts on the room screen were inflated two to five times.** `vic_goal_results`
+got an `insert` on every tag, with no guard, while the attempt close was already idempotent. Since
+VIC now keeps teaching after the tag, it emits the tag again later and each emission wrote another
+row. Measured on the real data: the screen showed **67 skills today for 27 actually worked**, and
+**85 for 17 on Oct 26** — five times over. 26 of 78 student-standard-day pairs had more than one
+verdict row, and 3 had conflicting verdicts on the same day, which is where "met vs not completed"
+stopped making sense to teachers and students.
+
+Three changes:
+
+- **One verdict per attempt, enforced by the attempt.** `pages/api/vic.js` now closes the attempt
+  *first*, conditionally on it still being open, and writes the verdict only if that close actually
+  changed a row. The update is the lock; a repeat tag finds nothing to close and writes nothing.
+  Deliberately **first-verdict-wins**: a later differing tag is not a correction, because `met`
+  already means three correct unaided and the honest re-test is the spaced second reading, not
+  another judgment in the same sitting. Worth revisiting if Rob wants same-session downgrades.
+- **The room screen counts attempts, not tags.** One attempt is one piece of work
+  (`assignment_id` is unique on it), so it cannot double-count — and an attempt with no verdict is
+  the "still going" the screen could never show before.
+- **Plainer words.** "3 met · 1 partly · 0 not yet" became "4 skills today · 3 got there · 1 still
+  going", with a line under the detail panel saying what "got there" does and does not mean, and
+  that a skill still going mid-lesson is normal rather than a problem.
+
+**Not done, needs Rob's call:** the duplicate rows already in `vic_goal_results` from Oct 26 to
+Nov 2 are still there. Nothing reads them any more for counts — the room screen and
+`/school/progress` both read attempts, and practice selection uses sets of standard ids, which
+duplicates do not affect — so this is tidiness rather than correctness, and deleting rows is not
+something to do without asking.

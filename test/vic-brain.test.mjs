@@ -6,11 +6,11 @@ import { buildVicContext } from '../lib/ask-vic-context.mjs'
 
 const route = readFileSync(new URL('../pages/api/vic.js', import.meta.url), 'utf8')
 
-test('VIC brain is the full v3.8 text, not a stub', () => {
-  assert.match(VIC_BRAIN_VERSION, /v3\.8/)
+test('VIC brain is the full v3.9 text, not a stub', () => {
+  assert.match(VIC_BRAIN_VERSION, /v3\.9/)
   assert.ok(VIC_BRAIN.length > 20000)
-  assert.match(VIC_BRAIN, /^=+\nVIC MASTER BRAIN v3\.8/)
-  assert.match(VIC_BRAIN, /END VIC MASTER BRAIN v3\.8\n=+$/)
+  assert.match(VIC_BRAIN, /^=+\nVIC MASTER BRAIN v3\.9/)
+  assert.match(VIC_BRAIN, /END VIC MASTER BRAIN v3\.9\n=+$/)
   for (const section of ['CORE IDENTITY', 'ASSIGNED LESSON ENTRY', 'ANSWER VERIFICATION', 'DIRECT ANSWER ACCEPTANCE RULE', 'INTEREST USAGE', 'MINI PROJECT MODE', 'DEPTH OVER COMPLETION', 'AFTER THE GOAL TAG']) assert.ok(VIC_BRAIN.includes(section), section)
 })
 
@@ -79,4 +79,38 @@ test('assigned lessons are labelled with the name the brain uses', () => {
   const context = buildVicContext({ mode: 'teacher_directed', lesson: { title: 'Equivalent fractions', lesson_text: 'Use area models.', subject: 'math' }, assignmentMode: 'core' })
   assert.match(context, /assignedLesson is present/)
   assert.doesNotMatch(buildVicContext({ mode: 'student_directed' }), /assignedLesson/)
+})
+
+// Rob watched the deeper work in a classroom on Nov 2: after the first met, VIC was serving the
+// same passage back with the question reworded. The v3.8 text said "keep teaching the SAME
+// standard" and listed moves, but never said the material had to change -- so it did not.
+test('going deeper has to be new material, not the same question reworded', () => {
+  assert.match(VIC_BRAIN, /NEW MATERIAL/)
+  assert.match(VIC_BRAIN, /NEVER re-use what they have already worked on/)
+  // The specific failure, named so it cannot be read as a style note.
+  assert.match(VIC_BRAIN, /not the same question with the words changed around/i)
+  assert.match(VIC_BRAIN, /Same standard means the same skill/)
+  assert.match(VIC_BRAIN, /is the thing in front of the student new\?/i)
+})
+
+test('the deeper menu tells VIC what to do when it reaches for the old passage', () => {
+  assert.match(VIC_BRAIN, /reaching for the passage or the problem you have already used/)
+  assert.match(VIC_BRAIN, /harder, less routine cases — a new problem or a new text every time/)
+})
+
+// The other half of the same morning: the room screen was counting one skill several times,
+// because VIC re-emitted the tag as it carried on teaching.
+test('one skill gets exactly one tag, for the rest of the session', () => {
+  assert.match(VIC_BRAIN, /Give it ONCE for a skill/)
+  assert.match(VIC_BRAIN, /you never give another one for it, for the rest of\s+the session/)
+  assert.match(VIC_BRAIN, /One skill, one tag/)
+  // Why, in the brain itself, so a later edit does not read it as boilerplate.
+  assert.match(VIC_BRAIN, /a second skill/)
+})
+
+test('going deeper still does not end the lesson or offer another skill', () => {
+  // The v3.7/v3.8 guarantee must survive the new-material rule.
+  assert.match(VIC_BRAIN, /Do NOT say the skill is complete/)
+  assert.match(VIC_BRAIN, /Do NOT offer them a different skill/)
+  assert.match(VIC_BRAIN, /never be the one who suggests the exit/)
 })

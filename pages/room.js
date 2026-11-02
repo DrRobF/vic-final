@@ -151,7 +151,7 @@ export default function Room() {
        <span className="kn">{s.short}</span>
        <span className="ks">{STATUS[s.status].icon} {s.status === 'quiet' && s.minutesQuiet != null ? `Quiet ${s.minutesQuiet} min` : STATUS[s.status].word}</span>
        <span className="kl">{s.lessons[0]?.title || (s.lastWith === 'own' ? 'My own work' : s.status === 'out' ? '' : 'No lesson yet')}</span>
-       {(s.goals?.met + s.goals?.partly + s.goals?.not_yet) > 0 && <span className="kt">Skills: {s.goals.met} met · {s.goals.partly} partly · {s.goals.not_yet} not yet</span>}
+       {s.skills?.workedOn > 0 && <span className="kt">{s.skills.workedOn} {s.skills.workedOn === 1 ? 'skill' : 'skills'} today · {s.skills.gotThere} got there{s.skills.stillWorking ? ` · ${s.skills.stillWorking} still going` : ''}</span>}
        {s.notes.length > 0 && <span className="kt">📝 {s.notes.length}</span>}
        {s.locked && <span className="kt">🔒 Locked</span>}
       </button>)}
@@ -161,7 +161,8 @@ export default function Room() {
       <div className="dh"><h2>{student.name}</h2><button type="button" className="btn btn-outline" onClick={() => setOpen(null)}>Close</button></div>
       <p className="muted">{student.classes.join(' · ')} · {student.turns} messages with VIC today</p>
       {student.alerts.length > 0 && <p className="warn">⚠ VIC flagged something this child said ({student.alerts.map(a => a.category).join(', ')}). Talk with them now. The teacher and school leader were emailed too.</p>}
-      <p><strong>Skills today:</strong> {student.goals.met} met · {student.goals.partly} partly · {student.goals.not_yet} not yet</p>
+      <p><strong>Skills today:</strong> {student.skills.workedOn} worked on — {student.skills.gotThere} got there{student.skills.partly ? `, ${student.skills.partly} nearly` : ''}{student.skills.notYet ? `, ${student.skills.notYet} not yet` : ''}{student.skills.stillWorking ? `, ${student.skills.stillWorking} still going` : ''}</p>
+      <p className="muted small">“Got there” means VIC saw three correct in a row, unaided. A skill still going has no verdict yet — that is normal mid-lesson, not a problem.</p>
       <p><strong>On today:</strong> {student.lessons.length ? student.lessons.map(l => l.title).join(', ') : 'Nothing launched yet. VIC will help with their own work.'}</p>
       <div><strong>Notes for VIC:</strong>{student.notes.length ? <ul>{student.notes.map(n => <li key={n.id}>{n.note} <button type="button" className="linkbtn" onClick={() => act({ action: 'clearNote', noteId: n.id })}>Remove</button></li>)}</ul> : <span className="muted"> none</span>}</div>
       <NoteBox label={`Add a note for VIC about ${student.short}`} onSave={note => act({ action: 'addNote', studentId: student.id, note }, () => 'Note added. VIC will use it on the next message.')} />
@@ -233,6 +234,7 @@ export default function Room() {
    .card{border:2px dashed var(--vic-border);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;break-inside:avoid}
    .card :global(.pics){font-size:40px}
    .card small{color:var(--vic-text-secondary)}
+   .small{font-size:14px;line-height:1.55}
    @media print{:global(header),:global(nav),.noprint,.tabs,.top{display:none!important}.cards{grid-template-columns:repeat(3,1fr)}}
   `}</style>
  </PageShell>
