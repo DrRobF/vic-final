@@ -70,11 +70,29 @@ test('A code for another day cannot open or launch', async () => {
  assert.equal(r.code, 403)
  assert.equal(calls.launches.length, 0)
 })
-test('Rate limiting stops code guessing before the code is looked up', async () => {
- const { run, calls } = load({ grant: GRANT, allowed: false }), r = res()
+test('Rate limiting stops repeated guessing at a code that does not work', async () => {
+ const { run, calls } = load({ grant: null, allowed: false }), r = res()
  await run(post({ code: 'ABCD2345' }), r)
  assert.equal(r.code, 429)
  assert.equal(calls.plannedFor.length, 0)
+})
+// Nov 2: a principal handing out logins to a room of children was cut off after twenty
+// requests, because the guard charged every request rather than every failed one -- and the
+// budget is keyed to the building's IP, shared by him, the sub and every machine in the
+// school. A code that works is not a guess.
+test('a working code is never charged against the guessing budget', async () => {
+ // allowed:false means the budget is already spent. A live grant must still open.
+ const { run } = load({ grant: GRANT, allowed: false, planned: [{ lessonId: 'L1', classId: 36, ready: true }] }), r = res()
+ await run(post({ code: 'ABCD2345' }), r)
+ assert.notEqual(r.code, 429)
+ assert.equal(r.data.coveringName, 'Amber Manuel')
+})
+test('an exhausted budget cannot block launching or handing out logins', async () => {
+ const { run, calls } = load({ grant: GRANT, allowed: false, planned: [{ lessonId: 'L1', classId: 36, ready: true }] })
+ const r = res()
+ await run(post({ code: 'ABCD2345', action: 'launch', classId: 36, lessonId: 'L1' }), r)
+ assert.notEqual(r.code, 429)
+ assert.equal(calls.launches.length, 1)
 })
 
 test('A class outside the slip is refused even with a working code', async () => {
