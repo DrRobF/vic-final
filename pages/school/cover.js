@@ -78,6 +78,14 @@ export default function CoverPage() {
 
  const classes = data?.classes || []
  const nameOf = id => classes.find(c => Number(c.id) === Number(id))?.name || `Class ${id}`
+ // The rooms the slip's classes belong to, so the printed slip can carry the code each
+ // computer needs. One entry per room: a slip can straddle two, and a computer remembers
+ // only the last code typed into it.
+ const madeRooms = !made ? [] : [...(made.classIds || []).reduce((acc, id) => {
+  const room = classes.find(c => Number(c.id) === Number(id))?.room
+  if (room?.code) acc.set(room.code, { ...room, classIds: [...(acc.get(room.code)?.classIds || []), Number(id)] })
+  return acc
+ }, new Map()).values()]
 
  return <PageShell title="Cover a class" currentPath="/school/cover">
   <PanelStyles />
@@ -96,11 +104,35 @@ export default function CoverPage() {
 
     {made && <section className="panel slip" aria-label="The cover slip">
      <p className="label">Give this to {made.coveringName}</p>
-     <p className="code">{made.code}</p>
-     <p>Go to <strong>askvic.ai/cover</strong> and type this code.</p>
-     <p className="muted">{fmt(made.day)} · {made.classIds.map(nameOf).join(' · ')}</p>
-     <p className="muted small">The code works today only and shows nothing but the lessons for these classes.</p>
-     <div className="row noprint"><button type="button" className="btn btn-primary" onClick={() => window.print()}>Print this slip</button><button type="button" className="btn btn-outline" onClick={() => setMade(null)}>Done</button></div>
+     <p className="slipfor">{fmt(made.day)} · {made.classIds.map(nameOf).join(' · ')}</p>
+
+     <div className="twocodes">
+      <div className="onecode">
+       <p className="cl">1 · For you, {made.coveringName.split(' ')[0]}</p>
+       <p className="code">{made.code}</p>
+       <p>Open <strong>askvic.ai/cover</strong> and type this. It shows today’s lessons and a button to start each one.</p>
+      </div>
+      {madeRooms.length > 0 ? <div className="onecode">
+       <p className="cl">2 · For each computer the children use</p>
+       {madeRooms.map(r => <div key={r.code} className="sub">
+        <p className="code">{r.code}</p>
+        {madeRooms.length > 1 && <p className="muted small">{r.name} — {r.classIds.map(nameOf).join(', ')}</p>}
+       </div>)}
+       <p>Open <strong>askvic.ai/hello</strong> on each computer and type this once. Then each child taps their name and their two pictures.</p>
+       {madeRooms.length > 1 && <p className="warnish small">These classes are in different rooms, so there are two codes. A computer only remembers the last one typed into it.</p>}
+      </div> : <div className="onecode">
+       <p className="cl">2 · The children</p>
+       <p>These classes are not in a VIC Room, so the children sign in with their own usernames at <strong>askvic.ai/student-login</strong>.</p>
+      </div>}
+     </div>
+
+     <p className="muted small">The first code works today only and shows nothing but the lessons for these classes.</p>
+     <p className="cards">Picture cards: print them from <strong>VIC Room → Logins and picture cards</strong> and leave them with this slip. A sub should never have to hand out logins.</p>
+     <div className="row noprint">
+      <button type="button" className="btn btn-primary" onClick={() => window.print()}>Print this slip</button>
+      <a className="btn btn-outline" href="/room" target="_blank" rel="noopener">Print picture cards →</a>
+      <button type="button" className="btn btn-outline" onClick={() => setMade(null)}>Done</button>
+     </div>
     </section>}
 
     {!data ? <p role="status">Loading your classes…</p> : <>
@@ -115,7 +147,7 @@ export default function CoverPage() {
 
        <p className="label">Classes</p>
        <ul className="classes">{classes.map(c => <li key={c.id}>
-        <label><input type="checkbox" checked={picked.includes(c.id)} onChange={() => toggle(c.id)} /><span><strong>{c.name}</strong><span className="muted"> · {c.teacher}</span>{!c.plannedToday.length ? <em className="muted"> — nothing planned today</em> : c.plannedToday.some(p => !p.ready) ? <em className="warnish"> — today’s lesson needs a standard and objective</em> : <em className="muted"> — “{c.plannedToday[0].title}” ready</em>}</span></label>
+        <label className={c.students === 0 ? 'empty' : ''}><input type="checkbox" checked={picked.includes(c.id)} onChange={() => toggle(c.id)} /><span><strong>{c.name}</strong><span className="muted"> · {c.teacher}</span>{c.students === 0 ? <em className="warnish"> — no children in this class</em> : <span className="muted"> · {c.students === 1 ? '1 child' : `${c.students} children`}</span>}{c.students > 0 && (!c.plannedToday.length ? <em className="muted"> — nothing planned today</em> : c.plannedToday.some(p => !p.ready) ? <em className="warnish"> — today’s lesson needs a standard and objective</em> : <em className="muted"> — “{c.plannedToday[0].title}” ready</em>)}</span></label>
        </li>)}</ul>
 
        <div className="fields">
@@ -151,6 +183,16 @@ export default function CoverPage() {
    h2{margin:0 0 12px}
    .pick select{min-height:44px;border-radius:10px;padding:0 10px;font:inherit;margin-left:8px}
    .slip{border:2px solid var(--vic-primary)}
+   .slipfor{margin:0 0 14px;font-weight:700}
+   .twocodes{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+   .onecode{border:1px solid var(--vic-border);border-radius:14px;padding:14px 16px}
+   .onecode p{margin:0 0 8px}
+   .onecode p:last-child{margin-bottom:0}
+   .cl{font-family:var(--font-mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--vic-text-secondary);font-weight:800}
+   .sub{margin:0 0 6px}
+   .cards{margin-top:14px;background:var(--vic-surface-muted);border-radius:10px;padding:11px 13px;font-size:15px}
+   .empty{opacity:.6}
+   @media(max-width:700px){.twocodes{grid-template-columns:1fr}}
    .code{font-family:var(--font-mono);font-size:clamp(38px,8vw,60px);letter-spacing:.16em;margin:6px 0 10px;font-weight:800}
    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px}
    .chips{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 6px}
@@ -173,7 +215,14 @@ export default function CoverPage() {
    .sm{min-height:36px;padding:5px 12px;font-size:14px}
    .small{font-size:14px}
    @media(max-width:700px){.fields{grid-template-columns:1fr}}
-   @media print{.noprint{display:none}}
+   @media print{
+    .noprint{display:none}
+    .panel:not(.slip),.top,.alert{display:none}
+    .slip{border:2px solid #000;box-shadow:none;break-inside:avoid}
+    .onecode{border:1px solid #000}
+    .code{color:#000}
+    .cards{background:none;border:1px dashed #000}
+   }
   `}</style>
  </PageShell>
 }
