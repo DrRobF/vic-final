@@ -35,16 +35,24 @@ export default async function handler(req, res) {
  const db = serviceDb()
  if (!db) return res.status(503).json({ error: 'Cover is not available right now.' })
  try {
-  const ip = String(req.headers['x-vercel-forwarded-for'] || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()
-  const { data: allowed, error: rateError } = await db.rpc('claim_cover_attempt', { ip_bucket: createHash('sha256').update(ip).digest('hex') })
-  if (rateError) return res.status(503).json({ error: 'Cover is not available right now.' })
-  if (!allowed) { res.setHeader('Retry-After', '600'); return res.status(429).json({ error: 'Too many tries. Wait a few minutes, then check the code with the office.' }) }
-
   const { data: grant } = await db.from('cover_grants').select('id,school_id,day,class_ids,covering_name,note,revoked_at').eq('code', code).maybeSingle()
   const today = schoolToday()
   const usable = grantUsable(grant, today)
-  // One wording for "no such code" and "revoked", so this cannot be used to hunt for live codes.
-  if (!usable.ok) return res.status(usable.reason === 'notfound' ? 404 : 403).json({ error: COVER_REFUSALS[usable.reason] })
+
+  // The guard exists to stop somebody guessing an eight-character code, so only a code that
+  // does NOT work spends from it. Charging every request instead throttled the actual school:
+  // the page refreshes itself every 30 seconds, each picture reset and each launch is another
+  // request, and the budget is keyed to the building's IP -- so a principal handing out logins
+  // to a room of children was cut off after twenty, as an attacker would be. (Nov 2, in a
+  // covered classroom, mid-morning.) Working codes are now unlimited; wrong ones still are not.
+  if (!usable.ok) {
+   const ip = String(req.headers['x-vercel-forwarded-for'] || req.headers['x-forwarded-for'] || req.socket?.remoteAddress || 'unknown').split(',')[0].trim()
+   const { data: allowed, error: rateError } = await db.rpc('claim_cover_attempt', { ip_bucket: createHash('sha256').update(ip).digest('hex') })
+   if (rateError) return res.status(503).json({ error: 'Cover is not available right now.' })
+   if (!allowed) { res.setHeader('Retry-After', '600'); return res.status(429).json({ error: 'Too many tries with a code that is not working. Wait a few minutes, then check it with the office.' }) }
+   // One wording for "no such code" and "revoked", so this cannot be used to hunt for live codes.
+   return res.status(usable.reason === 'notfound' ? 404 : 403).json({ error: COVER_REFUSALS[usable.reason] })
+  }
 
   const granted = (grant.class_ids || []).map(Number)
   if (req.body?.action === 'launch') {
