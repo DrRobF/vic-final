@@ -30,7 +30,18 @@ export default async function handler(req, res) {
    if (req.query.id) {
     const room = await guard(req.query.id)
     if (!room) return res.status(404).json({ error: 'This room isn’t yours to run.' })
-    return res.json({ ...(await liveRoom(db, room)), launchable: await plannedToday(db, room.class_ids) })
+    // Who hears about a disclosure, printed on the screen on purpose. Being on the room's staff
+    // list is only permission to open it; the alert list is the child's own teachers plus the
+    // room's aides. Showing it is what stops an aide who ought to be on it from being silently
+    // missing -- the failure nobody notices until it matters.
+    const aideIds = (room.aide_ids || []).map(Number).filter(Boolean)
+    const { data: aides } = aideIds.length
+     ? await db.from('users').select('id,name').in('id', aideIds) : { data: [] }
+    return res.json({
+     ...(await liveRoom(db, room)),
+     launchable: await plannedToday(db, room.class_ids),
+     alerts: { aides: (aides || []).map(a => a.name).filter(Boolean) },
+    })
    }
    const { data: all } = await db.from('vic_rooms').select('id,name,code,class_ids,staff_ids').order('created_at', { ascending: true })
    const mine = []
