@@ -119,6 +119,7 @@ export default function SchoolDashboard() {
  const doors = [
   { href: '/school/cover', title: 'Sub coverage', note: uncovered ? `${plural(uncovered, 'teacher')} out today · ${slipsToday ? `${plural(slipsToday, 'slip')} made` : 'no slips yet'}` : slipsToday ? `${plural(slipsToday, 'slip')} out today` : 'Nobody out · make a slip any time', lead: uncovered > slipsToday },
   { href: `/weeklyplans?school=${schoolId}&week=${weekOf}`, title: 'Lesson plans', note: plans ? `${toReview ? `${plural(toReview, 'plan')} to review · ` : ''}${teachers.filter(t => sentIds.has(t.id)).length} of ${teachers.length} sent this week` : '…' },
+  { href: '/school/progress', title: 'Student progress', note: 'What VIC is seeing — standards that aren’t landing, and the children behind them' },
   { href: '/walkthroughs', title: 'Walkthroughs', note: walks ? (walkCount ? `${plural(walksThisWeek, 'visit')} this week · ${walkCount} this year` : 'Not started yet · start your first') : '…' },
   { href: '/school/payroll', title: 'Payroll', note: outs ? `${outs === 1 ? '1 person' : `${outs} people`} missing a clock-out` : 'Hours and pay periods' },
   { href: '/school/attendance', title: 'Attendance detail', note: att?.unmatched?.length ? `${plural(att.unmatched.length, 'name')} don’t match anyone` : 'Fix a day, check-in sheet, planned absences' },
