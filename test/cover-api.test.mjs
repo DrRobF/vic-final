@@ -6,7 +6,7 @@ import { createHash } from 'node:crypto'
 import { tidyCoverCode, COVER_CODE, grantUsable, COVER_REFUSALS } from '../lib/cover.mjs'
 
 // The handler is loaded into a sandbox so the rules can be tested without a database.
-function load({ grant = null, today = '2026-10-26', allowed = true, planned = [], launched = null, classes = [], roster = [], logins = [], practiced = null } = {}) {
+function load({ grant = null, today = '2026-10-26', allowed = true, planned = [], launched = null, classes = [], roster = [], logins = [], practiced = null, rooms = [] } = {}) {
  const calls = { launches: [], plannedFor: [], practices: [], upserts: [] }
  const src = readFileSync(new URL('../pages/api/cover/index.js', import.meta.url), 'utf8')
   .replace(/^import .*\n/gm, '').replace('export const ', 'const ')
@@ -30,6 +30,7 @@ function load({ grant = null, today = '2026-10-26', allowed = true, planned = []
    // list by awaiting the builder itself, so the mock has to answer both shapes.
    from(table) {
     const rows = table === 'classes' ? classes
+     : table === 'vic_rooms' ? rooms
      : table === 'ap_schools' ? [{ name: 'Saint Peter\'s Academy' }]
      : table === 'student_picture_logins' ? logins
      : [grant]
@@ -188,4 +189,46 @@ test('Opening a slip lists who is in the room, and never their pictures', async 
  assert.equal(ana.hasPictures, true)
  // The whole point of per-child reset: a slip never shows the room's passwords.
  assert.equal(/cat|pizza/.test(JSON.stringify(r.data)), false, 'login pictures leaked to the cover screen')
+})
+
+
+// Nov 2: Rob was standing in a covered room with a working slip and a class of children who
+// could not log in, because the code each COMPUTER needs is a different code and the slip
+// never mentioned it. The adult on this screen is often a stranger; anything they need and
+// cannot guess has to be on it.
+test('a slip carries the room code each computer needs', async () => {
+ const rooms = [{ name: 'VIC & IXL Room', code: 'HPXJ5U', class_ids: [36, 37, 38, 39] }]
+ const { run } = load({ grant: GRANT, rooms }), r = res()
+ await run(post({ code: 'ABCD2345' }), r)
+ assert.equal(r.data.rooms.length, 1)
+ assert.equal(r.data.rooms[0].code, 'HPXJ5U')
+ // Only the granted classes, never the rest of the room's.
+ assert.equal([...r.data.rooms[0].classIds].sort().join(','), '36,37')
+})
+test('a room with none of the slip\u2019s classes is left off', async () => {
+ const rooms = [
+  { name: 'VIC & IXL Room', code: 'HPXJ5U', class_ids: [36, 37] },
+  { name: 'K-2 VIC & IXL Room', code: 'K2ROOM', class_ids: [17, 19, 26] },
+ ]
+ const { run } = load({ grant: GRANT, rooms }), r = res()
+ await run(post({ code: 'ABCD2345' }), r)
+ assert.equal(r.data.rooms.map(x => x.code).join(','), 'HPXJ5U')
+})
+test('a slip spanning two rooms gets both codes', async () => {
+ const spanning = { ...GRANT, class_ids: [36, 17] }
+ const rooms = [
+  { name: 'VIC & IXL Room', code: 'HPXJ5U', class_ids: [36, 37] },
+  { name: 'K-2 VIC & IXL Room', code: 'K2ROOM', class_ids: [17, 19] },
+ ]
+ const { run } = load({ grant: spanning, rooms }), r = res()
+ await run(post({ code: 'ABCD2345' }), r)
+ assert.equal(r.data.rooms.map(x => x.code).sort().join(','), 'HPXJ5U,K2ROOM')
+})
+test('losing the room list costs the code panel, never the lessons', async () => {
+ // The lessons are why the adult is here; a failed lookup must not take the day down.
+ const { run } = load({ grant: GRANT, rooms: null, planned: [{ lessonId: 'L1', classId: 36, ready: true }] }), r = res()
+ await run(post({ code: 'ABCD2345' }), r)
+ assert.ok(Array.isArray(r.data.rooms))
+ assert.equal(r.data.rooms.length, 0)
+ assert.equal(r.data.coveringName, 'Amber Manuel')
 })
