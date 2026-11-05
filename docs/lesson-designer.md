@@ -39,12 +39,24 @@ Student-facing VIC (practice, room screen, learner levels) does NOT read this fi
 It keeps its own `['math','reading']` whitelist, so adding a subject to the planner
 never pushes new content at a child.
 
-**Science and social studies: not imported yet.** The code path is ready; the
-catalogue entries are not. Florida social studies is stable (Florida's State Academic
-Standards -- Social Studies, rule 6A-1.09401) and is the first import. Florida science
-is mid-revision: the department ran a B.E.S.T. science standards listening tour in
-October 2026, so anything imported now may be superseded. Importing requires the
-official PDFs -- no standard text is ever written by VIC or by an AI.
+**Florida science and social studies (November 5, 2026): 876 entries imported.**
+Social studies 588 (K 30, 1 31, 2 29, 3 35, 4 70, 5 70, 6 99, 7 83, 8 141) from
+Florida's State Academic Standards -- Social Studies 2025, rule 6A-1.09401 F.A.C.
+Science 288 (K 19, 1 19, 2 30, 3 32, 4 42, 5 37, 6 35, 7 34, 8 40), NGSSS
+benchmarks from a CPALMS Benchmark Results export. Both K-8 only; the 9-12 banded
+codes are dropped. Benchmark Clarifications are excluded, as with math and ELA.
+Every social studies entry was checked back against the source PDF as a verbatim
+string match. Rebuild with
+`python3 scripts/import-fl-science-socialstudies.py <ss.pdf> <science-export.docx>`
+then `node scripts/build-standard-coverage.mjs`.
+
+Two cautions carried deliberately. Florida science is NGSSS, which the department
+was revising as these went in -- a B.E.S.T. science listening tour ran in October
+2026 -- so these codes may be superseded and the `version` field on every row
+records what was imported and when. And the middle-school African American History
+strand is coded SS.68.*, one set of benchmarks for grades 6-8; each is filed once
+per grade so a grade 7 or 8 teacher can actually select it, with the grade carried
+in the internal id (`FL:SS.68.AA.1.1@7`) and the official code shown unchanged.
 
 ## Standards maintenance
 
