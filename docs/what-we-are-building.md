@@ -75,6 +75,52 @@ printed slip now says so and links to where they print. A sub should never be ha
 logins, and `/cover`'s reset gives a child *new* pictures — any card printed earlier is then
 out of date.
 
+## Nov 2 — the denominator held up, and it changed the red-flag rule
+
+The attempt table (migration `20261027120000`) is live and doing its job: 109 attempts across
+35 students and 23 standards, every verdict since Oct 28 resolving an attempt, and verdicts no
+longer 100% `met` — 195 met, 10 partly, 6 not_yet. The censorship described below is broken.
+The 24 unlinked verdicts are all from Oct 27 itself, before the deploy.
+
+**But the rule proposed below — flag a child on unresolved attempts — does not survive its own
+data.** Of 109 attempts, **45 have three turns or fewer and 42 of those are still open**: 41% of
+everything recorded. Those are not struggling children. That is a child opening a skill and
+leaving — a bell, a login, a switch to another skill, an aide relaunching the room. Run the
+unresolved-attempts rule over the real rows and it returns **75 findings**, which is to say
+everybody, which is to say nothing.
+
+**So turns is the filter, and it splits one flag into two facts with two different owners.**
+Agreed with Rob on Nov 2:
+
+- **Worked at it, hasn't landed** — a teaching question. Per child per standard: never reached
+  `met`, and either ten or more turns of real effort or an explicit `partly`/`not_yet` from VIC.
+  Repetition alone does not qualify: two two-turn attempts is a child leaving twice.
+- **Opening skills and leaving** — a supervision question. Three or more attempts of three turns
+  or fewer that never reached `met`, counted per child rather than per standard, because the
+  pattern is about the child's morning and not about fractions.
+
+The two are **never merged into one "red flag" list**. Put both on one list and the principal is
+sent to the wrong person half the time, which is worse than having no list.
+
+Over the real rows these give **11 findings across 6 children** for the teaching signal (4 of
+them children who came back to a standard a second time) and **6 children** for the supervision
+signal, out of 33 with rows. That is a morning's work, not a wall.
+
+**One finding worth keeping:** every student-standard pair that reached a second attempt in the
+first week ended without a `met` — 15 out of 15. Small sample, but a repeat attempt is on its own
+the strongest signal in this data, and the screen ranks it above a single long attempt.
+
+Rules live in `lib/student-evidence.mjs` and are tested in `test/student-evidence.test.mjs`;
+several of those tests fail under the unresolved-attempts rule and pass under this one, which is
+the only reason to have written a new one. The screen is `/school/progress`, one page at two
+altitudes: a leader gets standards first with children underneath, a teacher gets their own
+children by name.
+
+**Still not said anywhere on that screen: "on level".** `met` is acquisition, not mastery, and
+the honest claim still needs the second reading two or more weeks later agreed in
+`assessment-and-privacy-spec.md`. The page reports what was attempted and what landed, says in
+plain words what "got there" does and does not mean, and lets the adult draw the conclusion.
+
 ## Open right now — Oct 27, read before building anything about student data
 
 ### The verdict stream is not trustworthy yet. Do not build the dashboard on it.

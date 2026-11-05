@@ -166,6 +166,7 @@ export default function MyWeek() {
     <div className="moregrid">
      <a className="panel tile" href="/lessons"><strong>My Lessons</strong><span>Every lesson you’ve made, with its progress.</span></a>
      {account.classroom ? <a className="panel tile" href="/classes"><strong>My Classes</strong><span>Students, levels and what VIC is teaching.</span></a> : <a className="panel tile" href="/join"><strong>Join your school</strong><span>Use your school’s code so VIC can teach your students.</span></a>}
+     {account.classroom && <a className="panel tile" href="/school/progress"><strong>What VIC is seeing</strong><span>Who worked hard and is still stuck, and who keeps wandering off.</span></a>}
      <a className="panel tile" href="/parentletters"><strong>Families</strong><span>Student letters and class updates.</span></a>
      <a className="panel tile" href="/learning"><strong>Learning Paths</strong><span>Short practice for you, picked from walkthroughs.</span></a>
      {account.leader && <a className="panel tile lead" href="/school"><strong>School dashboard</strong><span>Lesson plans, walkthroughs and people.</span></a>}
