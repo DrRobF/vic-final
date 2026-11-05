@@ -21,7 +21,7 @@ const ATTEMPT_ID = 777
 async function run({
  standard = MATH, subject = 'Math & Science', supports = null, levels = [], gradeLevel = 6,
  modelReply = 'Nice work. Try the next one.', studentText = 'ready', spoke = false,
- sessionMode = 'teacher_directed', messages = null,
+ sessionMode = 'teacher_directed', messages = null, alreadyResolved = false,
 } = {}) {
  const wrote = {}
  const push = (k, v) => { (wrote[k] ||= []).push(v) }
@@ -45,11 +45,16 @@ async function run({
     gte: () => b, lte: () => b, in: () => b, is: () => b,
     insert(row) { push(`${table}.insert`, row); mode = 'write'; return b },
     upsert(row, opts) { push(`${table}.upsert`, { row, opts }); mode = 'upsert'; return b },
-    update(patch) { push(`${table}.update`, patch); mode = 'write'; return b },
+    update(patch) { push(`${table}.update`, patch); mode = 'update'; return b },
     maybeSingle: async () => (mode === 'upsert'
      ? { data: { id: ATTEMPT_ID }, error: null }
      : { data: (tables[table] || [])[0] ?? null, error: null }),
-    then: (res, rej) => Promise.resolve(mode ? { data: null, error: null } : { data: tables[table] || [], error: null }).then(res, rej),
+    // An update guarded by `.is('resolved_at', null)` returns the rows it changed: one row when the
+    // attempt was still open, none when a verdict already closed it.
+    then: (res, rej) => Promise.resolve(
+     mode === 'update' ? { data: alreadyResolved ? [] : [{ id: ATTEMPT_ID }], error: null }
+      : mode ? { data: null, error: null }
+       : { data: tables[table] || [], error: null }).then(res, rej),
    }
    return b
   },
@@ -201,4 +206,33 @@ test('a database that refuses the attempt never costs the child her lesson', asy
  const { res } = await run({ modelReply: 'Keep going.' })
  assert.equal(res.code, 200)
  assert.match(res.body.reply, /Keep going/)
+})
+
+test('a repeat tag for the same skill writes no second verdict', async () => {
+ // The fault this guards. Since v3.7 the tag stopped ending the lesson, so VIC carries on and
+ // emits it again later. Each emission used to insert another row, and one skill became several:
+ // on Oct 26 the room screen showed 85 skills for 17 actually worked.
+ const { res, goals, resolved } = await run({ modelReply: 'Great. [[VIC_GOAL: met]]', alreadyResolved: true })
+ assert.equal(res.code, 200, 'the child\'s lesson carries on regardless')
+ assert.equal(resolved.length, 1, 'closing is still attempted — it is the lock')
+ assert.equal(goals.length, 0, 'but nothing is written, because this skill already has its verdict')
+})
+
+test('the first tag for a skill still writes exactly one verdict', async () => {
+ const { goals, resolved } = await run({ modelReply: 'Great. [[VIC_GOAL: met]]' })
+ assert.equal(resolved.length, 1)
+ assert.equal(goals.length, 1, 'the real verdict is not lost to the guard')
+ assert.equal(goals[0].verdict, 'met')
+ assert.equal(goals[0].attempt_id, ATTEMPT_ID)
+})
+
+test('a verdict is written only after the attempt is closed, never before', async () => {
+ // Order is the lock. Insert first and two concurrent turns both write a verdict.
+ const { res } = await run({ modelReply: 'Great. [[VIC_GOAL: met]]' })
+ assert.equal(res.code, 200)
+ const src = readFileSync(new URL('../pages/api/vic.js', import.meta.url), 'utf8')
+ const closeAt = src.indexOf("from('vic_goal_attempts').update(patch)")
+ const insertAt = src.indexOf("from('vic_goal_results').insert")
+ assert.ok(closeAt > 0 && insertAt > 0, 'both writes are still there')
+ assert.ok(closeAt < insertAt, 'the attempt must be closed before the verdict is written')
 })

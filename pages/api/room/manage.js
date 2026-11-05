@@ -208,7 +208,10 @@ async function liveRoom(db, room) {
   ids.length ? db.from('vic_safety_alerts').select('id,student_id,category,created_at,reviewed_at').in('student_id', ids).gte('created_at', dayStart) : empty,
   ids.length ? db.from('vic_room_notes').select('id,student_id,note,created_at').eq('room_id', room.id).eq('active', true).in('student_id', ids) : empty,
   ids.length ? db.from('assignments').select('student_id,mode,assigned_at,lessons!inner(id,title,class_id,source_lesson_id)').in('student_id', ids).eq('status', 'assigned').in('lessons.class_id', room.class_ids || []).gte('assigned_at', dayStart).lte('assigned_at', new Date().toISOString()) : empty,
-  ids.length ? db.from('vic_goal_results').select('student_id,verdict').in('student_id', ids).gte('created_at', dayStart) : empty,
+  // Attempts, not verdict rows. One attempt is one piece of work (assignment_id is unique on it),
+  // so counting them cannot double-count a skill the way counting tags did -- and an attempt with
+  // no verdict yet is the "still working" the screen never used to be able to show.
+  ids.length ? db.from('vic_goal_attempts').select('student_id,verdict,resolved_at,standard_id').in('student_id', ids).gte('last_seen_at', dayStart) : empty,
  ])
  const by = (rows, key = 'student_id') => { const m = new Map(); for (const r of rows || []) { const k = Number(r[key]); m.set(k, [...(m.get(k) || []), r]) } return m }
  const picBy = new Map((pics || []).map(p => [Number(p.student_id), p]))
@@ -231,7 +234,13 @@ async function liveRoom(db, room) {
    status, minutesQuiet, turns, lastWith: activity[0]?.kind || null,
    lessons, alerts: openAlerts.map(a => ({ id: a.id, category: a.category, at: a.created_at })),
    notes: (noteBy.get(id) || []).map(n => ({ id: n.id, note: n.note })),
-   goals: ['met', 'partly', 'not_yet'].reduce((o, v) => ({ ...o, [v]: (goalBy.get(id) || []).filter(g => g.verdict === v).length }), {}),
+   skills: (rows => ({
+    workedOn: rows.length,
+    gotThere: rows.filter(r => r.verdict === 'met').length,
+    partly: rows.filter(r => r.verdict === 'partly').length,
+    notYet: rows.filter(r => r.verdict === 'not_yet').length,
+    stillWorking: rows.filter(r => !r.resolved_at).length,
+   }))(goalBy.get(id) || []),
    pictures: pic?.pictures || null, locked: !!(pic?.locked_until && new Date(pic.locked_until) > new Date()),
   }
  })

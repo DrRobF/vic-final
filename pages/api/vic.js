@@ -261,27 +261,44 @@ export default async function handler(req, res) {
       }
     }
 
-    // VIC's verdict on this lesson or practice skill: the evidence behind "on level" and red flags.
+    // VIC's verdict on this lesson or practice skill: the evidence behind the progress screens.
+    //
+    // ONE verdict per attempt, and the attempt is what enforces it. Since v3.7 the tag stopped
+    // ending the lesson, so VIC carries on teaching the same standard afterwards -- and emits the
+    // tag again on a later turn. This insert used to run every time, so one skill became two, three
+    // or five rows. On Oct 26 the room screen showed 85 skills for 17 that were actually worked.
+    //
+    // So the attempt is closed FIRST, conditionally on it still being open, and the verdict is
+    // written only if that close actually changed a row. The update is the lock: a second tag for
+    // the same attempt finds nothing to close and writes nothing. Deliberately first-verdict-wins
+    // -- a later differing tag is not treated as a correction, because `met` already means three
+    // correct unaided and the honest re-test is the spaced second reading, not another judgment in
+    // the same sitting.
     let goal = null
     if (goalTag.goal && onTask) {
       goal = goalTag.goal
-      const { error: goalError } = await auth.admin.from('vic_goal_results').insert(resultRow({
-        studentId: auth.profile.id,
-        classId: activityAssignment.class_id,
-        lessonId: assignedLessonRow.id,
-        assignmentId: activityAssignment.assignment_id,
-        standardId: assignedLessonRow.practice_standard || null,
-        verdict: goal,
-        practice: !!assignedLessonRow.practice_standard,
-        attemptId,
-        condition,
-      }))
-      if (goalError) console.error('VIC goal result not saved', { code: goalError.code })
-      // The verdict closes the attempt, so it stops counting as unfinished work.
       const patch = resolvePatch(goal)
+      let record = true
       if (patch && attemptId) {
-        const { error: closeError } = await auth.admin.from('vic_goal_attempts').update(patch).eq('id', attemptId).is('resolved_at', null)
+        const { data: closed, error: closeError } = await auth.admin
+          .from('vic_goal_attempts').update(patch).eq('id', attemptId).is('resolved_at', null).select('id')
         if (closeError) console.error('VIC attempt not resolved', { code: closeError.code })
+        // No row closed means this attempt already carries a verdict: a repeat tag, not a new skill.
+        else record = (closed || []).length > 0
+      }
+      if (record) {
+        const { error: goalError } = await auth.admin.from('vic_goal_results').insert(resultRow({
+          studentId: auth.profile.id,
+          classId: activityAssignment.class_id,
+          lessonId: assignedLessonRow.id,
+          assignmentId: activityAssignment.assignment_id,
+          standardId: assignedLessonRow.practice_standard || null,
+          verdict: goal,
+          practice: !!assignedLessonRow.practice_standard,
+          attemptId,
+          condition,
+        }))
+        if (goalError) console.error('VIC goal result not saved', { code: goalError.code })
       }
     }
 
