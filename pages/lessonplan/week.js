@@ -8,6 +8,7 @@ import { supabase } from '../../lib/supabase'
 import { persistLesson } from '../../lib/lesson-library-client'
 import { lessonLink } from '../../lib/educator-lessons.mjs'
 import { DEFAULT_SECTIONS, GROUP_DEFAULTS } from '../../lib/lesson-designer.mjs'
+import { PLANNER_SUBJECTS, hasCatalogue, subjectOptions } from '../../lib/lesson-subjects.mjs'
 import { WEEKDAYS, WEEK_STATUS, defaultWeekOf, weekDates, mondayOf, formatDay, weekLabel, weekPhrase, gradeLabel, subjectLabel, emptyWeekDay, normalizeWeekSetup, dayLessonRequest, validEmail } from '../../lib/lesson-week.mjs'
 
 const GRADES=['K','1','2','3','4','5','6','7','8']
@@ -51,7 +52,7 @@ export default function WeekPlanner(){
   return()=>{active=false}
  },[user?.id,router.isReady,router.query.id])
 
- const builtIn=['CCSS','FL','PA'].includes(week.state)&&GRADES.includes(week.grade)&&['math','reading'].includes(week.subject)
+ const builtIn=GRADES.includes(week.grade)&&hasCatalogue(week.state,week.grade,week.subject)
  useEffect(()=>{
   let cancelled=false;setStandards([])
   if(!builtIn)return
@@ -171,7 +172,7 @@ export default function WeekPlanner(){
  async function removeWeek(w){if(!window.confirm(`Remove the ${weekPhrase(w.weekOf)} plan? Its lessons stay in My Lessons.`))return;try{await call('/api/lessonplan/weeks',{method:'POST',body:{action:'delete',id:w.id}});if(w.id===week.id)newWeek();loadHistory()}catch(e){setError(e.message)}}
 
  const stepLabel={lesson:'Designing the lesson…',worksheet:'Creating the worksheet and answer key…',saving:'Saving…',done:'Ready',error:'Not finished'}
- const stateChoice=['CCSS','FL','PA'].includes(week.state)?week.state:'other',gradeChoice=GRADES.includes(week.grade)?week.grade:'other',subjectChoice=['math','reading'].includes(week.subject)?week.subject:'other'
+ const stateChoice=['CCSS','FL','PA'].includes(week.state)?week.state:'other',gradeChoice=GRADES.includes(week.grade)?week.grade:'other',subjectChoice=PLANNER_SUBJECTS.includes(week.subject)?week.subject:'other'
 
  return <><Head><title>Weekly Lesson Planner for Teachers | AskVic</title><meta name="description" content="Plan a full week of standards-based lessons in one step: a different standard each day, with materials, worksheets and answer keys. Download the week or send it to your principal."/><link rel="canonical" href="https://www.askvic.ai/lessonplan/week"/></Head>
  <div className="wk-shell"><VICHeader currentPath="/lessonplan"/>
@@ -201,7 +202,7 @@ export default function WeekPlanner(){
    </label>}
    <label>Grade<select value={gradeChoice} disabled={locked} onChange={e=>changeTarget('grade',e.target.value==='other'?'':e.target.value)}>{GRADES.map(g=><option key={g} value={g}>{gradeLabel(g)}</option>)}<option value="other">Another grade or course</option></select></label>
    {gradeChoice==='other'&&<label>Grade or course<input required maxLength="30" value={week.grade} disabled={locked} onChange={e=>update({grade:e.target.value})} placeholder="Grade 10 or Biology"/></label>}
-   <label>Subject<select value={subjectChoice} disabled={locked} onChange={e=>changeTarget('subject',e.target.value==='other'?'':e.target.value)}><option value="math">Math</option><option value="reading">Reading / ELA</option><option value="other">Another subject</option></select></label>
+   <label>Subject<select value={subjectChoice} disabled={locked} onChange={e=>changeTarget('subject',e.target.value==='other'?'':e.target.value)}>{subjectOptions(week.state).map(o=><option key={o.value} value={o.value}>{o.label}</option>)}<option value="other">Another subject</option></select></label>
    {subjectChoice==='other'&&<label>Subject name<input required maxLength="100" value={week.subject} disabled={locked} onChange={e=>update({subject:e.target.value})} placeholder="Science, social studies…"/></label>}
    <label>Minutes per lesson<input type="number" min="10" max="180" required value={week.minutes} disabled={locked} onChange={e=>update({minutes:Number(e.target.value)})}/></label>
   </div>
