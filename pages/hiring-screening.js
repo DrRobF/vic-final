@@ -1,0 +1,222 @@
+import Head from 'next/head'
+import {useEffect,useRef,useState} from 'react'
+import {supabase} from '../lib/supabase'
+import {BUCKET} from '../lib/hiring-media.mjs'
+
+// The candidate's screening interview. Invitation only, nobody signed in, reached with the code
+// from their email.
+//
+// Two things this screen must never do. It must not lose a recording: the take stays in memory and
+// on the page until the upload is confirmed, and a failed upload leaves the clip there to retry
+// rather than clearing it. And it must not make the candidate feel watched or sold to -- there is
+// no advertising on this page, no account to create, and nothing about the software it runs on.
+
+const mins=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
+
+async function api(body){
+ const r=await fetch('/api/hiring/screening',{method:body?'POST':'GET',credentials:'same-origin',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})})
+ const d=await r.json().catch(()=>({}))
+ if(!r.ok)throw Object.assign(new Error(d.error||'Something went wrong. Please try again, or call the school office.'),{status:r.status})
+ return d
+}
+
+// Whichever type this browser actually records. Safari records MOV/MP4, Chrome and Firefox WebM.
+function pickMime(){
+ if(typeof MediaRecorder==='undefined')return ''
+ for(const t of ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'])if(MediaRecorder.isTypeSupported(t))return t
+ return ''
+}
+
+function Recorder({question,limit,onDone,busy}){
+ const [stream,setStream]=useState(null),[state,setState]=useState('idle'),[clip,setClip]=useState(null),[seconds,setSeconds]=useState(0),[error,setError]=useState('')
+ const video=useRef(null),recorder=useRef(null),chunks=useRef([]),timer=useRef(null)
+
+ useEffect(()=>()=>{stream?.getTracks().forEach(t=>t.stop());clearInterval(timer.current)},[stream])
+ useEffect(()=>{if(video.current&&stream&&state!=='done')video.current.srcObject=stream},[stream,state])
+
+ async function camera(){
+  setError('')
+  try{
+   const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:true})
+   setStream(s);setState('ready')
+  }catch{setError('We could not reach your camera or microphone. Check your browser’s permission prompt, or call the office and we will arrange an interview without recording.')}
+ }
+
+ function start(){
+  const mime=pickMime()
+  if(!mime){setError('This browser cannot record video. Try Chrome, Edge, Firefox or Safari — or call the office for an interview without recording.');return}
+  chunks.current=[]
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1_200_000})
+  rec.ondataavailable=e=>{if(e.data?.size)chunks.current.push(e.data)}
+  rec.onstop=()=>{
+   clearInterval(timer.current)
+   const type=mime.split(';')[0]
+   setClip({blob:new Blob(chunks.current,{type}),type})
+   setState('done')
+   stream.getTracks().forEach(t=>t.stop())
+  }
+  recorder.current=rec
+  rec.start(1000)
+  setSeconds(0);setState('recording')
+  timer.current=setInterval(()=>setSeconds(s=>{if(s+1>=limit){try{rec.stop()}catch{}return limit}return s+1}),1000)
+ }
+
+ const stop=()=>{try{recorder.current?.stop()}catch{}}
+ const again=()=>{setClip(null);setSeconds(0);setStream(null);setState('idle')}
+
+ return <div className="rec">
+  {state==='done'&&clip
+   ?<video controls src={URL.createObjectURL(clip.blob)} className="shot"/>
+   :<video ref={video} autoPlay muted playsInline className="shot"/>}
+
+  {state==='idle'&&<button type="button" className="primary" onClick={camera}>Turn on camera</button>}
+  {state==='ready'&&<button type="button" className="primary" onClick={start}>Start recording</button>}
+  {state==='recording'&&<div className="live">
+   <span className="dot" aria-hidden="true"/><strong>Recording · {mins(seconds)}</strong>
+   <span className="muted">stops automatically at {mins(limit)}</span>
+   <button type="button" onClick={stop}>Stop</button>
+  </div>}
+  {state==='done'&&<div className="row">
+   <button type="button" className="primary" disabled={!!busy} onClick={()=>onDone(clip,seconds)}>{busy||'Use this take'}</button>
+   <button type="button" disabled={!!busy} onClick={again}>Record it again</button>
+   <span className="muted">{mins(seconds)}</span>
+  </div>}
+  {error&&<p className="bad" role="alert">{error}</p>}
+  <style jsx>{`
+   .rec{display:grid;gap:12px}
+   .shot{width:100%;max-height:360px;background:var(--vic-ink);border-radius:14px}
+   .row,.live{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+   .dot{width:12px;height:12px;border-radius:50%;background:var(--vic-danger);display:inline-block}
+   .muted{color:var(--vic-text-muted);font-size:15px}
+   .bad{background:var(--vic-danger-soft);color:var(--vic-danger);padding:10px 12px;border-radius:10px;margin:0}
+   button{padding:12px 16px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
+   .primary{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
+  `}</style>
+ </div>
+}
+
+export default function HiringScreening(){
+ const [ready,setReady]=useState(false),[session,setSession]=useState(false),[data,setData]=useState(null)
+ const [code,setCode]=useState(''),[commute,setCommute]=useState(''),[consent,setConsent]=useState(false)
+ const [busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('')
+ const [drafts,setDrafts]=useState({}),[submitted,setSubmitted]=useState('')
+
+ useEffect(()=>{api().then(d=>{setSession(!!d.session);if(d.session){setData(d);if(d.candidate?.submitted)setSubmitted(d.candidate.name||'Candidate')}}).catch(()=>{}).finally(()=>setReady(true))},[])
+
+ const run=async(label,fn)=>{setBusy(label);setError('');setNotice('');try{await fn()}catch(e){setError(e.message)}finally{setBusy('')}}
+
+ const enter=e=>{e.preventDefault();run('Opening your interview…',async()=>{const d=await api({action:'enter',code});setSession(true);setData(d)})}
+ const agree=e=>{e.preventDefault();run('Saving…',async()=>{const d=await api({action:'consent',consent:true,commute});setData(d);setNotice('Thank you. You can start with question one whenever you are ready.')})}
+
+ // The clip is handed over only after the server confirms it. If any step fails the take is still
+ // on the page, so the candidate retries rather than re-records.
+ const useTake=(question)=>async(clip,seconds)=>{
+  await run('Uploading…',async()=>{
+   const prep=await api({action:'upload-url',kind:`q${question.ordinal}`,contentType:clip.type,bytes:clip.blob.size})
+   const up=await supabase.storage.from(BUCKET).uploadToSignedUrl(prep.path,prep.token,clip.blob,{contentType:prep.contentType})
+   if(up.error)throw new Error('The upload did not finish. Check your connection and press “Use this take” again — your recording is still here.')
+   const d=await api({action:'file',kind:`q${question.ordinal}`,path:prep.path,questionId:question.id,seconds})
+   setData(d);setNotice(`Question ${question.ordinal} saved.`)
+  })
+ }
+
+ const saveWritten=q=>run('Saving…',async()=>{const d=await api({action:'written',questionId:q.id,text:drafts[q.id]||''});setData(d);setNotice('Saved.')})
+ const submit=()=>{if(!window.confirm('Submit your interview? You will not be able to change your answers afterwards.'))return
+  run('Submitting…',async()=>{const d=await api({action:'submit'});setSubmitted(d.name||'Candidate')})}
+
+ const videos=(data?.questions||[]).filter(q=>q.stage==='video')
+ const written=(data?.questions||[]).filter(q=>q.stage==='written')
+ const left=(data?.questions||[]).filter(q=>!q.answered).length
+
+ return <main>
+  <Head><title>Teacher screening interview</title><meta name="robots" content="noindex,nofollow"/></Head>
+
+  <header className="hero">
+   <p className="eyebrow">TEACHER SCREENING INTERVIEW</p>
+   <h1>Five video questions and five short written answers.</h1>
+   <p>Take it at your own pace. Nothing is sent until you press submit, and you can re-record any answer as many times as you like.</p>
+  </header>
+
+  {!ready?<p role="status">Opening your interview…</p>
+  :submitted?<section className="card">
+   <h2>Your interview is in. Thank you.</h2>
+   <p>We have your five video answers and your written responses, {submitted}. Our team reviews every complete packet, and you will hear from us by email or phone within two weeks of the closing date — either way. If anything needs correcting, call the office.</p>
+  </section>
+  :!session?<section className="card">
+   <h2>Enter your invitation code</h2>
+   <p className="muted">It is the twelve-character code in your invitation email, and it works on one device at a time.</p>
+   <form onSubmit={enter} className="row">
+    <input value={code} onChange={e=>setCode(e.target.value)} placeholder="ABCD-EFGH-JKLM" aria-label="Invitation code" autoComplete="off" spellCheck="false"/>
+    <button className="primary" disabled={!!busy}>{busy||'Open my interview'}</button>
+   </form>
+   <p className="muted">Having trouble, or would you prefer an interview that does not involve recording? Call the school office and we will arrange one.</p>
+  </section>
+  :!data?.candidate?.consented?<section className="card">
+   <h2>Before you begin</h2>
+   <p className="notice">{data?.notice}</p>
+   <form onSubmit={agree} className="stack">
+    <label>Have you reviewed our school hours and your daily commute, and is it sustainable for you long term?
+     <textarea rows={3} value={commute} onChange={e=>setCommute(e.target.value)} placeholder="Your own answer — this is not scored."/>
+    </label>
+    <label className="check"><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/> I have read the notice above and I am ready to record.</label>
+    <button className="primary" disabled={!consent||!!busy}>{busy||'Start my interview'}</button>
+   </form>
+  </section>
+  :<>
+   <p className="progress" role="status">{left===0?'All answers saved. Submit when you are ready.':`${left} ${left===1?'answer':'answers'} still to do.`}</p>
+
+   {videos.map(q=><section className="card" key={q.id}>
+    <p className="eyebrow">VIDEO {q.ordinal} OF {videos.length}{q.answered?' · SAVED':''}</p>
+    <h2>{q.prompt}</h2>
+    <p className="muted">Up to {mins(data.limits.videoSeconds)}. Tell us about real children and real classrooms — a story beats a textbook answer every time.</p>
+    {q.answered&&<p className="done"><span aria-hidden="true">✓</span> Saved{q.seconds?` · ${mins(q.seconds)}`:''}. Record it again below if you would rather.</p>}
+    <Recorder question={q} limit={data.limits.videoSeconds} onDone={useTake(q)} busy={busy}/>
+   </section>)}
+
+   {written.map(q=><section className="card" key={q.id}>
+    <p className="eyebrow">WRITTEN {q.ordinal} OF {written.length}{q.answered?' · SAVED':''}</p>
+    <h2>{q.prompt}</h2>
+    <p className="muted">A single paragraph. We read for what you say and how well you write it, so give it a proofread.</p>
+    <textarea rows={6} value={drafts[q.id]??q.text??''} onChange={e=>setDrafts(d=>({...d,[q.id]:e.target.value}))} placeholder="Your answer"/>
+    <div className="row">
+     <button type="button" className="primary" disabled={!!busy} onClick={()=>saveWritten(q)}>{busy||(q.answered?'Save changes':'Save this answer')}</button>
+     {q.answered&&<span className="done"><span aria-hidden="true">✓</span> Saved{q.words?` · ${q.words} words`:''}</span>}
+    </div>
+   </section>)}
+
+   <section className="card">
+    <h2>Submit your interview</h2>
+    <p className="muted">{left===0?'Everything is saved. Once you submit, your answers are final.':'Finish every question above first.'}</p>
+    <button type="button" className="primary" disabled={left>0||!!busy} onClick={submit}>{busy||'Submit my interview'}</button>
+   </section>
+  </>}
+
+  {error&&<p className="bad" role="alert">{error}</p>}
+  {notice&&<p className="ok" role="status">{notice}</p>}
+
+  <style jsx>{`
+   main{max-width:780px;margin:0 auto;padding:24px 18px 64px}
+   .hero{margin:8px 0 20px}
+   .eyebrow{font-family:var(--font-mono);font-size:13px;letter-spacing:.08em;color:var(--vic-text-secondary);margin:0 0 6px}
+   h1{font-size:30px;margin:0 0 8px}
+   h2{font-size:21px;margin:0 0 8px;line-height:1.35}
+   .card{background:var(--vic-surface);border:1px solid var(--vic-border-soft);border-radius:18px;padding:20px;margin:0 0 18px;box-shadow:var(--vic-shadow-soft)}
+   .stack{display:grid;gap:14px}
+   .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}
+   .muted{color:var(--vic-text-secondary);font-size:15px}
+   .notice{background:var(--vic-accent-soft);padding:14px;border-radius:12px;line-height:1.55}
+   .progress{font-weight:700;padding:12px 14px;background:var(--vic-surface-muted);border-radius:12px}
+   /* Colorblind-safe: the tick and the word carry the meaning, not the color. */
+   .done{display:inline-flex;gap:8px;align-items:center;font-weight:700;color:var(--vic-text-primary)}
+   .ok{background:var(--vic-primary-soft);padding:12px 14px;border-radius:12px;font-weight:600}
+   .bad{background:var(--vic-danger-soft);color:var(--vic-danger);padding:12px 14px;border-radius:12px;font-weight:600}
+   label{display:grid;gap:6px;font-weight:600}
+   .check{display:flex;gap:10px;align-items:flex-start;font-weight:600}
+   input,textarea{padding:12px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);width:100%;font-family:var(--font-body)}
+   textarea{font-family:var(--font-read);line-height:1.55}
+   button{padding:12px 18px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
+   .primary{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
+   button:disabled{background:var(--vic-disabled);border-color:var(--vic-disabled);color:#fff}
+  `}</style>
+ </main>
+}
