@@ -71,6 +71,13 @@ create table if not exists public.ap_hiring_candidates (
  -- else's application, so it is long enough not to be guessed and it expires.
  invite_code text not null unique check (char_length(invite_code) between 8 and 40),
  invite_expires_at timestamptz,
+ -- Single use. A code that still works after it has been claimed is a code that can be forwarded,
+ -- and then two people are recording into one application.
+ claimed_at timestamptz,
+ -- The candidate's session after they enter their code. Held here rather than signed into a cookie
+ -- so that it can be revoked, and so this feature needs no signing secret of its own.
+ session_token text unique check (session_token is null or char_length(session_token) between 32 and 80),
+ session_expires_at timestamptz,
  stage text not null default 'invited'
   check (stage in ('invited','screening_submitted','interview','demo','references','offer','hired','declined','withdrawn')),
  -- Commute is a real concern and a terrible thing to score: a points system built on where people
@@ -185,3 +192,25 @@ revoke all on public.ap_hiring_postings, public.ap_hiring_questions, public.ap_h
 grant select, insert, update, delete on public.ap_hiring_postings, public.ap_hiring_questions,
  public.ap_hiring_candidates, public.ap_hiring_responses, public.ap_hiring_scores,
  public.ap_hiring_screener, public.ap_hiring_reference_calls to service_role;
+
+-- Applicant video and resumes. A private bucket: nothing in here is ever served by URL, only
+-- through a short-lived signed link created for a signed-in school leader.
+--
+-- Saint Peter's own website does this with Vercel Blob. AskVic already has Supabase for everything
+-- else, and Supabase Storage gives the same direct browser-to-storage upload through a signed URL,
+-- so a five-minute recording never passes through a serverless function (which would fail: the
+-- body limit is a few megabytes and a video is tens).
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values (
+ 'hiring-media', 'hiring-media', false, 94371840,
+ array['video/webm','video/mp4','video/quicktime','application/pdf','application/msword',
+       'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
+)
+on conflict (id) do update
+ set public = false,
+     file_size_limit = excluded.file_size_limit,
+     allowed_mime_types = excluded.allowed_mime_types;
+
+-- No anon or authenticated policies are created on purpose. Every read and write goes through the
+-- server with the service role, which checks the candidate's session or the leader's school access
+-- first. A candidate must never be able to list this bucket, or they could read other applications.
