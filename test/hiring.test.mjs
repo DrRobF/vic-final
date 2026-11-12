@@ -5,6 +5,7 @@ import {
  SCREENER_LINES, SCREENER_MAX, STAGE_TOTALS, GRAND_TOTAL,
  DEMO_RUBRIC, PLAN_RUBRIC,
  makeInviteCode, normalizeInviteCode, candidateInput, screenerTotal, rankCandidates, seedQuestions,
+ LADDER, STOPPED_STAGES, ladderState,
 } from '../lib/hiring.mjs'
 
 test('every question carries both look-fors, because a blank one means three scorers invent three bars', () => {
@@ -103,4 +104,42 @@ test('seeding a posting produces all three stages with unique ordinals per stage
   assert.equal(new Set(ordinals).size, ordinals.length, `${stage} has duplicate ordinals`)
  }
  assert.ok(rows.every(r => r.posting_id === 'posting-1' && r.school_id === 'school-1'))
+})
+
+test('a rung lights when its round is scored, and the ladder is not complete until none are waiting', () => {
+ const partial = ladderState([{ key: 'video', scored: true, total: 40, max: 50 }], 'interview')
+ assert.equal(partial.lit, 1)
+ assert.equal(partial.complete, false)
+ assert.equal(partial.next.key, 'screener')
+
+ const full = LADDER.map(l => ({ key: l.key, scored: true, total: 1, max: 2 }))
+ assert.equal(ladderState(full, 'interview').complete, true)
+})
+
+test('a deliberately skipped round stops being a gate', () => {
+ // Not every position gets a demo lesson. A candidate must not sit one rung short forever
+ // because their school does not run that round.
+ const state = ladderState([
+  { key: 'screener', skipped: true },
+  { key: 'video', scored: true, total: 40, max: 50 },
+  { key: 'written', scored: true, total: 38, max: 50 },
+  { key: 'demo', skipped: true },
+  { key: 'plan', skipped: true },
+ ], 'interview')
+ assert.equal(state.complete, true)
+ assert.equal(state.lit, 2)
+ assert.equal(state.skipped, 3)
+ assert.equal(state.next, null)
+})
+
+test('a ladder with nothing scored is never complete, however much was skipped', () => {
+ const allSkipped = LADDER.map(l => ({ key: l.key, skipped: true }))
+ assert.equal(ladderState(allSkipped, 'interview').complete, false)
+ assert.equal(ladderState([], 'interview').complete, false)
+})
+
+test('stopping a candidate is a stage, not a missing score', () => {
+ for (const stage of STOPPED_STAGES) assert.equal(ladderState([], stage).stopped, true)
+ assert.equal(ladderState([], 'interview').stopped, false)
+ assert.equal(ladderState([], 'hired').hired, true)
 })
