@@ -23,7 +23,7 @@ const EDUCATOR_NAV = [
 const SCHOOL_NAV = [
  { href: '/school', label: 'Dashboard', match: ['/school'] },
  { href: '/room', label: 'VIC Room', match: ['/room'] },
- { href: '/school/setup', label: '⚙ Setup', match: ['/school/setup', '/school/attendance', '/school/cover', '/school/payroll', '/walkthroughs', '/weeklyplans', '/assistantprincipal', '/admin'] },
+ { href: '/school/setup', label: '⚙ Setup', match: ['/school/setup', '/school/attendance', '/school/cover', '/school/payroll', '/walkthroughs', '/hiring', '/weeklyplans', '/assistantprincipal', '/admin'] },
 ]
 const SCHOOL_PATHS = ['/room', '/school', '/weeklyplans', '/walkthroughs', '/assistantprincipal', '/admin']
 const STUDENT_NAV = [

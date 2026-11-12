@@ -62,6 +62,9 @@ export default function SchoolSetup() {
    ['/school/attendance', 'Check-in kiosks, codes & sheets', 'Set up a check-in computer, staff codes, school hours, announcements, your Google Sheets.'],
    ['/school/payroll', 'Payroll settings', 'Pay periods, max paid hours a day, business manager email.'],
   ]],
+  ['Hiring', [
+   ['/hiring', 'Hiring & interviews', 'Create a position, invite candidates to record a screening interview, and score them against the rubric.', true],
+  ]],
   ['Walkthroughs', [
    ['/walkthroughs?tab=staff', 'Walkthrough phone app & join code', 'Put Walkthroughs on your phone’s home screen.'],
   ]],
