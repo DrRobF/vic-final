@@ -32,7 +32,7 @@ const weekStartIso = () => { const d = new Date(); d.setHours(0, 0, 0, 0); d.set
 // so the page never grows as AskVic does.
 export default function SchoolDashboard() {
  const { account, error: accountError } = useAccount({ next: '/school' })
- const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState(''), [att, setAtt] = useState(null), [walks, setWalks] = useState(null), [plans, setPlans] = useState(null), [cover, setCover] = useState(null), [error, setError] = useState('')
+ const [schools, setSchools] = useState(null), [schoolId, setSchoolId] = useState(''), [att, setAtt] = useState(null), [walks, setWalks] = useState(null), [plans, setPlans] = useState(null), [cover, setCover] = useState(null), [hiring, setHiring] = useState(null), [error, setError] = useState('')
  const [open, setOpen] = useState(null), [privacy, setPrivacy] = useState(false), [deciding, setDeciding] = useState(0), [order, setOrder] = useState(null), [saving, setSaving] = useState(false), [dismissed, setDismissed] = useState({}), [showHidden, setShowHidden] = useState(false)
  const [now, setNow] = useState(null)
  const weekOf = defaultWeekOf()
@@ -60,8 +60,9 @@ export default function SchoolDashboard() {
   api(`/api/assistantprincipal/walkthroughs?${q}`).then(setWalks).catch(() => setWalks({}))
   api(`/api/assistantprincipal/lessonplans?${q}&week=${weekOf}`).then(setPlans).catch(() => setPlans({}))
   api(`/api/school/cover?${q}`).then(setCover).catch(() => setCover({}))
+  api(`/api/hiring/admin?${q}`).then(setHiring).catch(() => setHiring({}))
  }, [schoolId])
- useEffect(() => { setAtt(null); setWalks(null); setPlans(null); setCover(null); loadAtt(); loadRest() }, [schoolId])
+ useEffect(() => { setAtt(null); setWalks(null); setPlans(null); setCover(null); setHiring(null); loadAtt(); loadRest() }, [schoolId])
 
  const today = att?.today
  const dkey = `askvic-dismissed-${schoolId}`
@@ -116,10 +117,22 @@ export default function SchoolDashboard() {
  const slipsToday = (cover?.grants || []).filter(g => g.day === today && !g.revoked).length
  const uncovered = people.filter(p => p.today?.needsSub && p.today.kind?.startsWith('absent')).length
 
+ // Hiring: the number that matters is interviews sitting unwatched. A candidate who recorded and
+ // is waiting on a panel is the only state here with a clock on it.
+ const cands = hiring?.candidates || []
+ const toWatch = cands.filter(c => c.submittedAt && !c.scorers).length
+ const recording = cands.filter(c => !c.submittedAt && c.stage === 'invited').length
+ const hiringNote = !hiring ? '…'
+  : toWatch ? `${plural(toWatch, 'interview')} to review${recording ? ` · ${recording} still recording` : ''}`
+  : recording ? `${plural(recording, 'candidate')} still recording`
+  : cands.length ? `${plural(cands.length, 'candidate')} · all reviewed`
+  : 'Nobody invited yet · create a position'
+
  const doors = [
   { href: '/school/cover', title: 'Sub coverage', note: uncovered ? `${plural(uncovered, 'teacher')} out today · ${slipsToday ? `${plural(slipsToday, 'slip')} made` : 'no slips yet'}` : slipsToday ? `${plural(slipsToday, 'slip')} out today` : 'Nobody out · make a slip any time', lead: uncovered > slipsToday },
   { href: `/weeklyplans?school=${schoolId}&week=${weekOf}`, title: 'Lesson plans', note: plans ? `${toReview ? `${plural(toReview, 'plan')} to review · ` : ''}${teachers.filter(t => sentIds.has(t.id)).length} of ${teachers.length} sent this week` : '…' },
   { href: '/school/progress', title: 'Student progress', note: 'What VIC is seeing — standards that aren’t landing, and the children behind them' },
+  { href: '/hiring', title: 'Hiring', note: hiringNote, lead: toWatch > 0 },
   { href: '/walkthroughs', title: 'Walkthroughs', note: walks ? (walkCount ? `${plural(walksThisWeek, 'visit')} this week · ${walkCount} this year` : 'Not started yet · start your first') : '…' },
   { href: '/school/payroll', title: 'Payroll', note: outs ? `${outs === 1 ? '1 person' : `${outs} people`} missing a clock-out` : 'Hours and pay periods' },
   { href: '/school/attendance', title: 'Attendance detail', note: att?.unmatched?.length ? `${plural(att.unmatched.length, 'name')} don’t match anyone` : 'Fix a day, check-in sheet, planned absences' },
