@@ -25,32 +25,58 @@ const mins=s=>s?`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}
 const STAGES=[['invited','Invited'],['screening_submitted','Screening in'],['interview','Interview'],['demo','Teaching demo'],['references','References'],['offer','Offer'],['hired','Hired'],['declined','Not advancing'],['withdrawn','Withdrew']]
 const stageLabel=s=>(STAGES.find(([k])=>k===s)||[,s])[1]
 
+// A score you can see at a glance.
+//
+// These were styled with styled-jsx and built inside a helper function, which is why they stayed
+// unstyled squares: styled-jsx only adds its scoping class to markup written directly in the
+// component, so nothing applied and a chosen number looked exactly like an unchosen one. The
+// styling lives in inline styles now -- plainer, but nothing can quietly fail to reach it.
+//
+// A chosen number is filled dark, white, larger, and ringed. Four signals and not one of them is
+// colour on its own, which matters when the person scoring is colourblind.
+const DIAL_BASE = {
+ width: 52, height: 52, borderRadius: '50%', padding: 0, lineHeight: 1, cursor: 'pointer',
+ display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+ border: '2px solid var(--vic-border)', background: 'var(--vic-surface)',
+ color: 'var(--vic-text-secondary)', fontWeight: 700, fontSize: 17, fontFamily: 'inherit',
+ transition: 'transform .12s ease, background .12s ease, box-shadow .12s ease',
+}
+const DIAL_ON = {
+ ...DIAL_BASE,
+ background: 'var(--vic-ink)', borderColor: 'var(--vic-ink)', color: '#fff',
+ transform: 'scale(1.12)', boxShadow: '0 0 0 4px var(--vic-primary-soft)', fontSize: 19,
+}
+
+function Dial({label,help,value,max,onPick}){
+ return <div style={{display:'grid',gap:9}}>
+  <div>
+   <strong style={{fontSize:17}}>{label}</strong>
+   <span style={{color:'var(--vic-text-muted)',fontWeight:600,marginLeft:8}}>0&ndash;{max}</span>
+   {help&&<div style={{color:'var(--vic-text-secondary)',fontSize:14,fontWeight:500,marginTop:3,lineHeight:1.5}}>{help}</div>}
+  </div>
+  <div role="radiogroup" aria-label={`${label}, 0 to ${max}`} style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+   {Array.from({length:max+1},(_,n)=>
+    <button key={n} type="button" role="radio" aria-checked={value===n} onClick={()=>onPick(n)}
+     style={value===n?DIAL_ON:DIAL_BASE}>{n}</button>)}
+  </div>
+ </div>
+}
+
 function Score({item,onSave,busy}){
  const [content,setContent]=useState(item.myScore?.content??'')
  const [fit,setFit]=useState(item.myScore?.fit??'')
  const [writing,setWriting]=useState(item.myScore?.writing??'')
  const [note,setNote]=useState(item.myScore?.note??'')
  const [voice,setVoice]=useState(item.myScore?.voiceMismatch??false)
- const nums=max=>Array.from({length:max+1},(_,i)=>i)
  const scored=o=>(o.content||0)+(o.fit||0)+(o.writing||0)
  const perMax=item.maxContent+item.maxFit+item.maxWriting
- // Colorblind-safe and obvious: a chosen number is filled, ringed, larger, and written out in
- // words beside the label. Color is never the only thing telling you what you picked.
- const row=(label,help,value,set,max)=>max>0&&<div className="pick" key={label}>
-  <div className="picklabel">
-   <strong>{label}</strong>
-   <span className="of">{value===''?`choose 0\u2013${max}`:`${value} of ${max}`}</span>
-   <span className="help">{help}</span>
-  </div>
-  <div className="dial" role="radiogroup" aria-label={`${label}, 0 to ${max}`}>
-   {nums(max).map(n=><button key={n} type="button" role="radio" aria-checked={value===n}
-     className={value===n?'on':''} onClick={()=>set(n)}>{n}</button>)}
-  </div>
- </div>
  return <div className="score">
-  {row('Content','Is the answer any good? Real children, real classrooms, specifics over the textbook version.',content,setContent,item.maxContent)}
-  {row('Fit','Would this answer work here? Does it match how this school teaches.',fit,setFit,item.maxFit)}
-  {row('Writing','Grammar, clarity, professional tone.',writing,setWriting,item.maxWriting)}
+  <Dial label="Content" max={item.maxContent} value={content} onPick={setContent}
+   help="Is the answer any good? Real children, real classrooms, specifics over the textbook version."/>
+  <Dial label="Fit" max={item.maxFit} value={fit} onPick={setFit}
+   help="Would this answer work here? Does it match how this school teaches."/>
+  {item.maxWriting>0&&<Dial label="Writing" max={item.maxWriting} value={writing} onPick={setWriting}
+   help="Grammar, clarity, professional tone."/>}
   <label>The story they told
    <textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder="The specific child, class or week they named. Six weeks from now this is the useful part."/>
   </label>
@@ -67,14 +93,6 @@ function Score({item,onSave,busy}){
   {item.myScore&&item.others.map((o,i)=><p className="other" key={i}><strong>{o.name}:</strong> {scored(o)} / {perMax} <span className="muted">(content {o.content}, fit {o.fit}{item.maxWriting>0?`, writing ${o.writing}`:''})</span>{o.note?` · ${o.note}`:''}{o.voiceMismatch?' · flagged: sounds unlike their video':''}</p>)}
   <style jsx>{`
    .score{display:grid;gap:14px;padding:14px;border-radius:14px;background:var(--vic-surface-muted);margin-top:12px}
-   .pick{display:grid;gap:8px}
-   .picklabel{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
-   .of{color:var(--vic-text-primary);font-weight:700;font-variant-numeric:tabular-nums}
-   .help{color:var(--vic-text-secondary);font-size:14px;font-weight:500;flex:1 1 100%}
-   .dial{display:flex;gap:10px;flex-wrap:wrap}
-   .dial button{width:46px;height:46px;border-radius:50%;border:2px solid var(--vic-border);background:var(--vic-surface);font-weight:700;font-size:16px;color:var(--vic-text-secondary);transition:transform .12s ease,background .12s ease}
-   .dial button:hover{border-color:var(--vic-primary);color:var(--vic-text-primary)}
-   .dial button.on{background:var(--vic-ink);border-color:var(--vic-ink);color:#fff;transform:scale(1.14);box-shadow:0 0 0 4px var(--vic-primary-soft)}
    label{display:grid;gap:6px;font-weight:600}
    .flag{display:flex;gap:10px;align-items:flex-start;font-weight:500;background:var(--vic-surface);padding:12px;border-radius:12px}
    textarea{padding:10px;border-radius:10px;border:1px solid var(--vic-field-border);font-family:var(--font-read);line-height:1.5}
@@ -94,7 +112,6 @@ function RoundCard({round,onSave,onClear,busy}){
  const [open,setOpen]=useState(Boolean(round.mine))
  const [points,setPoints]=useState(()=>({...(round.mine?.points||{})}))
  const [note,setNote]=useState(round.mine?.note||'')
- const nums=max=>Array.from({length:max+1},(_,i)=>i)
 
  // Shown live as you score, so the number you are building is never a surprise at the end.
  const running=round.kind==='checklist'
@@ -130,17 +147,9 @@ function RoundCard({round,onSave,onClear,busy}){
           <label><input type="checkbox" checked={!!points[l.key]} onChange={e=>setPoints(p=>({...p,[l.key]:e.target.checked}))}/>
            <span>{l.label} <span className="pts">{l.points} {l.points===1?'point':'points'}</span></span></label>
          </li>)}</ul>
-       : <div className="rubric">{round.lines.map(l=><div className="pick" key={l.key}>
-          <div className="picklabel">
-           <strong>{l.label}</strong>
-           <span className="of">{points[l.key]===undefined?`choose 0\u2013${l.max}`:`${points[l.key]} of ${l.max}`}</span>
-           <span className="help">{l.look_for}</span>
-          </div>
-          <div className="dial" role="radiogroup" aria-label={`${l.label}, 0 to ${l.max}`}>
-           {nums(l.max).map(n=><button key={n} type="button" role="radio" aria-checked={points[l.key]===n}
-             className={points[l.key]===n?'on':''} onClick={()=>setPoints(p=>({...p,[l.key]:n}))}>{n}</button>)}
-          </div>
-         </div>)}</div>}
+       : <div className="rubric">{round.lines.map(l=><Dial key={l.key} label={l.label} help={l.look_for}
+          max={l.max} value={points[l.key]===undefined?'':points[l.key]}
+          onPick={n=>setPoints(p=>({...p,[l.key]:n}))}/>)}</div>}
 
       <label>Notes
        <textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder={round.key==='demo'?'What you saw in the first two minutes, and how they answered “how do you think that went?”':'Anything worth remembering six weeks from now.'}/>
@@ -169,14 +178,6 @@ function RoundCard({round,onSave,onClear,busy}){
    .lines label{display:flex;gap:10px;align-items:flex-start;font-weight:500;background:var(--vic-surface-muted);padding:11px 13px;border-radius:11px}
    .pts{color:var(--vic-text-secondary);font-size:14px;white-space:nowrap}
    .rubric{display:grid;gap:18px}
-   .pick{display:grid;gap:8px}
-   .picklabel{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
-   .of{color:var(--vic-text-primary);font-weight:700;font-variant-numeric:tabular-nums}
-   .help{color:var(--vic-text-secondary);font-size:14px;font-weight:500;flex:1 1 100%}
-   .dial{display:flex;gap:10px;flex-wrap:wrap}
-   .dial button{width:46px;height:46px;border-radius:50%;border:2px solid var(--vic-border);background:var(--vic-surface);font-weight:700;font-size:16px;color:var(--vic-text-secondary);transition:transform .12s ease,background .12s ease}
-   .dial button:hover{border-color:var(--vic-primary);color:var(--vic-text-primary)}
-   .dial button.on{background:var(--vic-ink);border-color:var(--vic-ink);color:#fff;transform:scale(1.14);box-shadow:0 0 0 4px var(--vic-primary-soft)}
    .running{margin:0;font-size:17px}
    .running strong{font-size:22px}
    label{display:grid;gap:6px;font-weight:600}
