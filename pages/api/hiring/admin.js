@@ -112,16 +112,14 @@ export default async function handler(req, res) {
     .select('id, candidate_id, question_id, school_id').eq('id', responseId).eq('school_id', school.schoolId).maybeSingle()
    if (!response?.id) return no(res, 404, 'That answer does not belong to this school.')
    const { data: question } = await db.from('ap_hiring_questions')
-    .select('max_substance, max_delivery').eq('id', response.question_id).maybeSingle()
+    .select('max_content, max_fit, max_writing').eq('id', response.question_id).maybeSingle()
    if (!question) return no(res, 404, 'That question no longer exists.')
 
-   const substance = Number(req.body?.substance)
-   const delivery = Number(req.body?.delivery ?? 0)
-   if (!Number.isInteger(substance) || substance < 0 || substance > question.max_substance) {
-    return no(res, 400, `Score substance from 0 to ${question.max_substance}.`)
-   }
-   if (!Number.isInteger(delivery) || delivery < 0 || delivery > question.max_delivery) {
-    return no(res, 400, `Score delivery from 0 to ${question.max_delivery}.`)
+   const dims = {}
+   for (const [key, max, label] of [['content', question.max_content, 'content'], ['fit', question.max_fit, 'fit'], ['writing', question.max_writing, 'writing']]) {
+    const value = Number(req.body?.[key] ?? 0)
+    if (!Number.isInteger(value) || value < 0 || value > max) return no(res, 400, `Score ${label} from 0 to ${max}.`)
+    dims[key] = value
    }
    const note = String(req.body?.note || '').trim().slice(0, 2000)
 
@@ -130,7 +128,8 @@ export default async function handler(req, res) {
    const { error } = await db.from('ap_hiring_scores').upsert({
     school_id: school.schoolId, candidate_id: response.candidate_id, response_id: responseId,
     scorer_user_id: auth.user.id, scorer_name: auth.profile?.name || '',
-    substance, delivery, note, updated_at: new Date().toISOString(),
+    ...dims, note, voice_mismatch: req.body?.voiceMismatch === true,
+    updated_at: new Date().toISOString(),
    }, { onConflict: 'response_id,scorer_user_id' })
    if (error) throw error
    return res.json({ saved: true })
@@ -167,13 +166,18 @@ async function overview(db, school, res) {
   .eq('school_id', school.schoolId).order('created_at', { ascending: false }).limit(500)
 
  const { data: scores } = await db.from('ap_hiring_scores')
-  .select('candidate_id, scorer_user_id, substance, delivery').eq('school_id', school.schoolId).limit(20000)
+  .select('candidate_id, scorer_user_id, content, fit, writing, ap_hiring_responses(stage)')
+  .eq('school_id', school.schoolId).limit(20000)
 
  const byCandidate = new Map()
  for (const s of scores || []) {
-  if (!byCandidate.has(s.candidate_id)) byCandidate.set(s.candidate_id, { total: 0, scorers: new Set() })
+  if (!byCandidate.has(s.candidate_id)) byCandidate.set(s.candidate_id, { total: 0, video: 0, written: 0, scorers: new Set() })
   const entry = byCandidate.get(s.candidate_id)
-  entry.total += (s.substance || 0) + (s.delivery || 0)
+  const points = (s.content || 0) + (s.fit || 0) + (s.writing || 0)
+  entry.total += points
+  const stage = s.ap_hiring_responses?.stage
+  if (stage === 'video') entry.video += points
+  else if (stage === 'written') entry.written += points
   entry.scorers.add(s.scorer_user_id)
  }
 
@@ -183,6 +187,8 @@ async function overview(db, school, res) {
    id: c.id, postingId: c.posting_id, name: c.name, email: c.email, stage: c.stage,
    submittedAt: c.submitted_at, deleteAfter: c.delete_after,
    total: entry?.total || 0,
+   video: entry?.video || 0,
+   written: entry?.written || 0,
    scorers: entry?.scorers.size || 0,
   }
  })
@@ -205,13 +211,13 @@ async function review(db, auth, school, candidateId, res) {
 
  const [{ data: questions }, { data: responses }, { data: scores }] = await Promise.all([
   db.from('ap_hiring_questions')
-   .select('id, stage, ordinal, prompt, domain, look_for_strong, look_for_weak, max_substance, max_delivery')
+   .select('id, stage, ordinal, prompt, domain, look_for_strong, look_for_weak, max_content, max_fit, max_writing')
    .eq('posting_id', candidate.posting_id).order('stage').order('ordinal'),
   db.from('ap_hiring_responses')
    .select('id, question_id, stage, video_path, video_seconds, text_response, submitted_at')
    .eq('candidate_id', candidateId),
   db.from('ap_hiring_scores')
-   .select('response_id, scorer_user_id, scorer_name, substance, delivery, note')
+   .select('response_id, scorer_user_id, scorer_name, content, fit, writing, note, voice_mismatch')
    .eq('candidate_id', candidateId),
  ])
 
@@ -233,23 +239,56 @@ async function review(db, auth, school, candidateId, res) {
   return {
    questionId: q.id, stage: q.stage, ordinal: q.ordinal, prompt: q.prompt, domain: q.domain,
    lookForStrong: q.look_for_strong, lookForWeak: q.look_for_weak,
-   maxSubstance: q.max_substance, maxDelivery: q.max_delivery,
+   maxContent: q.max_content, maxFit: q.max_fit, maxWriting: q.max_writing,
    responseId: response?.id || null,
    videoUrl: response?.video_path ? signed.get(response.video_path) || null : null,
    seconds: response?.video_seconds ?? null,
    text: response?.text_response || '',
-   myScore: own ? { substance: own.substance, delivery: own.delivery, note: own.note } : null,
+   myScore: own ? { content: own.content, fit: own.fit, writing: own.writing, note: own.note, voiceMismatch: own.voice_mismatch } : null,
    // Other panel members' numbers are shown only once this scorer has saved their own, so that a
    // panel scores independently rather than anchoring on whoever went first.
    others: own
     ? all.filter(s => s.scorer_user_id !== mine)
-       .map(s => ({ name: s.scorer_name || 'Panel member', substance: s.substance, delivery: s.delivery, note: s.note }))
+       .map(s => ({ name: s.scorer_name || 'Panel member', content: s.content, fit: s.fit, writing: s.writing, note: s.note, voiceMismatch: s.voice_mismatch }))
     : [],
    otherScorerCount: all.filter(s => s.scorer_user_id !== mine).length,
   }
  })
 
+ // The results view. A single scorer sees their own video, written and total straight away; once
+ // more than one person has scored, the panel's combined numbers sit beside them. Scored out of is
+ // always shown, because a total means nothing without knowing how much of the interview it covers.
+ const maxFor = stage => (questions || []).filter(q => q.stage === stage)
+  .reduce((a, q) => a + q.max_content + q.max_fit + q.max_writing, 0)
+ const answerCount = stage => (responses || []).filter(r => r.stage === stage).length
+ const responseStage = new Map((responses || []).map(r => [r.id, r.stage]))
+
+ const perScorer = new Map()
+ for (const s of scores || []) {
+  if (!perScorer.has(s.scorer_user_id)) {
+   perScorer.set(s.scorer_user_id, { name: s.scorer_name || 'Panel member', isMe: s.scorer_user_id === mine, video: 0, written: 0, total: 0, answersScored: 0 })
+  }
+  const entry = perScorer.get(s.scorer_user_id)
+  const points = (s.content || 0) + (s.fit || 0) + (s.writing || 0)
+  const stage = responseStage.get(s.response_id)
+  if (stage === 'video') entry.video += points
+  else if (stage === 'written') entry.written += points
+  entry.total += points
+  entry.answersScored += 1
+ }
+ const scorerRows = [...perScorer.values()].sort((a, b) => (b.isMe ? 1 : 0) - (a.isMe ? 1 : 0))
+ const totals = {
+  maxVideo: maxFor('video'), maxWritten: maxFor('written'),
+  maxTotal: maxFor('video') + maxFor('written'),
+  answers: answerCount('video') + answerCount('written'),
+  scorers: scorerRows,
+  // The panel number is the sum of every member's scores, which is how the ranking works: highest
+  // combined total advances, and nobody holds a veto.
+  panel: scorerRows.reduce((a, r) => ({ video: a.video + r.video, written: a.written + r.written, total: a.total + r.total }), { video: 0, written: 0, total: 0 }),
+ }
+
  return res.json({
+  totals,
   candidate: {
    id: candidate.id, name: candidate.name, email: candidate.email, phone: candidate.phone,
    certAreas: candidate.cert_areas, stage: candidate.stage, submittedAt: candidate.submitted_at,

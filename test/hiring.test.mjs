@@ -14,12 +14,23 @@ test('every question carries both look-fors, because a blank one means three sco
  }
 })
 
-test('delivery can never outweigh substance on any question', () => {
+test('writing can never outweigh what a candidate actually said', () => {
  for (const q of [...DEFAULT_VIDEO_QUESTIONS, ...DEFAULT_WRITTEN_QUESTIONS, ...DEFAULT_INTERVIEW_QUESTIONS]) {
-  const substance = q.max_substance ?? 8
-  const delivery = q.max_delivery ?? 2
-  assert.ok(delivery < substance, `question ${q.ordinal} lets presentation beat judgment`)
+  const content = q.max_content ?? 5
+  const writing = q.max_writing ?? 0
+  assert.ok(writing < content, `question ${q.ordinal} lets presentation beat judgment`)
  }
+})
+
+test('content and fit are weighted equally — they are different questions, not a main and a tiebreak', () => {
+ for (const q of [...DEFAULT_VIDEO_QUESTIONS, ...DEFAULT_WRITTEN_QUESTIONS, ...DEFAULT_INTERVIEW_QUESTIONS]) {
+  assert.equal(q.max_content ?? 5, q.max_fit ?? 5, `question ${q.ordinal} weights content and fit differently`)
+ }
+})
+
+test('only written questions carry a writing score', () => {
+ for (const q of [...DEFAULT_VIDEO_QUESTIONS, ...DEFAULT_INTERVIEW_QUESTIONS]) assert.equal(q.max_writing ?? 0, 0)
+ for (const q of DEFAULT_WRITTEN_QUESTIONS) assert.ok((q.max_writing ?? 0) > 0)
 })
 
 test('GPA tiers are mutually exclusive and take the best selected tier', () => {
@@ -42,8 +53,8 @@ test('no screener line scores a protected characteristic or where somebody lives
 
 test('stage totals are derived from the rubrics, so the grand total cannot drift', () => {
  assert.equal(STAGE_TOTALS.video, 50)
- assert.equal(STAGE_TOTALS.written, 20)
- assert.equal(STAGE_TOTALS.interview, 50)
+ assert.equal(STAGE_TOTALS.written, 65)
+ assert.equal(STAGE_TOTALS.interview, 100)
  assert.equal(STAGE_TOTALS.demo, DEMO_RUBRIC.reduce((a, r) => a + r.max, 0))
  assert.equal(STAGE_TOTALS.plan, PLAN_RUBRIC.reduce((a, r) => a + r.max, 0))
  assert.equal(GRAND_TOTAL, Object.values(STAGE_TOTALS).reduce((a, b) => a + b, 0))
