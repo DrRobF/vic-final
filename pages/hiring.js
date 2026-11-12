@@ -26,39 +26,52 @@ const STAGES=[['invited','Invited'],['screening_submitted','Screening in'],['int
 const stageLabel=s=>(STAGES.find(([k])=>k===s)||[,s])[1]
 
 function Score({item,onSave,busy}){
- const [substance,setSubstance]=useState(item.myScore?.substance??'')
- const [delivery,setDelivery]=useState(item.myScore?.delivery??'')
+ const [content,setContent]=useState(item.myScore?.content??'')
+ const [fit,setFit]=useState(item.myScore?.fit??'')
+ const [writing,setWriting]=useState(item.myScore?.writing??'')
  const [note,setNote]=useState(item.myScore?.note??'')
+ const [voice,setVoice]=useState(item.myScore?.voiceMismatch??false)
  const nums=max=>Array.from({length:max+1},(_,i)=>i)
+ const scored=o=>(o.content||0)+(o.fit||0)+(o.writing||0)
+ const perMax=item.maxContent+item.maxFit+item.maxWriting
+ const row=(label,help,value,set,max)=>max>0&&<div className="pick" key={label}>
+  <div className="picklabel"><strong>{label}</strong> <span className="of">/ {max}</span><span className="help">{help}</span></div>
+  <div className="btns">{nums(max).map(n=><button key={n} type="button" aria-pressed={value===n} onClick={()=>set(n)}>{n}</button>)}</div>
+ </div>
  return <div className="score">
-  <div className="pick">
-   <span>Substance <b>/ {item.maxSubstance}</b></span>
-   <div className="btns">{nums(item.maxSubstance).map(n=><button key={n} type="button" aria-pressed={substance===n} onClick={()=>setSubstance(n)}>{n}</button>)}</div>
-  </div>
-  {item.maxDelivery>0&&<div className="pick">
-   <span>Delivery <b>/ {item.maxDelivery}</b></span>
-   <div className="btns">{nums(item.maxDelivery).map(n=><button key={n} type="button" aria-pressed={delivery===n} onClick={()=>setDelivery(n)}>{n}</button>)}</div>
-  </div>}
+  {row('Content','Is the answer any good? Real children, real classrooms, specifics over the textbook version.',content,setContent,item.maxContent)}
+  {row('Fit','Would this answer work here? Does it match how this school teaches.',fit,setFit,item.maxFit)}
+  {row('Writing','Grammar, clarity, professional tone.',writing,setWriting,item.maxWriting)}
   <label>The story they told
    <textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder="The specific child, class or week they named. Six weeks from now this is the useful part."/>
   </label>
-  <button type="button" className="primary" disabled={substance===''||!!busy} onClick={()=>onSave({substance:Number(substance),delivery:item.maxDelivery>0?Number(delivery||0):0,note})}>
+  {item.stage==='written'&&<label className="flag">
+   <input type="checkbox" checked={voice} onChange={e=>setVoice(e.target.checked)}/>
+   <span>This does not sound like the same person as their video — ask about it in the next round. <span className="help">A note to follow up, not a score and not an accusation. Worth nothing either way.</span></span>
+  </label>}
+  <button type="button" className="primary" disabled={content===''||fit===''||(item.maxWriting>0&&writing==='')||!!busy}
+   onClick={()=>onSave({content:Number(content),fit:Number(fit),writing:item.maxWriting>0?Number(writing||0):0,note,voiceMismatch:voice})}>
    {busy||(item.myScore?'Update my score':'Save my score')}
   </button>
+  {item.myScore&&<p className="mine">Your score on this answer: <strong>{scored(item.myScore)}</strong> / {perMax}</p>}
   {!item.myScore&&item.otherScorerCount>0&&<p className="muted">{item.otherScorerCount} other panel {item.otherScorerCount===1?'member has':'members have'} scored this. Their numbers appear once you save yours.</p>}
-  {item.myScore&&item.others.map((o,i)=><p className="other" key={i}><strong>{o.name}:</strong> {o.substance}{item.maxDelivery>0?` + ${o.delivery}`:''}{o.note?` · ${o.note}`:''}</p>)}
+  {item.myScore&&item.others.map((o,i)=><p className="other" key={i}><strong>{o.name}:</strong> {scored(o)} / {perMax} <span className="muted">(content {o.content}, fit {o.fit}{item.maxWriting>0?`, writing ${o.writing}`:''})</span>{o.note?` · ${o.note}`:''}{o.voiceMismatch?' · flagged: sounds unlike their video':''}</p>)}
   <style jsx>{`
-   .score{display:grid;gap:12px;padding:14px;border-radius:14px;background:var(--vic-surface-muted);margin-top:12px}
-   .pick{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-weight:700}
+   .score{display:grid;gap:14px;padding:14px;border-radius:14px;background:var(--vic-surface-muted);margin-top:12px}
+   .pick{display:grid;gap:6px}
+   .picklabel{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+   .of{color:var(--vic-text-secondary);font-weight:700}
+   .help{color:var(--vic-text-secondary);font-size:14px;font-weight:500;flex:1 1 100%}
    .btns{display:flex;gap:6px;flex-wrap:wrap}
-   .btns button{width:40px;padding:8px 0;border-radius:10px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
+   .btns button{width:44px;padding:9px 0;border-radius:10px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
    .btns button[aria-pressed=true]{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
    label{display:grid;gap:6px;font-weight:600}
+   .flag{display:flex;gap:10px;align-items:flex-start;font-weight:500;background:var(--vic-surface);padding:12px;border-radius:12px}
    textarea{padding:10px;border-radius:10px;border:1px solid var(--vic-field-border);font-family:var(--font-read);line-height:1.5}
    .primary{padding:11px 16px;border-radius:12px;border:0;background:var(--vic-primary);color:#fff;font-weight:700;justify-self:start}
    .primary:disabled{background:var(--vic-disabled)}
    .muted{color:var(--vic-text-secondary);font-size:14px;margin:0}
-   .other{margin:0;font-size:15px}
+   .mine,.other{margin:0;font-size:15px}
   `}</style>
  </div>
 }
@@ -129,6 +142,38 @@ export default function Hiring(){
     </label>
    </section>
 
+   {review.totals&&<section className="card">
+    <h3>Results</h3>
+    {!review.totals.scorers.length
+     ?<p className="muted">Nobody has scored this interview yet. Scores appear here as each panel member saves theirs.</p>
+     :<>
+      <table className="results">
+       <thead><tr><th>Scorer</th><th>Video</th><th>Written</th><th>Total</th><th>Answers scored</th></tr></thead>
+       <tbody>
+        {review.totals.scorers.map((r,i)=><tr key={i}>
+         <td>{r.name}{r.isMe?' (you)':''}</td>
+         <td>{r.video} <span className="muted">/ {review.totals.maxVideo}</span></td>
+         <td>{r.written} <span className="muted">/ {review.totals.maxWritten}</span></td>
+         <td><strong>{r.total}</strong> <span className="muted">/ {review.totals.maxTotal}</span></td>
+         <td>{r.answersScored} <span className="muted">of {review.totals.answers}</span></td>
+        </tr>)}
+        {review.totals.scorers.length>1&&<tr className="panelrow">
+         <td><strong>Panel combined</strong></td>
+         <td><strong>{review.totals.panel.video}</strong></td>
+         <td><strong>{review.totals.panel.written}</strong></td>
+         <td><strong>{review.totals.panel.total}</strong> <span className="muted">/ {review.totals.maxTotal*review.totals.scorers.length}</span></td>
+         <td><span className="muted">{review.totals.scorers.length} scorers</span></td>
+        </tr>}
+       </tbody>
+      </table>
+      <p className="muted">{review.totals.scorers.length===1
+       ?'One scorer so far. Candidates are ranked on the panel\u2019s combined total, so a second scorer adds to this rather than averaging with it.'
+       :'Candidates are ranked on the combined total. Nobody holds a veto, including the principal.'}</p>
+      {review.totals.scorers.some(r=>r.answersScored<review.totals.answers)&&
+       <p className="muted">Somebody has not finished. A part-scored interview reads as a lower total than it deserves \u2014 finish before you compare candidates.</p>}
+     </>}
+   </section>}
+
    {review.items.filter(i=>i.stage!=='interview').map(item=><section className="card" key={item.questionId}>
     <p className="eyebrow">{item.stage==='video'?'VIDEO':'WRITTEN'} {item.ordinal}{item.domain?` · ${item.domain.toUpperCase()}`:''}</p>
     <h3>{item.prompt}</h3>
@@ -153,12 +198,14 @@ export default function Hiring(){
     {!data?<p role="status">Loading…</p>
     :!data.candidates.length?<p className="muted">Nobody invited yet. Create a position below, then invite your first candidate.</p>
     :<table>
-     <thead><tr><th>Candidate</th><th>Position</th><th>Stage</th><th>Panel score</th><th/></tr></thead>
+     <thead><tr><th>Candidate</th><th>Position</th><th>Stage</th><th>Video</th><th>Written</th><th>Panel total</th><th/></tr></thead>
      <tbody>{data.candidates.map(c=><tr key={c.id}>
       <td><strong>{c.name}</strong><br/><span className="muted">{c.email}</span></td>
       <td>{postingName(c.postingId)}</td>
       <td>{stageLabel(c.stage)}{c.submittedAt?'':' · not submitted'}</td>
       {/* An unscored candidate says so in words rather than showing a zero, which would read as a bad score. */}
+      <td>{c.scorers?c.video:<span className="muted">—</span>}</td>
+      <td>{c.scorers?c.written:<span className="muted">—</span>}</td>
       <td>{c.scorers?<><strong>{c.total}</strong><br/><span className="muted">{c.scorers} scorer{c.scorers===1?'':'s'}</span></>:<span className="muted">Not scored yet</span>}</td>
       <td><button type="button" onClick={()=>openCandidate(c)}>Review</button></td>
      </tr>)}</tbody>
@@ -236,6 +283,9 @@ export default function Hiring(){
    .ok{background:var(--vic-primary-soft);padding:12px 14px;border-radius:12px;font-weight:600}
    .bad{background:var(--vic-danger-soft);color:var(--vic-danger);padding:12px 14px;border-radius:12px;font-weight:600}
    code{font-family:var(--font-mono);font-size:14px}
+   .results{margin-bottom:10px}
+   .results th,.results td{padding:9px 8px}
+   .panelrow td{border-top:2px solid var(--vic-border)}
   `}</style>
  </main>
 }
