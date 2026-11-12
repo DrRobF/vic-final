@@ -29,10 +29,20 @@ function pickMime(){
 
 function Recorder({question,limit,onDone,busy}){
  const [stream,setStream]=useState(null),[state,setState]=useState('idle'),[clip,setClip]=useState(null),[seconds,setSeconds]=useState(0),[error,setError]=useState('')
+ const [clipUrl,setClipUrl]=useState('')
  const video=useRef(null),recorder=useRef(null),chunks=useRef([]),timer=useRef(null)
 
  useEffect(()=>()=>{stream?.getTracks().forEach(t=>t.stop());clearInterval(timer.current)},[stream])
  useEffect(()=>{if(video.current&&stream&&state!=='done')video.current.srcObject=stream},[stream,state])
+
+ // The playback URL is made once per take and released after, rather than in render: a URL built
+ // during render is rebuilt on every keystroke elsewhere on the page and never freed.
+ useEffect(()=>{
+  if(!clip?.blob?.size){setClipUrl('');return}
+  const url=URL.createObjectURL(clip.blob)
+  setClipUrl(url)
+  return ()=>URL.revokeObjectURL(url)
+ },[clip])
 
  async function camera(){
   setError('')
@@ -51,9 +61,22 @@ function Recorder({question,limit,onDone,busy}){
   rec.onstop=()=>{
    clearInterval(timer.current)
    const type=mime.split(';')[0]
-   setClip({blob:new Blob(chunks.current,{type}),type})
-   setState('done')
+   const blob=new Blob(chunks.current,{type})
+   // The live preview and the playback are two different elements, but React will happily reuse one
+   // DOM node for both -- and a node still holding srcObject ignores src, so playback would be a
+   // blank, silent player. Detach the camera from the node before the swap.
+   if(video.current){try{video.current.pause()}catch{};video.current.srcObject=null}
    stream.getTracks().forEach(t=>t.stop())
+   if(!blob.size){
+    // Back to idle, not 'ready': the camera tracks are stopped now, so "Start recording" would run
+    // against a dead stream. Turning the camera on again is the only honest next step.
+    setError('Nothing came through on that recording. Check that your browser is allowed to use the microphone and camera, then turn the camera on and try again.')
+    setStream(null)
+    setState('idle')
+    return
+   }
+   setClip({blob,type})
+   setState('done')
   }
   recorder.current=rec
   rec.start(1000)
@@ -62,12 +85,15 @@ function Recorder({question,limit,onDone,busy}){
  }
 
  const stop=()=>{try{recorder.current?.stop()}catch{}}
- const again=()=>{setClip(null);setSeconds(0);setStream(null);setState('idle')}
+ const again=()=>{setError('');setClip(null);setSeconds(0);setStream(null);setState('idle')}
 
  return <div className="rec">
-  {state==='done'&&clip
-   ?<video controls src={URL.createObjectURL(clip.blob)} className="shot"/>
-   :<video ref={video} autoPlay muted playsInline className="shot"/>}
+  {/* Distinct keys so React builds a fresh element for playback instead of handing the playback
+      props to the node that was just showing the camera. */}
+  {state==='done'&&clipUrl
+   ?<video key="playback" controls playsInline src={clipUrl} className="shot"
+     onError={()=>setError('This browser recorded your answer but will not play it back here. You can still send it — press “Use this take” — or record it again if you would rather see it first.')}/>
+   :<video key="preview" ref={video} autoPlay muted playsInline className="shot"/>}
 
   {state==='idle'&&<button type="button" className="primary" onClick={camera}>Turn on camera</button>}
   {state==='ready'&&<button type="button" className="primary" onClick={start}>Start recording</button>}
