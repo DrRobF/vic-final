@@ -28,6 +28,12 @@ test('content and fit are weighted equally — they are different questions, not
  }
 })
 
+test('the video round is never worth less than the written round', () => {
+ // The written part is the part a candidate can have a machine help with. It must not outweigh the
+ // part they had to say out loud, on camera, themselves.
+ assert.ok(STAGE_TOTALS.video >= STAGE_TOTALS.written)
+})
+
 test('only written questions carry a writing score', () => {
  for (const q of [...DEFAULT_VIDEO_QUESTIONS, ...DEFAULT_INTERVIEW_QUESTIONS]) assert.equal(q.max_writing ?? 0, 0)
  for (const q of DEFAULT_WRITTEN_QUESTIONS) assert.ok((q.max_writing ?? 0) > 0)
@@ -53,7 +59,7 @@ test('no screener line scores a protected characteristic or where somebody lives
 
 test('stage totals are derived from the rubrics, so the grand total cannot drift', () => {
  assert.equal(STAGE_TOTALS.video, 50)
- assert.equal(STAGE_TOTALS.written, 65)
+ assert.equal(STAGE_TOTALS.written, 50)
  assert.equal(STAGE_TOTALS.interview, 100)
  assert.equal(STAGE_TOTALS.demo, DEMO_RUBRIC.reduce((a, r) => a + r.max, 0))
  assert.equal(STAGE_TOTALS.plan, PLAN_RUBRIC.reduce((a, r) => a + r.max, 0))

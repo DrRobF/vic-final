@@ -24,10 +24,14 @@ alter table public.ap_hiring_questions add constraint ap_hiring_questions_max_fi
 alter table public.ap_hiring_questions add constraint ap_hiring_questions_max_writing_check check (max_writing between 0 and 10);
 
 -- Questions already created keep their wording and their ordinals; only the scales move.
+-- Video answers are worth 10 (content 5 + fit 5); written answers 9 (4 + 4 + writing 2). The five
+-- videos therefore carry at least as much as the five written answers, which is deliberate: the
+-- written part is the part a candidate can have a machine help with, and the video is the part they
+-- cannot. Writing counts for less than what was actually said, on the same reasoning.
 update public.ap_hiring_questions
- set max_content = 5,
-     max_fit = 5,
-     max_writing = case when stage = 'written' then 3 else 0 end;
+ set max_content = case when stage = 'written' then 4 else 5 end,
+     max_fit = case when stage = 'written' then 4 else 5 end,
+     max_writing = case when stage = 'written' then 2 else 0 end;
 
 alter table public.ap_hiring_scores rename column substance to content;
 alter table public.ap_hiring_scores rename column delivery to fit;
@@ -51,7 +55,7 @@ comment on column public.ap_hiring_scores.voice_mismatch is
 -- and copying one into the other would invent data that nobody entered. Those are zeroed, the
 -- scorer's written notes are kept, and the answers need scoring again.
 update public.ap_hiring_scores
- set content = least(content, 5),
+ set content = least(content, 4),
      fit = 0,
      writing = 0;
 
