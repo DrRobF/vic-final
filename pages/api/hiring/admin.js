@@ -1,6 +1,7 @@
 import { requirePrincipal, requireSchool } from '../../../lib/assistant-principal-auth'
 import {
  candidateInput, makeInviteCode, seedQuestions, rankCandidates, STAGE_TOTALS,
+ ROUNDS, roundByKey, roundTotal, roundMax, packet,
 } from '../../../lib/hiring.mjs'
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
 
@@ -135,6 +136,54 @@ export default async function handler(req, res) {
    return res.json({ saved: true })
   }
 
+  // The optional rounds either side of the recorded interview: the resume screen and the teaching
+  // demonstration. Saved per scorer, like every other score here, so a second panel member scoring
+  // the demo never overwrites the first.
+  if (action === 'round-score') {
+   const candidateId = String(req.body?.candidateId || '')
+   const round = String(req.body?.round || '')
+   const spec = roundByKey(round)
+   if (!UUID.test(candidateId)) return no(res, 400, 'Choose a candidate.')
+   if (!spec?.lines) return no(res, 400, 'That is not a round you can score this way.')
+
+   const { data: candidate } = await db.from('ap_hiring_candidates')
+    .select('id').eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
+   if (!candidate?.id) return no(res, 404, 'That candidate does not belong to this school.')
+
+   // Only keys the rubric defines survive, and each is clamped to its own maximum. A stale or
+   // hand-edited payload cannot inflate a total.
+   const points = {}
+   for (const line of spec.lines) {
+    const raw = req.body?.points?.[line.key]
+    if (spec.kind === 'checklist') { if (raw === true) points[line.key] = true; continue }
+    const value = Number(raw)
+    if (Number.isFinite(value) && value > 0) points[line.key] = Math.min(Math.round(value), line.max)
+   }
+   const total = roundTotal(round, points)
+   const { error } = await db.from('ap_hiring_round_scores').upsert({
+    school_id: school.schoolId, candidate_id: candidateId,
+    scorer_user_id: auth.user.id, scorer_name: auth.profile?.name || '',
+    round, points, total,
+    note: String(req.body?.note || '').trim().slice(0, 4000),
+    updated_at: new Date().toISOString(),
+   }, { onConflict: 'candidate_id,scorer_user_id,round' })
+   if (error) throw error
+   return res.json({ saved: true, total, max: roundMax(round) })
+  }
+
+  // Clearing a round is how a principal says "we did not do this one", which is different from
+  // scoring it zero and must stay different.
+  if (action === 'round-clear') {
+   const candidateId = String(req.body?.candidateId || '')
+   const round = String(req.body?.round || '')
+   if (!UUID.test(candidateId) || !roundByKey(round)?.lines) return no(res, 400, 'Choose a candidate and a round.')
+   const { error } = await db.from('ap_hiring_round_scores').delete()
+    .eq('candidate_id', candidateId).eq('school_id', school.schoolId)
+    .eq('scorer_user_id', auth.user.id).eq('round', round)
+   if (error) throw error
+   return res.json({ cleared: true })
+  }
+
   if (action === 'stage') {
    const candidateId = String(req.body?.candidateId || '')
    const stage = String(req.body?.stage || '')
@@ -209,7 +258,7 @@ async function review(db, auth, school, candidateId, res) {
   .eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
  if (!candidate?.id) return no(res, 404, 'That candidate does not belong to this school.')
 
- const [{ data: questions }, { data: responses }, { data: scores }] = await Promise.all([
+ const [{ data: questions }, { data: responses }, { data: scores }, { data: roundRows }] = await Promise.all([
   db.from('ap_hiring_questions')
    .select('id, stage, ordinal, prompt, domain, look_for_strong, look_for_weak, max_content, max_fit, max_writing')
    .eq('posting_id', candidate.posting_id).order('stage').order('ordinal'),
@@ -218,6 +267,9 @@ async function review(db, auth, school, candidateId, res) {
    .eq('candidate_id', candidateId),
   db.from('ap_hiring_scores')
    .select('response_id, scorer_user_id, scorer_name, content, fit, writing, note, voice_mismatch')
+   .eq('candidate_id', candidateId),
+  db.from('ap_hiring_round_scores')
+   .select('round, scorer_user_id, scorer_name, points, total, note')
    .eq('candidate_id', candidateId),
  ])
 
@@ -287,8 +339,43 @@ async function review(db, auth, school, candidateId, res) {
   panel: scorerRows.reduce((a, r) => ({ video: a.video + r.video, written: a.written + r.written, total: a.total + r.total }), { video: 0, written: 0, total: 0 }),
  }
 
+ // The packet: every round this candidate has actually been through, with its own total, and one
+ // combined figure at the end. Rounds nobody scored are marked skipped and are left out of both
+ // sides of that figure, so a candidate who did four rounds is not judged against one who did six.
+ const roundsByKey = new Map()
+ for (const r of roundRows || []) {
+  if (!roundsByKey.has(r.round)) roundsByKey.set(r.round, { total: 0, scorers: new Set(), entries: [] })
+  const entry = roundsByKey.get(r.round)
+  entry.total += Number(r.total) || 0
+  entry.scorers.add(r.scorer_user_id)
+  entry.entries.push({
+   name: r.scorer_name || 'Panel member', isMe: r.scorer_user_id === mine,
+   points: r.points || {}, total: Number(r.total) || 0, note: r.note || '',
+  })
+ }
+
+ const packetRows = ROUNDS.map(round => {
+  if (round.key === 'video' || round.key === 'written') {
+   const max = round.key === 'video' ? totals.maxVideo : totals.maxWritten
+   const earned = round.key === 'video' ? totals.panel.video : totals.panel.written
+   const scorers = totals.scorers.length
+   if (!scorers) return { key: round.key, scored: false }
+   return { key: round.key, scored: true, total: earned, max: max * scorers, scorers }
+  }
+  const entry = roundsByKey.get(round.key)
+  if (!entry) return { key: round.key, scored: false }
+  return { key: round.key, scored: true, total: entry.total, max: roundMax(round.key) * entry.scorers.size, scorers: entry.scorers.size }
+ })
+
  return res.json({
   totals,
+  packet: packet(packetRows),
+  rounds: ROUNDS.filter(r => r.lines).map(r => ({
+   key: r.key, label: r.label, blurb: r.blurb, kind: r.kind, optional: r.optional,
+   max: roundMax(r.key), lines: r.lines,
+   mine: (roundsByKey.get(r.key)?.entries || []).find(e => e.isMe) || null,
+   others: (roundsByKey.get(r.key)?.entries || []).filter(e => !e.isMe),
+  })),
   candidate: {
    id: candidate.id, name: candidate.name, email: candidate.email, phone: candidate.phone,
    certAreas: candidate.cert_areas, stage: candidate.stage, submittedAt: candidate.submitted_at,

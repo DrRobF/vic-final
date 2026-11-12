@@ -34,9 +34,18 @@ function Score({item,onSave,busy}){
  const nums=max=>Array.from({length:max+1},(_,i)=>i)
  const scored=o=>(o.content||0)+(o.fit||0)+(o.writing||0)
  const perMax=item.maxContent+item.maxFit+item.maxWriting
+ // Colorblind-safe and obvious: a chosen number is filled, ringed, larger, and written out in
+ // words beside the label. Color is never the only thing telling you what you picked.
  const row=(label,help,value,set,max)=>max>0&&<div className="pick" key={label}>
-  <div className="picklabel"><strong>{label}</strong> <span className="of">/ {max}</span><span className="help">{help}</span></div>
-  <div className="btns">{nums(max).map(n=><button key={n} type="button" aria-pressed={value===n} onClick={()=>set(n)}>{n}</button>)}</div>
+  <div className="picklabel">
+   <strong>{label}</strong>
+   <span className="of">{value===''?`choose 0\u2013${max}`:`${value} of ${max}`}</span>
+   <span className="help">{help}</span>
+  </div>
+  <div className="dial" role="radiogroup" aria-label={`${label}, 0 to ${max}`}>
+   {nums(max).map(n=><button key={n} type="button" role="radio" aria-checked={value===n}
+     className={value===n?'on':''} onClick={()=>set(n)}>{n}</button>)}
+  </div>
  </div>
  return <div className="score">
   {row('Content','Is the answer any good? Real children, real classrooms, specifics over the textbook version.',content,setContent,item.maxContent)}
@@ -58,13 +67,14 @@ function Score({item,onSave,busy}){
   {item.myScore&&item.others.map((o,i)=><p className="other" key={i}><strong>{o.name}:</strong> {scored(o)} / {perMax} <span className="muted">(content {o.content}, fit {o.fit}{item.maxWriting>0?`, writing ${o.writing}`:''})</span>{o.note?` · ${o.note}`:''}{o.voiceMismatch?' · flagged: sounds unlike their video':''}</p>)}
   <style jsx>{`
    .score{display:grid;gap:14px;padding:14px;border-radius:14px;background:var(--vic-surface-muted);margin-top:12px}
-   .pick{display:grid;gap:6px}
-   .picklabel{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
-   .of{color:var(--vic-text-secondary);font-weight:700}
+   .pick{display:grid;gap:8px}
+   .picklabel{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+   .of{color:var(--vic-text-primary);font-weight:700;font-variant-numeric:tabular-nums}
    .help{color:var(--vic-text-secondary);font-size:14px;font-weight:500;flex:1 1 100%}
-   .btns{display:flex;gap:6px;flex-wrap:wrap}
-   .btns button{width:44px;padding:9px 0;border-radius:10px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
-   .btns button[aria-pressed=true]{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
+   .dial{display:flex;gap:10px;flex-wrap:wrap}
+   .dial button{width:46px;height:46px;border-radius:50%;border:2px solid var(--vic-border);background:var(--vic-surface);font-weight:700;font-size:16px;color:var(--vic-text-secondary);transition:transform .12s ease,background .12s ease}
+   .dial button:hover{border-color:var(--vic-primary);color:var(--vic-text-primary)}
+   .dial button.on{background:var(--vic-ink);border-color:var(--vic-ink);color:#fff;transform:scale(1.14);box-shadow:0 0 0 4px var(--vic-primary-soft)}
    label{display:grid;gap:6px;font-weight:600}
    .flag{display:flex;gap:10px;align-items:flex-start;font-weight:500;background:var(--vic-surface);padding:12px;border-radius:12px}
    textarea{padding:10px;border-radius:10px;border:1px solid var(--vic-field-border);font-family:var(--font-read);line-height:1.5}
@@ -74,6 +84,108 @@ function Score({item,onSave,busy}){
    .mine,.other{margin:0;font-size:15px}
   `}</style>
  </div>
+}
+
+
+// An optional round: the resume screen, the teaching demonstration, the plan and debrief. Scoring
+// one is a choice. A round left alone is "we did not do this", which is a different thing from
+// scoring it zero, and the packet keeps them apart.
+function RoundCard({round,onSave,onClear,busy}){
+ const [open,setOpen]=useState(Boolean(round.mine))
+ const [points,setPoints]=useState(()=>({...(round.mine?.points||{})}))
+ const [note,setNote]=useState(round.mine?.note||'')
+ const nums=max=>Array.from({length:max+1},(_,i)=>i)
+
+ // Shown live as you score, so the number you are building is never a surprise at the end.
+ const running=round.kind==='checklist'
+  ? round.lines.reduce((a,l)=>{
+     if(!points[l.key])return a
+     if(!l.group)return a+l.points
+     return a
+    },0)+[...new Set(round.lines.filter(l=>l.group&&points[l.key]).map(l=>l.group))]
+     .reduce((a,g)=>a+Math.max(...round.lines.filter(l=>l.group===g&&points[l.key]).map(l=>l.points)),0)
+  : round.lines.reduce((a,l)=>a+Math.min(Number(points[l.key])||0,l.max),0)
+
+ return <section className="card round">
+  <div className="roundhead">
+   <div>
+    <p className="eyebrow">{round.optional?'OPTIONAL ROUND':'ROUND'}</p>
+    <h3>{round.label}</h3>
+    <p className="muted">{round.blurb}</p>
+   </div>
+   <div className="roundtotal">
+    {round.mine
+     ? <><strong>{round.mine.total}</strong><span className="muted"> / {round.max}</span><p className="muted">your score</p></>
+     : <p className="muted">Not done</p>}
+   </div>
+  </div>
+
+  {round.others.length>0&&<p className="other">{round.others.map(o=>`${o.name}: ${o.total}/${round.max}`).join(' · ')}</p>}
+
+  {!open
+   ? <button type="button" onClick={()=>setOpen(true)}>{round.mine?'Change my score':`Score the ${round.label.toLowerCase()}`}</button>
+   : <div className="roundbody">
+      {round.kind==='checklist'
+       ? <ul className="lines">{round.lines.map(l=><li key={l.key}>
+          <label><input type="checkbox" checked={!!points[l.key]} onChange={e=>setPoints(p=>({...p,[l.key]:e.target.checked}))}/>
+           <span>{l.label} <span className="pts">{l.points} {l.points===1?'point':'points'}</span></span></label>
+         </li>)}</ul>
+       : <div className="rubric">{round.lines.map(l=><div className="pick" key={l.key}>
+          <div className="picklabel">
+           <strong>{l.label}</strong>
+           <span className="of">{points[l.key]===undefined?`choose 0\u2013${l.max}`:`${points[l.key]} of ${l.max}`}</span>
+           <span className="help">{l.look_for}</span>
+          </div>
+          <div className="dial" role="radiogroup" aria-label={`${l.label}, 0 to ${l.max}`}>
+           {nums(l.max).map(n=><button key={n} type="button" role="radio" aria-checked={points[l.key]===n}
+             className={points[l.key]===n?'on':''} onClick={()=>setPoints(p=>({...p,[l.key]:n}))}>{n}</button>)}
+          </div>
+         </div>)}</div>}
+
+      <label>Notes
+       <textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder={round.key==='demo'?'What you saw in the first two minutes, and how they answered “how do you think that went?”':'Anything worth remembering six weeks from now.'}/>
+      </label>
+
+      <p className="running">Running total: <strong>{running}</strong> / {round.max}</p>
+      <div className="row">
+       <button type="button" className="primary" disabled={!!busy} onClick={()=>onSave(round.key,points,note)}>{busy||'Save this round'}</button>
+       <button type="button" onClick={()=>setOpen(false)}>Close</button>
+       {round.mine&&<button type="button" onClick={()=>{if(window.confirm(`Clear your ${round.label.toLowerCase()} score? It will read as “we did not do this round”, not as a zero.`)){setPoints({});setNote('');onClear(round.key);setOpen(false)}}}>We did not do this round</button>}
+      </div>
+     </div>}
+
+  <style jsx>{`
+   .round{padding:20px}
+   .roundhead{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
+   .roundtotal{text-align:right;min-width:110px}
+   .roundtotal strong{font-size:28px;font-family:var(--font-head)}
+   .roundtotal p{margin:2px 0 0;font-size:14px}
+   .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--vic-text-secondary);margin:0 0 4px}
+   h3{margin:0 0 4px}
+   .muted{color:var(--vic-text-secondary);font-size:15px;margin:0}
+   .other{margin:10px 0 0;font-size:15px}
+   .roundbody{display:grid;gap:16px;margin-top:14px}
+   .lines{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+   .lines label{display:flex;gap:10px;align-items:flex-start;font-weight:500;background:var(--vic-surface-muted);padding:11px 13px;border-radius:11px}
+   .pts{color:var(--vic-text-secondary);font-size:14px;white-space:nowrap}
+   .rubric{display:grid;gap:18px}
+   .pick{display:grid;gap:8px}
+   .picklabel{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+   .of{color:var(--vic-text-primary);font-weight:700;font-variant-numeric:tabular-nums}
+   .help{color:var(--vic-text-secondary);font-size:14px;font-weight:500;flex:1 1 100%}
+   .dial{display:flex;gap:10px;flex-wrap:wrap}
+   .dial button{width:46px;height:46px;border-radius:50%;border:2px solid var(--vic-border);background:var(--vic-surface);font-weight:700;font-size:16px;color:var(--vic-text-secondary);transition:transform .12s ease,background .12s ease}
+   .dial button:hover{border-color:var(--vic-primary);color:var(--vic-text-primary)}
+   .dial button.on{background:var(--vic-ink);border-color:var(--vic-ink);color:#fff;transform:scale(1.14);box-shadow:0 0 0 4px var(--vic-primary-soft)}
+   .running{margin:0;font-size:17px}
+   .running strong{font-size:22px}
+   label{display:grid;gap:6px;font-weight:600}
+   textarea{padding:10px;border-radius:11px;border:1px solid var(--vic-field-border);font-family:var(--font-read);line-height:1.5;width:100%}
+   .row{display:flex;gap:10px;flex-wrap:wrap}
+   button{padding:11px 16px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
+   .primary{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
+  `}</style>
+ </section>
 }
 
 export default function Hiring(){
@@ -108,6 +220,12 @@ export default function Hiring(){
   setReview(await api(null,`?schoolId=${encodeURIComponent(schoolId)}&candidateId=${encodeURIComponent(open)}`));await load();setNotice('Your score is saved.')})
 
  const setStage=(c,stage)=>run('Saving…',async()=>{await api({action:'stage',schoolId,candidateId:c.id,stage});await load()})
+
+ const reload=async()=>setReview(await api(null,`?schoolId=${encodeURIComponent(schoolId)}&candidateId=${encodeURIComponent(open)}`))
+ const saveRound=(round,points,note)=>run('Saving…',async()=>{
+  await api({action:'round-score',schoolId,candidateId:open,round,points,note});await reload();await load();setNotice('Round saved.')})
+ const clearRound=round=>run('Clearing…',async()=>{
+  await api({action:'round-clear',schoolId,candidateId:open,round});await reload();await load();setNotice('Marked as not done.')})
 
  const postingName=id=>(data?.postings||[]).find(p=>p.id===id)?.title||''
  const link=typeof window!=='undefined'?`${window.location.origin}/hiring-screening`:'/hiring-screening'
@@ -174,6 +292,30 @@ export default function Hiring(){
      </>}
    </section>}
 
+   {review.packet&&<section className="card">
+    <h3>The packet</h3>
+    <p className="muted">Every round this candidate has been through, and nothing they have not. A round you skip is left out of both sides of the total, so somebody who did four rounds is never judged against somebody who did six.</p>
+    <table className="results">
+     <thead><tr><th>Round</th><th>Score</th><th>Out of</th><th>Scorers</th></tr></thead>
+     <tbody>
+      {review.packet.rounds.map(r=><tr key={r.key} className={r.scored?'':'skipped'}>
+       <td>{r.label}{r.optional&&!r.scored?' ':''}</td>
+       <td>{r.scored?<strong>{r.total}</strong>:<span className="muted">not done</span>}</td>
+       <td>{r.scored?r.max:<span className="muted">\u2014</span>}</td>
+       <td>{r.scored?r.scorers:<span className="muted">\u2014</span>}</td>
+      </tr>)}
+      <tr className="panelrow">
+       <td><strong>Packet total</strong></td>
+       <td><strong>{review.packet.earned}</strong></td>
+       <td><strong>{review.packet.possible}</strong></td>
+       <td>{review.packet.percent===null?<span className="muted">\u2014</span>:<strong>{review.packet.percent}%</strong>}</td>
+      </tr>
+     </tbody>
+    </table>
+   </section>}
+
+   {(review.rounds||[]).filter(r=>r.key==='screener').map(r=><RoundCard key={r.key} round={r} onSave={saveRound} onClear={clearRound} busy={busy}/>)}
+
    {review.items.filter(i=>i.stage!=='interview').map(item=><section className="card" key={item.questionId}>
     <p className="eyebrow">{item.stage==='video'?'VIDEO':'WRITTEN'} {item.ordinal}{item.domain?` · ${item.domain.toUpperCase()}`:''}</p>
     <h3>{item.prompt}</h3>
@@ -189,6 +331,8 @@ export default function Hiring(){
      <Score item={item} onSave={saveScore(item)} busy={busy}/>
     </>}
    </section>)}
+
+   {(review.rounds||[]).filter(r=>r.key!=='screener').map(r=><RoundCard key={r.key} round={r} onSave={saveRound} onClear={clearRound} busy={busy}/>)}
   </>
   :<>
    {schools.length>1&&<label className="schoolPick">School<select value={schoolId} onChange={e=>setSchoolId(e.target.value)}>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}
@@ -286,6 +430,7 @@ export default function Hiring(){
    .results{margin-bottom:10px}
    .results th,.results td{padding:9px 8px}
    .panelrow td{border-top:2px solid var(--vic-border)}
+   .skipped td{color:var(--vic-text-muted)}
   `}</style>
  </main>
 }
