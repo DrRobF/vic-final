@@ -166,7 +166,24 @@ export default async function handler(req, res) {
   }
 
   if (action === 'score') {
-   const responseId = String(req.body?.responseId || '')
+   let responseId = String(req.body?.responseId || '')
+   // An in-person question has no recording or text, so there is no response row until somebody
+   // scores it. The first scorer's save creates it (same candidate and question, one row), and a
+   // second scorer arriving at the same moment lands on the same row.
+   if (!UUID.test(responseId) && UUID.test(String(req.body?.candidateId || '')) && UUID.test(String(req.body?.questionId || ''))) {
+    const { data: cand } = await db.from('ap_hiring_candidates')
+     .select('id, posting_id').eq('id', req.body.candidateId).eq('school_id', school.schoolId).maybeSingle()
+    const { data: q } = cand?.id ? await db.from('ap_hiring_questions')
+     .select('id, stage').eq('id', req.body.questionId).eq('posting_id', cand.posting_id).maybeSingle() : { data: null }
+    if (!q?.id || q.stage !== 'interview') return no(res, 400, 'Only in-person questions can be scored before an answer exists.')
+    const { data: made, error: madeError } = await db.from('ap_hiring_responses').upsert({
+     school_id: school.schoolId, candidate_id: cand.id, question_id: q.id, stage: 'interview',
+    }, { onConflict: 'candidate_id,question_id', ignoreDuplicates: true }).select('id').maybeSingle()
+    if (madeError) throw madeError
+    const { data: found } = made?.id ? { data: made } : await db.from('ap_hiring_responses')
+     .select('id').eq('candidate_id', cand.id).eq('question_id', q.id).maybeSingle()
+    responseId = found?.id || ''
+   }
    if (!UUID.test(responseId)) return no(res, 400, 'Choose an answer to score.')
    const { data: response } = await db.from('ap_hiring_responses')
     .select('id, candidate_id, question_id, school_id').eq('id', responseId).eq('school_id', school.schoolId).maybeSingle()
@@ -289,10 +306,12 @@ async function overview(db, school, res) {
   if (!byCandidate.has(s.candidate_id)) byCandidate.set(s.candidate_id, { total: 0, video: 0, written: 0, scorers: new Set() })
   const entry = byCandidate.get(s.candidate_id)
   const points = (s.content || 0) + (s.fit || 0) + (s.writing || 0)
-  entry.total += points
   const stage = s.ap_hiring_responses?.stage
-  if (stage === 'video') entry.video += points
-  else if (stage === 'written') entry.written += points
+  // The list's total is the screening total (video plus written). In-person points live in their
+  // own round on the packet, so they are not folded in here.
+  if (stage === 'video') { entry.video += points; entry.total += points }
+  else if (stage === 'written') { entry.written += points; entry.total += points }
+  else continue
   entry.scorers.add(s.scorer_user_id)
  }
 
@@ -396,7 +415,17 @@ async function review(db, auth, school, candidateId, res) {
  const responseStage = new Map((responses || []).map(r => [r.id, r.stage]))
 
  const perScorer = new Map()
+ const interviewBy = new Map()
  for (const s of scores || []) {
+  // In-person scores are tracked apart from the screening scorers so someone who has only scored
+  // the in-person round does not appear in, or light, the video and written results.
+  if (responseStage.get(s.response_id) === 'interview') {
+   const cur = interviewBy.get(s.scorer_user_id) || { name: s.scorer_name || 'Panel member', isMe: s.scorer_user_id === mine, points: 0, scored: 0 }
+   cur.points += (s.content || 0) + (s.fit || 0) + (s.writing || 0)
+   cur.scored += 1
+   interviewBy.set(s.scorer_user_id, cur)
+   continue
+  }
   if (!perScorer.has(s.scorer_user_id)) {
    perScorer.set(s.scorer_user_id, { name: s.scorer_name || 'Panel member', isMe: s.scorer_user_id === mine, video: 0, written: 0, total: 0, answersScored: 0 })
   }
@@ -410,7 +439,9 @@ async function review(db, auth, school, candidateId, res) {
  }
  const scorerRows = [...perScorer.values()].sort((a, b) => (b.isMe ? 1 : 0) - (a.isMe ? 1 : 0))
  const totals = {
-  maxVideo: maxFor('video'), maxWritten: maxFor('written'),
+  maxVideo: maxFor('video'), maxWritten: maxFor('written'), maxInterview: maxFor('interview'),
+  interview: [...interviewBy.values()].map(r => ({ name: r.name, isMe: r.isMe, points: r.points, scored: r.scored })),
+  interviewQuestions: (questions || []).filter(q => q.stage === 'interview').length,
   maxTotal: maxFor('video') + maxFor('written'),
   answers: answerCount('video') + answerCount('written'),
   scorers: scorerRows,
@@ -437,6 +468,16 @@ async function review(db, auth, school, candidateId, res) {
  }
 
  const packetRows = ROUNDS.map(round => {
+  if (round.key === 'interview') {
+   // Lit only for scorers who have scored every in-person question. The interview happens live and a
+   // scorer is saved question by question, so one score in must not light the rung or put half a
+   // total in the packet.
+   const expected = (questions || []).filter(q => q.stage === 'interview').length
+   const interviewRows = [...interviewBy.values()]
+   const complete = interviewRows.filter(r => expected > 0 && r.scored >= expected)
+   if (!complete.length) return { key: 'interview', scored: false }
+   return { key: 'interview', scored: true, total: complete.reduce((a, r) => a + r.points, 0), max: totals.maxInterview * complete.length, scorers: complete.length }
+  }
   if (round.key === 'video' || round.key === 'written') {
    const max = round.key === 'video' ? totals.maxVideo : totals.maxWritten
    const earned = round.key === 'video' ? totals.panel.video : totals.panel.written

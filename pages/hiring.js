@@ -15,7 +15,7 @@ import {supabase} from '../lib/supabase'
 async function api(body,query=''){
  const {data:{session}}=await supabase.auth.getSession()
  if(!session)throw Object.assign(new Error('Please log in.'),{login:true})
- const r=await fetch(`/api/hiring/admin${query}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${session.access_token}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})})
+ const r=await fetch(`/api/hiring/admin${query}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${session.access_token}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})}).catch(()=>{throw Object.assign(new Error('Lost your connection. Nothing was lost; check your Wi-Fi and try again.'),{offline:true})})
  const d=await r.json().catch(()=>({}))
  if(!r.ok)throw Object.assign(new Error(d.error||'Something went wrong. Please try again.'),{status:r.status})
  return d
@@ -268,7 +268,7 @@ export default function Hiring(){
   try{setReview(await api(null,`?schoolId=${encodeURIComponent(schoolId)}&candidateId=${encodeURIComponent(c.id)}`))}catch(e){setError(e.message)}}
 
  const saveScore=(item)=>vals=>run('Saving…',async()=>{
-  await api({action:'score',schoolId,responseId:item.responseId,...vals})
+  await api({action:'score',schoolId,...(item.responseId?{responseId:item.responseId}:{candidateId:open,questionId:item.questionId}),...vals})
   setReview(await api(null,`?schoolId=${encodeURIComponent(schoolId)}&candidateId=${encodeURIComponent(open)}`));await load();setNotice('Your score is saved.')})
 
  // Refresh the open record as well as the list. Without the reload the saved stage never came
@@ -401,6 +401,23 @@ export default function Hiring(){
      </details>
      <Score item={item} onSave={saveScore(item)} busy={busy}/>
     </>}
+   </section>)}
+
+   {review.items.some(i=>i.stage==='interview')&&<section className="card">
+    <p className="eyebrow">IN-PERSON INTERVIEW</p>
+    <h2>Ten questions, asked in the room</h2>
+    <p className="muted">Score each answer as you hear it. Everyone on the panel scores on their own, and other members' numbers show once you save yours. The round lights on the ladder once you have scored all {review.totals.interviewQuestions}.</p>
+    {(()=>{const mine=review.totals.interview.find(r=>r.isMe);return <p className="muted">{mine?`You have scored ${mine.scored} of ${review.totals.interviewQuestions}: ${mine.points} of ${review.totals.maxInterview} points so far.`:'You have not scored any yet.'}{review.totals.interview.filter(r=>!r.isMe).map(r=>` ${r.name}: ${r.scored} of ${review.totals.interviewQuestions} scored.`).join('')}</p>})()}
+   </section>}
+   {review.items.filter(i=>i.stage==='interview').map(item=><section className="card" key={item.questionId}>
+    <p className="eyebrow">IN PERSON {item.ordinal}{item.domain?` · ${item.domain.toUpperCase()}`:''}</p>
+    <h3>{item.prompt}</h3>
+    <details open>
+     <summary>What to listen for</summary>
+     <p className="look"><strong>Strong sounds like:</strong> {item.lookForStrong||'—'}</p>
+     <p className="look"><strong>Weak sounds like:</strong> {item.lookForWeak||'—'}</p>
+    </details>
+    <Score item={item} onSave={saveScore(item)} busy={busy}/>
    </section>)}
 
    {(review.rounds||[]).filter(r=>r.key!=='screener').map(r=><RoundCard key={r.key} round={r} onSave={saveRound} onClear={clearRound} busy={busy}/>)}
