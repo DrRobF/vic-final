@@ -11,6 +11,23 @@ import {BUCKET,sniffVideoType} from '../lib/hiring-media.mjs'
 // rather than clearing it. And it must not make the candidate feel watched or sold to -- there is
 // no advertising on this page, no account to create, and nothing about the software it runs on.
 
+// How small a recording can be and still do its job.
+//
+// A panel scores what a candidate says, never how they look saying it -- that rule is on the scoring
+// sheet, so paying for 720p is paying for the one thing nobody is allowed to mark. 480p at this
+// bitrate is a perfectly clear talking head.
+//
+// Audio is the exception and is deliberately not cut: the whole answer lives in the words, and a
+// scorer straining to hear a candidate will mark them down for it whatever the rubric says.
+//
+// Measured at roughly 9.7 MB a minute before this change and about a third of that after, which is
+// also a third of the upload -- and the candidate on weak home Wi-Fi at ten at night is the one who
+// most needs this to finish.
+const VIDEO_WIDTH=640
+const VIDEO_HEIGHT=480
+const VIDEO_BITS=450_000
+const AUDIO_BITS=96_000
+
 const RESUME_TYPES={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
 const mins=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
 
@@ -61,7 +78,7 @@ function Recorder({question,limit,onDone,busy,answered,savedSeconds}){
  async function camera(){
   setError('')
   try{
-   const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:1280},height:{ideal:720}},audio:true})
+   const s=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:VIDEO_WIDTH},height:{ideal:VIDEO_HEIGHT}},audio:true})
    setStream(s);setState('ready')
   }catch{setError('We could not reach your camera or microphone. Check your browser’s permission prompt, or call the office and we will arrange an interview without recording.')}
  }
@@ -70,7 +87,7 @@ function Recorder({question,limit,onDone,busy,answered,savedSeconds}){
   const mime=pickMime()
   if(!mime){setError('This browser cannot record video. Try Chrome, Edge, Firefox or Safari — or call the office for an interview without recording.');return}
   chunks.current=[]
-  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1_200_000})
+  const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:VIDEO_BITS,audioBitsPerSecond:AUDIO_BITS})
   rec.ondataavailable=e=>{if(e.data?.size)chunks.current.push(e.data)}
   rec.onstop=async()=>{
    clearInterval(timer.current)

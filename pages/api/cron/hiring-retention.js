@@ -53,7 +53,7 @@ export default async function handler(req, res) {
 
    // The path is cleared only once the object is gone, so a row never claims a recording exists
    // when it does not, nor the reverse -- the reverse is what orphans files nobody can find.
-   await db.from('ap_hiring_responses').update({ video_path: '' }).eq('candidate_id', candidate.id).neq('video_path', '')
+   await db.from('ap_hiring_responses').update({ video_path: '', video_bytes: null }).eq('candidate_id', candidate.id).neq('video_path', '')
    cleared.push(candidate.id)
   }
 

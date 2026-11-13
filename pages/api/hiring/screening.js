@@ -213,7 +213,8 @@ export default async function handler(req, res) {
 
    const row = {
     school_id: candidate.school_id, candidate_id: candidate.id, question_id: questionId,
-    stage: 'video', video_path: path, video_seconds: seconds, submitted_at: new Date().toISOString(),
+    stage: 'video', video_path: path, video_seconds: seconds, video_bytes: Number(size) || null,
+    submitted_at: new Date().toISOString(),
    }
    const { error } = prior?.id
     ? await db.from('ap_hiring_responses').update(row).eq('id', prior.id)
