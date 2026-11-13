@@ -457,6 +457,19 @@ async function overview(db, school, res) {
   .select('id, posting_id, name, email, stage, submitted_at, created_at, delete_after, media_deleted_at')
   .eq('school_id', school.schoolId).order('created_at', { ascending: false }).limit(500)
 
+  // How far through a candidate is, which 'not submitted' on its own does not say. Somebody who has
+ // answered eight of ten and stopped is a person to ring before the deadline; somebody who has
+ // opened nothing is a person who may never have received the email.
+ const { data: progress } = await db.from('ap_hiring_responses')
+  .select('candidate_id, stage').eq('school_id', school.schoolId)
+ const answeredBy = new Map()
+ for (const row of progress || []) answeredBy.set(row.candidate_id, (answeredBy.get(row.candidate_id) || 0) + 1)
+
+ const { data: questionCounts } = await db.from('ap_hiring_questions')
+  .select('posting_id, stage').eq('school_id', school.schoolId).in('stage', ['video', 'written'])
+ const askedByPosting = new Map()
+ for (const q of questionCounts || []) askedByPosting.set(q.posting_id, (askedByPosting.get(q.posting_id) || 0) + 1)
+
  // What each candidate's recordings occupy, and the school's total. Shown on the screen where the
  // decision to delete is actually made.
  const { data: sizes } = await db.from('ap_hiring_responses')
@@ -495,6 +508,8 @@ async function overview(db, school, res) {
    archived: archivedPostings.has(c.posting_id),
    submittedAt: c.submitted_at, deleteAfter: c.delete_after, mediaDeletedAt: c.media_deleted_at,
    videoBytes: bytesByCandidate.get(c.id) || 0,
+   answered: answeredBy.get(c.id) || 0,
+   asked: askedByPosting.get(c.posting_id) || 0,
    total: entry?.total || 0,
    video: entry?.video || 0,
    written: entry?.written || 0,
