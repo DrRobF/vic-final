@@ -1,7 +1,7 @@
 import { requirePrincipal, requireSchool } from '../../../lib/assistant-principal-auth'
 import {
  candidateInput, makeInviteCode, seedQuestions, rankCandidates, STAGE_TOTALS,
- ROUNDS, roundByKey, roundTotal, roundMax, packet, ladderState,
+ ROUNDS, roundByKey, roundTotal, roundMax, packet, ladderState, questionEdit,
 } from '../../../lib/hiring.mjs'
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
 import {
@@ -163,6 +163,37 @@ export default async function handler(req, res) {
     .eq('id', candidateId)
    if (error) throw error
    return res.json({ expiresAt: until })
+  }
+
+  // Editing a question on one position. Questions are copied per position, so this changes this
+  // job's rubric and nothing else -- last spring's scored candidates keep the wording they were
+  // actually asked.
+  //
+  // The guard that matters: a video or written question somebody has already answered. Rewording it
+  // leaves a recording of one question filed under the text of another, which is how a panel ends up
+  // scoring an answer against a bar the candidate never heard. The screen has to say so and pass
+  // confirmed, rather than this happening quietly.
+  if (action === 'save-question') {
+   const questionId = String(req.body?.questionId || '')
+   if (!UUID.test(questionId)) return no(res, 400, 'Choose a question.')
+   const { data: question } = await db.from('ap_hiring_questions')
+    .select('id, stage, posting_id').eq('id', questionId).eq('school_id', school.schoolId).maybeSingle()
+   if (!question?.id) return no(res, 404, 'That question does not belong to this school.')
+
+   let fields
+   try { fields = questionEdit(req.body) } catch (e) { return no(res, 400, e.message) }
+
+   if (question.stage !== 'interview' && req.body?.confirmed !== true) {
+    const { count } = await db.from('ap_hiring_responses')
+     .select('id', { count: 'exact', head: true }).eq('question_id', questionId)
+    if (count) {
+     return no(res, 409, `${count} ${count === 1 ? 'candidate has' : 'candidates have'} already answered this question as it is written. Changing it now means their recording is filed under wording they never heard.`)
+    }
+   }
+
+   const { error } = await db.from('ap_hiring_questions').update(fields).eq('id', questionId)
+   if (error) throw error
+   return res.json({ saved: true })
   }
 
   if (action === 'score') {
