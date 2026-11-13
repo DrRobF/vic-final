@@ -572,7 +572,7 @@ export default function Hiring(){
      <tbody>{data.candidates.filter(c=>!c.archived).map(c=><tr key={c.id}>
       <td><strong>{c.name}</strong><br/><span className="muted">{c.email}</span></td>
       <td>{postingName(c.postingId)}</td>
-      <td>{stageLabel(c.stage)}{c.submittedAt?'':' · not submitted'}</td>
+      <td>{stageLabel(c.stage)}{c.submittedAt?'':c.answered?<span className="muted"><br/>{c.answered} of {c.asked} answered, not submitted</span>:<span className="muted"><br/>not started</span>}</td>
       {/* An unscored candidate says so in words rather than showing a zero, which would read as a bad score. */}
       <td>{c.scorers?c.video:<span className="muted">—</span>}</td>
       <td>{c.scorers?c.written:<span className="muted">—</span>}</td>
