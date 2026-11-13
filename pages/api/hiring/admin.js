@@ -4,6 +4,7 @@ import {
  ROUNDS, roundByKey, roundTotal, roundMax, packet, ladderState,
 } from '../../../lib/hiring.mjs'
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
+import { inviteMessage, sendInvite } from '../../../lib/hiring-invite.mjs'
 
 // The panel's side of hiring: invite candidates, review what they sent, score it against the rubric.
 //
@@ -78,7 +79,7 @@ export default async function handler(req, res) {
    const postingId = String(req.body?.postingId || '')
    if (!UUID.test(postingId)) return no(res, 400, 'Choose a position.')
    const { data: posting } = await db.from('ap_hiring_postings')
-    .select('id, status').eq('id', postingId).eq('school_id', school.schoolId).maybeSingle()
+    .select('id, status, title').eq('id', postingId).eq('school_id', school.schoolId).maybeSingle()
    if (!posting?.id) return no(res, 404, 'That position does not belong to this school.')
    if (['closed', 'filled'].includes(posting.status)) return no(res, 409, 'That position is closed. Reopen it before inviting anyone else.')
 
@@ -103,7 +104,20 @@ export default async function handler(req, res) {
     if (!/duplicate key|unique/i.test(error.message || '')) throw error
    }
    if (!created) return no(res, 503, 'Could not create that invitation. Please try again.')
-   return res.json({ candidateId: created.id, code: created.invite_code, expiresAt: created.invite_expires_at })
+
+   // Email the candidate their link and code. The code is also returned so the panel can send it by
+   // hand if mail is not set up or the send fails; the invitation exists either way.
+   const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]
+   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0]
+   const site = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.askvic.ai')
+   const { data: schoolRow } = await db.from('ap_schools').select('name').eq('id', school.schoolId).maybeSingle()
+   const message = inviteMessage({
+    name: input.name, schoolName: schoolRow?.name, positionTitle: posting.title,
+    code: created.invite_code, expiresAt: created.invite_expires_at, link: `${site}/hiring-screening`,
+    senderName: auth.profile?.name,
+   })
+   const emailed = await sendInvite({ to: input.email, replyTo: auth.user?.email, ...message, key: `hiring-invite-${created.id}` })
+   return res.json({ candidateId: created.id, code: created.invite_code, expiresAt: created.invite_expires_at, emailed })
   }
 
   if (action === 'score') {
