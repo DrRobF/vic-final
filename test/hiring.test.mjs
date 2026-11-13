@@ -5,7 +5,7 @@ import {
  SCREENER_LINES, SCREENER_MAX, STAGE_TOTALS, GRAND_TOTAL,
  DEMO_RUBRIC, PLAN_RUBRIC,
  makeInviteCode, normalizeInviteCode, candidateInput, screenerTotal, rankCandidates, seedQuestions,
- LADDER, STOPPED_STAGES, ladderState,
+ LADDER, STOPPED_STAGES, ladderState, ROUNDS,
 } from '../lib/hiring.mjs'
 
 test('every question carries both look-fors, because a blank one means three scorers invent three bars', () => {
@@ -123,11 +123,12 @@ test('a deliberately skipped round stops being a gate', () => {
   { key: 'screener', skipped: true },
   { key: 'video', scored: true, total: 40, max: 50 },
   { key: 'written', scored: true, total: 38, max: 50 },
+  { key: 'interview', scored: true, total: 80, max: 100 },
   { key: 'demo', skipped: true },
   { key: 'plan', skipped: true },
  ], 'interview')
  assert.equal(state.complete, true)
- assert.equal(state.lit, 2)
+ assert.equal(state.lit, 3)
  assert.equal(state.skipped, 3)
  assert.equal(state.next, null)
 })
@@ -142,4 +143,23 @@ test('stopping a candidate is a stage, not a missing score', () => {
  for (const stage of STOPPED_STAGES) assert.equal(ladderState([], stage).stopped, true)
  assert.equal(ladderState([], 'interview').stopped, false)
  assert.equal(ladderState([], 'hired').hired, true)
+})
+
+test('the in-person interview is a rung on the ladder, between written and the performance round', () => {
+ const keys = LADDER.map(l => l.key)
+ assert.deepEqual(keys, ['screener', 'video', 'written', 'interview', 'demo', 'plan'])
+ assert.ok(ROUNDS.some(r => r.key === 'interview' && r.kind === 'answers' && !r.optional), 'in-person is a required round scored per answer')
+ assert.deepEqual(ROUNDS.map(r => r.key), keys, 'every ladder rung is a round and every round is a rung')
+})
+
+test('the in-person interview is worth 100 and the ten questions add up to it', () => {
+ assert.equal(STAGE_TOTALS.interview, 100)
+ assert.equal(DEFAULT_INTERVIEW_QUESTIONS.length, 10)
+})
+
+test('a ladder missing only the in-person round is not complete', () => {
+ const rows = LADDER.filter(l => l.key !== 'interview').map(l => ({ key: l.key, scored: true, total: 1, max: 2 }))
+ const state = ladderState(rows, 'interview')
+ assert.equal(state.complete, false)
+ assert.equal(state.next.key, 'interview')
 })

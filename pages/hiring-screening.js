@@ -15,7 +15,7 @@ const RESUME_TYPES={pdf:'application/pdf',doc:'application/msword',docx:'applica
 const mins=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
 
 async function api(body){
- const r=await fetch('/api/hiring/screening',{method:body?'POST':'GET',credentials:'same-origin',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})})
+ const r=await fetch('/api/hiring/screening',{method:body?'POST':'GET',credentials:'same-origin',...(body?{headers:{'Content-Type':'application/json'},body:JSON.stringify(body)}:{})}).catch(()=>{throw Object.assign(new Error('Lost your connection. Nothing you recorded or wrote is lost on this page; check your Wi-Fi and try again.'),{offline:true})})
  const d=await r.json().catch(()=>({}))
  if(!r.ok)throw Object.assign(new Error(d.error||'Something went wrong. Please try again, or call the school office.'),{status:r.status})
  return d
