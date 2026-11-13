@@ -35,26 +35,26 @@ const stageLabel=s=>(STAGES.find(([k])=>k===s)||[,s])[1]
 // A chosen number is filled dark, white, larger, and ringed. Four signals and not one of them is
 // colour on its own, which matters when the person scoring is colourblind.
 const DIAL_BASE = {
- width: 52, height: 52, borderRadius: '50%', padding: 0, lineHeight: 1, cursor: 'pointer',
+ width: 44, height: 44, borderRadius: '50%', padding: 0, lineHeight: 1, cursor: 'pointer',
  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
  border: '2px solid var(--vic-border)', background: 'var(--vic-surface)',
- color: 'var(--vic-text-secondary)', fontWeight: 700, fontSize: 17, fontFamily: 'inherit',
+ color: 'var(--vic-text-secondary)', fontWeight: 700, fontSize: 15, fontFamily: 'inherit',
  transition: 'transform .12s ease, background .12s ease, box-shadow .12s ease',
 }
 const DIAL_ON = {
  ...DIAL_BASE,
  background: 'var(--vic-ink)', borderColor: 'var(--vic-ink)', color: '#fff',
- transform: 'scale(1.12)', boxShadow: '0 0 0 4px var(--vic-primary-soft)', fontSize: 19,
+ transform: 'scale(1.12)', boxShadow: '0 0 0 4px var(--vic-primary-soft)', fontSize: 17,
 }
 
 function Dial({label,help,value,max,onPick}){
- return <div style={{display:'grid',gap:9}}>
+ return <div style={{display:'grid',gap:7}}>
   <div>
-   <strong style={{fontSize:17}}>{label}</strong>
+   <strong style={{fontSize:15}}>{label}</strong>
    <span style={{color:'var(--vic-text-muted)',fontWeight:600,marginLeft:8}}>0&ndash;{max}</span>
-   {help&&<div style={{color:'var(--vic-text-secondary)',fontSize:14,fontWeight:500,marginTop:3,lineHeight:1.5}}>{help}</div>}
+   {help&&<div style={{color:'var(--vic-text-secondary)',fontSize:13,fontWeight:500,marginTop:2,lineHeight:1.45}}>{help}</div>}
   </div>
-  <div role="radiogroup" aria-label={`${label}, 0 to ${max}`} style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+  <div role="radiogroup" aria-label={`${label}, 0 to ${max}`} style={{display:'flex',gap:8,flexWrap:'wrap'}}>
    {Array.from({length:max+1},(_,n)=>
     <button key={n} type="button" role="radio" aria-checked={value===n} onClick={()=>onPick(n)}
      style={value===n?DIAL_ON:DIAL_BASE}>{n}</button>)}
@@ -77,7 +77,7 @@ function Score({item,onSave,busy}){
    help="Would this answer work here? Does it match how this school teaches."/>
   {item.maxWriting>0&&<Dial label="Writing" max={item.maxWriting} value={writing} onPick={setWriting}
    help="Grammar, clarity, professional tone."/>}
-  <label>The story they told
+  <label>Notes
    <textarea rows={2} value={note} onChange={e=>setNote(e.target.value)} placeholder="The specific child, class or week they named. Six weeks from now this is the useful part."/>
   </label>
   {item.stage==='written'&&<label className="flag">
@@ -92,14 +92,14 @@ function Score({item,onSave,busy}){
   {!item.myScore&&item.otherScorerCount>0&&<p className="muted">{item.otherScorerCount} other panel {item.otherScorerCount===1?'member has':'members have'} scored this. Their numbers appear once you save yours.</p>}
   {item.myScore&&item.others.map((o,i)=><p className="other" key={i}><strong>{o.name}:</strong> {scored(o)} / {perMax} <span className="muted">(content {o.content}, fit {o.fit}{item.maxWriting>0?`, writing ${o.writing}`:''})</span>{o.note?` · ${o.note}`:''}{o.voiceMismatch?' · flagged: sounds unlike their video':''}</p>)}
   <style jsx>{`
-   .score{display:grid;gap:14px;padding:14px;border-radius:14px;background:var(--vic-surface-muted);margin-top:12px}
-   label{display:grid;gap:6px;font-weight:600}
-   .flag{display:flex;gap:10px;align-items:flex-start;font-weight:500;background:var(--vic-surface);padding:12px;border-radius:12px}
-   textarea{padding:10px;border-radius:10px;border:1px solid var(--vic-field-border);font-family:var(--font-read);line-height:1.5}
-   .primary{padding:11px 16px;border-radius:12px;border:0;background:var(--vic-primary);color:#fff;font-weight:700;justify-self:start}
+   .score{display:grid;gap:12px;padding:13px;border-radius:12px;background:var(--vic-surface-muted);margin-top:11px}
+   label{display:grid;gap:5px;font-weight:600;font-size:14px}
+   .flag{display:flex;gap:9px;align-items:flex-start;font-weight:500;background:var(--vic-surface);padding:11px;border-radius:11px;font-size:14px}
+   textarea{padding:9px;border-radius:10px;border:1px solid var(--vic-field-border);font-family:var(--font-read);line-height:1.5;font-size:14px;width:100%}
+   .primary{padding:9px 14px;border-radius:11px;border:0;background:var(--vic-primary);color:#fff;font-weight:700;justify-self:start;font-size:14px}
    .primary:disabled{background:var(--vic-disabled)}
    .muted{color:var(--vic-text-secondary);font-size:14px;margin:0}
-   .mine,.other{margin:0;font-size:15px}
+   .mine,.other{margin:0;font-size:14px}
   `}</style>
  </div>
 }
@@ -108,6 +108,100 @@ function Score({item,onSave,busy}){
 // An optional round: the resume screen, the teaching demonstration, the plan and debrief. Scoring
 // one is a choice. A round left alone is "we did not do this", which is a different thing from
 // scoring it zero, and the packet keeps them apart.
+// One question, however it was answered: a recording, a paragraph, or nothing at all because the
+// panel is in the room asking it right now.
+//
+// The question itself is editable here. A school that does not like our wording should change it
+// rather than work around it, and because questions are copied onto each position, an edit changes
+// this job and no other -- a candidate scored last spring keeps the wording they were actually
+// asked. The exception the server enforces: a video or written question somebody has already
+// answered is only reworded after a warning, because their recording would otherwise sit under
+// text they never heard.
+function AnswerCard({item,onScore,onSaveQuestion,busy}){
+ const blank={prompt:item.prompt,domain:item.domain||'',lookForStrong:item.lookForStrong||'',lookForWeak:item.lookForWeak||''}
+ const [editing,setEditing]=useState(false)
+ const [draft,setDraft]=useState(blank)
+ const [warn,setWarn]=useState(''),[saving,setSaving]=useState(false)
+ const label=item.stage==='video'?'VIDEO':item.stage==='written'?'WRITTEN':'IN PERSON'
+
+ const start=()=>{setDraft(blank);setWarn('');setEditing(true)}
+ const save=async confirmed=>{
+  setSaving(true)
+  try{await onSaveQuestion({questionId:item.questionId,...draft,confirmed});setEditing(false);setWarn('')}
+  catch(e){setWarn(e.message||'Could not save that question.')}
+  finally{setSaving(false)}
+ }
+
+ return <section className="card">
+  <div className="qhead">
+   <p className="eyebrow">{label} {item.ordinal}{item.domain?` · ${item.domain.toUpperCase()}`:''}</p>
+   {!editing&&<button type="button" className="tiny" onClick={start}>Edit question</button>}
+  </div>
+
+  {editing
+   ?<div className="qedit">
+     <label>Question<textarea rows={3} value={draft.prompt} onChange={e=>setDraft({...draft,prompt:e.target.value})}/></label>
+     <label>Domain <span className="muted">optional, the tag above the question</span><input value={draft.domain} onChange={e=>setDraft({...draft,domain:e.target.value})} placeholder="management"/></label>
+     <label>Strong sounds like<textarea rows={3} value={draft.lookForStrong} onChange={e=>setDraft({...draft,lookForStrong:e.target.value})}/></label>
+     <label>Weak sounds like<textarea rows={3} value={draft.lookForWeak} onChange={e=>setDraft({...draft,lookForWeak:e.target.value})}/></label>
+     <p className="muted">This changes the question for this position only. Other positions, and candidates already scored elsewhere, keep their own wording.</p>
+     {warn&&<div className="warn">
+      <p>{warn}</p>
+      <button type="button" disabled={saving} onClick={()=>save(true)}>Change it anyway</button>
+     </div>}
+     <div className="rowbtn">
+      <button type="button" className="primary" disabled={saving||draft.prompt.trim().length<5} onClick={()=>save(false)}>{saving?'Saving…':'Save question'}</button>
+      <button type="button" disabled={saving} onClick={()=>{setEditing(false);setWarn('')}}>Cancel</button>
+     </div>
+    </div>
+   :<h3>{item.prompt}</h3>}
+
+  {item.stage==='interview'
+   ?<>
+     <details><summary>What to listen for</summary>
+      <p className="look"><strong>Strong sounds like:</strong> {item.lookForStrong||'—'}</p>
+      <p className="look"><strong>Weak sounds like:</strong> {item.lookForWeak||'—'}</p>
+     </details>
+     <Score item={item} onSave={onScore} busy={busy}/>
+    </>
+   :!item.responseId?<p className="muted">No answer yet.</p>
+   :<>
+     {item.videoUrl&&<video controls src={item.videoUrl} className="shot"/>}
+     {item.seconds?<p className="muted">{mins(item.seconds)}</p>:null}
+     {item.text&&<p className="written">{item.text}</p>}
+     <details><summary>What to listen for</summary>
+      <p className="look"><strong>Strong sounds like:</strong> {item.lookForStrong||'—'}</p>
+      <p className="look"><strong>Weak sounds like:</strong> {item.lookForWeak||'—'}</p>
+     </details>
+     <Score item={item} onSave={onScore} busy={busy}/>
+    </>}
+
+  <style jsx>{`
+   .card{background:var(--vic-surface);border:1px solid var(--vic-border-soft);border-radius:14px;padding:15px;margin:0 0 12px;box-shadow:var(--vic-shadow-soft)}
+   .qhead{display:flex;gap:10px;align-items:baseline;justify-content:space-between}
+   .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--vic-text-secondary);margin:0 0 5px}
+   h3{font-size:16px;margin:0 0 8px;line-height:1.4}
+   .tiny{padding:5px 10px;border-radius:9px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700;font-size:13px;flex:none}
+   .qedit{display:grid;gap:10px;margin:0 0 10px;padding:13px;border:1px solid var(--vic-border-soft);border-radius:12px;background:var(--vic-surface-muted)}
+   .qedit label{display:grid;gap:5px;font-weight:600;font-size:14px}
+   .qedit input,.qedit textarea{padding:8px 10px;border-radius:10px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-family:var(--font-body);font-size:14px;line-height:1.5}
+   .warn{background:var(--vic-danger-soft);color:var(--vic-danger);padding:11px;border-radius:11px;display:grid;gap:8px;justify-items:start;font-weight:600;font-size:14px}
+   .warn p{margin:0}
+   .warn button{padding:7px 12px;border-radius:10px;border:1px solid currentColor;background:transparent;color:inherit;font-weight:700;font-size:13px}
+   .rowbtn{display:flex;gap:8px;flex-wrap:wrap}
+   .rowbtn button{padding:8px 13px;border-radius:11px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700;font-size:14px}
+   .primary{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
+   .primary:disabled{background:var(--vic-disabled);border-color:var(--vic-disabled)}
+   .muted{color:var(--vic-text-secondary);font-size:14px}
+   .shot{width:100%;max-height:340px;background:var(--vic-ink);border-radius:12px}
+   .written{background:var(--vic-surface-muted);padding:12px;border-radius:11px;font-family:var(--font-read);line-height:1.6;white-space:pre-wrap;font-size:15px}
+   details{margin-top:10px;border:1px solid var(--vic-border-soft);border-radius:11px;padding:9px 11px}
+   summary{font-weight:700;cursor:pointer;font-size:14px}
+   .look{margin:7px 0 0;line-height:1.5;font-size:14px}
+  `}</style>
+ </section>
+}
+
 function RoundCard({round,onSave,onClear,busy}){
  const [open,setOpen]=useState(Boolean(round.mine))
  const [points,setPoints]=useState(()=>({...(round.mine?.points||{})}))
@@ -164,26 +258,26 @@ function RoundCard({round,onSave,onClear,busy}){
      </div>}
 
   <style jsx>{`
-   .round{padding:20px}
+   .round{padding:15px}
    .roundhead{display:flex;gap:16px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
    .roundtotal{text-align:right;min-width:110px}
-   .roundtotal strong{font-size:28px;font-family:var(--font-head)}
+   .roundtotal strong{font-size:23px;font-family:var(--font-head)}
    .roundtotal p{margin:2px 0 0;font-size:14px}
    .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--vic-text-secondary);margin:0 0 4px}
    h3{margin:0 0 4px}
-   .muted{color:var(--vic-text-secondary);font-size:15px;margin:0}
-   .other{margin:10px 0 0;font-size:15px}
-   .roundbody{display:grid;gap:16px;margin-top:14px}
-   .lines{list-style:none;padding:0;margin:0;display:grid;gap:10px}
-   .lines label{display:flex;gap:10px;align-items:flex-start;font-weight:500;background:var(--vic-surface-muted);padding:11px 13px;border-radius:11px}
+   .muted{color:var(--vic-text-secondary);font-size:14px;margin:0}
+   .other{margin:9px 0 0;font-size:14px}
+   .roundbody{display:grid;gap:13px;margin-top:12px}
+   .lines{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+   .lines label{display:flex;gap:9px;align-items:flex-start;font-weight:500;background:var(--vic-surface-muted);padding:9px 11px;border-radius:10px;font-size:14px}
    .pts{color:var(--vic-text-secondary);font-size:14px;white-space:nowrap}
-   .rubric{display:grid;gap:18px}
-   .running{margin:0;font-size:17px}
-   .running strong{font-size:22px}
+   .rubric{display:grid;gap:15px}
+   .running{margin:0;font-size:15px}
+   .running strong{font-size:19px}
    label{display:grid;gap:6px;font-weight:600}
    textarea{padding:10px;border-radius:11px;border:1px solid var(--vic-field-border);font-family:var(--font-read);line-height:1.5;width:100%}
    .row{display:flex;gap:10px;flex-wrap:wrap}
-   button{padding:11px 16px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
+   button{padding:8px 13px;border-radius:11px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700;font-size:14px}
    .primary{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
   `}</style>
  </section>
@@ -292,6 +386,12 @@ export default function Hiring(){
   await api({action:'extend-invite',schoolId,candidateId:open,hours});await reload();await load();setNotice(`They have ${hours} more hours from now.`)})
  const preview=()=>{const v={first_name:'Dana',school:'your school',position:postingName(editing)||'the position',link:link,code:'ABCD-EFGH-JKLM',deadline:'Sunday, November 15 at 8:15 AM EST',sender:'you'}
   const fill=t=>String(t).replace(/\{([a-z_]+)\}/gi,(w,k)=>v[k]??w);return{subject:fill(tmpl.subject),body:fill(tmpl.body)}}
+ // Rethrows on purpose: the card shows the already-answered warning next to the question being
+ // edited, where the person can see what they are about to change.
+ const saveQuestion=async body=>{
+  await api({action:'save-question',schoolId,...body})
+  await reload();await load();setNotice('Question updated for this position.')
+ }
  const postingName=id=>(data?.postings||[]).find(p=>p.id===id)?.title||''
  const link=typeof window!=='undefined'?`${window.location.origin}/hiring-screening`:'/hiring-screening'
  const copy=t=>{navigator.clipboard?.writeText(t).then(()=>setNotice('Copied.')).catch(()=>{})}
@@ -387,40 +487,21 @@ export default function Hiring(){
 
    {(review.rounds||[]).filter(r=>r.key==='screener').map(r=><RoundCard key={r.key} round={r} onSave={saveRound} onClear={clearRound} busy={busy}/>)}
 
-   {review.items.filter(i=>i.stage!=='interview').map(item=><section className="card" key={item.questionId}>
-    <p className="eyebrow">{item.stage==='video'?'VIDEO':'WRITTEN'} {item.ordinal}{item.domain?` · ${item.domain.toUpperCase()}`:''}</p>
-    <h3>{item.prompt}</h3>
-    {!item.responseId?<p className="muted">No answer yet.</p>:<>
-     {item.videoUrl&&<video controls src={item.videoUrl} className="shot"/>}
-     {item.seconds?<p className="muted">{mins(item.seconds)}</p>:null}
-     {item.text&&<p className="written">{item.text}</p>}
-     <details open>
-      <summary>What to listen for</summary>
-      <p className="look"><strong>Strong sounds like:</strong> {item.lookForStrong||'—'}</p>
-      <p className="look"><strong>Weak sounds like:</strong> {item.lookForWeak||'—'}</p>
-     </details>
-     <Score item={item} onSave={saveScore(item)} busy={busy}/>
-    </>}
-   </section>)}
+   {review.items.filter(i=>i.stage!=='interview').map(item=>
+    <AnswerCard key={item.questionId} item={item} onScore={saveScore(item)} onSaveQuestion={saveQuestion} busy={busy}/>)}
 
    {review.items.some(i=>i.stage==='interview')&&<section className="card">
     <p className="eyebrow">IN-PERSON INTERVIEW</p>
-    <h2>Ten questions, asked in the room</h2>
-    <p className="muted">Score each answer as you hear it. Everyone on the panel scores on their own, and other members' numbers show once you save yours. The round lights on the ladder once you have scored all {review.totals.interviewQuestions}.</p>
+    <h2>{review.totals.interviewQuestions} questions, asked in the room</h2>
+    <p className="muted">Score each answer as you hear it. Everyone on the panel scores on their own, and other members' numbers show once you save yours. The round lights on the ladder once you have scored all {review.totals.interviewQuestions}. Any question here can be reworded for this position — use “Edit question”.</p>
     {(()=>{const mine=review.totals.interview.find(r=>r.isMe);return <p className="muted">{mine?`You have scored ${mine.scored} of ${review.totals.interviewQuestions}: ${mine.points} of ${review.totals.maxInterview} points so far.`:'You have not scored any yet.'}{review.totals.interview.filter(r=>!r.isMe).map(r=>` ${r.name}: ${r.scored} of ${review.totals.interviewQuestions} scored.`).join('')}</p>})()}
    </section>}
-   {review.items.filter(i=>i.stage==='interview').map(item=><section className="card" key={item.questionId}>
-    <p className="eyebrow">IN PERSON {item.ordinal}{item.domain?` · ${item.domain.toUpperCase()}`:''}</p>
-    <h3>{item.prompt}</h3>
-    <details open>
-     <summary>What to listen for</summary>
-     <p className="look"><strong>Strong sounds like:</strong> {item.lookForStrong||'—'}</p>
-     <p className="look"><strong>Weak sounds like:</strong> {item.lookForWeak||'—'}</p>
-    </details>
-    <Score item={item} onSave={saveScore(item)} busy={busy}/>
-   </section>)}
+   {review.items.filter(i=>i.stage==='interview').map(item=>
+    <AnswerCard key={item.questionId} item={item} onScore={saveScore(item)} onSaveQuestion={saveQuestion} busy={busy}/>)}
 
    {(review.rounds||[]).filter(r=>r.key!=='screener').map(r=><RoundCard key={r.key} round={r} onSave={saveRound} onClear={clearRound} busy={busy}/>)}
+
+   <p className="endtop"><button type="button" className="linkish" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}>↑ Back to the top</button> · <button type="button" className="linkish" onClick={()=>{setOpen(null);setReview(null);window.scrollTo({top:0})}}>Back to all candidates</button></p>
   </>
   :<>
    {schools.length>1&&<label className="schoolPick">School<select value={schoolId} onChange={e=>setSchoolId(e.target.value)}>{schools.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>}
@@ -443,6 +524,8 @@ export default function Hiring(){
      </tr>)}</tbody>
     </table>}
    </section>
+
+   <p className="endtop"><button type="button" className="linkish" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}>↑ Back to the top</button></p>
 
    <section className="card">
     <h2>Invite a candidate</h2>
@@ -494,51 +577,61 @@ export default function Hiring(){
    </section>
   </>}
 
+  <button type="button" className="totop" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})} title="Back to top">↑ Top</button>
+
   {error&&<p className="bad" role="alert">{error}</p>}
   {notice&&<p className="ok" role="status">{notice}</p>}
 
   <style jsx>{`
-   main{max-width:900px;margin:0 auto;padding:16px 18px 64px}
+   main{max-width:900px;margin:0 auto;padding:14px 16px 72px;font-size:15px}
    .crumbs{margin:8px 0}
-   .hero{margin:8px 0 20px}
-   .eyebrow{font-family:var(--font-mono);font-size:13px;letter-spacing:.08em;color:var(--vic-text-secondary);margin:0 0 6px}
-   h1{font-size:30px;margin:0 0 8px}
-   h2{font-size:21px;margin:0 0 10px}
-   h3{font-size:18px;margin:0 0 10px;line-height:1.4}
-   .card{background:var(--vic-surface);border:1px solid var(--vic-border-soft);border-radius:18px;padding:20px;margin:0 0 18px;box-shadow:var(--vic-shadow-soft)}
-   .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));align-items:end;margin-top:12px}
+   .hero{margin:6px 0 14px}
+   .eyebrow{font-family:var(--font-mono);font-size:12px;letter-spacing:.08em;color:var(--vic-text-secondary);margin:0 0 5px}
+   h1{font-size:24px;margin:0 0 7px}
+   h2{font-size:18px;margin:0 0 8px}
+   h3{font-size:16px;margin:0 0 8px;line-height:1.4}
+   .card{background:var(--vic-surface);border:1px solid var(--vic-border-soft);border-radius:14px;padding:15px;margin:0 0 12px;box-shadow:var(--vic-shadow-soft)}
+   .grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));align-items:end;margin-top:10px}
    label{display:grid;gap:6px;font-weight:600}
-   input,select,textarea{padding:11px;border-radius:11px;border:1px solid var(--vic-field-border);background:var(--vic-surface);width:100%}
+   input,select,textarea{padding:8px 10px;border-radius:10px;border:1px solid var(--vic-field-border);background:var(--vic-surface);width:100%;font-size:14px;font-family:var(--font-body)}
    button{padding:11px 16px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
    .primary{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
    .primary:disabled{background:var(--vic-disabled);border-color:var(--vic-disabled)}
    .back{margin:0 0 14px}
    table{width:100%;border-collapse:collapse}
-   th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--vic-border-soft);vertical-align:top}
-   th{font-size:14px;color:var(--vic-text-secondary)}
-   .muted{color:var(--vic-text-secondary);font-size:15px}
-   .shot{width:100%;max-height:420px;background:var(--vic-ink);border-radius:14px}
-   .written{background:var(--vic-surface-muted);padding:14px;border-radius:12px;font-family:var(--font-read);line-height:1.6;white-space:pre-wrap}
-   .quote{background:var(--vic-accent-soft);padding:12px;border-radius:12px}
-   details{margin-top:12px;border:1px solid var(--vic-border-soft);border-radius:12px;padding:10px 12px}
-   summary{font-weight:700;cursor:pointer}
-   .look{margin:8px 0 0;line-height:1.55;font-size:15px}
-   .issued{margin-top:14px;padding:14px;border-radius:14px;background:var(--vic-ink);color:var(--vic-ink-text)}
+   th,td{text-align:left;padding:7px 7px;border-bottom:1px solid var(--vic-border-soft);vertical-align:top;font-size:14px}
+   th{font-size:13px;color:var(--vic-text-secondary)}
+   .muted{color:var(--vic-text-secondary);font-size:14px}
+   .shot{width:100%;max-height:340px;background:var(--vic-ink);border-radius:12px}
+   .written{background:var(--vic-surface-muted);padding:12px;border-radius:11px;font-family:var(--font-read);line-height:1.6;white-space:pre-wrap;font-size:15px}
+   .quote{background:var(--vic-accent-soft);padding:11px;border-radius:11px;font-size:14px}
+   details{margin-top:10px;border:1px solid var(--vic-border-soft);border-radius:11px;padding:9px 11px}
+   summary{font-weight:700;cursor:pointer;font-size:14px}
+   .look{margin:7px 0 0;line-height:1.5;font-size:14px}
+   .issued{margin-top:12px;padding:13px;border-radius:12px;background:var(--vic-ink);color:var(--vic-ink-text)}
    .issued p{margin:0 0 8px}
    .issued .muted{color:var(--vic-ink-muted)}
-   .code{font-family:var(--font-mono);font-size:24px;letter-spacing:.06em}
+   .code{font-family:var(--font-mono);font-size:20px;letter-spacing:.06em}
    .tmpl{display:grid;gap:12px;margin:12px 0 4px;padding:14px;border:1px solid var(--vic-border-soft);border-radius:14px}
    .rowbtn{display:flex;gap:10px;flex-wrap:wrap}
    .plain{list-style:none;padding:0;margin:0 0 6px;display:grid;gap:6px}
    .stagePick{margin-top:12px;max-width:260px}
    .schoolPick{max-width:320px;margin:0 0 14px}
-   .ok{background:var(--vic-primary-soft);padding:12px 14px;border-radius:12px;font-weight:600}
-   .bad{background:var(--vic-danger-soft);color:var(--vic-danger);padding:12px 14px;border-radius:12px;font-weight:600}
+   .ok{background:var(--vic-primary-soft);padding:10px 12px;border-radius:11px;font-weight:600;font-size:14px}
+   .bad{background:var(--vic-danger-soft);color:var(--vic-danger);padding:10px 12px;border-radius:11px;font-weight:600;font-size:14px}
    code{font-family:var(--font-mono);font-size:14px}
    .results{margin-bottom:10px}
    .results th,.results td{padding:9px 8px}
    .panelrow td{border-top:2px solid var(--vic-border)}
    .skipped td{color:var(--vic-text-muted)}
+   /* Always reachable, so a long candidate record never has to be scrolled back up by hand. */
+   .totop{position:fixed;right:16px;bottom:16px;z-index:20;padding:9px 13px;border-radius:999px;
+    background:var(--vic-ink);color:var(--vic-ink-text);border:0;font-weight:700;font-size:14px;
+    box-shadow:var(--vic-shadow-soft);opacity:.9}
+   .totop:hover{opacity:1}
+   .endtop{margin:2px 0 16px}
+   .linkish{padding:0;border:0;background:none;color:var(--vic-text-secondary);text-decoration:underline;font-weight:700;font-size:14px;cursor:pointer}
+   @media print{.totop,.endtop{display:none}}
   `}</style>
  </main>
 }

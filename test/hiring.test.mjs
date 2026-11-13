@@ -5,7 +5,7 @@ import {
  SCREENER_LINES, SCREENER_MAX, STAGE_TOTALS, GRAND_TOTAL,
  DEMO_RUBRIC, PLAN_RUBRIC,
  makeInviteCode, normalizeInviteCode, candidateInput, screenerTotal, rankCandidates, seedQuestions,
- LADDER, STOPPED_STAGES, ladderState, ROUNDS,
+ LADDER, STOPPED_STAGES, ladderState, ROUNDS, questionEdit,
 } from '../lib/hiring.mjs'
 
 test('every question carries both look-fors, because a blank one means three scorers invent three bars', () => {
@@ -162,4 +162,15 @@ test('a ladder missing only the in-person round is not complete', () => {
  const state = ladderState(rows, 'interview')
  assert.equal(state.complete, false)
  assert.equal(state.next.key, 'interview')
+})
+
+test('an edited question is cleaned up, and cannot be blanked out', () => {
+ const q = questionEdit({ prompt: '  Tell us about\n  a hard week.  ', domain: ' Management ', lookForStrong: ' specifics ', lookForWeak: '' })
+ assert.equal(q.prompt, 'Tell us about a hard week.')
+ assert.equal(q.domain, 'Management')
+ assert.equal(q.look_for_strong, 'specifics')
+ assert.equal(q.look_for_weak, '')
+ for (const bad of ['', '   ', 'hi']) assert.throws(() => questionEdit({ prompt: bad }), /five characters/)
+ assert.throws(() => questionEdit({ prompt: 'x'.repeat(1201) }), /too long/)
+ assert.equal(questionEdit({ prompt: 'A fine question', domain: 'd'.repeat(90) }).domain.length, 60)
 })
