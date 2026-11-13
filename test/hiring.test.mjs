@@ -5,7 +5,7 @@ import {
  SCREENER_LINES, SCREENER_MAX, STAGE_TOTALS, GRAND_TOTAL,
  DEMO_RUBRIC, PLAN_RUBRIC,
  makeInviteCode, normalizeInviteCode, candidateInput, screenerTotal, rankCandidates, seedQuestions,
- LADDER, STOPPED_STAGES, ladderState, ROUNDS, questionEdit,
+ LADDER, STOPPED_STAGES, ladderState, ROUNDS, questionEdit, parseCandidateList, BATCH_LIMIT,
 } from '../lib/hiring.mjs'
 
 test('every question carries both look-fors, because a blank one means three scorers invent three bars', () => {
@@ -173,4 +173,48 @@ test('an edited question is cleaned up, and cannot be blanked out', () => {
  for (const bad of ['', '   ', 'hi']) assert.throws(() => questionEdit({ prompt: bad }), /five characters/)
  assert.throws(() => questionEdit({ prompt: 'x'.repeat(1201) }), /too long/)
  assert.equal(questionEdit({ prompt: 'A fine question', domain: 'd'.repeat(90) }).domain.length, 60)
+})
+
+test('a pasted candidate list reads the formats people actually paste', () => {
+ const { rows, problems } = parseCandidateList(
+  'Dana Whitfield, dana@school.org\n' +
+  'Marcus Reed <marcus.reed@example.com>\n' +
+  'Pat Ellis\tpat@example.org\n' +
+  '- Lee Fong; lee@example.net\n' +
+  '\n' +
+  'jo@example.com\n'
+ )
+ assert.deepEqual(rows.map(r => r.name), ['Dana Whitfield', 'Marcus Reed', 'Pat Ellis', 'Lee Fong', 'jo'])
+ assert.deepEqual(rows.map(r => r.email), ['dana@school.org', 'marcus.reed@example.com', 'pat@example.org', 'lee@example.net', 'jo@example.com'])
+ assert.deepEqual(problems, [], 'a blank line is skipped, not reported')
+})
+
+test('a line nobody can read is reported rather than dropped, since a dropped line is a candidate never invited', () => {
+ const { rows, problems } = parseCandidateList('Dana Whitfield\nreal@example.org\nnot an email either')
+ assert.deepEqual(rows.map(r => r.email), ['real@example.org'])
+ assert.deepEqual(problems.map(p => p.line), [1, 3])
+ for (const p of problems) assert.match(p.error, /email/i)
+})
+
+test('the same candidate twice in one paste is invited once', () => {
+ const { rows, problems } = parseCandidateList('Dana, dana@x.org\nDana Whitfield, DANA@X.ORG')
+ assert.equal(rows.length, 1)
+ assert.equal(rows[0].email, 'dana@x.org')
+ assert.match(problems[0].error, /twice/)
+})
+
+test('a list longer than the batch limit is flagged, not silently truncated', () => {
+ const many = Array.from({ length: BATCH_LIMIT + 1 }, (_, i) => `Person ${i}, p${i}@example.org`).join('\n')
+ const result = parseCandidateList(many)
+ assert.equal(result.rows.length, BATCH_LIMIT + 1, 'every row is still parsed, so the count can be reported')
+ assert.equal(result.overLimit, true)
+ assert.equal(parseCandidateList('one, one@example.org').overLimit, false)
+})
+
+test('an empty paste is empty, not an error', () => {
+ for (const input of ['', '   \n\n ', null, undefined]) {
+  const { rows, problems } = parseCandidateList(input)
+  assert.deepEqual(rows, [])
+  assert.deepEqual(problems, [])
+ }
 })

@@ -1,6 +1,7 @@
 import { requirePrincipal, requireSchool } from '../../../lib/assistant-principal-auth'
 import {
  candidateInput, makeInviteCode, seedQuestions, rankCandidates, STAGE_TOTALS,
+ parseCandidateList, BATCH_LIMIT,
  ROUNDS, roundByKey, roundTotal, roundMax, packet, ladderState, questionEdit,
 } from '../../../lib/hiring.mjs'
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
@@ -22,7 +23,7 @@ import {
 // the software a candidate had to use already holds all the power in the room, and that column
 // exists so the ask is honest -- not so the answer can be acted on while deciding who gets a job.
 
-export const config = { api: { bodyParser: { sizeLimit: '32kb' } } }
+export const config = { api: { bodyParser: { sizeLimit: '32kb' } }, maxDuration: 60 }
 
 const no = (res, status, error) => res.status(status).json({ error })
 const UUID = /^[0-9a-f-]{36}$/i
@@ -118,6 +119,54 @@ export default async function handler(req, res) {
    return res.json({ status, title: data.title, deleted })
   }
 
+  // A pasted list of candidates, invited in one pass. Reported row by row: a batch that says only
+  // "something went wrong" after sending eleven of twenty emails is worse than no batch at all,
+  // because the only way to find out who was invited is to ask them.
+  if (action === 'invite-batch') {
+   const postingId = String(req.body?.postingId || '')
+   if (!UUID.test(postingId)) return no(res, 400, 'Choose a position.')
+   const { data: posting } = await db.from('ap_hiring_postings')
+    .select('id, status, title, invite_subject, invite_body, invite_hours').eq('id', postingId).eq('school_id', school.schoolId).maybeSingle()
+   if (!posting?.id) return no(res, 404, 'That position does not belong to this school.')
+   if (['closed', 'filled'].includes(posting.status)) return no(res, 409, 'That position is closed. Reopen it before inviting anyone else.')
+
+   const { rows, problems, overLimit } = parseCandidateList(req.body?.list)
+   if (overLimit) return no(res, 400, `That is more than ${BATCH_LIMIT} candidates. Send them in batches of ${BATCH_LIMIT} so nobody is half-invited if something fails partway.`)
+   if (!rows.length) return res.json({ invited: [], problems, skipped: [] })
+
+   const asked = Number(req.body?.hours)
+   const hours = Number.isInteger(asked) && asked >= 1 && asked <= 720 ? asked : (posting.invite_hours || DEFAULT_INVITE_HOURS)
+
+   // Somebody already invited to this position is left alone rather than given a second code: two
+   // codes in one inbox is a candidate who does not know which interview is theirs.
+   const { data: existing } = await db.from('ap_hiring_candidates')
+    .select('email').eq('posting_id', postingId).in('email', rows.map(r => r.email))
+   const already = new Set((existing || []).map(e => String(e.email || '').toLowerCase()))
+
+   const { data: schoolRow } = await db.from('ap_schools').select('name').eq('id', school.schoolId).maybeSingle()
+   const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]
+   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0]
+   const site = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.askvic.ai')
+
+   const invited = []
+   const skipped = rows.filter(r => already.has(r.email)).map(r => ({ ...r, reason: 'Already invited to this position.' }))
+
+   for (const row of rows) {
+    if (already.has(row.email)) continue
+    const created = await createInvitation(db, { school, auth, posting, input: row, hours })
+    if (!created) { problems.push({ line: row.line, text: `${row.name} <${row.email}>`, error: 'Could not create this invitation. Try this one on its own.' }); continue }
+    const message = inviteMessage({
+     name: row.name, schoolName: schoolRow?.name, positionTitle: posting.title,
+     code: created.invite_code, expiresAt: created.invite_expires_at, link: `${site}/hiring-screening`,
+     senderName: auth.profile?.name, subject: posting.invite_subject, body: posting.invite_body,
+    })
+    const emailed = await sendInvite({ to: row.email, replyTo: auth.user?.email, ...message, key: `hiring-invite-${created.id}` })
+    invited.push({ name: row.name, email: row.email, code: created.invite_code, expiresAt: created.invite_expires_at, emailed })
+   }
+
+   return res.json({ invited, problems, skipped })
+  }
+
   if (action === 'invite') {
    const postingId = String(req.body?.postingId || '')
    if (!UUID.test(postingId)) return no(res, 400, 'Choose a position.')
@@ -135,19 +184,7 @@ export default async function handler(req, res) {
    const hours = Number.isInteger(asked) && asked >= 1 && asked <= 720 ? asked : (posting.invite_hours || DEFAULT_INVITE_HOURS)
    // One retry, because a duplicate code is possible and astronomically unlikely, and a candidate
    // who cannot be invited because of a coin flip is a bad afternoon for somebody.
-   let created = null
-   for (let attempt = 0; attempt < 2 && !created; attempt++) {
-    const { data, error } = await db.from('ap_hiring_candidates').insert({
-     school_id: school.schoolId, posting_id: postingId,
-     name: input.name, email: input.email, phone: input.phone, cert_areas: input.certAreas,
-     invite_code: makeInviteCode(),
-     invite_expires_at: new Date(Date.now() + hours * 3600000).toISOString(),
-     delete_after: disposalDate(),
-     created_by: auth.user.id,
-    }).select('id, invite_code, invite_expires_at').single()
-    if (!error) { created = data; break }
-    if (!/duplicate key|unique/i.test(error.message || '')) throw error
-   }
+   const created = await createInvitation(db, { school, auth, posting, input, hours })
    if (!created) return no(res, 503, 'Could not create that invitation. Please try again.')
 
    // Email the candidate their link and code. The code is also returned so the panel can send it by
@@ -390,6 +427,24 @@ export default async function handler(req, res) {
   console.error('Hiring admin request failed', error instanceof Error ? error.name : 'Error')
   return no(res, 503, 'Could not complete that just now. Please try again.')
  }
+}
+
+// One invitation row, with the retry that a duplicate code would otherwise cost a candidate. Shared
+// by the single and batch paths so a code minted in a batch is identical to one minted on its own.
+async function createInvitation(db, { school, auth, posting, input, hours }) {
+ for (let attempt = 0; attempt < 2; attempt++) {
+  const { data, error } = await db.from('ap_hiring_candidates').insert({
+   school_id: school.schoolId, posting_id: posting.id,
+   name: input.name, email: input.email, phone: input.phone || '', cert_areas: input.certAreas || '',
+   invite_code: makeInviteCode(),
+   invite_expires_at: new Date(Date.now() + hours * 3600000).toISOString(),
+   delete_after: disposalDate(),
+   created_by: auth.user.id,
+  }).select('id, invite_code, invite_expires_at').single()
+  if (!error) return data
+  if (!/duplicate key|unique/i.test(error.message || '')) throw error
+ }
+ return null
 }
 
 async function overview(db, school, res) {
