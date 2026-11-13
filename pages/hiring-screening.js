@@ -117,6 +117,7 @@ function Recorder({question,limit,onDone,busy}){
    .muted{color:var(--vic-text-muted);font-size:15px}
    .bad{background:var(--vic-danger-soft);color:var(--vic-danger);padding:10px 12px;border-radius:10px;margin:0}
    button{padding:12px 16px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
+   .linkish{padding:0;border:0;background:none;color:var(--vic-link,var(--vic-primary));text-decoration:underline;font-weight:600;cursor:pointer}
    .primary{background:var(--vic-primary);border-color:var(--vic-primary);color:#fff}
   `}</style>
  </div>
@@ -160,6 +161,10 @@ export default function HiringScreening(){
    setData(d);setNotice('Resume saved.')
   })}
 
+ // For a shared computer: forget this session so the next person enters their own code.
+ const notYou=()=>run('One moment…',async()=>{await api({action:'leave'});setSession(false);setData(null);setCode('');setCommute('');setConsent(false);setDrafts({})})
+ const due=data?.candidate?.deadline?new Date(data.candidate.deadline).toLocaleString(undefined,{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}):''
+
  const saveWritten=q=>run('Saving…',async()=>{const d=await api({action:'written',questionId:q.id,text:drafts[q.id]||''});setData(d);setNotice('Saved.')})
  const submit=()=>{if(!window.confirm('Submit your interview? You will not be able to change your answers afterwards.'))return
   run('Submitting…',async()=>{const d=await api({action:'submit'});setSubmitted(d.name||'Candidate')})}
@@ -194,6 +199,7 @@ export default function HiringScreening(){
   </section>
   :!data?.candidate?.consented?<section className="card">
    <h2>Before you begin</h2>
+   <p className="muted">Signed in as {data?.candidate?.name||'this candidate'}. <button type="button" className="linkish" onClick={notYou} disabled={!!busy}>Not you? Use a different code</button></p>
    <p className="notice">{data?.notice}</p>
    <form onSubmit={agree} className="stack">
     <label>Have you reviewed our school hours and your daily commute, and is it sustainable for you long term?
@@ -204,6 +210,8 @@ export default function HiringScreening(){
    </form>
   </section>
   :<>
+   <p className="muted">Signed in as {data.candidate.name||'this candidate'}. <button type="button" className="linkish" onClick={notYou} disabled={!!busy}>Not you? Use a different code</button></p>
+   {due&&<p className="muted">Please submit by <strong>{due}</strong>. After that this invitation stops working.</p>}
    <p className="progress" role="status">{left===0?'All answers saved. Submit when you are ready.':`${left} ${left===1?'answer':'answers'} still to do.`}</p>
 
    <section className="card">

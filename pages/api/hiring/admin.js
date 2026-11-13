@@ -4,7 +4,9 @@ import {
  ROUNDS, roundByKey, roundTotal, roundMax, packet, ladderState,
 } from '../../../lib/hiring.mjs'
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
-import { inviteMessage, sendInvite } from '../../../lib/hiring-invite.mjs'
+import {
+ inviteMessage, sendInvite, checkTemplate, DEFAULT_INVITE_SUBJECT, DEFAULT_INVITE_BODY, DEFAULT_INVITE_HOURS, INVITE_PLACEHOLDERS,
+} from '../../../lib/hiring-invite.mjs'
 
 // The panel's side of hiring: invite candidates, review what they sent, score it against the rubric.
 //
@@ -79,15 +81,17 @@ export default async function handler(req, res) {
    const postingId = String(req.body?.postingId || '')
    if (!UUID.test(postingId)) return no(res, 400, 'Choose a position.')
    const { data: posting } = await db.from('ap_hiring_postings')
-    .select('id, status, title').eq('id', postingId).eq('school_id', school.schoolId).maybeSingle()
+    .select('id, status, title, invite_subject, invite_body, invite_hours').eq('id', postingId).eq('school_id', school.schoolId).maybeSingle()
    if (!posting?.id) return no(res, 404, 'That position does not belong to this school.')
    if (['closed', 'filled'].includes(posting.status)) return no(res, 409, 'That position is closed. Reopen it before inviting anyone else.')
 
    let input
    try { input = candidateInput(req.body) } catch (e) { return no(res, 400, e.message) }
 
-   const days = Number(req.body?.days)
-   const validDays = Number.isFinite(days) && days >= 1 && days <= 60 ? Math.round(days) : 14
+   // How long they have to submit, which is also how long the code works: one number, so the date in
+   // the email and the moment the code dies are the same thing. A position carries its own default.
+   const asked = Number(req.body?.hours)
+   const hours = Number.isInteger(asked) && asked >= 1 && asked <= 720 ? asked : (posting.invite_hours || DEFAULT_INVITE_HOURS)
    // One retry, because a duplicate code is possible and astronomically unlikely, and a candidate
    // who cannot be invited because of a coin flip is a bad afternoon for somebody.
    let created = null
@@ -96,7 +100,7 @@ export default async function handler(req, res) {
      school_id: school.schoolId, posting_id: postingId,
      name: input.name, email: input.email, phone: input.phone, cert_areas: input.certAreas,
      invite_code: makeInviteCode(),
-     invite_expires_at: new Date(Date.now() + validDays * 86400000).toISOString(),
+     invite_expires_at: new Date(Date.now() + hours * 3600000).toISOString(),
      delete_after: disposalDate(),
      created_by: auth.user.id,
     }).select('id, invite_code, invite_expires_at').single()
@@ -115,9 +119,50 @@ export default async function handler(req, res) {
     name: input.name, schoolName: schoolRow?.name, positionTitle: posting.title,
     code: created.invite_code, expiresAt: created.invite_expires_at, link: `${site}/hiring-screening`,
     senderName: auth.profile?.name,
+    subject: posting.invite_subject, body: posting.invite_body,
    })
    const emailed = await sendInvite({ to: input.email, replyTo: auth.user?.email, ...message, key: `hiring-invite-${created.id}` })
    return res.json({ candidateId: created.id, code: created.invite_code, expiresAt: created.invite_expires_at, emailed })
+  }
+
+  // The invitation email for one position, and its default time to submit. Sending an empty subject
+  // and message puts the position back on the standard wording.
+  if (action === 'save-invite-template') {
+   const postingId = String(req.body?.postingId || '')
+   if (!UUID.test(postingId)) return no(res, 400, 'Choose a position.')
+   const hours = Number(req.body?.hours)
+   if (!Number.isInteger(hours) || hours < 1 || hours > 720) return no(res, 400, 'Time to submit must be between 1 and 720 hours.')
+   const subject = String(req.body?.subject ?? '')
+   const body = String(req.body?.body ?? '')
+   const reset = !subject.trim() && !body.trim()
+   if (!reset) {
+    const check = checkTemplate(subject, body)
+    if (!check.ok) return no(res, 400, check.error)
+   }
+   const { data, error } = await db.from('ap_hiring_postings')
+    .update({ invite_subject: reset ? null : subject, invite_body: reset ? null : body, invite_hours: hours })
+    .eq('id', postingId).eq('school_id', school.schoolId).select('id').maybeSingle()
+   if (error) throw error
+   if (!data?.id) return no(res, 404, 'That position does not belong to this school.')
+   return res.json({ saved: true, reset })
+  }
+
+  // More time for one candidate. Same code, new deadline: a family emergency on Saturday should not
+  // cost anyone the job, and it should not mean a second invitation either.
+  if (action === 'extend-invite') {
+   const candidateId = String(req.body?.candidateId || '')
+   const hours = Number(req.body?.hours)
+   if (!UUID.test(candidateId) || !Number.isInteger(hours) || hours < 1 || hours > 720) return no(res, 400, 'Choose a candidate and a number of hours.')
+   const { data: c } = await db.from('ap_hiring_candidates')
+    .select('id, submitted_at, session_token').eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
+   if (!c?.id) return no(res, 404, 'That candidate does not belong to this school.')
+   if (c.submitted_at) return no(res, 409, 'They have already submitted.')
+   const until = new Date(Date.now() + hours * 3600000).toISOString()
+   const { error } = await db.from('ap_hiring_candidates')
+    .update({ invite_expires_at: until, ...(c.session_token ? { session_expires_at: until } : {}) })
+    .eq('id', candidateId)
+   if (error) throw error
+   return res.json({ expiresAt: until })
   }
 
   if (action === 'score') {
@@ -227,7 +272,7 @@ export default async function handler(req, res) {
 
 async function overview(db, school, res) {
  const { data: postings, error } = await db.from('ap_hiring_postings')
-  .select('id, title, grade_band, subject, status, created_at')
+  .select('id, title, grade_band, subject, status, created_at, invite_subject, invite_body, invite_hours')
   .eq('school_id', school.schoolId).order('created_at', { ascending: false }).limit(100)
  if (error) throw error
 
@@ -264,7 +309,14 @@ async function overview(db, school, res) {
  })
 
  return res.json({
-  postings: postings || [],
+  postings: (postings || []).map(p => ({
+   id: p.id, title: p.title, gradeBand: p.grade_band, subject: p.subject, status: p.status, createdAt: p.created_at,
+   inviteSubject: p.invite_subject || DEFAULT_INVITE_SUBJECT,
+   inviteBody: p.invite_body || DEFAULT_INVITE_BODY,
+   inviteHours: p.invite_hours || DEFAULT_INVITE_HOURS,
+   inviteCustom: Boolean(p.invite_subject || p.invite_body),
+  })),
+  inviteHelp: { placeholders: INVITE_PLACEHOLDERS, defaultSubject: DEFAULT_INVITE_SUBJECT, defaultBody: DEFAULT_INVITE_BODY, defaultHours: DEFAULT_INVITE_HOURS },
   // Ranked, but a candidate nobody has scored yet is flagged rather than quietly ranked last: an
   // unscored answer is a missing scorer, not a zero.
   candidates: rankCandidates(rows),
