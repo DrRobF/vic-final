@@ -173,8 +173,8 @@ function AnswerCard({item,onScore,onSaveQuestion,busy}){
        onError={()=>setPlayFailed(true)}/>}
      {item.videoUrl&&<p className="muted">
       {item.seconds?`${mins(item.seconds)} recorded. `:''}
-      {playFailed?'This browser will not play that recording. ':''}
-      <a href={item.videoUrl} download>Download this recording</a>{playFailed?' and open it in another player.':''}
+      {playFailed?'This browser will not play that recording — Chrome plays every format we record. ':''}
+      <a href={item.videoUrl} download>Download this recording</a>{playFailed?', or open this page in Chrome.':''}
      </p>}
      {item.text&&<p className="written">{item.text}</p>}
      <details><summary>What to listen for</summary>

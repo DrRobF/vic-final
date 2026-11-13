@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import {useEffect,useRef,useState} from 'react'
 import {supabase} from '../lib/supabase'
-import {BUCKET,sniffVideoType} from '../lib/hiring-media.mjs'
+import {BUCKET,sniffVideoType,RECORDING_FORMATS} from '../lib/hiring-media.mjs'
 
 // The candidate's screening interview. Invitation only, nobody signed in, reached with the code
 // from their email.
@@ -49,10 +49,9 @@ async function sniffType(blob,fallback){
  catch{return fallback}
 }
 
-// Whichever type this browser actually records. Safari records MOV/MP4, Chrome and Firefox WebM.
 function pickMime(){
  if(typeof MediaRecorder==='undefined')return ''
- for(const t of ['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm','video/mp4'])if(MediaRecorder.isTypeSupported(t))return t
+ for(const t of RECORDING_FORMATS)if(MediaRecorder.isTypeSupported(t))return t
  return ''
 }
 
