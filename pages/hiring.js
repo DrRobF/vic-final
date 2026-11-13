@@ -345,6 +345,7 @@ export default function Hiring(){
  const [invite,setInvite]=useState({postingId:'',name:'',email:'',phone:'',certAreas:'',hours:''}),[issued,setIssued]=useState(null)
  const [editing,setEditing]=useState(null),[tmpl,setTmpl]=useState({subject:'',body:'',hours:48})
  const [showArchived,setShowArchived]=useState(false)
+ const [batch,setBatch]=useState({postingId:'',list:'',hours:''}),[batchResult,setBatchResult]=useState(null)
 
  useEffect(()=>{api().then(d=>{setSchools(d.schools);if(d.schools[0])setSchoolId(d.schools[0].id);else setBlocked('none')}).catch(e=>setBlocked(e.login?'login':e.message)).finally(()=>setReady(true))},[])
  const load=async(id=schoolId)=>{if(!id)return;try{setData(await api(null,`?schoolId=${encodeURIComponent(id)}`))}catch(e){setError(e.message)}}
@@ -390,6 +391,14 @@ export default function Hiring(){
   await api({action:'extend-invite',schoolId,candidateId:open,hours});await reload();await load();setNotice(`They have ${hours} more hours from now.`)})
  const preview=()=>{const v={first_name:'Dana',school:'your school',position:postingName(editing)||'the position',link:link,code:'ABCD-EFGH-JKLM',deadline:'Sunday, November 15 at 8:15 AM EST',sender:'you'}
   const fill=t=>String(t).replace(/\{([a-z_]+)\}/gi,(w,k)=>v[k]??w);return{subject:fill(tmpl.subject),body:fill(tmpl.body)}}
+ const inviteBatch=e=>{e.preventDefault()
+  run('Inviting…',async()=>{
+   const d=await api({action:'invite-batch',schoolId,...batch})
+   setBatchResult(d)
+   if(d.invited.length)setBatch(b=>({...b,list:''}))
+   await load()})
+ }
+
  // Filling a position is the moment to put it away, and the moment a school is finished with the
  // video of everyone who did not get the job -- but the two are asked separately, because one is
  // tidying and the other cannot be undone.
@@ -604,6 +613,41 @@ export default function Hiring(){
    </section>
 
    <section className="card">
+    <h2>Invite a list of candidates</h2>
+    <p className="muted">One per line. “Dana Whitfield, dana@school.org” or “Dana Whitfield &lt;dana@school.org&gt;” both work, and so does pasting a column of names and emails straight out of a spreadsheet. Up to 25 at a time, so nobody is half-invited if something fails partway.</p>
+    <form onSubmit={inviteBatch} className="stack">
+     <label>Position<select value={batch.postingId} onChange={e=>setBatch({...batch,postingId:e.target.value,hours:''})} required><option value="">Choose…</option>{(data?.postings||[]).filter(p=>!['closed','filled'].includes(p.status)).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
+     <label>Candidates<textarea rows={8} value={batch.list} onChange={e=>setBatch({...batch,list:e.target.value})} placeholder={'Dana Whitfield, dana@school.org\nMarcus Reed <marcus@example.com>'} required/></label>
+     <label>Hours to submit<input type="number" min="1" max="720" value={batch.hours} onChange={e=>setBatch({...batch,hours:e.target.value})} placeholder={String((data?.postings||[]).find(x=>x.id===batch.postingId)?.inviteHours||data?.inviteHelp?.defaultHours||48)}/></label>
+     <button className="primary" disabled={!!busy||!batch.list.trim()}>{busy||`Invite ${batch.list.split(/\n/).filter(l=>l.includes('@')).length||''} candidates`.trim()}</button>
+    </form>
+
+    {batchResult&&<div className="batchres">
+     {batchResult.invited.length>0&&<>
+      <h3>Invited {batchResult.invited.length}</h3>
+      <table>
+       <thead><tr><th>Candidate</th><th>Email</th><th>Code</th><th>Sent</th></tr></thead>
+       <tbody>{batchResult.invited.map((r,i)=><tr key={i}>
+        <td>{r.name}</td><td>{r.email}</td><td><code>{r.code}</code></td>
+        <td>{r.emailed==='sent'?'yes':r.emailed==='failed'?'no — send it yourself':'email not set up — send it yourself'}</td>
+       </tr>)}</tbody>
+      </table>
+      <p className="muted">Codes are shown once, here. Copy any you need to send by hand.</p>
+      <button type="button" onClick={()=>copy(batchResult.invited.map(r=>`${r.name}\t${r.email}\t${r.code}`).join('\n'))}>Copy all names, emails and codes</button>
+     </>}
+     {batchResult.skipped?.length>0&&<>
+      <h3>Already invited — left alone</h3>
+      <ul className="plain">{batchResult.skipped.map((r,i)=><li key={i}>{r.name} · {r.email} — {r.reason}</li>)}</ul>
+     </>}
+     {batchResult.problems?.length>0&&<>
+      <h3>Lines I could not use</h3>
+      <ul className="plain">{batchResult.problems.map((r,i)=><li key={i}>Line {r.line}: “{r.text}” — {r.error}</li>)}</ul>
+      <p className="muted">Nobody on these lines was invited. Fix them and paste them again.</p>
+     </>}
+    </div>}
+   </section>
+
+   <section className="card">
     <h2>Positions</h2>
     {(data?.postings||[]).length>0&&<ul className="plain">{data.postings.map(p=><li key={p.id}>
      <strong>{p.title}</strong> {p.gradeBand&&<span className="muted">· {p.gradeBand}</span>} {p.subject&&<span className="muted">· {p.subject}</span>} <span className="muted">· {p.status} · {p.inviteHours} hours to submit{p.inviteCustom?' · custom email':''}</span>{' '}
@@ -692,6 +736,11 @@ export default function Hiring(){
     box-shadow:var(--vic-shadow-soft);opacity:.9}
    .totop:hover{opacity:1}
    .qhead{display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
+   .stack{display:grid;gap:10px;margin-top:10px;justify-items:start}
+   .stack label,.stack button{width:100%;max-width:none}
+   .stack button{max-width:260px}
+   .batchres{margin-top:14px;padding:13px;border:1px solid var(--vic-border-soft);border-radius:12px;display:grid;gap:8px}
+   .batchres h3{margin:6px 0 2px;font-size:15px}
    .endtop{margin:2px 0 16px}
    .linkish{padding:0;border:0;background:none;color:var(--vic-text-secondary);text-decoration:underline;font-weight:700;font-size:14px;cursor:pointer}
    @media print{.totop,.endtop{display:none}}
