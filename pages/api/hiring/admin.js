@@ -293,8 +293,11 @@ export default async function handler(req, res) {
    const { count: scorerCount } = await db.from('ap_hiring_scores')
     .select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId)
 
-   const allowed = mayDeleteMedia({ stage: candidate.stage, scorerCount: scorerCount || 0, hasVideo: paths.length > 0 })
-   if (!allowed.ok) return no(res, 409, allowed.reason)
+   const allowed = mayDeleteMedia({
+    stage: candidate.stage, scorerCount: scorerCount || 0, hasVideo: paths.length > 0,
+    confirmed: req.body?.confirmed === true,
+   })
+   if (!allowed.ok) return res.status(409).json({ error: allowed.reason, confirmable: allowed.confirmable === true })
 
    const { error: removeError } = await db.storage.from(BUCKET).remove(paths)
    if (removeError) return no(res, 503, 'Those recordings could not be deleted just now. Please try again.')
