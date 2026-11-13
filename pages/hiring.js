@@ -245,7 +245,8 @@ export default function Hiring(){
  const [open,setOpen]=useState(null),[review,setReview]=useState(null)
  const [busy,setBusy]=useState(''),[error,setError]=useState(''),[notice,setNotice]=useState('')
  const [posting,setPosting]=useState({title:'',gradeBand:'',subject:''})
- const [invite,setInvite]=useState({postingId:'',name:'',email:'',phone:'',certAreas:''}),[issued,setIssued]=useState(null)
+ const [invite,setInvite]=useState({postingId:'',name:'',email:'',phone:'',certAreas:'',hours:''}),[issued,setIssued]=useState(null)
+ const [editing,setEditing]=useState(null),[tmpl,setTmpl]=useState({subject:'',body:'',hours:48})
 
  useEffect(()=>{api().then(d=>{setSchools(d.schools);if(d.schools[0])setSchoolId(d.schools[0].id);else setBlocked('none')}).catch(e=>setBlocked(e.login?'login':e.message)).finally(()=>setReady(true))},[])
  const load=async(id=schoolId)=>{if(!id)return;try{setData(await api(null,`?schoolId=${encodeURIComponent(id)}`))}catch(e){setError(e.message)}}
@@ -261,7 +262,7 @@ export default function Hiring(){
  const addCandidate=e=>{e.preventDefault();run('Creating the invitation…',async()=>{
   const d=await api({action:'invite',schoolId,...invite})
   setIssued({name:invite.name,email:invite.email,code:d.code,expiresAt:d.expiresAt,emailed:d.emailed})
-  setInvite(i=>({postingId:i.postingId,name:'',email:'',phone:'',certAreas:''}));await load()})}
+  setInvite(i=>({postingId:i.postingId,name:'',email:'',phone:'',certAreas:'',hours:''}));await load()})}
 
  const openCandidate=async c=>{setOpen(c.id);setReview(null);setError('')
   try{setReview(await api(null,`?schoolId=${encodeURIComponent(schoolId)}&candidateId=${encodeURIComponent(c.id)}`))}catch(e){setError(e.message)}}
@@ -283,6 +284,14 @@ export default function Hiring(){
  const clearRound=round=>run('Clearing…',async()=>{
   await api({action:'round-clear',schoolId,candidateId:open,round});await reload();await load();setNotice('Marked as not done.')})
 
+ const editTemplate=p=>{setEditing(editing===p.id?null:p.id);setTmpl({subject:p.inviteSubject,body:p.inviteBody,hours:p.inviteHours})}
+ const saveTemplate=(p,reset)=>run('Saving…',async()=>{
+  await api({action:'save-invite-template',schoolId,postingId:p.id,subject:reset?'':tmpl.subject,body:reset?'':tmpl.body,hours:tmpl.hours})
+  await load();setEditing(null);setNotice(reset?'That position is back on the standard email.':'Invitation email saved for this position.')})
+ const extend=hours=>run('Extending…',async()=>{
+  await api({action:'extend-invite',schoolId,candidateId:open,hours});await reload();await load();setNotice(`They have ${hours} more hours from now.`)})
+ const preview=()=>{const v={first_name:'Dana',school:'your school',position:postingName(editing)||'the position',link:link,code:'ABCD-EFGH-JKLM',deadline:'Sunday, November 15 at 8:15 AM EST',sender:'you'}
+  const fill=t=>String(t).replace(/\{([a-z_]+)\}/gi,(w,k)=>v[k]??w);return{subject:fill(tmpl.subject),body:fill(tmpl.body)}}
  const postingName=id=>(data?.postings||[]).find(p=>p.id===id)?.title||''
  const link=typeof window!=='undefined'?`${window.location.origin}/hiring-screening`:'/hiring-screening'
  const copy=t=>{navigator.clipboard?.writeText(t).then(()=>setNotice('Copied.')).catch(()=>{})}
@@ -311,6 +320,7 @@ export default function Hiring(){
     <p className="muted">{review.candidate.email}{review.candidate.phone?` · ${review.candidate.phone}`:''}{review.candidate.certAreas?` · ${review.candidate.certAreas}`:''}</p>
     <p className="muted">Screening submitted {day(review.candidate.submittedAt)||'— not yet'} · Stage: {stageLabel(review.candidate.stage)} · Video deleted after {day(review.candidate.deleteAfter)}</p>
     <p className="muted">{review.candidate.resumeUrl?<a href={review.candidate.resumeUrl} target="_blank" rel="noopener noreferrer">Open résumé: {review.candidate.resumeName}</a>:'No résumé attached.'}</p>
+    {!review.candidate.submittedAt&&review.candidate.inviteExpiresAt&&<p className="muted">Invitation {Date.parse(review.candidate.inviteExpiresAt)>Date.now()?'runs out':'ran out'} {new Date(review.candidate.inviteExpiresAt).toLocaleString(undefined,{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}. <button type="button" disabled={!!busy} onClick={()=>extend(24)}>Give 24 more hours</button> <button type="button" disabled={!!busy} onClick={()=>extend(48)}>Give 48 more hours</button></p>}
     {review.candidate.commuteSustainable&&<p className="quote"><strong>On the commute, in their words:</strong> {review.candidate.commuteSustainable}</p>}
     <p className="muted">Stage: {stageLabel(review.candidate.stage)}</p>
    </section>
@@ -419,13 +429,14 @@ export default function Hiring(){
 
    <section className="card">
     <h2>Invite a candidate</h2>
-    <p className="muted">We email them a link and a single-use code to record their interview at <code>{link}</code>.</p>
+    <p className="muted">We email them a link and a single-use code to record their interview at <code>{link}</code>. The code stops working when their time to submit runs out, and the email says exactly when. Change the wording for each position under Positions below.</p>
     <form onSubmit={addCandidate} className="grid">
-     <label>Position<select value={invite.postingId} onChange={e=>setInvite({...invite,postingId:e.target.value})} required><option value="">Choose…</option>{(data?.postings||[]).filter(p=>!['closed','filled'].includes(p.status)).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
+     <label>Position<select value={invite.postingId} onChange={e=>setInvite({...invite,postingId:e.target.value,hours:''})} required><option value="">Choose…</option>{(data?.postings||[]).filter(p=>!['closed','filled'].includes(p.status)).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
      <label>Name<input value={invite.name} onChange={e=>setInvite({...invite,name:e.target.value})} required/></label>
      <label>Email<input type="email" value={invite.email} onChange={e=>setInvite({...invite,email:e.target.value})} required/></label>
      <label>Phone<input value={invite.phone} onChange={e=>setInvite({...invite,phone:e.target.value})}/></label>
      <label>Certification areas<input value={invite.certAreas} onChange={e=>setInvite({...invite,certAreas:e.target.value})}/></label>
+     <label>Hours to submit<input type="number" min="1" max="720" value={invite.hours} onChange={e=>setInvite({...invite,hours:e.target.value})} placeholder={String((data?.postings||[]).find(x=>x.id===invite.postingId)?.inviteHours||data?.inviteHelp?.defaultHours||48)}/></label>
      <button className="primary" disabled={!!busy}>{busy||'Create invitation'}</button>
     </form>
     {issued&&<div className="issued">
@@ -438,7 +449,24 @@ export default function Hiring(){
 
    <section className="card">
     <h2>Positions</h2>
-    {(data?.postings||[]).length>0&&<ul className="plain">{data.postings.map(p=><li key={p.id}><strong>{p.title}</strong> {p.gradeBand&&<span className="muted">· {p.gradeBand}</span>} {p.subject&&<span className="muted">· {p.subject}</span>} <span className="muted">· {p.status}</span></li>)}</ul>}
+    {(data?.postings||[]).length>0&&<ul className="plain">{data.postings.map(p=><li key={p.id}>
+     <strong>{p.title}</strong> {p.gradeBand&&<span className="muted">· {p.gradeBand}</span>} {p.subject&&<span className="muted">· {p.subject}</span>} <span className="muted">· {p.status} · {p.inviteHours} hours to submit{p.inviteCustom?' · custom email':''}</span>{' '}
+     <button type="button" onClick={()=>editTemplate(p)}>{editing===p.id?'Close':'Edit invitation email'}</button>
+     {editing===p.id&&<div className="tmpl">
+      <label>Subject<input value={tmpl.subject} onChange={e=>setTmpl({...tmpl,subject:e.target.value})}/></label>
+      <label>Message<textarea rows={16} value={tmpl.body} onChange={e=>setTmpl({...tmpl,body:e.target.value})}/></label>
+      <label>Hours to submit (also how long the code works)<input type="number" min="1" max="720" value={tmpl.hours} onChange={e=>setTmpl({...tmpl,hours:Number(e.target.value)})}/></label>
+      <p className="muted">Fill-ins you can use, typed exactly as shown: {(data?.inviteHelp?.placeholders||[]).map(([k,d])=>`${k} (${d})`).join(' · ')}. The message must include {'{link}'}, {'{code}'} and {'{deadline}'}.</p>
+      <details open><summary>What the candidate will see</summary>
+       <p><strong>{preview().subject}</strong></p>
+       <p className="written">{preview().body}</p>
+      </details>
+      <div className="rowbtn">
+       <button type="button" className="primary" disabled={!!busy} onClick={()=>saveTemplate(p,false)}>{busy||'Save for this position'}</button>
+       <button type="button" disabled={!!busy} onClick={()=>{if(window.confirm('Put this position back on the standard email? Your wording for it will be replaced.'))saveTemplate(p,true)}}>Use the standard email</button>
+      </div>
+     </div>}
+    </li>)}</ul>}
     <form onSubmit={addPosting} className="grid">
      <label>Title<input value={posting.title} onChange={e=>setPosting({...posting,title:e.target.value})} placeholder="Elementary Teacher" required/></label>
      <label>Grade band<input value={posting.gradeBand} onChange={e=>setPosting({...posting,gradeBand:e.target.value})} placeholder="K–2"/></label>
@@ -482,6 +510,8 @@ export default function Hiring(){
    .issued p{margin:0 0 8px}
    .issued .muted{color:var(--vic-ink-muted)}
    .code{font-family:var(--font-mono);font-size:24px;letter-spacing:.06em}
+   .tmpl{display:grid;gap:12px;margin:12px 0 4px;padding:14px;border:1px solid var(--vic-border-soft);border-radius:14px}
+   .rowbtn{display:flex;gap:10px;flex-wrap:wrap}
    .plain{list-style:none;padding:0;margin:0 0 6px;display:grid;gap:6px}
    .stagePick{margin-top:12px;max-width:260px}
    .schoolPick{max-width:320px;margin:0 0 14px}

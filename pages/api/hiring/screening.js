@@ -35,7 +35,7 @@ async function currentCandidate(db, req) {
  const token = readSessionToken(req)
  if (!token) return null
  const { data } = await db.from('ap_hiring_candidates')
-  .select('id, school_id, posting_id, name, email, stage, session_expires_at, recording_notice_accepted_at, commute_sustainable, submitted_at, resume_path, resume_name')
+  .select('id, school_id, posting_id, name, email, stage, session_expires_at, recording_notice_accepted_at, commute_sustainable, submitted_at, resume_path, resume_name, invite_expires_at')
   .eq('session_token', token).maybeSingle()
  if (!data?.id) return null
  if (data.session_expires_at && Date.parse(data.session_expires_at) <= Date.now()) return null
@@ -74,6 +74,8 @@ async function state(db, candidate) {
    submitted: Boolean(candidate.submitted_at),
    resumeAttached: Boolean(candidate.resume_path),
    resumeName: candidate.resume_name || '',
+   // When the code stops working: the candidate is told this in the email and sees it here too.
+   deadline: candidate.invite_expires_at || null,
   },
   notice: RECORDING_NOTICE,
   limits: { videoSeconds: VIDEO_LIMIT_SECONDS, videoBytes: MAX_VIDEO_BYTES, resumeBytes: MAX_RESUME_BYTES },
@@ -119,15 +121,29 @@ export default async function handler(req, res) {
    // Already claimed, and the claiming session is still alive: this is somebody returning on a
    // different device or after clearing cookies, which is ordinary. Hand them a fresh session for
    // the same application rather than locking them out of their own interview.
+   // The session ends when the invitation does. The deadline in the email is the deadline, not a
+   // suggestion: a candidate who got in with an hour to spare is not still recording a week later.
    const token = makeSessionToken()
-   const expires = sessionExpiry()
+   const deadline = candidate.invite_expires_at ? Date.parse(candidate.invite_expires_at) : Infinity
+   const expiresMs = Math.min(Date.parse(sessionExpiry()), deadline)
+   const expires = new Date(expiresMs).toISOString()
    const { error } = await db.from('ap_hiring_candidates')
     .update({ claimed_at: candidate.claimed_at || new Date().toISOString(), session_token: token, session_expires_at: expires })
     .eq('id', candidate.id)
    if (error) throw error
-   setSessionCookie(req, res, token, 14 * 86400)
+   setSessionCookie(req, res, token, Math.max(60, Math.floor((expiresMs - Date.now()) / 1000)))
    const fresh = await currentCandidate(db, req) || { ...candidate, session_token: token }
    return res.json({ session: true, ...(await state(db, { ...fresh, id: candidate.id, posting_id: candidate.posting_id })) })
+  }
+
+  // "Not you?" on a shared computer. Ends this browser's session and forgets it on the server, so
+  // the next person types their own code instead of landing in someone else's half-finished
+  // interview. The code itself still works; the person it belongs to just enters it again.
+  if (action === 'leave') {
+   const who = await currentCandidate(db, req)
+   if (who?.id) await db.from('ap_hiring_candidates').update({ session_token: null, session_expires_at: null }).eq('id', who.id)
+   setSessionCookie(req, res, '0'.repeat(64), 0)
+   return res.json({ session: false })
   }
 
   const candidate = await currentCandidate(db, req)
