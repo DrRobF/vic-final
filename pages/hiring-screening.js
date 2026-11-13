@@ -1,7 +1,7 @@
 import Head from 'next/head'
 import {useEffect,useRef,useState} from 'react'
 import {supabase} from '../lib/supabase'
-import {BUCKET} from '../lib/hiring-media.mjs'
+import {BUCKET,sniffVideoType} from '../lib/hiring-media.mjs'
 
 // The candidate's screening interview. Invitation only, nobody signed in, reached with the code
 // from their email.
@@ -19,6 +19,17 @@ async function api(body){
  const d=await r.json().catch(()=>({}))
  if(!r.ok)throw Object.assign(new Error(d.error||'Something went wrong. Please try again, or call the school office.'),{status:r.status})
  return d
+}
+
+// What a recording actually is, read out of its own first bytes.
+//
+// A browser may accept a request to record WebM and hand back something else, and MediaRecorder's
+// own mimeType is only its word for it. Believing either one mislabels the file in storage, and a
+// panel member is then served a file whose content type contradicts its contents: a black player,
+// a duration of zero, and a candidate who looks like they submitted nothing.
+async function sniffType(blob,fallback){
+ try{return sniffVideoType(new Uint8Array(await blob.slice(0,12).arrayBuffer()),fallback)}
+ catch{return fallback}
 }
 
 // Whichever type this browser actually records. Safari records MOV/MP4, Chrome and Firefox WebM.
@@ -61,10 +72,14 @@ function Recorder({question,limit,onDone,busy,answered,savedSeconds}){
   chunks.current=[]
   const rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:1_200_000})
   rec.ondataavailable=e=>{if(e.data?.size)chunks.current.push(e.data)}
-  rec.onstop=()=>{
+  rec.onstop=async()=>{
    clearInterval(timer.current)
-   const type=mime.split(';')[0]
-   const blob=new Blob(chunks.current,{type})
+   // rec.mimeType is what the recorder says it produced, which beats what we asked for; the bytes
+   // themselves beat both.
+   const claimed=String(rec.mimeType||mime).split(';')[0]
+   const parts=chunks.current.slice()
+   const type=await sniffType(new Blob(parts),claimed)
+   const blob=new Blob(parts,{type})
    // The live preview and the playback are two different elements, but React will happily reuse one
    // DOM node for both -- and a node still holding srcObject ignores src, so playback would be a
    // blank, silent player. Detach the camera from the node before the swap.

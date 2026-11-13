@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
  BUCKET, MAX_VIDEO_BYTES, MAX_RESUME_BYTES, VIDEO_LIMIT_SECONDS,
  candidatePrefix, uploadPath, verifiedPath, allowedUpload,
- makeSessionToken, sessionExpiry, disposalDate, RECORDING_NOTICE,
+ makeSessionToken, sessionExpiry, disposalDate, RECORDING_NOTICE, sniffVideoType,
 } from '../lib/hiring-media.mjs'
 
 const A = '11111111-1111-4111-8111-111111111111'
@@ -86,4 +86,25 @@ test('the recording notice tells candidates what happens and offers a way out', 
  assert.match(RECORDING_NOTICE, /call the school office/i)
  assert.equal(BUCKET, 'hiring-media')
  assert.equal(VIDEO_LIMIT_SECONDS, 300)
+})
+
+test('a recording is identified by its own bytes, not by what the browser claimed', () => {
+ const webm = [0x1a, 0x45, 0xdf, 0xa3, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+ const mp4 = [0, 0, 0, 0x20, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d] // ....ftypisom
+ const mov = [0, 0, 0, 0x14, 0x66, 0x74, 0x79, 0x70, 0x71, 0x74, 0x20, 0x20] // ....ftypqt␠␠
+ assert.equal(sniffVideoType(webm, 'video/mp4'), 'video/webm')
+ // The case that broke a phone recording: the browser said WebM and produced MP4.
+ assert.equal(sniffVideoType(mp4, 'video/webm'), 'video/mp4')
+ assert.equal(sniffVideoType(mov, 'video/webm'), 'video/quicktime')
+ // Every type this can return must be one storage will actually accept.
+ for (const head of [webm, mp4, mov]) {
+  assert.ok(allowedUpload('q1', sniffVideoType(head, ''), 1000).ok)
+ }
+})
+
+test('an unrecognisable header falls back rather than guessing', () => {
+ assert.equal(sniffVideoType([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 'video/webm'), 'video/webm')
+ assert.equal(sniffVideoType([], 'video/mp4'), 'video/mp4')
+ assert.equal(sniffVideoType(null, 'video/webm'), 'video/webm')
+ assert.equal(sniffVideoType([1, 2, 3], ''), '')
 })

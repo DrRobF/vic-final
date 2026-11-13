@@ -122,6 +122,8 @@ function AnswerCard({item,onScore,onSaveQuestion,busy}){
  const [editing,setEditing]=useState(false)
  const [draft,setDraft]=useState(blank)
  const [warn,setWarn]=useState(''),[saving,setSaving]=useState(false)
+ // A black player with no explanation reads as a candidate who sent nothing.
+ const [playFailed,setPlayFailed]=useState(false)
  const label=item.stage==='video'?'VIDEO':item.stage==='written'?'WRITTEN':'IN PERSON'
 
  const start=()=>{setDraft(blank);setWarn('');setEditing(true)}
@@ -166,8 +168,13 @@ function AnswerCard({item,onScore,onSaveQuestion,busy}){
     </>
    :!item.responseId?<p className="muted">No answer yet.</p>
    :<>
-     {item.videoUrl&&<video controls src={item.videoUrl} className="shot"/>}
-     {item.seconds?<p className="muted">{mins(item.seconds)}</p>:null}
+     {item.videoUrl&&<video controls preload="metadata" src={item.videoUrl} className="shot"
+       onError={()=>setPlayFailed(true)}/>}
+     {item.videoUrl&&<p className="muted">
+      {item.seconds?`${mins(item.seconds)} recorded. `:''}
+      {playFailed?'This browser will not play that recording. ':''}
+      <a href={item.videoUrl} download>Download this recording</a>{playFailed?' and open it in another player.':''}
+     </p>}
      {item.text&&<p className="written">{item.text}</p>}
      <details><summary>What to listen for</summary>
       <p className="look"><strong>Strong sounds like:</strong> {item.lookForStrong||'—'}</p>
@@ -253,7 +260,12 @@ function RoundCard({round,onSave,onClear,busy}){
       <div className="row">
        <button type="button" className="primary" disabled={!!busy} onClick={()=>onSave(round.key,points,note)}>{busy||'Save this round'}</button>
        <button type="button" onClick={()=>setOpen(false)}>Close</button>
-       {round.mine&&<button type="button" onClick={()=>{if(window.confirm(`Clear your ${round.label.toLowerCase()} score? It will read as “we did not do this round”, not as a zero.`)){setPoints({});setNote('');onClear(round.key);setOpen(false)}}}>We did not do this round</button>}
+       {/* Not gated on having scored it. A school saying it does not run this round should not have
+           to score the round first in order to say so -- which is exactly what this used to require. */}
+       {round.optional&&!round.skipped&&<button type="button" onClick={()=>{if(window.confirm(round.mine
+        ?`Clear your ${round.label.toLowerCase()} score? It will read as “we did not do this round”, not as a zero.`
+        :`Mark ${round.label.toLowerCase()} as a round you did not run? It will be left out of the packet total rather than counted as a zero.`)){setPoints({});setNote('');onClear(round.key);setOpen(false)}}}>We did not do this round</button>}
+       {round.skipped&&<span className="muted">Marked as not used. Score it below if you do run it.</span>}
       </div>
      </div>}
 
