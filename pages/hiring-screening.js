@@ -28,8 +28,10 @@ function pickMime(){
  return ''
 }
 
-function Recorder({question,limit,onDone,busy}){
- const [stream,setStream]=useState(null),[state,setState]=useState('idle'),[clip,setClip]=useState(null),[seconds,setSeconds]=useState(0),[error,setError]=useState('')
+function Recorder({question,limit,onDone,busy,answered,savedSeconds}){
+ // Starts in 'saved' when this answer is already in, so coming back to the page shows what is
+ // actually true rather than an empty camera button next to an answer that is already recorded.
+ const [stream,setStream]=useState(null),[state,setState]=useState(answered?'saved':'idle'),[clip,setClip]=useState(null),[seconds,setSeconds]=useState(savedSeconds||0),[error,setError]=useState('')
  const [clipUrl,setClipUrl]=useState('')
  const video=useRef(null),recorder=useRef(null),chunks=useRef([]),timer=useRef(null)
 
@@ -88,14 +90,30 @@ function Recorder({question,limit,onDone,busy}){
  const stop=()=>{try{recorder.current?.stop()}catch{}}
  const again=()=>{setError('');setClip(null);setSeconds(0);setStream(null);setState('idle')}
 
+ // The take is only called saved once the server has confirmed it. On failure the clip stays exactly
+ // where it is so the candidate presses the same button again rather than recording the answer twice.
+ const use=async()=>{
+  const saved=await onDone(clip,seconds)
+  if(!saved)return
+  setClip(null)
+  setState('saved')
+ }
+
  return <div className="rec">
   {/* Distinct keys so React builds a fresh element for playback instead of handing the playback
       props to the node that was just showing the camera. */}
-  {state==='done'&&clipUrl
+  {state==='saved'
+   ?<div className="saved" role="status">
+     <p className="savedline"><span aria-hidden="true">✓</span> This answer is saved{seconds?` · ${mins(seconds)}`:''}</p>
+     <p className="muted">Nothing more to do here. You can record it again if you want to replace it.</p>
+    </div>
+   :state==='done'&&clipUrl
    ?<video key="playback" controls playsInline src={clipUrl} className="shot"
      onError={()=>setError('This browser recorded your answer but will not play it back here. You can still send it — press “Use this take” — or record it again if you would rather see it first.')}/>
    :<video key="preview" ref={video} autoPlay muted playsInline className="shot"/>}
 
+  {state==='saved'&&<button type="button" disabled={!!busy} onClick={again}>Record this answer again</button>}
+  {answered&&state!=='saved'&&<p className="muted">Your saved answer is still there. It is only replaced when you press “Use this take”.</p>}
   {state==='idle'&&<button type="button" className="primary" onClick={camera}>Turn on camera</button>}
   {state==='ready'&&<button type="button" className="primary" onClick={start}>Start recording</button>}
   {state==='recording'&&<div className="live">
@@ -104,7 +122,7 @@ function Recorder({question,limit,onDone,busy}){
    <button type="button" onClick={stop}>Stop</button>
   </div>}
   {state==='done'&&<div className="row">
-   <button type="button" className="primary" disabled={!!busy} onClick={()=>onDone(clip,seconds)}>{busy||'Use this take'}</button>
+   <button type="button" className="primary" disabled={!!busy} onClick={use}>{busy||'Use this take'}</button>
    <button type="button" disabled={!!busy} onClick={again}>Record it again</button>
    <span className="muted">{mins(seconds)}</span>
   </div>}
@@ -115,6 +133,10 @@ function Recorder({question,limit,onDone,busy}){
    .row,.live{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
    .dot{width:12px;height:12px;border-radius:50%;background:var(--vic-danger);display:inline-block}
    .muted{color:var(--vic-text-muted);font-size:15px}
+   /* Colorblind-safe: the tick, the word and the border carry it, never colour alone. */
+   .saved{border:2px solid var(--vic-ink);border-radius:14px;padding:16px 18px;background:var(--vic-primary-soft)}
+   .savedline{margin:0;font-size:19px;font-weight:800;display:flex;gap:10px;align-items:center}
+   .saved .muted{margin:6px 0 0}
    .bad{background:var(--vic-danger-soft);color:var(--vic-danger);padding:10px 12px;border-radius:10px;margin:0}
    button{padding:12px 16px;border-radius:12px;border:1px solid var(--vic-field-border);background:var(--vic-surface);font-weight:700}
    .linkish{padding:0;border:0;background:none;color:var(--vic-link,var(--vic-primary));text-decoration:underline;font-weight:600;cursor:pointer}
@@ -131,22 +153,21 @@ export default function HiringScreening(){
 
  useEffect(()=>{api().then(d=>{setSession(!!d.session);if(d.session){setData(d);if(d.candidate?.submitted)setSubmitted(d.candidate.name||'Candidate')}}).catch(()=>{}).finally(()=>setReady(true))},[])
 
- const run=async(label,fn)=>{setBusy(label);setError('');setNotice('');try{await fn()}catch(e){setError(e.message)}finally{setBusy('')}}
+ const run=async(label,fn)=>{setBusy(label);setError('');setNotice('');try{await fn();return true}catch(e){setError(e.message);return false}finally{setBusy('')}}
 
  const enter=e=>{e.preventDefault();run('Opening your interview…',async()=>{const d=await api({action:'enter',code});setSession(true);setData(d)})}
  const agree=e=>{e.preventDefault();run('Saving…',async()=>{const d=await api({action:'consent',consent:true,commute});setData(d);setNotice('Thank you. You can start with question one whenever you are ready.')})}
 
  // The clip is handed over only after the server confirms it. If any step fails the take is still
  // on the page, so the candidate retries rather than re-records.
- const useTake=(question)=>async(clip,seconds)=>{
-  await run('Uploading…',async()=>{
+ const useTake=(question)=>async(clip,seconds)=>
+  run('Uploading…',async()=>{
    const prep=await api({action:'upload-url',kind:`q${question.ordinal}`,contentType:clip.type,bytes:clip.blob.size})
    const up=await supabase.storage.from(BUCKET).uploadToSignedUrl(prep.path,prep.token,clip.blob,{contentType:prep.contentType})
    if(up.error)throw new Error('The upload did not finish. Check your connection and press “Use this take” again — your recording is still here.')
    const d=await api({action:'file',kind:`q${question.ordinal}`,path:prep.path,questionId:question.id,seconds})
-   setData(d);setNotice(`Question ${question.ordinal} saved.`)
+   setData(d);setNotice(`Video ${question.ordinal} is saved.`)
   })
- }
 
  // Browsers sometimes report no type for a Word file, so the extension decides when the type is blank.
  const attachResume=file=>{if(!file)return
@@ -226,8 +247,7 @@ export default function HiringScreening(){
     <p className="eyebrow">VIDEO {q.ordinal} OF {videos.length}{q.answered?' · SAVED':''}</p>
     <h2>{q.prompt}</h2>
     <p className="muted">Up to {mins(data.limits.videoSeconds)}. Tell us about real children and real classrooms — a story beats a textbook answer every time.</p>
-    {q.answered&&<p className="done"><span aria-hidden="true">✓</span> Saved{q.seconds?` · ${mins(q.seconds)}`:''}. Record it again below if you would rather.</p>}
-    <Recorder question={q} limit={data.limits.videoSeconds} onDone={useTake(q)} busy={busy}/>
+    <Recorder key={q.id} question={q} limit={data.limits.videoSeconds} onDone={useTake(q)} busy={busy} answered={q.answered} savedSeconds={q.seconds}/>
    </section>)}
 
    {written.map(q=><section className="card" key={q.id}>
