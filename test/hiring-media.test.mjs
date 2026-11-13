@@ -85,7 +85,15 @@ test('the recording notice tells candidates what happens and offers a way out', 
  assert.match(RECORDING_NOTICE, /deleted/i)
  assert.match(RECORDING_NOTICE, /call the school office/i)
  assert.equal(BUCKET, 'hiring-media')
- assert.equal(VIDEO_LIMIT_SECONDS, 300)
+ assert.equal(VIDEO_LIMIT_SECONDS, 180)
+})
+
+test('the byte ceiling comfortably covers a recording of the full allowed length', () => {
+ // Measured at roughly 3.9 MB a minute at the quality we record. A time limit that allows a file the
+ // size limit then refuses is a candidate with no way to make their answer smaller.
+ const worstCase = (VIDEO_LIMIT_SECONDS / 60) * 3.9 * 1024 * 1024
+ assert.ok(MAX_VIDEO_BYTES > worstCase * 2, 'the size limit must not be reachable by talking for the full time')
+ assert.ok(allowedUpload('q1', 'video/webm', worstCase).ok)
 })
 
 test('a recording is identified by its own bytes, not by what the browser claimed', () => {

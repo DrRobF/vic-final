@@ -61,3 +61,14 @@ test('deadlines read in Eastern time, and a bad date is blank rather than wrong'
  assert.equal(deadlineText('nonsense'), '')
  assert.equal(renderInvite({ subject: 'x {nope}', body: 'y' }, {}).subject, 'x {nope}')
 })
+
+test('the email tells a candidate the length the recorder will actually allow', async () => {
+ const { VIDEO_LIMIT_SECONDS } = await import('../lib/hiring-media.mjs')
+ const minutes = Math.round(VIDEO_LIMIT_SECONDS / 60)
+ assert.match(DEFAULT_INVITE_BODY, new RegExp(`up to ${minutes} minutes each`))
+ // Being cut off mid-answer by a limit the invitation did not mention is unforgivable, so no other
+ // number of minutes may appear in the standard wording.
+ for (const m of DEFAULT_INVITE_BODY.matchAll(/(\d+|five|three|ten)\s+minutes/gi)) {
+  assert.equal(m[1], String(minutes), `the email mentions ${m[0]} but the cap is ${minutes} minutes`)
+ }
+})
