@@ -17,7 +17,7 @@ async function api(body,query=''){
  if(!session)throw Object.assign(new Error('Please log in.'),{login:true})
  const r=await fetch(`/api/hiring/admin${query}`,{method:body?'POST':'GET',headers:{Authorization:`Bearer ${session.access_token}`,...(body?{'Content-Type':'application/json'}:{})},...(body?{body:JSON.stringify(body)}:{})}).catch(()=>{throw Object.assign(new Error('Lost your connection. Nothing was lost; check your Wi-Fi and try again.'),{offline:true})})
  const d=await r.json().catch(()=>({}))
- if(!r.ok)throw Object.assign(new Error(d.error||'Something went wrong. Please try again.'),{status:r.status})
+ if(!r.ok)throw Object.assign(new Error(d.error||'Something went wrong. Please try again.'),{status:r.status,confirmable:d.confirmable===true})
  return d
 }
 const mb=b=>!b?'':b>=1073741824?`${(b/1073741824).toFixed(1)} GB`:`${Math.round(b/1048576)} MB`
@@ -429,11 +429,17 @@ export default function Hiring(){
 
  // Deleting recordings is irreversible, so the confirmation names what goes and what stays. The
  // written record is deliberately kept: it is how the decision can be shown to have been made.
- const deleteMedia=c=>{
-  if(!window.confirm(`Delete ${c.name}'s video recordings?\n\nTheir scores, notes, written answers and resume are kept. The recordings cannot be recovered.`))return
+ const deleteMedia=(c,confirmed)=>{
+  if(!confirmed&&!window.confirm(`Delete ${c.name}'s video recordings?\n\nTheir scores, notes, written answers and resume are kept. The recordings cannot be recovered.`))return
   run('Deleting…',async()=>{
-   const d=await api({action:'delete-media',schoolId,candidateId:c.id})
-   if(open)await reload();await load();setNotice(d.summary||'Recordings deleted.')})
+   try{
+    const d=await api({action:'delete-media',schoolId,candidateId:c.id,confirmed})
+    if(open)await reload();await load();setNotice(d.summary||'Recordings deleted.')
+   }catch(e){
+    // A warning, not a wall: whoever is being protected by the rule gets to overrule it.
+    if(!e.confirmable)throw e
+    if(window.confirm(`${e.message}\n\nDelete them anyway?`))await deleteMedia(c,true)
+   }})
  }
 
  // Rethrows on purpose: the card shows the already-answered warning next to the question being

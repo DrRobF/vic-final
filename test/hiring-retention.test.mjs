@@ -37,15 +37,23 @@ test('only real storage paths are deleted, and each one only once', () => {
  assert.deepEqual(paths, ['candidates/abc/q1-aaaaaaaa.webm'])
 })
 
-test('deleting on request is refused while the panel still needs the recording', () => {
+test('deleting on request warns while the panel still needs the recording, and never more than warns', () => {
  for (const stage of LIVE_STAGES) {
-  assert.equal(mayDeleteMedia({ stage, scorerCount: 0, hasVideo: true }).ok, false)
+  const first = mayDeleteMedia({ stage, scorerCount: 0, hasVideo: true })
+  assert.equal(first.ok, false)
+  // A rule the person it protects cannot overrule is not protection, it is an obstacle: the first
+  // person this blocked was a principal clearing his own test recordings.
+  assert.equal(first.confirmable, true)
+  assert.equal(mayDeleteMedia({ stage, scorerCount: 0, hasVideo: true, confirmed: true }).ok, true)
   assert.equal(mayDeleteMedia({ stage, scorerCount: 2, hasVideo: true }).ok, true, 'once scored, it is the principal\'s call')
  }
  for (const stage of ['declined', 'withdrawn', 'hired', 'interview']) {
   assert.equal(mayDeleteMedia({ stage, scorerCount: 0, hasVideo: true }).ok, true)
  }
- assert.equal(mayDeleteMedia({ stage: 'declined', scorerCount: 1, hasVideo: false }).ok, false, 'nothing to delete')
+ // An empty folder is the one flat no: confirming cannot conjure a file to delete.
+ const empty = mayDeleteMedia({ stage: 'declined', scorerCount: 1, hasVideo: false, confirmed: true })
+ assert.equal(empty.ok, false)
+ assert.ok(!empty.confirmable)
 })
 
 test('the notice promises what the job actually does, within the same number of days', () => {
