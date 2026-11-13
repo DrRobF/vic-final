@@ -293,7 +293,7 @@ function RoundCard({round,onSave,onClear,busy}){
 // A full ladder does not hire anybody. It means every round this school chose to run has been
 // scored. When several candidates finish level, that is a conversation around a table and sometimes
 // the superintendent -- not an arithmetic result.
-function Ladder({ladder,onAdvance,onStop,onHire,onReopen,busy}){
+function Ladder({ladder,onAdvance,onStop,onHire,onReopen,onDeleteMedia,busy}){
  if(!ladder)return null
  const {segments,stopped,hired,complete,next}=ladder
  const rung=s=>{
@@ -321,7 +321,10 @@ function Ladder({ladder,onAdvance,onStop,onHire,onReopen,busy}){
 
   <div className="row">
    {stopped
-    ? <button type="button" disabled={!!busy} onClick={onReopen}>{busy||'Put them back in'}</button>
+    ? <>
+       <button type="button" disabled={!!busy} onClick={onReopen}>{busy||'Put them back in'}</button>
+       {onDeleteMedia&&<button type="button" disabled={!!busy} onClick={onDeleteMedia}>{busy||'Delete their recordings'}</button>}
+      </>
     : hired
      ? <button type="button" disabled={!!busy} onClick={onReopen}>{busy||'Undo hire'}</button>
      : <>
@@ -386,6 +389,15 @@ export default function Hiring(){
   await api({action:'extend-invite',schoolId,candidateId:open,hours});await reload();await load();setNotice(`They have ${hours} more hours from now.`)})
  const preview=()=>{const v={first_name:'Dana',school:'your school',position:postingName(editing)||'the position',link:link,code:'ABCD-EFGH-JKLM',deadline:'Sunday, November 15 at 8:15 AM EST',sender:'you'}
   const fill=t=>String(t).replace(/\{([a-z_]+)\}/gi,(w,k)=>v[k]??w);return{subject:fill(tmpl.subject),body:fill(tmpl.body)}}
+ // Deleting recordings is irreversible, so the confirmation names what goes and what stays. The
+ // written record is deliberately kept: it is how the decision can be shown to have been made.
+ const deleteMedia=c=>{
+  if(!window.confirm(`Delete ${c.name}'s video recordings?\n\nTheir scores, notes, written answers and resume are kept. The recordings cannot be recovered.`))return
+  run('Deleting…',async()=>{
+   const d=await api({action:'delete-media',schoolId,candidateId:c.id})
+   if(open)await reload();await load();setNotice(d.summary||'Recordings deleted.')})
+ }
+
  // Rethrows on purpose: the card shows the already-answered warning next to the question being
  // edited, where the person can see what they are about to change.
  const saveQuestion=async body=>{
@@ -418,17 +430,20 @@ export default function Hiring(){
    <section className="card">
     <h2>{review.candidate.name}</h2>
     <p className="muted">{review.candidate.email}{review.candidate.phone?` · ${review.candidate.phone}`:''}{review.candidate.certAreas?` · ${review.candidate.certAreas}`:''}</p>
-    <p className="muted">Screening submitted {day(review.candidate.submittedAt)||'— not yet'} · Stage: {stageLabel(review.candidate.stage)} · Video deleted after {day(review.candidate.deleteAfter)}</p>
+    <p className="muted">Screening submitted {day(review.candidate.submittedAt)||'— not yet'} · Stage: {stageLabel(review.candidate.stage)}</p>
+    <p className="muted">{review.candidate.mediaDeletedAt
+     ?<>Recordings deleted {day(review.candidate.mediaDeletedAt)}{review.candidate.mediaDeletedBy?` by ${review.candidate.mediaDeletedBy}`:''}. Scores, notes and written answers are kept.</>
+     :<>Recordings delete automatically after {day(review.candidate.deleteAfter)}.{review.candidate.hasVideo&&<> <button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(review.candidate)}>Delete them now</button> — frees the space; the scored record stays.</>}</>}</p>
     <p className="muted">{review.candidate.resumeUrl?<a href={review.candidate.resumeUrl} target="_blank" rel="noopener noreferrer">Open résumé: {review.candidate.resumeName}</a>:'No résumé attached.'}</p>
     {!review.candidate.submittedAt&&review.candidate.inviteExpiresAt&&<p className="muted">Invitation {Date.parse(review.candidate.inviteExpiresAt)>Date.now()?'runs out':'ran out'} {new Date(review.candidate.inviteExpiresAt).toLocaleString(undefined,{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}. <button type="button" disabled={!!busy} onClick={()=>extend(24)}>Give 24 more hours</button> <button type="button" disabled={!!busy} onClick={()=>extend(48)}>Give 48 more hours</button></p>}
     {review.candidate.commuteSustainable&&<p className="quote"><strong>On the commute, in their words:</strong> {review.candidate.commuteSustainable}</p>}
-    <p className="muted">Stage: {stageLabel(review.candidate.stage)}</p>
    </section>
 
    <Ladder ladder={review.ladder} busy={busy}
     onAdvance={()=>setStage(review.candidate,'interview')}
     onHire={()=>setStage(review.candidate,'hired')}
     onStop={()=>{if(window.confirm(`Stop ${review.candidate.name}? They will not move forward. Their scores stay on file and you can put them back in later.`))setStage(review.candidate,'declined')}}
+    onDeleteMedia={review.candidate.hasVideo?()=>deleteMedia(review.candidate):null}
     onReopen={()=>setStage(review.candidate,'interview')}/>
 
    {review.totals&&<section className="card">
@@ -520,7 +535,9 @@ export default function Hiring(){
       <td>{c.scorers?c.video:<span className="muted">—</span>}</td>
       <td>{c.scorers?c.written:<span className="muted">—</span>}</td>
       <td>{c.scorers?<><strong>{c.total}</strong><br/><span className="muted">{c.scorers} scorer{c.scorers===1?'':'s'}</span></>:<span className="muted">Not scored yet</span>}</td>
-      <td><button type="button" onClick={()=>openCandidate(c)}>Review</button></td>
+      <td><button type="button" onClick={()=>openCandidate(c)}>Review</button>{c.mediaDeletedAt
+       ?<div className="muted">no recordings</div>
+       :c.submittedAt&&<div><button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(c)}>delete recordings</button></div>}</td>
      </tr>)}</tbody>
     </table>}
    </section>

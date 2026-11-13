@@ -4,6 +4,7 @@ import {
  ROUNDS, roundByKey, roundTotal, roundMax, packet, ladderState, questionEdit,
 } from '../../../lib/hiring.mjs'
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
+import { videoPaths, mayDeleteMedia, disposalSummary } from '../../../lib/hiring-retention.mjs'
 import {
  inviteMessage, sendInvite, checkTemplate, DEFAULT_INVITE_SUBJECT, DEFAULT_INVITE_BODY, DEFAULT_INVITE_HOURS, INVITE_PLACEHOLDERS,
 } from '../../../lib/hiring-invite.mjs'
@@ -196,6 +197,39 @@ export default async function handler(req, res) {
    return res.json({ saved: true })
   }
 
+  // Delete one candidate's recordings now, rather than waiting out the retention period. Video is
+  // nearly all the storage a school uses here, and a principal who has finished with three
+  // candidates should not have to carry six months of their video.
+  //
+  // The recordings only. Scores, notes, written answers and the resume stay, because they are the
+  // record of how the decision was made and an employer may be required to keep them.
+  if (action === 'delete-media') {
+   const candidateId = String(req.body?.candidateId || '')
+   if (!UUID.test(candidateId)) return no(res, 400, 'Choose a candidate.')
+   const { data: candidate } = await db.from('ap_hiring_candidates')
+    .select('id, name, stage, media_deleted_at').eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
+   if (!candidate?.id) return no(res, 404, 'That candidate does not belong to this school.')
+
+   const { data: responses } = await db.from('ap_hiring_responses')
+    .select('id, video_path').eq('candidate_id', candidateId).neq('video_path', '')
+   const paths = videoPaths(responses)
+   const { count: scorerCount } = await db.from('ap_hiring_scores')
+    .select('id', { count: 'exact', head: true }).eq('candidate_id', candidateId)
+
+   const allowed = mayDeleteMedia({ stage: candidate.stage, scorerCount: scorerCount || 0, hasVideo: paths.length > 0 })
+   if (!allowed.ok) return no(res, 409, allowed.reason)
+
+   const { error: removeError } = await db.storage.from(BUCKET).remove(paths)
+   if (removeError) return no(res, 503, 'Those recordings could not be deleted just now. Please try again.')
+
+   await db.from('ap_hiring_responses').update({ video_path: '' }).eq('candidate_id', candidateId).neq('video_path', '')
+   const { error } = await db.from('ap_hiring_candidates')
+    .update({ media_deleted_at: new Date().toISOString(), media_deleted_by: auth.profile?.name || 'A panel member' })
+    .eq('id', candidateId)
+   if (error) throw error
+   return res.json({ deleted: paths.length, summary: disposalSummary({ candidates: 1, files: paths.length, failed: 0 }) })
+  }
+
   if (action === 'score') {
    let responseId = String(req.body?.responseId || '')
    // An in-person question has no recording or text, so there is no response row until somebody
@@ -325,7 +359,7 @@ async function overview(db, school, res) {
  if (error) throw error
 
  const { data: candidates } = await db.from('ap_hiring_candidates')
-  .select('id, posting_id, name, email, stage, submitted_at, created_at, delete_after')
+  .select('id, posting_id, name, email, stage, submitted_at, created_at, delete_after, media_deleted_at')
   .eq('school_id', school.schoolId).order('created_at', { ascending: false }).limit(500)
 
  const { data: scores } = await db.from('ap_hiring_scores')
@@ -350,7 +384,7 @@ async function overview(db, school, res) {
   const entry = byCandidate.get(c.id)
   return {
    id: c.id, postingId: c.posting_id, name: c.name, email: c.email, stage: c.stage,
-   submittedAt: c.submitted_at, deleteAfter: c.delete_after,
+   submittedAt: c.submitted_at, deleteAfter: c.delete_after, mediaDeletedAt: c.media_deleted_at,
    total: entry?.total || 0,
    video: entry?.video || 0,
    written: entry?.written || 0,
@@ -377,7 +411,7 @@ async function overview(db, school, res) {
 async function review(db, auth, school, candidateId, res) {
  if (!UUID.test(candidateId)) return no(res, 400, 'Choose a candidate.')
  const { data: candidate } = await db.from('ap_hiring_candidates')
-  .select('id, posting_id, name, email, phone, cert_areas, stage, submitted_at, commute_sustainable, delete_after, invite_code, invite_expires_at, resume_path, resume_name')
+  .select('id, posting_id, name, email, phone, cert_areas, stage, submitted_at, commute_sustainable, delete_after, invite_code, invite_expires_at, resume_path, resume_name, media_deleted_at, media_deleted_by')
   .eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
  if (!candidate?.id) return no(res, 404, 'That candidate does not belong to this school.')
 
@@ -539,6 +573,8 @@ async function review(db, auth, school, candidateId, res) {
    commuteSustainable: candidate.commute_sustainable, deleteAfter: candidate.delete_after,
    inviteCode: candidate.invite_code, inviteExpiresAt: candidate.invite_expires_at,
    resumeUrl, resumeName: candidate.resume_name || (candidate.resume_path ? 'Resume' : ''),
+   mediaDeletedAt: candidate.media_deleted_at, mediaDeletedBy: candidate.media_deleted_by,
+   hasVideo: (responses || []).some(r => r.video_path),
   },
   items,
  })
