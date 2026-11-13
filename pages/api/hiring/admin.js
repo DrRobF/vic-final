@@ -109,7 +109,7 @@ export default async function handler(req, res) {
       if (!removeError) deleted = paths.length
      }
      if (!paths.length || deleted) {
-      await db.from('ap_hiring_responses').update({ video_path: '' }).in('candidate_id', ids).neq('video_path', '')
+      await db.from('ap_hiring_responses').update({ video_path: '', video_bytes: null }).in('candidate_id', ids).neq('video_path', '')
       await db.from('ap_hiring_candidates')
        .update({ media_deleted_at: new Date().toISOString(), media_deleted_by: auth.profile?.name || 'A panel member' })
        .in('id', ids)
@@ -299,7 +299,7 @@ export default async function handler(req, res) {
    const { error: removeError } = await db.storage.from(BUCKET).remove(paths)
    if (removeError) return no(res, 503, 'Those recordings could not be deleted just now. Please try again.')
 
-   await db.from('ap_hiring_responses').update({ video_path: '' }).eq('candidate_id', candidateId).neq('video_path', '')
+   await db.from('ap_hiring_responses').update({ video_path: '', video_bytes: null }).eq('candidate_id', candidateId).neq('video_path', '')
    const { error } = await db.from('ap_hiring_candidates')
     .update({ media_deleted_at: new Date().toISOString(), media_deleted_by: auth.profile?.name || 'A panel member' })
     .eq('id', candidateId)
@@ -457,6 +457,15 @@ async function overview(db, school, res) {
   .select('id, posting_id, name, email, stage, submitted_at, created_at, delete_after, media_deleted_at')
   .eq('school_id', school.schoolId).order('created_at', { ascending: false }).limit(500)
 
+ // What each candidate's recordings occupy, and the school's total. Shown on the screen where the
+ // decision to delete is actually made.
+ const { data: sizes } = await db.from('ap_hiring_responses')
+  .select('candidate_id, video_bytes').eq('school_id', school.schoolId).not('video_bytes', 'is', null)
+ const bytesByCandidate = new Map()
+ for (const row of sizes || []) {
+  bytesByCandidate.set(row.candidate_id, (bytesByCandidate.get(row.candidate_id) || 0) + Number(row.video_bytes || 0))
+ }
+
  const { data: scores } = await db.from('ap_hiring_scores')
   .select('candidate_id, scorer_user_id, content, fit, writing, ap_hiring_responses(stage)')
   .eq('school_id', school.schoolId).limit(20000)
@@ -485,6 +494,7 @@ async function overview(db, school, res) {
    id: c.id, postingId: c.posting_id, name: c.name, email: c.email, stage: c.stage,
    archived: archivedPostings.has(c.posting_id),
    submittedAt: c.submitted_at, deleteAfter: c.delete_after, mediaDeletedAt: c.media_deleted_at,
+   videoBytes: bytesByCandidate.get(c.id) || 0,
    total: entry?.total || 0,
    video: entry?.video || 0,
    written: entry?.written || 0,
@@ -493,6 +503,7 @@ async function overview(db, school, res) {
  })
 
  return res.json({
+  storage: { videoBytes: [...bytesByCandidate.values()].reduce((a, b) => a + b, 0), candidatesWithVideo: bytesByCandidate.size },
   postings: (postings || []).map(p => ({
    id: p.id, title: p.title, gradeBand: p.grade_band, subject: p.subject, status: p.status, createdAt: p.created_at,
    inviteSubject: p.invite_subject || DEFAULT_INVITE_SUBJECT,
@@ -520,7 +531,7 @@ async function review(db, auth, school, candidateId, res) {
    .select('id, stage, ordinal, prompt, domain, look_for_strong, look_for_weak, max_content, max_fit, max_writing')
    .eq('posting_id', candidate.posting_id).order('stage').order('ordinal'),
   db.from('ap_hiring_responses')
-   .select('id, question_id, stage, video_path, video_seconds, text_response, submitted_at')
+   .select('id, question_id, stage, video_path, video_seconds, video_bytes, text_response, submitted_at')
    .eq('candidate_id', candidateId),
   db.from('ap_hiring_scores')
    .select('response_id, scorer_user_id, scorer_name, content, fit, writing, note, voice_mismatch')
@@ -675,6 +686,7 @@ async function review(db, auth, school, candidateId, res) {
    resumeUrl, resumeName: candidate.resume_name || (candidate.resume_path ? 'Resume' : ''),
    mediaDeletedAt: candidate.media_deleted_at, mediaDeletedBy: candidate.media_deleted_by,
    hasVideo: (responses || []).some(r => r.video_path),
+   videoBytes: (responses || []).reduce((a, r) => a + Number(r.video_bytes || 0), 0),
   },
   items,
  })

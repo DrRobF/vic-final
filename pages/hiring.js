@@ -20,6 +20,7 @@ async function api(body,query=''){
  if(!r.ok)throw Object.assign(new Error(d.error||'Something went wrong. Please try again.'),{status:r.status})
  return d
 }
+const mb=b=>!b?'':b>=1073741824?`${(b/1073741824).toFixed(1)} GB`:`${Math.round(b/1048576)} MB`
 const day=d=>d?new Date(d).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}):''
 const mins=s=>s?`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`:''
 const STAGES=[['invited','Invited'],['screening_submitted','Screening in'],['interview','Interview'],['demo','Teaching demo'],['references','References'],['offer','Offer'],['hired','Hired'],['declined','Not advancing'],['withdrawn','Withdrew']]
@@ -470,7 +471,7 @@ export default function Hiring(){
     <p className="muted">Screening submitted {day(review.candidate.submittedAt)||'— not yet'} · Stage: {stageLabel(review.candidate.stage)}</p>
     <p className="muted">{review.candidate.mediaDeletedAt
      ?<>Recordings deleted {day(review.candidate.mediaDeletedAt)}{review.candidate.mediaDeletedBy?` by ${review.candidate.mediaDeletedBy}`:''}. Scores, notes and written answers are kept.</>
-     :<>Recordings delete automatically after {day(review.candidate.deleteAfter)}.{review.candidate.hasVideo&&<> <button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(review.candidate)}>Delete them now</button> — frees the space; the scored record stays.</>}</>}</p>
+     :<>Recordings delete automatically after {day(review.candidate.deleteAfter)}.{review.candidate.hasVideo&&<> <button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(review.candidate)}>Delete them now</button> — frees {mb(review.candidate.videoBytes)||'the space'}; the scored record stays.</>}</>}</p>
     <p className="muted">{review.candidate.resumeUrl?<a href={review.candidate.resumeUrl} target="_blank" rel="noopener noreferrer">Open résumé: {review.candidate.resumeName}</a>:'No résumé attached.'}</p>
     {!review.candidate.submittedAt&&review.candidate.inviteExpiresAt&&<p className="muted">Invitation {Date.parse(review.candidate.inviteExpiresAt)>Date.now()?'runs out':'ran out'} {new Date(review.candidate.inviteExpiresAt).toLocaleString(undefined,{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}. <button type="button" disabled={!!busy} onClick={()=>extend(24)}>Give 24 more hours</button> <button type="button" disabled={!!busy} onClick={()=>extend(48)}>Give 48 more hours</button></p>}
     {review.candidate.commuteSustainable&&<p className="quote"><strong>On the commute, in their words:</strong> {review.candidate.commuteSustainable}</p>}
@@ -562,6 +563,7 @@ export default function Hiring(){
 
    <section className="card">
     <h2>Candidates</h2>
+    {data?.storage?.videoBytes>0&&<p className="muted">Recordings on file: <strong>{mb(data.storage.videoBytes)}</strong> across {data.storage.candidatesWithVideo} {data.storage.candidatesWithVideo===1?'candidate':'candidates'}. Deleting the recordings of anyone not going forward is what keeps that number down.</p>}
     {!data?<p role="status">Loading…</p>
     :!data.candidates.length?<p className="muted">Nobody invited yet. Create a position below, then invite your first candidate.</p>
     :!data.candidates.some(c=>!c.archived)?<p className="muted">No candidates on an open position. {data.candidates.length} {data.candidates.length===1?'is':'are'} in the archive below.</p>
@@ -577,7 +579,7 @@ export default function Hiring(){
       <td>{c.scorers?<><strong>{c.total}</strong><br/><span className="muted">{c.scorers} scorer{c.scorers===1?'':'s'}</span></>:<span className="muted">Not scored yet</span>}</td>
       <td><button type="button" onClick={()=>openCandidate(c)}>Review</button>{c.mediaDeletedAt
        ?<div className="muted">no recordings</div>
-       :c.submittedAt&&<div><button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(c)}>delete recordings</button></div>}</td>
+       :c.submittedAt&&<div><button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(c)}>delete recordings</button>{c.videoBytes?<span className="muted"> · {mb(c.videoBytes)}</span>:null}</div>}</td>
      </tr>)}</tbody>
     </table>}
    </section>
