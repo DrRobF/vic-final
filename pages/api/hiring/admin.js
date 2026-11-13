@@ -1,7 +1,7 @@
 import { requirePrincipal, requireSchool } from '../../../lib/assistant-principal-auth'
 import {
  candidateInput, makeInviteCode, seedQuestions, rankCandidates, STAGE_TOTALS,
- ROUNDS, roundByKey, roundTotal, roundMax, packet,
+ ROUNDS, roundByKey, roundTotal, roundMax, packet, ladderState,
 } from '../../../lib/hiring.mjs'
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
 
@@ -163,7 +163,7 @@ export default async function handler(req, res) {
    const { error } = await db.from('ap_hiring_round_scores').upsert({
     school_id: school.schoolId, candidate_id: candidateId,
     scorer_user_id: auth.user.id, scorer_name: auth.profile?.name || '',
-    round, points, total,
+    round, points, total, skipped: false,
     note: String(req.body?.note || '').trim().slice(0, 4000),
     updated_at: new Date().toISOString(),
    }, { onConflict: 'candidate_id,scorer_user_id,round' })
@@ -171,17 +171,24 @@ export default async function handler(req, res) {
    return res.json({ saved: true, total, max: roundMax(round) })
   }
 
-  // Clearing a round is how a principal says "we did not do this one", which is different from
-  // scoring it zero and must stay different.
+  // "We did not do this round" is recorded, not deleted. A deleted row reads as "nobody has got to
+  // this yet", which is the opposite fact: a skipped round should stop holding the ladder open,
+  // and an unscored one should keep the candidate waiting.
   if (action === 'round-clear') {
    const candidateId = String(req.body?.candidateId || '')
    const round = String(req.body?.round || '')
    if (!UUID.test(candidateId) || !roundByKey(round)?.lines) return no(res, 400, 'Choose a candidate and a round.')
-   const { error } = await db.from('ap_hiring_round_scores').delete()
-    .eq('candidate_id', candidateId).eq('school_id', school.schoolId)
-    .eq('scorer_user_id', auth.user.id).eq('round', round)
+   const { data: candidate } = await db.from('ap_hiring_candidates')
+    .select('id').eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
+   if (!candidate?.id) return no(res, 404, 'That candidate does not belong to this school.')
+   const { error } = await db.from('ap_hiring_round_scores').upsert({
+    school_id: school.schoolId, candidate_id: candidateId,
+    scorer_user_id: auth.user.id, scorer_name: auth.profile?.name || '',
+    round, points: {}, total: 0, skipped: true, note: '',
+    updated_at: new Date().toISOString(),
+   }, { onConflict: 'candidate_id,scorer_user_id,round' })
    if (error) throw error
-   return res.json({ cleared: true })
+   return res.json({ skipped: true })
   }
 
   if (action === 'stage') {
@@ -269,7 +276,7 @@ async function review(db, auth, school, candidateId, res) {
    .select('response_id, scorer_user_id, scorer_name, content, fit, writing, note, voice_mismatch')
    .eq('candidate_id', candidateId),
   db.from('ap_hiring_round_scores')
-   .select('round, scorer_user_id, scorer_name, points, total, note')
+   .select('round, scorer_user_id, scorer_name, points, total, note, skipped')
    .eq('candidate_id', candidateId),
  ])
 
@@ -344,8 +351,10 @@ async function review(db, auth, school, candidateId, res) {
  // sides of that figure, so a candidate who did four rounds is not judged against one who did six.
  const roundsByKey = new Map()
  for (const r of roundRows || []) {
-  if (!roundsByKey.has(r.round)) roundsByKey.set(r.round, { total: 0, scorers: new Set(), entries: [] })
+  if (!roundsByKey.has(r.round)) roundsByKey.set(r.round, { total: 0, scorers: new Set(), entries: [], skipped: true })
   const entry = roundsByKey.get(r.round)
+  if (r.skipped) continue
+  entry.skipped = false
   entry.total += Number(r.total) || 0
   entry.scorers.add(r.scorer_user_id)
   entry.entries.push({
@@ -364,15 +373,18 @@ async function review(db, auth, school, candidateId, res) {
   }
   const entry = roundsByKey.get(round.key)
   if (!entry) return { key: round.key, scored: false }
+  if (entry.skipped) return { key: round.key, scored: false, skipped: true }
   return { key: round.key, scored: true, total: entry.total, max: roundMax(round.key) * entry.scorers.size, scorers: entry.scorers.size }
  })
 
  return res.json({
   totals,
   packet: packet(packetRows),
+  ladder: ladderState(packetRows, candidate.stage),
   rounds: ROUNDS.filter(r => r.lines).map(r => ({
    key: r.key, label: r.label, blurb: r.blurb, kind: r.kind, optional: r.optional,
    max: roundMax(r.key), lines: r.lines,
+   skipped: roundsByKey.get(r.key)?.skipped === true,
    mine: (roundsByKey.get(r.key)?.entries || []).find(e => e.isMe) || null,
    others: (roundsByKey.get(r.key)?.entries || []).filter(e => !e.isMe),
   })),

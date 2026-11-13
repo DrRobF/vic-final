@@ -189,6 +189,56 @@ function RoundCard({round,onSave,onClear,busy}){
  </section>
 }
 
+// How far up the ladder a candidate is. Every rung is a round; a rung lights when that round has
+// been scored, and the panel can decide once nothing is left waiting.
+//
+// Deliberately not a red-and-green stoplight. Lit and unlit are carried by fill, weight, a tick and
+// a word, because colour alone is unreadable to a good share of people -- including the principal
+// this was built for.
+//
+// A full ladder does not hire anybody. It means every round this school chose to run has been
+// scored. When several candidates finish level, that is a conversation around a table and sometimes
+// the superintendent -- not an arithmetic result.
+function Ladder({ladder,onAdvance,onStop,onHire,onReopen,busy}){
+ if(!ladder)return null
+ const {segments,stopped,hired,complete,next}=ladder
+ const rung=s=>{
+  if(stopped)return {bg:'var(--vic-surface-muted)',color:'var(--vic-text-muted)',border:'2px dashed var(--vic-border)',mark:'\u2014',word:'stopped'}
+  if(s.state==='lit')return {bg:'var(--vic-ink)',color:'#fff',border:'2px solid var(--vic-ink)',mark:'\u2713',word:'done'}
+  if(s.state==='skipped')return {bg:'var(--vic-surface)',color:'var(--vic-text-muted)',border:'2px dashed var(--vic-border)',mark:'\u2013',word:'not used'}
+  return {bg:'var(--vic-surface)',color:'var(--vic-text-secondary)',border:'2px solid var(--vic-border)',mark:'',word:'waiting'}
+ }
+ return <section className="card">
+  <h3>Where they are</h3>
+  <div style={{display:'flex',gap:10,flexWrap:'wrap',margin:'14px 0 6px'}}>
+   {segments.map(s=>{const r=rung(s);return <div key={s.key} style={{flex:'1 1 128px',minWidth:120,padding:'13px 12px',borderRadius:14,background:r.bg,color:r.color,border:r.border}}>
+    <div style={{fontSize:20,lineHeight:1,height:20,fontWeight:700}}>{r.mark}</div>
+    <div style={{fontWeight:700,marginTop:7,fontSize:16}}>{s.label}</div>
+    <div style={{fontSize:13,marginTop:2,opacity:.85}}>{s.state==='lit'&&!stopped?`${s.total} / ${s.max}`:r.word}</div>
+   </div>})}
+  </div>
+
+  <p className="muted">
+   {stopped?'Stopped. This candidate is not moving forward \u2014 their scores stay on file.'
+   :hired?'Hired.'
+   :complete?'Every round this school ran has been scored. Ready for a decision \u2014 if several candidates finish level, that is a table conversation, and sometimes the superintendent.'
+   :`Waiting on: ${next?.label}. Score that round, or mark it as not used if you are not running it.`}
+  </p>
+
+  <div className="row">
+   {stopped
+    ? <button type="button" disabled={!!busy} onClick={onReopen}>{busy||'Put them back in'}</button>
+    : hired
+     ? <button type="button" disabled={!!busy} onClick={onReopen}>{busy||'Undo hire'}</button>
+     : <>
+        {complete&&<button type="button" className="primary" disabled={!!busy} onClick={onHire}>{busy||'Hire this candidate'}</button>}
+        {!complete&&<button type="button" className="primary" disabled={!!busy} onClick={onAdvance}>{busy||`Move on to ${next?.label?.toLowerCase()}`}</button>}
+        <button type="button" disabled={!!busy} onClick={onStop}>{busy||'Not advancing'}</button>
+       </>}
+  </div>
+ </section>
+}
+
 export default function Hiring(){
  const [ready,setReady]=useState(false),[blocked,setBlocked]=useState('')
  const [schools,setSchools]=useState([]),[schoolId,setSchoolId]=useState(''),[data,setData]=useState(null)
@@ -220,7 +270,12 @@ export default function Hiring(){
   await api({action:'score',schoolId,responseId:item.responseId,...vals})
   setReview(await api(null,`?schoolId=${encodeURIComponent(schoolId)}&candidateId=${encodeURIComponent(open)}`));await load();setNotice('Your score is saved.')})
 
- const setStage=(c,stage)=>run('Saving…',async()=>{await api({action:'stage',schoolId,candidateId:c.id,stage});await load()})
+ // Refresh the open record as well as the list. Without the reload the saved stage never came
+ // back into view and the control snapped to its old value, which looked exactly like a failed save.
+ const setStage=(c,stage)=>run('Saving…',async()=>{
+  await api({action:'stage',schoolId,candidateId:c.id,stage})
+  if(open)await reload()
+  await load()})
 
  const reload=async()=>setReview(await api(null,`?schoolId=${encodeURIComponent(schoolId)}&candidateId=${encodeURIComponent(open)}`))
  const saveRound=(round,points,note)=>run('Saving…',async()=>{
@@ -256,10 +311,14 @@ export default function Hiring(){
     <p className="muted">{review.candidate.email}{review.candidate.phone?` · ${review.candidate.phone}`:''}{review.candidate.certAreas?` · ${review.candidate.certAreas}`:''}</p>
     <p className="muted">Screening submitted {day(review.candidate.submittedAt)||'— not yet'} · Stage: {stageLabel(review.candidate.stage)} · Video deleted after {day(review.candidate.deleteAfter)}</p>
     {review.candidate.commuteSustainable&&<p className="quote"><strong>On the commute, in their words:</strong> {review.candidate.commuteSustainable}</p>}
-    <label className="stagePick">Move to stage
-     <select value={review.candidate.stage} onChange={e=>setStage(review.candidate,e.target.value)}>{STAGES.map(([k,l])=><option key={k} value={k}>{l}</option>)}</select>
-    </label>
+    <p className="muted">Stage: {stageLabel(review.candidate.stage)}</p>
    </section>
+
+   <Ladder ladder={review.ladder} busy={busy}
+    onAdvance={()=>setStage(review.candidate,'interview')}
+    onHire={()=>setStage(review.candidate,'hired')}
+    onStop={()=>{if(window.confirm(`Stop ${review.candidate.name}? They will not move forward. Their scores stay on file and you can put them back in later.`))setStage(review.candidate,'declined')}}
+    onReopen={()=>setStage(review.candidate,'interview')}/>
 
    {review.totals&&<section className="card">
     <h3>Results</h3>
@@ -301,7 +360,7 @@ export default function Hiring(){
      <tbody>
       {review.packet.rounds.map(r=><tr key={r.key} className={r.scored?'':'skipped'}>
        <td>{r.label}{r.optional&&!r.scored?' ':''}</td>
-       <td>{r.scored?<strong>{r.total}</strong>:<span className="muted">not done</span>}</td>
+       <td>{r.scored?<strong>{r.total}</strong>:<span className="muted">{r.skipped?'not used':'not done'}</span>}</td>
        <td>{r.scored?r.max:<span className="muted">\u2014</span>}</td>
        <td>{r.scored?r.scorers:<span className="muted">\u2014</span>}</td>
       </tr>)}
