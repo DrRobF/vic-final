@@ -261,7 +261,7 @@ async function overview(db, school, res) {
 async function review(db, auth, school, candidateId, res) {
  if (!UUID.test(candidateId)) return no(res, 400, 'Choose a candidate.')
  const { data: candidate } = await db.from('ap_hiring_candidates')
-  .select('id, posting_id, name, email, phone, cert_areas, stage, submitted_at, commute_sustainable, delete_after, invite_code, invite_expires_at')
+  .select('id, posting_id, name, email, phone, cert_areas, stage, submitted_at, commute_sustainable, delete_after, invite_code, invite_expires_at, resume_path, resume_name')
   .eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
  if (!candidate?.id) return no(res, 404, 'That candidate does not belong to this school.')
 
@@ -288,6 +288,13 @@ async function review(db, auth, school, candidateId, res) {
  if (paths.length) {
   const { data: urls } = await db.storage.from(BUCKET).createSignedUrls(paths, PLAYBACK_SECONDS)
   for (const u of urls || []) if (u?.path && u?.signedUrl) signed.set(u.path, u.signedUrl)
+ }
+
+ // The resume opens the same way the recordings do: a short-lived signed link, never a public URL.
+ let resumeUrl = null
+ if (candidate.resume_path) {
+  const { data: r } = await db.storage.from(BUCKET).createSignedUrl(candidate.resume_path, PLAYBACK_SECONDS)
+  resumeUrl = r?.signedUrl || null
  }
 
  const mine = auth.user.id
@@ -393,6 +400,7 @@ async function review(db, auth, school, candidateId, res) {
    certAreas: candidate.cert_areas, stage: candidate.stage, submittedAt: candidate.submitted_at,
    commuteSustainable: candidate.commute_sustainable, deleteAfter: candidate.delete_after,
    inviteCode: candidate.invite_code, inviteExpiresAt: candidate.invite_expires_at,
+   resumeUrl, resumeName: candidate.resume_name || (candidate.resume_path ? 'Resume' : ''),
   },
   items,
  })

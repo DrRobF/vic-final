@@ -35,7 +35,7 @@ async function currentCandidate(db, req) {
  const token = readSessionToken(req)
  if (!token) return null
  const { data } = await db.from('ap_hiring_candidates')
-  .select('id, school_id, posting_id, name, email, stage, session_expires_at, recording_notice_accepted_at, commute_sustainable, submitted_at')
+  .select('id, school_id, posting_id, name, email, stage, session_expires_at, recording_notice_accepted_at, commute_sustainable, submitted_at, resume_path, resume_name')
   .eq('session_token', token).maybeSingle()
  if (!data?.id) return null
  if (data.session_expires_at && Date.parse(data.session_expires_at) <= Date.now()) return null
@@ -72,6 +72,8 @@ async function state(db, candidate) {
    consented: Boolean(candidate.recording_notice_accepted_at),
    commuteAnswered: Boolean(candidate.commute_sustainable),
    submitted: Boolean(candidate.submitted_at),
+   resumeAttached: Boolean(candidate.resume_path),
+   resumeName: candidate.resume_name || '',
   },
   notice: RECORDING_NOTICE,
   limits: { videoSeconds: VIDEO_LIMIT_SECONDS, videoBytes: MAX_VIDEO_BYTES, resumeBytes: MAX_RESUME_BYTES },
@@ -210,6 +212,32 @@ export default async function handler(req, res) {
    return res.json({ session: true, ...(await state(db, candidate)) })
   }
 
+  // The resume. Same pattern as a video take: the browser uploads, then confirms, and the server
+  // checks storage before it believes it. The old file goes only after the new one is recorded.
+  if (action === 'resume') {
+   const path = String(req.body?.path || '')
+   if (!verifiedPath(candidate.id, 'resume', path)) return no(res, 400, 'Unexpected file path.')
+   const name = path.split('/').pop()
+   const { data: listed } = await db.storage.from(BUCKET).list(`candidates/${candidate.id}`, { search: name, limit: 1 })
+   const object = (listed || []).find(o => o.name === name)
+   const size = object?.metadata?.size
+   if (!object || !Number(size)) return no(res, 400, 'That upload did not finish. Please attach your resume again.')
+   const recheck = allowedUpload('resume', object.metadata?.mimetype, size)
+   if (!recheck.ok) {
+    await db.storage.from(BUCKET).remove([path]).catch(() => {})
+    return no(res, 400, recheck.error)
+   }
+   // Only the file's own name is kept, trimmed of anything that is not plain text, so it is safe to show.
+   const label = String(req.body?.fileName || '').replace(/[\u0000-\u001f<>"\\/]/g, '').trim().slice(0, 120) || 'Resume'
+   const { error } = await db.from('ap_hiring_candidates')
+    .update({ resume_path: path, resume_name: label }).eq('id', candidate.id)
+   if (error) throw error
+   if (candidate.resume_path && candidate.resume_path !== path) {
+    await db.storage.from(BUCKET).remove([candidate.resume_path]).catch(() => {})
+   }
+   return res.json({ session: true, ...(await state(db, { ...candidate, resume_path: path, resume_name: label })) })
+  }
+
   if (action === 'written') {
    const questionId = String(req.body?.questionId || '')
    const text = typeof req.body?.text === 'string' ? req.body.text.trim() : ''
@@ -239,6 +267,7 @@ export default async function handler(req, res) {
    ])
    const answered = new Set(responses.map(r => r.question_id))
    const missing = questions.filter(q => !answered.has(q.id))
+   if (!candidate.resume_path) return no(res, 400, 'Attach your resume before submitting.')
    if (missing.length) {
     return no(res, 400, `Finish every question before submitting. Still to do: ${missing.map(q => `${q.stage === 'video' ? 'video' : 'written'} ${q.ordinal}`).join(', ')}.`)
    }
