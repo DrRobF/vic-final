@@ -344,6 +344,7 @@ export default function Hiring(){
  const [posting,setPosting]=useState({title:'',gradeBand:'',subject:''})
  const [invite,setInvite]=useState({postingId:'',name:'',email:'',phone:'',certAreas:'',hours:''}),[issued,setIssued]=useState(null)
  const [editing,setEditing]=useState(null),[tmpl,setTmpl]=useState({subject:'',body:'',hours:48})
+ const [showArchived,setShowArchived]=useState(false)
 
  useEffect(()=>{api().then(d=>{setSchools(d.schools);if(d.schools[0])setSchoolId(d.schools[0].id);else setBlocked('none')}).catch(e=>setBlocked(e.login?'login':e.message)).finally(()=>setReady(true))},[])
  const load=async(id=schoolId)=>{if(!id)return;try{setData(await api(null,`?schoolId=${encodeURIComponent(id)}`))}catch(e){setError(e.message)}}
@@ -389,6 +390,21 @@ export default function Hiring(){
   await api({action:'extend-invite',schoolId,candidateId:open,hours});await reload();await load();setNotice(`They have ${hours} more hours from now.`)})
  const preview=()=>{const v={first_name:'Dana',school:'your school',position:postingName(editing)||'the position',link:link,code:'ABCD-EFGH-JKLM',deadline:'Sunday, November 15 at 8:15 AM EST',sender:'you'}
   const fill=t=>String(t).replace(/\{([a-z_]+)\}/gi,(w,k)=>v[k]??w);return{subject:fill(tmpl.subject),body:fill(tmpl.body)}}
+ // Filling a position is the moment to put it away, and the moment a school is finished with the
+ // video of everyone who did not get the job -- but the two are asked separately, because one is
+ // tidying and the other cannot be undone.
+ const closePosting=(posting,status)=>{
+  const filling=status==='filled'
+  if(!window.confirm(`${filling?'Mark':'Close'} “${posting.title}” as ${status}? Its candidates move to the archive at the bottom of this page. Nothing is deleted and you can reopen it any time.`))return
+  const deleteRecordings=window.confirm(`Also delete the video recordings for everyone on this position who was not hired?\n\nTheir scores, notes and written answers are kept. The recordings cannot be recovered. Choose Cancel to keep them for now.`)
+  run('Archiving…',async()=>{
+   const d=await api({action:'close-posting',schoolId,postingId:posting.id,status,deleteRecordings})
+   await load();setNotice(d.deleted?`“${d.title}” archived. ${d.deleted} recording${d.deleted===1?'':'s'} deleted.`:`“${d.title}” archived.`)})
+ }
+ const reopenPosting=posting=>run('Reopening…',async()=>{
+  await api({action:'close-posting',schoolId,postingId:posting.id,status:'open'})
+  await load();setNotice(`“${posting.title}” is open again.`)})
+
  // Deleting recordings is irreversible, so the confirmation names what goes and what stays. The
  // written record is deliberately kept: it is how the decision can be shown to have been made.
  const deleteMedia=c=>{
@@ -441,7 +457,9 @@ export default function Hiring(){
 
    <Ladder ladder={review.ladder} busy={busy}
     onAdvance={()=>setStage(review.candidate,'interview')}
-    onHire={()=>setStage(review.candidate,'hired')}
+    onHire={()=>{setStage(review.candidate,'hired')
+     const posting=(data?.postings||[]).find(p=>p.id===(data?.candidates||[]).find(c=>c.id===review.candidate.id)?.postingId)
+     if(posting&&posting.status!=='filled')setNotice(`${review.candidate.name} is hired. When you are ready, mark “${posting.title}” filled under Positions to archive the rest.`)}}
     onStop={()=>{if(window.confirm(`Stop ${review.candidate.name}? They will not move forward. Their scores stay on file and you can put them back in later.`))setStage(review.candidate,'declined')}}
     onDeleteMedia={review.candidate.hasVideo?()=>deleteMedia(review.candidate):null}
     onReopen={()=>setStage(review.candidate,'interview')}/>
@@ -525,9 +543,10 @@ export default function Hiring(){
     <h2>Candidates</h2>
     {!data?<p role="status">Loading…</p>
     :!data.candidates.length?<p className="muted">Nobody invited yet. Create a position below, then invite your first candidate.</p>
+    :!data.candidates.some(c=>!c.archived)?<p className="muted">No candidates on an open position. {data.candidates.length} {data.candidates.length===1?'is':'are'} in the archive below.</p>
     :<table>
      <thead><tr><th>Candidate</th><th>Position</th><th>Stage</th><th>Video</th><th>Written</th><th>Panel total</th><th/></tr></thead>
-     <tbody>{data.candidates.map(c=><tr key={c.id}>
+     <tbody>{data.candidates.filter(c=>!c.archived).map(c=><tr key={c.id}>
       <td><strong>{c.name}</strong><br/><span className="muted">{c.email}</span></td>
       <td>{postingName(c.postingId)}</td>
       <td>{stageLabel(c.stage)}{c.submittedAt?'':' · not submitted'}</td>
@@ -541,6 +560,26 @@ export default function Hiring(){
      </tr>)}</tbody>
     </table>}
    </section>
+
+   {data?.candidates?.some(c=>c.archived)&&<section className="card">
+    <div className="qhead">
+     <h2>Archive</h2>
+     <button type="button" onClick={()=>setShowArchived(!showArchived)}>{showArchived?'Hide':`Show ${data.candidates.filter(c=>c.archived).length}`}</button>
+    </div>
+    <p className="muted">Candidates on positions you have filled or closed. Everything is still here — open one any time.</p>
+    {showArchived&&<table>
+     <thead><tr><th>Candidate</th><th>Position</th><th>Stage</th><th>Panel total</th><th/></tr></thead>
+     <tbody>{data.candidates.filter(c=>c.archived).map(c=><tr key={c.id}>
+      <td><strong>{c.name}</strong><br/><span className="muted">{c.email}</span></td>
+      <td>{postingName(c.postingId)}</td>
+      <td>{stageLabel(c.stage)}</td>
+      <td>{c.scorers?<strong>{c.total}</strong>:<span className="muted">Not scored</span>}</td>
+      <td><button type="button" onClick={()=>openCandidate(c)}>Review</button>{c.mediaDeletedAt
+       ?<div className="muted">no recordings</div>
+       :<div><button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(c)}>delete recordings</button></div>}</td>
+     </tr>)}</tbody>
+    </table>}
+   </section>}
 
    <p className="endtop"><button type="button" className="linkish" onClick={()=>window.scrollTo({top:0,behavior:'smooth'})}>↑ Back to the top</button></p>
 
@@ -568,7 +607,13 @@ export default function Hiring(){
     <h2>Positions</h2>
     {(data?.postings||[]).length>0&&<ul className="plain">{data.postings.map(p=><li key={p.id}>
      <strong>{p.title}</strong> {p.gradeBand&&<span className="muted">· {p.gradeBand}</span>} {p.subject&&<span className="muted">· {p.subject}</span>} <span className="muted">· {p.status} · {p.inviteHours} hours to submit{p.inviteCustom?' · custom email':''}</span>{' '}
-     <button type="button" onClick={()=>editTemplate(p)}>{editing===p.id?'Close':'Edit invitation email'}</button>
+     <button type="button" onClick={()=>editTemplate(p)}>{editing===p.id?'Close':'Edit invitation email'}</button>{' '}
+     {['filled','closed'].includes(p.status)
+      ?<button type="button" disabled={!!busy} onClick={()=>reopenPosting(p)}>Reopen</button>
+      :<>
+        <button type="button" disabled={!!busy} onClick={()=>closePosting(p,'filled')}>Mark filled &amp; archive</button>{' '}
+        <button type="button" disabled={!!busy} onClick={()=>closePosting(p,'closed')}>Close &amp; archive</button>
+       </>}
      {editing===p.id&&<div className="tmpl">
       <label>Subject<input value={tmpl.subject} onChange={e=>setTmpl({...tmpl,subject:e.target.value})}/></label>
       <label>Message<textarea rows={16} value={tmpl.body} onChange={e=>setTmpl({...tmpl,body:e.target.value})}/></label>
@@ -646,6 +691,7 @@ export default function Hiring(){
     background:var(--vic-ink);color:var(--vic-ink-text);border:0;font-weight:700;font-size:14px;
     box-shadow:var(--vic-shadow-soft);opacity:.9}
    .totop:hover{opacity:1}
+   .qhead{display:flex;gap:10px;align-items:baseline;justify-content:space-between;flex-wrap:wrap}
    .endtop{margin:2px 0 16px}
    .linkish{padding:0;border:0;background:none;color:var(--vic-text-secondary);text-decoration:underline;font-weight:700;font-size:14px;cursor:pointer}
    @media print{.totop,.endtop{display:none}}

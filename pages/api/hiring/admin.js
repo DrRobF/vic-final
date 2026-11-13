@@ -78,6 +78,46 @@ export default async function handler(req, res) {
    return res.json({ postingId: posting.id, questions: seeded.length })
   }
 
+  // Filling a position archives it. Candidates for a job that closed in August are history, not a
+  // worklist, and a screen that keeps showing them is a screen a principal stops reading.
+  //
+  // Nothing is deleted by archiving. The position and its candidates move out of the way and stay
+  // openable, because the scored record of a decision is exactly what you want a year later.
+  if (action === 'close-posting') {
+   const postingId = String(req.body?.postingId || '')
+   const status = String(req.body?.status || '')
+   if (!UUID.test(postingId) || !['open', 'closed', 'filled'].includes(status)) return no(res, 400, 'Choose a position and a status.')
+   const { data, error } = await db.from('ap_hiring_postings')
+    .update({ status }).eq('id', postingId).eq('school_id', school.schoolId).select('id, title').maybeSingle()
+   if (error) throw error
+   if (!data?.id) return no(res, 404, 'That position does not belong to this school.')
+
+   // Offered alongside, never implied by archiving: a position being filled is the moment a school
+   // knows it is finished with the video of everyone who did not get the job.
+   let deleted = 0
+   if (req.body?.deleteRecordings === true && status !== 'open') {
+    const { data: candidates } = await db.from('ap_hiring_candidates')
+     .select('id, stage').eq('posting_id', postingId).eq('school_id', school.schoolId).is('media_deleted_at', null)
+    const ids = (candidates || []).filter(c => c.stage !== 'hired').map(c => c.id)
+    if (ids.length) {
+     const { data: responses } = await db.from('ap_hiring_responses')
+      .select('video_path').in('candidate_id', ids).neq('video_path', '')
+     const paths = videoPaths(responses)
+     if (paths.length) {
+      const { error: removeError } = await db.storage.from(BUCKET).remove(paths)
+      if (!removeError) deleted = paths.length
+     }
+     if (!paths.length || deleted) {
+      await db.from('ap_hiring_responses').update({ video_path: '' }).in('candidate_id', ids).neq('video_path', '')
+      await db.from('ap_hiring_candidates')
+       .update({ media_deleted_at: new Date().toISOString(), media_deleted_by: auth.profile?.name || 'A panel member' })
+       .in('id', ids)
+     }
+    }
+   }
+   return res.json({ status, title: data.title, deleted })
+  }
+
   if (action === 'invite') {
    const postingId = String(req.body?.postingId || '')
    if (!UUID.test(postingId)) return no(res, 400, 'Choose a position.')
@@ -380,10 +420,15 @@ async function overview(db, school, res) {
   entry.scorers.add(s.scorer_user_id)
  }
 
+ // Archived means the position is filled or closed, rather than a second flag on every candidate
+ // that could drift away from it.
+ const archivedPostings = new Set((postings || []).filter(p => ['filled', 'closed'].includes(p.status)).map(p => p.id))
+
  const rows = (candidates || []).map(c => {
   const entry = byCandidate.get(c.id)
   return {
    id: c.id, postingId: c.posting_id, name: c.name, email: c.email, stage: c.stage,
+   archived: archivedPostings.has(c.posting_id),
    submittedAt: c.submitted_at, deleteAfter: c.delete_after, mediaDeletedAt: c.media_deleted_at,
    total: entry?.total || 0,
    video: entry?.video || 0,
