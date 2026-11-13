@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
- BUCKET, MAX_VIDEO_BYTES, MAX_RESUME_BYTES, VIDEO_LIMIT_SECONDS,
+ BUCKET, MAX_VIDEO_BYTES, MAX_RESUME_BYTES, VIDEO_LIMIT_SECONDS, VIDEO_TYPES, RECORDING_FORMATS,
  candidatePrefix, uploadPath, verifiedPath, allowedUpload,
  makeSessionToken, sessionExpiry, disposalDate, RECORDING_NOTICE, sniffVideoType,
 } from '../lib/hiring-media.mjs'
@@ -115,4 +115,20 @@ test('an unrecognisable header falls back rather than guessing', () => {
  assert.equal(sniffVideoType([], 'video/mp4'), 'video/mp4')
  assert.equal(sniffVideoType(null, 'video/webm'), 'video/webm')
  assert.equal(sniffVideoType([1, 2, 3], ''), '')
+})
+
+test('recording formats are ordered by what will play back, not by what compresses best', () => {
+ const base = t => t.split(';')[0]
+ // Everything offered must be something the upload guard accepts, or a candidate records an answer
+ // the server then refuses.
+ for (const format of RECORDING_FORMATS) {
+  assert.ok(VIDEO_TYPES.includes(base(format)), `${format} is offered to record but not allowed to upload`)
+ }
+ // MP4 before WebM: H.264 plays in every browser a panel might use.
+ assert.ok(RECORDING_FORMATS.findIndex(f => base(f) === 'video/mp4') < RECORDING_FORMATS.findIndex(f => base(f) === 'video/webm'))
+ // VP8 before VP9, and VP9 last of all: it compresses best and is refused most.
+ const vp8 = RECORDING_FORMATS.findIndex(f => f.includes('vp8'))
+ const vp9 = RECORDING_FORMATS.findIndex(f => f.includes('vp9'))
+ assert.ok(vp8 > -1 && vp9 > -1 && vp8 < vp9, 'VP8 must be preferred over VP9')
+ assert.equal(vp9, RECORDING_FORMATS.length - 1, 'VP9 is the last resort, never the first choice')
 })
