@@ -260,7 +260,7 @@ export default function Hiring(){
 
  const addCandidate=e=>{e.preventDefault();run('Creating the invitation…',async()=>{
   const d=await api({action:'invite',schoolId,...invite})
-  setIssued({name:invite.name,code:d.code,expiresAt:d.expiresAt})
+  setIssued({name:invite.name,email:invite.email,code:d.code,expiresAt:d.expiresAt,emailed:d.emailed})
   setInvite(i=>({postingId:i.postingId,name:'',email:'',phone:'',certAreas:''}));await load()})}
 
  const openCandidate=async c=>{setOpen(c.id);setReview(null);setError('')
@@ -310,6 +310,7 @@ export default function Hiring(){
     <h2>{review.candidate.name}</h2>
     <p className="muted">{review.candidate.email}{review.candidate.phone?` · ${review.candidate.phone}`:''}{review.candidate.certAreas?` · ${review.candidate.certAreas}`:''}</p>
     <p className="muted">Screening submitted {day(review.candidate.submittedAt)||'— not yet'} · Stage: {stageLabel(review.candidate.stage)} · Video deleted after {day(review.candidate.deleteAfter)}</p>
+    <p className="muted">{review.candidate.resumeUrl?<a href={review.candidate.resumeUrl} target="_blank" rel="noopener noreferrer">Open résumé: {review.candidate.resumeName}</a>:'No résumé attached.'}</p>
     {review.candidate.commuteSustainable&&<p className="quote"><strong>On the commute, in their words:</strong> {review.candidate.commuteSustainable}</p>}
     <p className="muted">Stage: {stageLabel(review.candidate.stage)}</p>
    </section>
@@ -418,7 +419,7 @@ export default function Hiring(){
 
    <section className="card">
     <h2>Invite a candidate</h2>
-    <p className="muted">They get a single-use code and record their interview at <code>{link}</code>. Send them the link and the code.</p>
+    <p className="muted">We email them a link and a single-use code to record their interview at <code>{link}</code>.</p>
     <form onSubmit={addCandidate} className="grid">
      <label>Position<select value={invite.postingId} onChange={e=>setInvite({...invite,postingId:e.target.value})} required><option value="">Choose…</option>{(data?.postings||[]).filter(p=>!['closed','filled'].includes(p.status)).map(p=><option key={p.id} value={p.id}>{p.title}</option>)}</select></label>
      <label>Name<input value={invite.name} onChange={e=>setInvite({...invite,name:e.target.value})} required/></label>
@@ -431,7 +432,7 @@ export default function Hiring(){
      <p><strong>{issued.name}</strong>’s code, good until {day(issued.expiresAt)}:</p>
      <p className="code">{issued.code}</p>
      <button type="button" onClick={()=>copy(`${link}\n\nYour code: ${issued.code}`)}>Copy the link and code</button>
-     <p className="muted">Shown once here. If it gets lost, create a new invitation.</p>
+     <p className="muted">{issued.emailed==='sent'?`Emailed to ${issued.email} with the link. Replies go to you.`:issued.emailed==='failed'?'The email did not go out. Copy the link and code above and send it yourself.':'Email is not set up here, so nothing was sent. Copy the link and code above and send it yourself.'} The code is shown once; if it gets lost, create a new invitation.</p>
     </div>}
    </section>
 

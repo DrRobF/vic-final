@@ -11,6 +11,7 @@ import {BUCKET} from '../lib/hiring-media.mjs'
 // rather than clearing it. And it must not make the candidate feel watched or sold to -- there is
 // no advertising on this page, no account to create, and nothing about the software it runs on.
 
+const RESUME_TYPES={pdf:'application/pdf',doc:'application/msword',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}
 const mins=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`
 
 async function api(body){
@@ -146,13 +147,27 @@ export default function HiringScreening(){
   })
  }
 
+ // Browsers sometimes report no type for a Word file, so the extension decides when the type is blank.
+ const attachResume=file=>{if(!file)return
+  run('Uploading your resume…',async()=>{
+   const ext=(file.name.split('.').pop()||'').toLowerCase()
+   const type=RESUME_TYPES[ext]
+   if(!type)throw new Error('Attach your resume as a PDF or Word document.')
+   const prep=await api({action:'upload-url',kind:'resume',contentType:type,bytes:file.size})
+   const up=await supabase.storage.from(BUCKET).uploadToSignedUrl(prep.path,prep.token,file,{contentType:prep.contentType})
+   if(up.error)throw new Error('The upload did not finish. Check your connection and try attaching it again.')
+   const d=await api({action:'resume',path:prep.path,fileName:file.name})
+   setData(d);setNotice('Resume saved.')
+  })}
+
  const saveWritten=q=>run('Saving…',async()=>{const d=await api({action:'written',questionId:q.id,text:drafts[q.id]||''});setData(d);setNotice('Saved.')})
  const submit=()=>{if(!window.confirm('Submit your interview? You will not be able to change your answers afterwards.'))return
   run('Submitting…',async()=>{const d=await api({action:'submit'});setSubmitted(d.name||'Candidate')})}
 
  const videos=(data?.questions||[]).filter(q=>q.stage==='video')
  const written=(data?.questions||[]).filter(q=>q.stage==='written')
- const left=(data?.questions||[]).filter(q=>!q.answered).length
+ const resumeDone=Boolean(data?.candidate?.resumeAttached)
+ const left=(data?.questions||[]).filter(q=>!q.answered).length+(resumeDone?0:1)
 
  return <main>
   <Head><title>Teacher screening interview</title><meta name="robots" content="noindex,nofollow"/></Head>
@@ -190,6 +205,14 @@ export default function HiringScreening(){
   </section>
   :<>
    <p className="progress" role="status">{left===0?'All answers saved. Submit when you are ready.':`${left} ${left===1?'answer':'answers'} still to do.`}</p>
+
+   <section className="card">
+    <p className="eyebrow">RESUME{resumeDone?' · SAVED':''}</p>
+    <h2>Attach your resume</h2>
+    <p className="muted">A PDF or Word document, up to 10 MB.</p>
+    {resumeDone&&<p className="done"><span aria-hidden="true">✓</span> Saved: {data.candidate.resumeName}. Choose a different file below to replace it.</p>}
+    <input type="file" accept=".pdf,.doc,.docx,application/pdf" aria-label="Choose your resume" disabled={!!busy} onChange={e=>{attachResume(e.target.files?.[0]);e.target.value=''}}/>
+   </section>
 
    {videos.map(q=><section className="card" key={q.id}>
     <p className="eyebrow">VIDEO {q.ordinal} OF {videos.length}{q.answered?' · SAVED':''}</p>
