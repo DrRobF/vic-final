@@ -81,3 +81,15 @@ test('delivery reports are accepted only when correctly signed and recent', () =
  // Several signatures during a rotation: any one matching is enough.
  assert.equal(verifySignature({ ...good, header: `v1,bogus ${sign(secret, 'ev_1', ts, body)}` }, now), true)
 })
+
+test('hiring mail uses the school address when one is set, and the app address otherwise', async () => {
+ const sent = []
+ const spy = async (u, o) => { sent.push(JSON.parse(o.body).from); return { ok: true, json: async () => ({ id: 'm' }) } }
+ const msg = { to: 'a@b.test', subject: 's', body: 'b' }
+ const base = { RESEND_API_KEY: 'x', REPORTS_FROM_EMAIL: 'reports@askvic.test' }
+ await sendHiringMail(msg, base, spy)
+ await sendHiringMail(msg, { ...base, HIRING_FROM_EMAIL: 'Saint Peters <hiring@school.test>' }, spy)
+ assert.deepEqual(sent, ['reports@askvic.test', 'Saint Peters <hiring@school.test>'])
+ // Only a hiring address configured: still sends, rather than silently reporting 'not set up'.
+ assert.equal((await sendHiringMail(msg, { RESEND_API_KEY: 'x', HIRING_FROM_EMAIL: 'h@school.test' }, spy)).outcome, 'sent')
+})
