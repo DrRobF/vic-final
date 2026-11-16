@@ -48,6 +48,31 @@ const DIAL_ON = {
  transform: 'scale(1.12)', boxShadow: '0 0 0 4px var(--vic-primary-soft)', fontSize: 17,
 }
 
+// What happened to an email, in words a principal can act on. The distinction that matters:
+// "sent" means the mail provider took it, not that anybody received it. Saying "delivered" when we
+// only know it was accepted is how a school concludes a candidate ignored them.
+function mailShort(m){
+ if(!m)return ''
+ const when=new Date(m.at).toLocaleDateString(undefined,{month:'short',day:'numeric'})
+ const times=m.total>1?` · ${m.total} emails`:''
+ if(m.outcome!=='sent')return `email did not go out (${when})${times}`
+ if(m.delivery==='bounced')return `bounced — wrong or blocked address (${when})${times}`
+ if(m.delivery==='complained')return `marked as spam by them (${when})${times}`
+ if(m.delivery==='delivered')return `delivered ${when}${times}`
+ return `sent ${when}, no delivery report${times}`
+}
+function mailLine(m){
+ const when=new Date(m.at).toLocaleString(undefined,{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})
+ const what=m.kind==='reminder'?`Reminder ${m.attempt}`:'Invitation'
+ const sent=m.outcome==='sent'?'accepted by the mail service':m.outcome==='failed'?'did NOT go out':'email not set up — nothing sent'
+ const got=m.delivery==='delivered'?' · delivered'
+  :m.delivery==='bounced'?` · BOUNCED${m.detail?` (${m.detail})`:''}`
+  :m.delivery==='complained'?' · they marked it as spam'
+  :m.delivery==='delivery_delayed'?' · delayed, still trying'
+  :m.outcome==='sent'?' · no delivery report yet':''
+ return `${what} to ${m.to} — ${when} — ${sent}${got}`
+}
+
 function Dial({label,help,value,max,onPick}){
  return <div style={{display:'grid',gap:7}}>
   <div>
@@ -359,6 +384,7 @@ export default function Hiring(){
  const [editing,setEditing]=useState(null),[tmpl,setTmpl]=useState({subject:'',body:'',hours:48})
  const [showArchived,setShowArchived]=useState(false)
  const [batch,setBatch]=useState({postingId:'',list:'',hours:''}),[batchResult,setBatchResult]=useState(null)
+ const [remindResult,setRemindResult]=useState(null)
 
  useEffect(()=>{api().then(d=>{setSchools(d.schools);if(d.schools[0])setSchoolId(d.schools[0].id);else setBlocked('none')}).catch(e=>setBlocked(e.login?'login':e.message)).finally(()=>setReady(true))},[])
  const load=async(id=schoolId)=>{if(!id)return;try{setData(await api(null,`?schoolId=${encodeURIComponent(id)}`))}catch(e){setError(e.message)}}
@@ -402,6 +428,25 @@ export default function Hiring(){
   await load();setEditing(null);setNotice(reset?'That position is back on the standard email.':'Invitation email saved for this position.')})
  const extend=hours=>run('Extending…',async()=>{
   await api({action:'extend-invite',schoolId,candidateId:open,hours});await reload();await load();setNotice(`They have ${hours} more hours from now.`)})
+
+ // A reminder is an extension and an email together, never one without the other: a second message
+ // pointing at a dead code wastes the candidate's time and the school's last chance at them.
+ const remindOne=()=>run('Sending…',async()=>{
+  const d=await api({action:'remind',schoolId,candidateId:open,hours:96})
+  await reload();await load()
+  const r=d.reminded?.[0]
+  setNotice(r?.emailed==='sent'?`Reminder sent to ${r.email}. They have four more days.`
+   :r?.emailed==='not_configured'?'The deadline moved, but email is not set up here, so nothing was sent.'
+   :'The deadline moved, but the email did not go out. Send them the link and code by hand.')})
+
+ const remindAll=postingId=>{
+  const waiting=(data?.candidates||[]).filter(c=>c.postingId===postingId&&!c.submittedAt&&!c.archived)
+  if(!waiting.length)return
+  if(!window.confirm(`Send a reminder to ${waiting.length} ${waiting.length===1?'candidate':'candidates'} who have not submitted?\n\nEach one keeps their original code and gets four more days. It is written as a second attempt and says to check their junk folder.`))return
+  run('Sending reminders…',async()=>{
+   const d=await api({action:'remind-all',schoolId,postingId,hours:96})
+   setRemindResult(d);await load()})
+ }
  const preview=()=>{const v={first_name:'Dana',school:'your school',position:postingName(editing)||'the position',link:link,code:'ABCD-EFGH-JKLM',deadline:'Sunday, November 15 at 8:15 AM EST',sender:'you'}
   const fill=t=>String(t).replace(/\{([a-z_]+)\}/gi,(w,k)=>v[k]??w);return{subject:fill(tmpl.subject),body:fill(tmpl.body)}}
  const inviteBatch=e=>{e.preventDefault()
@@ -479,7 +524,11 @@ export default function Hiring(){
      ?<>Recordings deleted {day(review.candidate.mediaDeletedAt)}{review.candidate.mediaDeletedBy?` by ${review.candidate.mediaDeletedBy}`:''}. Scores, notes and written answers are kept.</>
      :<>Recordings delete automatically after {day(review.candidate.deleteAfter)}.{review.candidate.hasVideo&&<> <button type="button" className="linkish" disabled={!!busy} onClick={()=>deleteMedia(review.candidate)}>Delete them now</button> — frees {mb(review.candidate.videoBytes)||'the space'}; the scored record stays.</>}</>}</p>
     <p className="muted">{review.candidate.resumeUrl?<a href={review.candidate.resumeUrl} target="_blank" rel="noopener noreferrer">Open résumé: {review.candidate.resumeName}</a>:'No résumé attached.'}</p>
-    {!review.candidate.submittedAt&&review.candidate.inviteExpiresAt&&<p className="muted">Invitation {Date.parse(review.candidate.inviteExpiresAt)>Date.now()?'runs out':'ran out'} {new Date(review.candidate.inviteExpiresAt).toLocaleString(undefined,{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}. <button type="button" disabled={!!busy} onClick={()=>extend(24)}>Give 24 more hours</button> <button type="button" disabled={!!busy} onClick={()=>extend(48)}>Give 48 more hours</button></p>}
+    {!review.candidate.submittedAt&&review.candidate.inviteExpiresAt&&<p className="muted">Invitation {Date.parse(review.candidate.inviteExpiresAt)>Date.now()?'runs out':'ran out'} {new Date(review.candidate.inviteExpiresAt).toLocaleString(undefined,{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'})}. <button type="button" disabled={!!busy} onClick={()=>extend(24)}>Give 24 more hours</button> <button type="button" disabled={!!busy} onClick={()=>extend(48)}>Give 48 more hours</button> <button type="button" disabled={!!busy} onClick={remindOne}>Send a reminder email</button></p>}
+    {!!review.candidate.mail?.length&&<details className="muted"><summary>Email history ({review.candidate.mail.length})</summary>
+     <ul>{review.candidate.mail.map((m,i)=><li key={i}>{mailLine(m)}</li>)}</ul>
+     {review.candidate.mail.some(m=>m.delivery==='bounced')&&<p><strong>That address bounced.</strong> Another email will not reach them — try a phone number, or the message system of whichever job board they applied through.</p>}
+    </details>}
     {review.candidate.commuteSustainable&&<p className="quote"><strong>On the commute, in their words:</strong> {review.candidate.commuteSustainable}</p>}
    </section>
 
@@ -578,7 +627,8 @@ export default function Hiring(){
      <tbody>{data.candidates.filter(c=>!c.archived).map(c=><tr key={c.id}>
       <td><strong>{c.name}</strong><br/><span className="muted">{c.email}</span></td>
       <td>{postingName(c.postingId)}</td>
-      <td>{stageLabel(c.stage)}{c.submittedAt?'':c.answered?<span className="muted"><br/>{c.answered} of {c.asked} answered, not submitted</span>:<span className="muted"><br/>not started</span>}</td>
+      <td>{stageLabel(c.stage)}{c.submittedAt?'':c.answered?<span className="muted"><br/>{c.answered} of {c.asked} answered, not submitted</span>:<span className="muted"><br/>not started</span>}
+       {!c.submittedAt&&c.mail&&<span className="muted"><br/>{mailShort(c.mail)}</span>}</td>
       {/* An unscored candidate says so in words rather than showing a zero, which would read as a bad score. */}
       <td>{c.scorers?c.video:<span className="muted">—</span>}</td>
       <td>{c.scorers?c.written:<span className="muted">—</span>}</td>
@@ -664,6 +714,36 @@ export default function Hiring(){
       <ul className="plain">{batchResult.problems.map((r,i)=><li key={i}>Line {r.line}: “{r.text}” — {r.error}</li>)}</ul>
       <p className="muted">Nobody on these lines was invited. Fix them and paste them again.</p>
      </>}
+    </div>}
+   </section>
+
+   {/* One email is not a hiring process. Most people who never answer are not saying no -- they are
+       busy, or the first message is sitting in a junk folder. Chasing them is the cheapest thing a
+       school can do, and it has to be one button or it does not happen on a Monday morning. */}
+   <section className="card">
+    <h2>Chase the ones who have not answered</h2>
+    <p className="muted">Sends a second, shorter email that says it is a second attempt, tells them where to look if the first one never arrived, and gives them four more days. They keep their original code, so anyone part-way through carries on where they stopped.</p>
+    {(data?.postings||[]).filter(p=>!['closed','filled'].includes(p.status)).map(p=>{
+     const waiting=(data?.candidates||[]).filter(c=>c.postingId===p.id&&!c.submittedAt&&!c.archived)
+     const bounced=waiting.filter(c=>c.mail?.delivery==='bounced')
+     return <div key={p.id} className="stack">
+      <p><strong>{p.title}</strong> — {waiting.length?`${waiting.length} ${waiting.length===1?'person has':'people have'} not submitted`:'everyone has submitted'}
+       {' '}{waiting.length>0&&<button type="button" disabled={!!busy} onClick={()=>remindAll(p.id)}>{busy||`Remind ${waiting.length}`}</button>}</p>
+      {bounced.length>0&&<p className="muted">{bounced.length} of them {bounced.length===1?'has an address that bounced':'have addresses that bounced'} — another email will not reach {bounced.length===1?'them':'them'}: {bounced.map(c=>c.name).join(', ')}.</p>}
+     </div>
+    })}
+
+    {remindResult&&<div className="batchres">
+     <h3>Reminded {remindResult.reminded.filter(r=>r.emailed==='sent').length} of {remindResult.reminded.length}</h3>
+     <table>
+      <thead><tr><th>Candidate</th><th>Email</th><th>Code</th><th>Sent</th></tr></thead>
+      <tbody>{remindResult.reminded.map((r,i)=><tr key={i}>
+       <td>{r.name}</td><td>{r.email}</td><td><code>{r.code}</code></td>
+       <td>{r.emailed==='sent'?`yes — attempt ${r.attempt}`:r.emailed==='failed'?'no — send it yourself':'email not set up — send it yourself'}</td>
+      </tr>)}</tbody>
+     </table>
+     <p className="muted">Everyone listed now has until {remindResult.expiresAt?new Date(remindResult.expiresAt).toLocaleString(undefined,{weekday:'long',month:'long',day:'numeric',hour:'numeric',minute:'2-digit'}):'the new deadline'}. “Sent” means the mail service accepted it; whether it reached them shows on the candidate list once the service reports back.</p>
+     <button type="button" onClick={()=>copy(remindResult.reminded.map(r=>`${r.name}\t${r.email}\t${r.code}`).join('\n'))}>Copy all names, emails and codes</button>
     </div>}
    </section>
 
