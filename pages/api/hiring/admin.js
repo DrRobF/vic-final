@@ -7,7 +7,7 @@ import {
 import { BUCKET, disposalDate } from '../../../lib/hiring-media.mjs'
 import { videoPaths, mayDeleteMedia, disposalSummary } from '../../../lib/hiring-retention.mjs'
 import {
- inviteMessage, sendInvite, checkTemplate, DEFAULT_INVITE_SUBJECT, DEFAULT_INVITE_BODY, DEFAULT_INVITE_HOURS, INVITE_PLACEHOLDERS,
+ inviteMessage, reminderMessage, sendHiringMail, checkTemplate, DEFAULT_INVITE_SUBJECT, DEFAULT_INVITE_BODY, DEFAULT_INVITE_HOURS, INVITE_PLACEHOLDERS,
 } from '../../../lib/hiring-invite.mjs'
 
 // The panel's side of hiring: invite candidates, review what they sent, score it against the rubric.
@@ -160,7 +160,10 @@ export default async function handler(req, res) {
      code: created.invite_code, expiresAt: created.invite_expires_at, link: `${site}/hiring-screening`,
      senderName: auth.profile?.name, subject: posting.invite_subject, body: posting.invite_body,
     })
-    const emailed = await sendInvite({ to: row.email, replyTo: auth.user?.email, ...message, key: `hiring-invite-${created.id}` })
+    const emailed = await deliver(db, {
+     school, auth, candidateId: created.id, to: row.email, kind: 'invite', attempt: 1,
+     message, key: `hiring-invite-${created.id}`,
+    })
     invited.push({ name: row.name, email: row.email, code: created.invite_code, expiresAt: created.invite_expires_at, emailed })
    }
 
@@ -199,7 +202,10 @@ export default async function handler(req, res) {
     senderName: auth.profile?.name,
     subject: posting.invite_subject, body: posting.invite_body,
    })
-   const emailed = await sendInvite({ to: input.email, replyTo: auth.user?.email, ...message, key: `hiring-invite-${created.id}` })
+   const emailed = await deliver(db, {
+    school, auth, candidateId: created.id, to: input.email, kind: 'invite', attempt: 1,
+    message, key: `hiring-invite-${created.id}`,
+   })
    return res.json({ candidateId: created.id, code: created.invite_code, expiresAt: created.invite_expires_at, emailed })
   }
 
@@ -241,6 +247,93 @@ export default async function handler(req, res) {
     .eq('id', candidateId)
    if (error) throw error
    return res.json({ expiresAt: until })
+  }
+
+  // A second attempt at the people who never answered the first one.
+  //
+  // One email is not a hiring process. The first real batch here went to eight candidates on a
+  // Friday afternoon and one came back, which says nothing about the other seven: a teacher
+  // applying to six schools at once does not notice one message from a domain they have never seen,
+  // and a good share of them land in a junk folder nobody opens. So this re-sends -- and because a
+  // reminder arriving after the code has died is worse than no reminder at all, it extends the
+  // deadline FIRST and only then writes the email, so the date in the message is the live one.
+  //
+  // The code never changes. A second code in the same inbox is a candidate who does not know which
+  // one is theirs.
+  if (action === 'remind' || action === 'remind-all') {
+   const one = action === 'remind'
+   const asked = Number(req.body?.hours)
+   // Default is a long weekend rather than the 48 hours of a first invitation: somebody being
+   // chased has already missed one window, usually because they were busy, not because they are
+   // slow.
+   const hours = Number.isInteger(asked) && asked >= 1 && asked <= 720 ? asked : 96
+
+   let candidates = []
+   let posting = null
+   if (one) {
+    const candidateId = String(req.body?.candidateId || '')
+    if (!UUID.test(candidateId)) return no(res, 400, 'Choose a candidate.')
+    const { data: c } = await db.from('ap_hiring_candidates')
+     .select('id, posting_id, name, email, invite_code, submitted_at, session_token, reminders_sent')
+     .eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
+    if (!c?.id) return no(res, 404, 'That candidate does not belong to this school.')
+    if (c.submitted_at) return no(res, 409, 'They have already submitted. There is nothing to remind them about.')
+    candidates = [c]
+   } else {
+    const postingId = String(req.body?.postingId || '')
+    if (!UUID.test(postingId)) return no(res, 400, 'Choose a position.')
+    const { data: rows } = await db.from('ap_hiring_candidates')
+     .select('id, posting_id, name, email, invite_code, submitted_at, session_token, reminders_sent')
+     .eq('posting_id', postingId).eq('school_id', school.schoolId)
+     .is('submitted_at', null).order('name')
+    candidates = rows || []
+    if (!candidates.length) return res.json({ reminded: [], note: 'Everyone on this position has already submitted.' })
+   }
+
+   const postingIds = [...new Set(candidates.map(c => c.posting_id))]
+   const { data: postings } = await db.from('ap_hiring_postings')
+    .select('id, status, title, invite_subject, invite_body').in('id', postingIds).eq('school_id', school.schoolId)
+   const byPosting = new Map((postings || []).map(p => [p.id, p]))
+   posting = byPosting.get(candidates[0].posting_id)
+   if (!posting) return no(res, 404, 'That position does not belong to this school.')
+   if (['closed', 'filled'].includes(posting.status)) return no(res, 409, 'That position is closed. Reopen it before writing to anyone.')
+
+   const { data: schoolRow } = await db.from('ap_schools').select('name').eq('id', school.schoolId).maybeSingle()
+   const proto = String(req.headers['x-forwarded-proto'] || 'https').split(',')[0]
+   const host = String(req.headers['x-forwarded-host'] || req.headers.host || '').split(',')[0]
+   const site = host ? `${proto}://${host}` : (process.env.NEXT_PUBLIC_SITE_URL || 'https://www.askvic.ai')
+   const until = new Date(Date.now() + hours * 3600000).toISOString()
+
+   const reminded = []
+   for (const c of candidates) {
+    const job = byPosting.get(c.posting_id) || posting
+    // Deadline first, message second. The candidate is told the date that is actually in force.
+    const { error: extErr } = await db.from('ap_hiring_candidates')
+     .update({ invite_expires_at: until, ...(c.session_token ? { session_expires_at: until } : {}) })
+     .eq('id', c.id)
+    if (extErr) { reminded.push({ name: c.name, email: c.email, emailed: 'failed' }); continue }
+
+    const attempt = (c.reminders_sent || 0) + 1
+    const message = reminderMessage({
+     name: c.name, schoolName: schoolRow?.name, positionTitle: job.title,
+     code: c.invite_code, expiresAt: until, link: `${site}/hiring-screening`,
+     senderName: auth.profile?.name,
+    })
+    // The key carries the attempt number. Without it the provider's idempotency would quietly
+    // swallow the second send as a duplicate of the first, and the screen would report a reminder
+    // that never left the building.
+    const emailed = await deliver(db, {
+     school, auth, candidateId: c.id, to: c.email, kind: 'reminder', attempt,
+     message, key: `hiring-reminder-${c.id}-${attempt}`,
+    })
+    if (emailed === 'sent') {
+     await db.from('ap_hiring_candidates')
+      .update({ reminders_sent: attempt, last_contact_at: new Date().toISOString() }).eq('id', c.id)
+    }
+    reminded.push({ name: c.name, email: c.email, code: c.invite_code, attempt, emailed })
+   }
+
+   return res.json({ reminded, expiresAt: until })
   }
 
   // Editing a question on one position. Questions are copied per position, so this changes this
@@ -434,6 +527,26 @@ export default async function handler(req, res) {
 
 // One invitation row, with the retry that a duplicate code would otherwise cost a candidate. Shared
 // by the single and batch paths so a code minted in a batch is identical to one minted on its own.
+// Sends a hiring email and writes down that it was sent, which is the whole point: a send result
+// shown once on a screen and never stored is the reason nobody could say, a week later, whether
+// seven candidates had ignored the school or never heard from it.
+//
+// Never throws. A failed log must not lose a sent email, and a failed email must not lose an
+// invitation -- the code is on screen either way.
+async function deliver(db, { school, auth, candidateId, to, kind, attempt, message, key }) {
+ const { outcome, providerId } = await sendHiringMail({ to, replyTo: auth.user?.email, ...message, key })
+ try {
+  await db.from('ap_hiring_invite_sends').insert({
+   school_id: school.schoolId, candidate_id: candidateId, kind, attempt,
+   to_email: to, subject: message.subject, outcome, provider_id: providerId,
+   sent_by: auth.user?.id || null,
+  })
+ } catch (e) {
+  console.error('Could not record hiring email send', { name: e?.name })
+ }
+ return outcome
+}
+
 async function createInvitation(db, { school, auth, posting, input, hours }) {
  for (let attempt = 0; attempt < 2; attempt++) {
   const { data, error } = await db.from('ap_hiring_candidates').insert({
@@ -504,6 +617,20 @@ async function overview(db, school, res) {
  // that could drift away from it.
  const archivedPostings = new Set((postings || []).filter(p => ['filled', 'closed'].includes(p.status)).map(p => p.id))
 
+ // The last thing we sent each candidate, and whatever the mail provider said became of it. Shown
+ // on the list because "did they ever get the email" is the first question a quiet inbox raises,
+ // and it should not need a trip to a mail provider's dashboard to answer.
+ const { data: sends } = await db.from('ap_hiring_invite_sends')
+  .select('candidate_id, kind, attempt, outcome, delivery, delivery_detail, created_at')
+  .in('candidate_id', (candidates || []).map(c => c.id).slice(0, 1000))
+  .order('created_at', { ascending: false })
+ const lastSend = new Map()
+ const sendCount = new Map()
+ for (const row of sends || []) {
+  if (!lastSend.has(row.candidate_id)) lastSend.set(row.candidate_id, row)
+  sendCount.set(row.candidate_id, (sendCount.get(row.candidate_id) || 0) + 1)
+ }
+
  const rows = (candidates || []).map(c => {
   const entry = byCandidate.get(c.id)
   return {
@@ -517,6 +644,15 @@ async function overview(db, school, res) {
    video: entry?.video || 0,
    written: entry?.written || 0,
    scorers: entry?.scorers.size || 0,
+   mail: (() => {
+    const m = lastSend.get(c.id)
+    if (!m) return null
+    return {
+     kind: m.kind, attempt: m.attempt, outcome: m.outcome,
+     delivery: m.delivery, detail: m.delivery_detail, at: m.created_at,
+     total: sendCount.get(c.id) || 1,
+    }
+   })(),
   }
  })
 
@@ -544,7 +680,7 @@ async function review(db, auth, school, candidateId, res) {
   .eq('id', candidateId).eq('school_id', school.schoolId).maybeSingle()
  if (!candidate?.id) return no(res, 404, 'That candidate does not belong to this school.')
 
- const [{ data: questions }, { data: responses }, { data: scores }, { data: roundRows }] = await Promise.all([
+ const [{ data: questions }, { data: responses }, { data: scores }, { data: roundRows }, { data: mailRows }] = await Promise.all([
   db.from('ap_hiring_questions')
    .select('id, stage, ordinal, prompt, domain, look_for_strong, look_for_weak, max_content, max_fit, max_writing')
    .eq('posting_id', candidate.posting_id).order('stage').order('ordinal'),
@@ -557,6 +693,9 @@ async function review(db, auth, school, candidateId, res) {
   db.from('ap_hiring_round_scores')
    .select('round, scorer_user_id, scorer_name, points, total, note, skipped')
    .eq('candidate_id', candidateId),
+  db.from('ap_hiring_invite_sends')
+   .select('kind, attempt, outcome, to_email, delivery, delivery_detail, delivery_at, created_at')
+   .eq('candidate_id', candidateId).order('created_at', { ascending: false }),
  ])
 
  const responseByQuestion = new Map((responses || []).map(r => [r.question_id, r]))
@@ -703,6 +842,10 @@ async function review(db, auth, school, candidateId, res) {
    inviteCode: candidate.invite_code, inviteExpiresAt: candidate.invite_expires_at,
    resumeUrl, resumeName: candidate.resume_name || (candidate.resume_path ? 'Resume' : ''),
    mediaDeletedAt: candidate.media_deleted_at, mediaDeletedBy: candidate.media_deleted_by,
+   mail: (mailRows || []).map(m => ({
+    kind: m.kind, attempt: m.attempt, outcome: m.outcome, to: m.to_email,
+    delivery: m.delivery, detail: m.delivery_detail, deliveryAt: m.delivery_at, at: m.created_at,
+   })),
    hasVideo: (responses || []).some(r => r.video_path),
    videoBytes: (responses || []).reduce((a, r) => a + Number(r.video_bytes || 0), 0),
   },

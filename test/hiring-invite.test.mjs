@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
- inviteMessage, sendInvite, checkTemplate, renderInvite, deadlineText,
+ inviteMessage, sendHiringMail, checkTemplate, renderInvite, deadlineText,
  DEFAULT_INVITE_SUBJECT, DEFAULT_INVITE_BODY, INVITE_PLACEHOLDERS,
 } from '../lib/hiring-invite.mjs'
 
@@ -26,13 +26,13 @@ test('the invitation offers a way out of recording and never pitches software', 
 
 test('sending reports not_configured, sent and failed without throwing', async () => {
  const msg = { to: 'a@b.test', replyTo: 'p@school.test', subject: 's', body: 'b', key: 'k' }
- assert.equal(await sendInvite(msg, {}), 'not_configured')
+ assert.equal((await sendHiringMail(msg, {})).outcome, 'not_configured')
  const env = { RESEND_API_KEY: 'x', REPORTS_FROM_EMAIL: 'from@askvic.test' }
  let seen
- assert.equal(await sendInvite(msg, env, async (u, o) => { seen = JSON.parse(o.body); return { ok: true } }), 'sent')
+ assert.equal((await sendHiringMail(msg, env, async (u, o) => { seen = JSON.parse(o.body); return { ok: true, json: async () => ({ id: 'm1' }) } })).outcome, 'sent')
  assert.equal(seen.reply_to, 'p@school.test')
- assert.equal(await sendInvite(msg, env, async () => ({ ok: false, status: 500 })), 'failed')
- assert.equal(await sendInvite(msg, env, async () => { throw new Error('down') }), 'failed')
+ assert.equal((await sendHiringMail(msg, env, async () => ({ ok: false, status: 500 }))).outcome, 'failed')
+ assert.equal((await sendHiringMail(msg, env, async () => { throw new Error('down') })).outcome, 'failed')
 })
 
 test('the standard email passes its own checks and names every fill-in it uses', () => {
